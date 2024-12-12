@@ -16,9 +16,8 @@ This is an attempt to create a "facade" over existing spatial services to ease u
 
 ## Principles
 
-* ~~No geocoding (as ChatGPT already use multiple sources to find lon,lat for a given location)~~ (bad quality)
-* Use external service for geocoding
-  * Ex : [docs/gpf-autocompletion.yaml](docs/gpf-autocompletion.yaml) adapted from [geoservices.ign.fr - Service Géoplateforme d’autocomplétion](https://geoservices.ign.fr/documentation/services/services-geoplateforme/autocompletion)
+* Use existing service for geocoding.
+  * Import [docs/gpf-autocompletion.yaml](docs/gpf-autocompletion.yaml) adapted from [geoservices.ign.fr - Service Géoplateforme d’autocomplétion](https://geoservices.ign.fr/documentation/services/services-geoplateforme/autocompletion)
 * No large geometries in responses.
 * JSON responses as flat as possible (no GeoJSON Feature or FeatureCollection)
 * Integration of [geoservices](https://geoservices.ign.fr/services-web) from [Géoplateforme](https://www.ign.fr/geoplateforme) first.
@@ -35,3 +34,4 @@ See [OpenAPI specifications](public/geocontext.yaml).
 ## License
 
 [MIT](LICENSE)
+

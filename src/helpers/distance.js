@@ -3,6 +3,9 @@ import { pointToLineDistance } from "@turf/point-to-line-distance";
 import { booleanPointInPolygon } from "@turf/boolean-point-in-polygon";
 import {point,lineString, polygon} from "@turf/turf";
 
+/**
+ * Compute distance between point and polygon
+ */
 function pointToPolygonDistance(gA,gB){
     if ( booleanPointInPolygon(gA,gB) ){
         return 0.0;
@@ -17,6 +20,9 @@ function pointToPolygonDistance(gA,gB){
     return result;
 }
 
+/**
+ * Compute distance between Point and MultiPoint
+ */
 function distancePointToMultiPoint(gA,gB){
     let result = Number.POSITIVE_INFINITY;
     for ( const coordinates of gB.coordinates ){
@@ -31,6 +37,9 @@ function distancePointToMultiPoint(gA,gB){
     return result;
 }
 
+/**
+ * Compute distance between Point and MultiLineString
+ */
 function distancePointToMultiLineString(gA,gB){
     let result = Number.POSITIVE_INFINITY;
     for ( const coordinates of gB.coordinates ){
@@ -45,6 +54,9 @@ function distancePointToMultiLineString(gA,gB){
     return result;
 }
 
+/**
+ * Compute distance between Point and MultiPolygon
+ */
 function distancePointToMultiPolygon(gA,gB){
     let result = Number.POSITIVE_INFINITY;
     for ( const coordinates of gB.coordinates ){
@@ -59,6 +71,9 @@ function distancePointToMultiPolygon(gA,gB){
     return result;
 }
 
+/**
+ * Compute distance between Point and Geometry.
+ */
 function distancePointToGeometry(gA,gB){
     if ( gB.type == "Point" ){
         return distancePointToPoint(gA,gB);
@@ -77,6 +92,10 @@ function distancePointToGeometry(gA,gB){
     }
 }
 
+/**
+ * @param {object} gA GeoJSON Point
+ * @param {object} gB GeoJSON Geometry
+ */
 export default function distance(gA,gB){
     if ( gA.type != "Point" ){
         throw new Error("gA must be of type Point");

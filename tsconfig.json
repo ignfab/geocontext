@@ -1,0 +1,21 @@
+{
+    "compilerOptions": {
+        "outDir": "./dist/",
+        "noImplicitAny": true,
+        "moduleResolution": "node",
+        "sourceMap": true,
+        "declaration": true,
+        "module": "ESNext",
+        "target": "ESNext",
+        "lib": [ "es2015" ],
+        "allowSyntheticDefaultImports": true,
+        "skipLibCheck": true,
+        "allowJs": true
+    },
+    "include": [
+        "./src/**/*"
+    ],
+    "exclude": [
+        "node_modules"
+    ]
+}
