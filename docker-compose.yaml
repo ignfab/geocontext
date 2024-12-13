@@ -6,6 +6,12 @@ services:
       args:
       - http_proxy
       - https_proxy
+    environment:
+      - PUBLIC_URL=${PUBLIC_URL:-http://localhost:3000}
+      - http_proxy
+      - https_proxy
+      - HTTP_PROXY
+      - HTTPS_PROXY
     ports:
     - ${APP_PORT:-3000}:3000
     deploy:

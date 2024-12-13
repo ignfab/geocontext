@@ -1,9 +1,11 @@
 import express from 'express';
-import { query, matchedData, validationResult } from 'express-validator';
+
 import cors from 'cors';
 import morgan from 'morgan';
 
 import logger from './logger.js';
+import yaml from 'js-yaml';
+import specs from './specs/openapi.cjs';
 
 const app = express();
 
@@ -23,16 +25,33 @@ const morganMiddleware = morgan(
 );
 app.use(morganMiddleware);
 
-
+/**
+ * allows to ensure that service is UP
+ */
 app.get('/health', function (req, res) {
     return res.json({
         "message": "OK"
     })
 });
 
-import { getAdminUnits, getAltitudeByLocation, getParcellaireExpress, getUrbanisme } from './services/geoplateforme.js';
 
-app.get('/api/gpf/altitude', [
+/**
+ * allows to ensure that service is UP
+ */
+app.get('/openapi.yaml', function (req, res) {
+    return res.send(yaml.dump(specs));
+});
+
+
+
+import { query, matchedData, validationResult } from 'express-validator';
+
+import { getParcellaireExpress } from './gpf/parcellaire-express.js';
+import { getAssiettesServitudes, getUrbanisme } from './gpf/urbanisme.js';
+import { getAdminUnits } from './gpf/adminexpress.js';
+import { getAltitudeByLocation } from './gpf/altitude.js';
+
+app.get('/v1/altitude', [
     query("lon").notEmpty().isNumeric(),
     query("lat").notEmpty().isNumeric()
 ], async function (req, res) {
@@ -49,7 +68,7 @@ app.get('/api/gpf/altitude', [
     return res.json(result);
 });
 
-app.get('/api/gpf/adminexpress', [
+app.get('/v1/adminexpress', [
     query("lon").notEmpty().isNumeric(),
     query("lat").notEmpty().isNumeric()
 ], async function (req, res) {
@@ -67,7 +86,7 @@ app.get('/api/gpf/adminexpress', [
 });
 
 
-app.get('/api/gpf/parcellaire-express', [
+app.get('/v1/parcellaire-express', [
     query("lon").notEmpty().isNumeric(),
     query("lat").notEmpty().isNumeric()
 ], async function (req, res) {
@@ -85,7 +104,7 @@ app.get('/api/gpf/parcellaire-express', [
 });
 
 
-app.get('/api/gpu/urbanisme', [
+app.get('/v1/urbanisme', [
     query("lon").notEmpty().isNumeric(),
     query("lat").notEmpty().isNumeric()
 ], async function (req, res) {
@@ -101,6 +120,26 @@ app.get('/api/gpu/urbanisme', [
     const result = await getUrbanisme(params.lon, params.lat);
     return res.json(result);
 });
+
+
+
+app.get('/v1/sup', [
+    query("lon").notEmpty().isNumeric(),
+    query("lat").notEmpty().isNumeric()
+], async function (req, res) {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).send({
+            message: "invalid parameters",
+            errors: errors.array()
+        });
+    }
+
+    const params = matchedData(req);
+    const result = await getAssiettesServitudes(params.lon, params.lat);
+    return res.json(result);
+});
+
 
 export default app;
 

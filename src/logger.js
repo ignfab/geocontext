@@ -1,23 +1,26 @@
-import winston from 'winston';
+import { createLogger, format, transports } from 'winston';
 
-const LOG_LEVEL = process.env.LOG_LEVEL ? process.env.LOG_LEVEL : 'info';
+const LOG_LEVEL = process.env.LOG_LEVEL ? process.env.LOG_LEVEL : 'debug';
 
 const formats = {
-    json: winston.format.json(),
-    simple: winston.format.simple()
+    json: format.json(),
+    simple: format.simple()
 };
 const LOG_FORMAT = process.env.LOG_FORMAT ? process.env.LOG_FORMAT : 'simple';
 if ( ! Object.keys(formats).includes(LOG_FORMAT) ){
     throw new Error(`LOG_FORMAT=${LOG_FORMAT} not found!`);
 }
 
-const format = formats[LOG_FORMAT];
-
-const logger = winston.createLogger({
+const logger = createLogger({
     level: LOG_LEVEL,
-    format: format,
-    transports: [
-        new winston.transports.Console()
+    format: formats[LOG_FORMAT],
+    transports: process.env.NODE_ENV != 'test' ? [
+        new transports.Console()
+    ] : [
+        new transports.File({
+            filename: 'geocontext.log',
+            level: 'debug'
+        })
     ],
 });
 
