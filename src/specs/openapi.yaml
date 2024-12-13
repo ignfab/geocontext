@@ -230,7 +230,7 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
 
 
-  /v1/assiette-sup:
+  /v1/sup:
     get:
       tags:
         - urbanisme
