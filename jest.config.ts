@@ -6,7 +6,8 @@ const presetConfig = createJsWithTsPreset({
 
 const jestConfig: JestConfigWithTsJest = {
   ...presetConfig,
-  collectCoverageFrom: ["src/**/*.(js|ts)"]
+  collectCoverageFrom: ["src/**/*.js"],
+  coverageProvider: 'v8'
 };
 
 export default jestConfig;

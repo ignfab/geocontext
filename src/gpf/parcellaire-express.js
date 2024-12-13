@@ -2,7 +2,7 @@ import logger from '../logger.js';
 
 import distance from '../helpers/distance.js';
 
-import {orderBy} from 'lodash';
+import _ from 'lodash';
 import { fetchJSON } from '../helpers/http.js';
 
 // CADASTRALPARCELS.PARCELLAIRE_EXPRESS:
@@ -25,7 +25,8 @@ const PARCELLAIRE_EXPRESS_TYPES = [
  * @returns {array<object>}
  */
 function filterByDistance(items){
-    const sortedItems = orderBy(items, ['type', 'distance'], ['asc', 'desc']);
+    const sortedItems = _.orderBy(items, ['type', 'distance'], ['asc', 'desc']);
+
     const result = [];
     let lastType = null;
     for ( const item of sortedItems ){

@@ -67,7 +67,7 @@ const ASSIETTES_SUP_TYPES = [
 ];
 
 /**
- * Renvoie la 
+ * Get SUP infos for a given location
  *
  * @param {number} lon 
  * @param {number} lat 
@@ -106,7 +106,7 @@ export async function getAssiettesServitudes(lon, lat) {
                 sourceGeom,
                 feature.geometry
             ) * 1000.0),
-            source: "Géoplateforme (Géoportail de l'Urbanisme)",
+            source: "Géoplateforme - (WFS Géoportail de l'Urbanisme)",
         }, feature.properties);
     });
 }

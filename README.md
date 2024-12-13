@@ -22,9 +22,20 @@ This is an attempt to create a "facade" over existing spatial services to ease u
 * JSON responses as flat as possible (no GeoJSON Feature or FeatureCollection)
 * Integration of [geoservices](https://geoservices.ign.fr/services-web) from [Géoplateforme](https://www.ign.fr/geoplateforme) first.
 
-## Features
+## Parameters
 
-See [OpenAPI specifications](public/geocontext.yaml).
+| Name         | Description                | Default value         |
+| ------------ | -------------------------- | --------------------- |
+| `PUBLIC_URL` | Public URL of the instance | http://localhost:3000 |
+
+
+## Usage
+
+```bash
+npm install
+# Swagger on http://localhost:3000
+npm run start
+```
 
 ## Credits
 

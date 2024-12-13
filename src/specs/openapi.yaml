@@ -10,10 +10,10 @@ info:
   license:
     name: MIT
     url: http://www.apache.org/licenses/LICENSE-2.0.html
-  version: 0.3.2
+  version: 0.4.0
 
-#servers:
-#  - url: https://geocontext.quadtreeworld.net
+servers:
+ - url: http://localhost:3000
 
 externalDocs:
   description: Dépôt GitHub
@@ -29,7 +29,7 @@ tags:
 
 paths:
 
-  /api/gpf/altitude:
+  /v1/altitude:
     get:
       tags:
         - altitude
@@ -72,7 +72,7 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
 
 
-  /api/gpf/adminexpress:
+  /v1/adminexpress:
     get:
       tags:
         - administratif
@@ -127,7 +127,7 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
 
 
-  /api/gpf/parcellaire-express:
+  /v1/parcellaire-express:
     get:
       tags:
         - administratif
@@ -187,7 +187,7 @@ paths:
 
 
 
-  /api/gpf/urbanisme:
+  /v1/urbanisme:
     get:
       tags:
         - urbanisme
@@ -247,7 +247,7 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
 
 
-  /api/gpf/assiette-sup:
+  /v1/assiette-sup:
     get:
       tags:
         - urbanisme
@@ -320,7 +320,7 @@ components:
           example: "Invalid request parameters"
 
     #---------------------------------------------------
-    # /api/gpf/altitude
+    # /v1/altitude
     #---------------------------------------------------
     AltitudeItem:
       type: object
@@ -342,7 +342,7 @@ components:
           description: La précision de la valeur au point considéré.
 
     #---------------------------------------------------
-    # /api/gpf/adminexpress
+    # /v1/adminexpress
     #---------------------------------------------------
     AdminExpressItem:
       type: object
@@ -407,7 +407,7 @@ components:
           example: "200023372"
 
     #---------------------------------------------------
-    # /api/gpf/parcellaire-express
+    # /v1/parcellaire-express
     #---------------------------------------------------
     ParcellaireExpressItem:
       type: object
@@ -501,7 +501,7 @@ components:
         - source
 
     #---------------------------------------------------
-    # /api/gpf/urbanisme
+    # /v1/urbanisme
     #---------------------------------------------------
     UrbanismeItem:
       type: object
@@ -589,7 +589,7 @@ components:
 
 
     #---------------------------------------------------
-    # /api/gpf/assiette-sup
+    # /v1/assiette-sup
     #---------------------------------------------------
     AsssietteServitudeItem:
       type: object

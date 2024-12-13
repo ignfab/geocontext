@@ -10,7 +10,8 @@
         "lib": [ "es2015" ],
         "allowSyntheticDefaultImports": true,
         "skipLibCheck": true,
-        "allowJs": true
+        "allowJs": true,
+        "esModuleInterop": true
     },
     "include": [
         "./src/**/*"
