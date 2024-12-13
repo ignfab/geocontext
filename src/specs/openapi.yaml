@@ -190,7 +190,7 @@ paths:
         récupérer les informations suivants à proximité du point en entrée.
         La distance au point de recherche est ajoutée dans la réponse 
         (0.0 correspond au cas où il y a intersection).
-      operationId: getGpfUrbanisme
+      operationId: getUrbanisme
       parameters:
         - in: query
           name: lon
@@ -240,7 +240,7 @@ paths:
         récupérer les types suivants à proximité du point en entrée.
         La distance au point de recherche est ajoutée dans la réponse (0.0 correspond au cas 
         où il y a intersection avec l'objet trouvé).
-      operationId: getAssiettesSup
+      operationId: getAssiettesServitudes
       parameters:
         - in: query
           name: lon
