@@ -122,8 +122,7 @@ app.get('/v1/urbanisme', [
 });
 
 
-
-app.get('/v1/sup', [
+app.get('/v1/assiette-sup', [
     query("lon").notEmpty().isNumeric(),
     query("lat").notEmpty().isNumeric()
 ], async function (req, res) {
