@@ -133,15 +133,8 @@ paths:
         - administratif
       summary: "Renvoie les informations cadastrales pour une position donnée par sa longitude et sa latitude."
       description: |
-        Le service WFS de la Géoplateforme (CADASTRALPARCELS.PARCELLAIRE_EXPRESS) est interrogé pour 
-        récupérer les types suivants à proximité du point en entrée :
-
-          * arrondissement (Paris, Lyon et Marseille uniquement)
-          * commune
-          * feuille
-          * localisant
-          * parcelle
-          * subdivision_fiscale
+        Le service WFS de la Géoplateforme est interrogé pour 
+        récupérer les informations à proximité du point en entrée.
         
         Remarques :
         - Le résultat le plus proche est conservé pour chaque type
@@ -194,19 +187,9 @@ paths:
       summary: "Renvoie les informations du document d'urbanisme (PLU, PLUi, POS, CC, PSMV) pour une position donnée par sa longitude et sa latitude."
       description: |
         Le service WFS de la Géoplateforme (wfs_du et wfs_scot) est interrogé pour 
-        récupérer les types suivants à proximité du point en entrée :
-        - scot
-        - document
-        - info_pct
-        - info_lin
-        - info_surf
-        - prescription_pct
-        - prescription_lin
-        - prescription_surf
-
-        Remarques :
-        - La distance au point de recherche est ajoutée dans la réponse.
-        - Une distance de 0.0 correspond au cas où il y a intersection avec l'objet trouvé.
+        récupérer les informations suivants à proximité du point en entrée.
+        La distance au point de recherche est ajoutée dans la réponse 
+        (0.0 correspond au cas où il y a intersection).
       operationId: getGpfUrbanisme
       parameters:
         - in: query
@@ -254,15 +237,10 @@ paths:
       summary: "Renvoie les assiettes des servitudes d'utilité publique (SUP) pour une position donnée par sa longitude et sa latitude."
       description: |
         Le service WFS de la Géoplateforme (wfs_sup) est interrogé pour 
-        récupérer les types suivants à proximité du point en entrée :
-        - assiette_sup_p
-        - assiette_sup_l
-        - assiette_sup_s
-
-        Remarques :
-        - La distance au point de recherche est ajoutée dans la réponse.
-        - Une distance de 0.0 correspond au cas où il y a intersection avec l'objet trouvé.
-      operationId: getGpfUrbanisme
+        récupérer les types suivants à proximité du point en entrée.
+        La distance au point de recherche est ajoutée dans la réponse (0.0 correspond au cas 
+        où il y a intersection avec l'objet trouvé).
+      operationId: getAssiettesSup
       parameters:
         - in: query
           name: lon
