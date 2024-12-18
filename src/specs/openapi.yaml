@@ -10,7 +10,7 @@ info:
   license:
     name: MIT
     url: http://www.apache.org/licenses/LICENSE-2.0.html
-  version: 0.4.0
+  version: 0.4.1
 
 servers:
  - url: http://localhost:3000
@@ -264,7 +264,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/AssietteSupItem'
+                  $ref: '#/components/schemas/AssietteServitudeItem'
 
         '400':
           description: Mauvaise requête (paramètre invalide)
@@ -411,7 +411,7 @@ components:
             $ref: '#/components/schemas/BoundingBox'
         distance:
           type: number
-          distance: La distance en degrée entre l'objet et la position.
+          description: La distance en degrée entre l'objet et la position.
           minimum: 0
         source:
           type: string
@@ -504,7 +504,7 @@ components:
             $ref: '#/components/schemas/BoundingBox'
         distance:
           type: number
-          distance: La distance en mètre entre l'objet et la position.
+          description: La distance en mètre entre l'objet et la position.
           minimum: 0
         source:
           type: string
@@ -569,7 +569,7 @@ components:
     #---------------------------------------------------
     # /v1/assiette-sup
     #---------------------------------------------------
-    AsssietteServitudeItem:
+    AssietteServitudeItem:
       type: object
       description: Assiette de servitude d'utilité publique
       properties:
@@ -588,7 +588,7 @@ components:
             $ref: '#/components/schemas/BoundingBox'
         distance:
           type: number
-          distance: La distance en mètre entre l'objet et la position.
+          description: La distance en mètre entre l'objet et la position.
           minimum: 0
         source:
           type: string
