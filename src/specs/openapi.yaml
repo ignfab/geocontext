@@ -2,19 +2,23 @@ openapi: 3.1.0
 info:
   title: geocontext
   description: |-
-    Cette API **expérimentale** vise à faciliter l'exploitation
-    des données de la Géoplateforme avec des LLM.
+    Cette API **expérimentale** vise à faciliter l'exploitation des données de la Géoplateforme avec des LLM.
+    Elle a vocation à devenir un module APICARTO facilitant l'utilisation 
+    des données de la Géoplateforme si son utilité est confirmée.
 
     NB : Il convient en parallèle d'intégrer l'appel à un service de géocodage 
     (voir [gpf-autocompletion.yaml](gpf-autocompletion.yaml) pour intégrer celui de la Géoplateforme)
   license:
     name: MIT
     url: http://www.apache.org/licenses/LICENSE-2.0.html
-  version: 0.4.1
+  version: 0.5.0
 
 servers:
  - url: http://localhost:3000
 
+termsOfService: https://github.com/mborne/geocontext#readme
+contact:
+  email: apicarto@ign.fr
 externalDocs:
   description: Dépôt GitHub
   url: https://github.com/mborne/geocontext#readme

@@ -24,10 +24,18 @@ This is an attempt to create a "facade" over existing spatial services to ease u
 
 ## Parameters
 
-| Name         | Description                | Default value         |
-| ------------ | -------------------------- | --------------------- |
-| `PUBLIC_URL` | Public URL of the instance | http://localhost:3000 |
+| Name         | Description                                                                 | Default value                               |
+| ------------ | --------------------------------------------------------------------------- | ------------------------------------------- |
+| `APP_NAME`   | Public name of the instance (ex : poc-llm)                                  | geocontext                                  |
+| `PUBLIC_URL` | Public URL of the instance                                                  | http://localhost:3000                       |
+| `TOS_URL`    | URL of the term of services (ex : https://apicarto.ign.fr/api/doc/mentions) | https://github.com/mborne/geocontext#readme |
 
+
+## Warning
+
+> Cette API est un POC ayant vocation à devenir un module APICARTO facilitant l'utilisation des données de la Géoplateforme si son utilité est confirmé.
+
+This API is a Proof of Concept (POC) intended to become an APICARTO module facilitating the use of Géoplateforme data if its usefulness is confirmed.
 
 ## Usage
 
