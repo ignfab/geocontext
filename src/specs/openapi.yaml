@@ -3,7 +3,7 @@ info:
   title: geocontext
   description: |-
     Cette API **expérimentale** vise à faciliter l'exploitation des données de la Géoplateforme avec des LLM.
-    Elle a vocation à devenir un module APICARTO facilitant l'utilisation 
+    Elle a vocation à devenir un module API Carto facilitant l'utilisation 
     des données de la Géoplateforme si son utilité est confirmée.
 
     NB : Il convient en parallèle d'intégrer l'appel à un service de géocodage 
@@ -11,7 +11,7 @@ info:
   license:
     name: MIT
     url: http://www.apache.org/licenses/LICENSE-2.0.html
-  version: 0.5.0
+  version: 0.5.1
 
 servers:
  - url: http://localhost:3000
@@ -38,7 +38,7 @@ paths:
       tags:
         - altitude
       summary: Renvoie l’altitude pour une position donnée par sa longitude et sa latitude.
-      description: Le service d'altimétrie de la Géoplateforme est appelé avec la longitude et la latitude en paramètre.
+      description: Le service d'altimétrie de la Géoplateforme est appelé avec la longitude et la latitude en paramètres.
       operationId: getAltitude
       parameters:
         - in: query
@@ -69,7 +69,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/BadRequestResponse'
         '500':
-          description: Mauvaise requête (paramètre invalide)
+          description: Erreur système
           content:
             application/json:
               schema:
@@ -80,7 +80,7 @@ paths:
     get:
       tags:
         - administratif
-      summary: Renvoie les unités administratives (communes, département, région,...) pour une position donnée par sa longitude et sa latitude.
+      summary: Renvoie les unités administratives (commune, département, région,...) pour une position donnée par sa longitude et sa latitude.
       description: |
         Le service WFS de la Géoplateforme (ADMINEXPRESS-COG.LATEST) est interrogé pour 
         récupérer les types suivants par intersection avec le point en entrée.
@@ -109,7 +109,7 @@ paths:
             type: number
       responses:
         '200':
-          description: Liste des éléments éléments trouvés
+          description: Unités administratives trouvées
           content:
             application/json:
               schema:
@@ -137,7 +137,7 @@ paths:
         - administratif
       summary: "Renvoie les informations cadastrales pour une position donnée par sa longitude et sa latitude."
       description: |
-        Le service WFS de la Géoplateforme est interrogé pour 
+        Le service WFS de la Géoplateforme (CADASTRALPARCELS.PARCELLAIRE_EXPRESS) est interrogé pour 
         récupérer les informations à proximité du point en entrée.
         
         Remarques :
@@ -161,7 +161,7 @@ paths:
             type: number
       responses:
         '200':
-          description: Liste des éléments éléments trouvés
+          description: Informations cadastrales trouvées
           content:
             application/json:
               schema:
@@ -176,7 +176,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/BadRequestResponse'
         '500':
-          description: erreur système
+          description: Erreur système
           content:
             application/json:
               schema:
@@ -191,7 +191,7 @@ paths:
       summary: "Renvoie les informations du document d'urbanisme (PLU, PLUi, POS, CC, PSMV) pour une position donnée par sa longitude et sa latitude."
       description: |
         Le service WFS de la Géoplateforme (wfs_du et wfs_scot) est interrogé pour 
-        récupérer les informations suivants à proximité du point en entrée.
+        récupérer les informations suivantes à proximité du point en entrée.
         La distance au point de recherche est ajoutée dans la réponse 
         (0.0 correspond au cas où il y a intersection).
       operationId: getUrbanisme
@@ -212,7 +212,7 @@ paths:
             type: number
       responses:
         '200':
-          description: liste des éléments parcelles trouvées
+          description: Documents d’urbanisme trouvés
           content:
             application/json:
               schema:
@@ -262,7 +262,7 @@ paths:
             type: number
       responses:
         '200':
-          description: liste des éléments parcelles trouvées
+          description: Assiettes des servitudes d'utilité publique trouvées
           content:
             application/json:
               schema:
@@ -277,7 +277,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/BadRequestResponse'
         '500':
-          description: erreur système
+          description: Erreur système
           content:
             application/json:
               schema:
