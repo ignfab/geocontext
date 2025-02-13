@@ -14,6 +14,7 @@ app.use(express.json());
 
 app.use(express.static('public'));
 
+
 const morganMiddleware = morgan(
     ':method :url :status :res[content-length] - :response-time ms',
     {
@@ -43,7 +44,6 @@ app.get('/openapi.yaml', function (req, res) {
 });
 
 
-
 import { query, matchedData, validationResult } from 'express-validator';
 
 import { getParcellaireExpress } from './gpf/parcellaire-express.js';
@@ -64,8 +64,15 @@ app.get('/v1/altitude', [
     }
 
     const params = matchedData(req);
-    const result = await getAltitudeByLocation(params.lon, params.lat);
-    return res.json(result);
+    try {
+        const result = await getAltitudeByLocation(params.lon, params.lat);
+        return res.json(result);
+    }catch(e){
+        logger.error(e.message);
+        return res.status(500).json({
+            message: "An error occurred"
+        })
+    }
 });
 
 app.get('/v1/adminexpress', [
@@ -99,8 +106,15 @@ app.get('/v1/parcellaire-express', [
     }
 
     const params = matchedData(req);
-    const result = await getParcellaireExpress(params.lon, params.lat);
-    return res.json(result);
+    try {
+        const result = await getParcellaireExpress(params.lon, params.lat);
+        return res.json(result);
+    }catch(e){
+        logger.error(e.message);
+        return res.status(500).json({
+            message: "An error occurred"
+        })
+    }
 });
 
 
@@ -117,8 +131,15 @@ app.get('/v1/urbanisme', [
     }
 
     const params = matchedData(req);
-    const result = await getUrbanisme(params.lon, params.lat);
-    return res.json(result);
+    try {
+        const result = await getUrbanisme(params.lon, params.lat);
+        return res.json(result);
+    }catch(e){
+        logger.error(e.message);
+        return res.status(500).json({
+            message: "An error occurred"
+        })
+    }
 });
 
 
@@ -135,8 +156,15 @@ app.get('/v1/sup', [
     }
 
     const params = matchedData(req);
-    const result = await getAssiettesServitudes(params.lon, params.lat);
-    return res.json(result);
+    try {
+        const result = await getAssiettesServitudes(params.lon, params.lat);
+        return res.json(result);
+    }catch(e){
+        logger.error(e.message);
+        return res.status(500).json({
+            message: "An error occurred"
+        })
+    }
 });
 
 
