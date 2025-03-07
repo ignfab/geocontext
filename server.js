@@ -9,8 +9,8 @@ const server = app.listen(APP_PORT, () => {
 });
 
 process.on('SIGTERM', () => {
-    log.warning('shut down (SIGTERM received)');
+    logger.warning('shut down (SIGTERM received)');
     server.close(() => {
-        log.debug('HTTP server closed');
+        logger.debug('HTTP server closed');
     });
 });
