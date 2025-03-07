@@ -1,6 +1,6 @@
-import logger from "../logger.js";
-
 import fetch from 'node-fetch';
+
+import logger from "../logger.js";
 
 import { HttpsProxyAgent } from 'https-proxy-agent';
 
@@ -22,5 +22,7 @@ if ( process.env.HTTP_PROXY ){
  */
 export async function fetchJSON(url) {
     logger.info(`[HTTP] GET ${url} ...`);
-    return fetch(url, fetchOpts).then(res => res.json());
+    const result = await fetch(url, fetchOpts).then(res => res.json());
+    logger.debug(`[HTTP] GET ${url} : ${JSON.stringify(result)}`)
+    return result;
 }

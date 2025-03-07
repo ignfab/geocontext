@@ -1,14 +1,14 @@
-import { createJsWithTsPreset, type JestConfigWithTsJest } from 'ts-jest';
+import { createJsWithTsEsmPreset, type JestConfigWithTsJest } from 'ts-jest'
 
-const presetConfig = createJsWithTsPreset({
-  //...options
-});
+const presetConfig = createJsWithTsEsmPreset({
+
+})
 
 const jestConfig: JestConfigWithTsJest = {
   ...presetConfig,
-  collectCoverageFrom: ["src/**/*.js"],
-  coverageProvider: 'v8'
-};
+  collectCoverageFrom: [
+    'src/**/*.{ts,tsx,js,jsx}'
+  ]
+}
 
 export default jestConfig;
-

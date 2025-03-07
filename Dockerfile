@@ -3,7 +3,7 @@ FROM node:22-alpine
 RUN mkdir /opt/geocontext
 WORKDIR /opt/geocontext
 
-COPY package.json .
+COPY package.json package-lock.json .
 RUN npm install --omit=dev
 
 COPY server.js .
