@@ -1,5 +1,7 @@
 FROM node:22-alpine
 
+RUN npm install -g npm
+
 RUN mkdir /opt/geocontext
 WORKDIR /opt/geocontext
 
