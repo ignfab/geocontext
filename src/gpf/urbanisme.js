@@ -6,7 +6,9 @@ import logger from "../logger.js";
 // https://data.geopf.fr/wfs/ows?service=WFS&version=2.0.0&request=GetCapabilities
 const URBANISME_TYPES = [
     'wfs_scot:scot',
-    'wfs_du:document', 
+    'wfs_du:document',
+    'wfs_du:zone_urba',
+    'wfs_du:secteur_cc',
     'wfs_du:info_pct',
     'wfs_du:info_lin',
     'wfs_du:info_surf',

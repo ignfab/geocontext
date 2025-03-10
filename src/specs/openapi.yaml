@@ -494,6 +494,8 @@ components:
           enum:
             - scot
             - document
+            - zone_urba
+            - secteur_cc
             - info_pct
             - info_lin
             - info_surf
@@ -530,6 +532,12 @@ components:
           type: string
           description: Description physique de la prescription ou du périmètre d’information.
           example: "Zone à risque d'exposition au plomb"
+        libelong:
+          type: string
+          description: Nom complet littéral de la zone tel qu’il apparaît dans le chapitre du règlement écrit.
+        typezone:
+          type: string
+          description: Type de la zone classé dans une nomenclature simplifiée.
         txt:
           type: string
           description: Étiquette associée à la prescription ou à l'information
