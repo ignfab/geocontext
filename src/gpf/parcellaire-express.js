@@ -25,7 +25,7 @@ const PARCELLAIRE_EXPRESS_TYPES = [
  * @returns {array<object>}
  */
 function filterByDistance(items){
-    const sortedItems = _.orderBy(items, ['type', 'distance'], ['asc', 'desc']);
+    const sortedItems = _.orderBy(items, ['type', 'distance'], ['asc', 'asc']);
 
     const result = [];
     let lastType = null;
