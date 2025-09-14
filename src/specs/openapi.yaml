@@ -293,13 +293,13 @@ components:
       properties:
         message:
           type: string
-          example: "An error occurred"
+          examples: ["An error occurred"]
     BadRequestResponse:
       type: object
       properties:
         message:
           type: string
-          example: "Invalid request parameters"
+          examples: ["Invalid request parameters"]
 
     #---------------------------------------------------
     # /v1/altitude
@@ -309,7 +309,7 @@ components:
       properties:
         source:
           type: string
-          example: Géoplateforme (altimétrie)
+          examples: ["Géoplateforme (altimétrie)"]
         lon:
           type: number
           description: La longitude du point.
@@ -343,58 +343,59 @@ components:
         id:
           type: string
           description: L'identifiant BDTOPO.
-          example: COMMUNE_0000000009750652
+          examples: ["COMMUNE_0000000009750652"]
         bbox:
+          type: array
           schema:
             $ref: '#/components/schemas/BoundingBox'
         nom_officiel:
           type: string
           description: Le nom de l'unité administrative.
-          example: "Chamonix-Mont-Blanc"
+          examples: ["Chamonix-Mont-Blanc"]
         nom_officiel_en_majuscules:
           type: string
           description: Le nom de l'unité administrative en majuscule.
-          example: "CHAMONIX-MONT-BLANC"
+          examples: ["CHAMONIX-MONT-BLANC"]
         code_insee:
           type: string
           description: Le code INSEE de l'unité administrative.
-          example: "74056"
+          examples: ["74056"]
         code_insee_du_departement:
           type: string
           description: Le code INSEE du département.
-          example: "74"
+          examples: ["74"]
         code_insee_de_la_region:
           type: string
           description: Le code INSEE de la région.
-          example: "74"
+          examples: ["74"]
         statut:
           type: string
           description: Le statut de la commune.
-          example: "Commune simple"
+          examples: ["Commune simple"]
         population:
           type: number
           description: La population de la commune (non disponible pour les départements et régions)
-          example: 8642
+          examples: [8642]
         date_du_recensement:
           type: string
           description: La date du recensement
-          example: "2022-01-01Z"
+          examples: ["2022-01-01Z"]
         organisme_recenseur:
           type: string
           description: L'organisme recenseur
-          example: "INSEE"
+          examples: ["INSEE"]
         code_insee_du_canton:
           type: string
           description: Le code INSEE du canton
-          example: "10"
+          examples: ["10"]
         code_insee_de_l_arrondissement:
           type: string
           description: Le code INSEE de l'arrondissement
-          example: "2"
+          examples: ["2"]
         codes_siren_des_epci:
           type: string
           description: Le code SIREN des EPCI
-          example: "200023372"
+          examples: ["200023372"]
 
     #---------------------------------------------------
     # /v1/parcellaire-express
@@ -419,6 +420,7 @@ components:
             - parcelle
             - localisant
         bbox:
+          type: array
           schema:
             $ref: '#/components/schemas/BoundingBox'
         distance:
@@ -427,60 +429,60 @@ components:
           minimum: 0
         source:
           type: string
-          example: Géoplateforme (WFS, CADASTRALPARCELS.PARCELLAIRE_EXPRESS)
+          examples: ["Géoplateforme (WFS, CADASTRALPARCELS.PARCELLAIRE_EXPRESS)"]
         code_dep:
           type: string
           description: Code INSEE du département.
-          example: "74"
+          examples: ["74"]
         code_com:
           type: string
           description: Code de la commune.
-          example: 056
+          examples: ["056"]
         nom_com:
           type: string
           description: Nom de la commune.
-          example: Chamonix-Mont-Blanc
+          examples: ["Chamonix-Mont-Blanc"]
         code_insee:
           type: string
           description: Numéro INSEE de la commune.
-          example: "74056"
+          examples: ["74056"]
         feuille:
           type: integer
           description: Numéro de la feuille cadastrale.
-          example: 7
+          examples: [7]
         section:
           type: string
           description: Numéro de la section cadastrale.
         com_abs:
           type: string
           description: Ancien code de la commune en cas de fusion de communes.
-          example: "000"
+          examples: ["000"]
         code_arr:
           type: string
           description: Code de l’arrondissement.
-          example: "000"
+          examples: ["000"]
         idu:
           type: string
           description: Identifiant de la parcelle cadastrale.
-          example: "740560000G4353"
+          examples: ["740560000G4353"]
         numero:
           type: string
           description: Numéro de la parcelle cadastrale.
-          example: "4353"
+          examples: ["4353"]
         contenance:
           type: integer
           minimum: 0
           description: Superficie extraite de MAJIC exprimée en m².
-          example: 178
+          examples: [178]
         echelle:
           type: string
           description: Dénominateur de l’échelle principale du plan cadastral.
-          example: 500
+          examples: [500]
         edition:
           type: string
           format: date
           description: Numéro d’édition de la feuille cadastrale
-          example: "2023-07-01"
+          examples: ["2023-07-01"]
       required:
         - id
         - type
@@ -514,6 +516,7 @@ components:
           type: string
           description: Identifiant technique de l'objet
         bbox:
+          type: array
           schema:
             $ref: '#/components/schemas/BoundingBox'
         distance:
@@ -522,24 +525,24 @@ components:
           minimum: 0
         source:
           type: string
-          example: Géoplateforme - (WFS Géoportail de l'Urbanisme)
+          examples: ["Géoplateforme - (WFS Géoportail de l'Urbanisme)"]
         gid:
           type: number
           description: Identifiant technique de l'objet
-          example: 2905619
+          examples: [2905619]
         gpu_doc_id:
           type: string
           description: Identifiant unique du document sur le GpU
-          example: 398a91a8349876bc9f08c2830347b4f1
+          examples: ["398a91a8349876bc9f08c2830347b4f1"]
         partition:
           type: string
           description: Identifiant stable du document d'urbanisme sur le GpU
-          example: DU_74056
+          examples: ["DU_74056"]
         # champs métiers
         libelle:
           type: string
           description: Description physique de la prescription ou du périmètre d’information.
-          example: "Zone à risque d'exposition au plomb"
+          examples: ["Zone à risque d'exposition au plomb"]
         libelong:
           type: string
           description: Nom complet littéral de la zone tel qu’il apparaît dans le chapitre du règlement écrit.
@@ -552,22 +555,22 @@ components:
         typeinf:
           type: string
           description: Type d'information (InformationUrbaType)
-          example: "17"
+          examples: ["17"]
         stypeinf:
           type: string
           description: sous-type détaillant le type d'information
-          example: "00"
+          examples: ["00"]
         idurba: 
           type: string
           description: Identifiant du document d'urbanisme
-          example: "74056_PLU_20231010"
+          examples: ["74056_PLU_20231010"]
         datvalid:
           type: string
           description: Date de la dernière validation de la prescription.
         nomfic:
           type: string
           description: Nom du fichier pdf contenant le texte décrivant la prescription
-          example: "74056_reglement_20231010.pdf"
+          examples: ["74056_reglement_20231010.pdf"]
         # TODO : compléter ( https://cnig.gouv.fr/IMG/pdf/231220_standard_cnig_plu_v2024-01.pdf )
         # "typep": null,
         # "urlfic": null,
@@ -604,6 +607,7 @@ components:
           type: string
           description: Identifiant technique de l'objet
         bbox:
+          type: array
           schema:
             $ref: '#/components/schemas/BoundingBox'
         distance:
@@ -612,58 +616,58 @@ components:
           minimum: 0
         source:
           type: string
-          example: Géoplateforme - (WFS Géoportail de l'Urbanisme)
+          examples: ["Géoplateforme - (WFS Géoportail de l'Urbanisme)"]
         gid:
           type: number
           description: Identifiant technique de l'objet
-          example: 2905619
+          examples: ["2905619"]
         gpu_doc_id:
           type: string
           description: Identifiant unique du document sur le GpU
-          example: 398a91a8349876bc9f08c2830347b4f1
+          examples: ["398a91a8349876bc9f08c2830347b4f1"]
         suptype:
           type: string
           description: Code du type de servitude
-          example: "ac1"
+          examples: ["ac1"]
         partition:
           type: string
           description: Identifiant stable du document sur le GpU
-          example: 172014607_SUP_74_AC1
+          examples: ["172014607_SUP_74_AC1"]
         # champs métiers
         fichier:
           type: string
           description: Nom ou référence du ficher contenant l'acte instituant la servitude
-          example: "AC1_Deux-fontaines--Eglise-Saint-Michel--Presbytere_20230421_act.pdf"
+          examples: ["AC1_Deux-fontaines--Eglise-Saint-Michel--Presbytere_20230421_act.pdf"]
         idass:
           type: string
           description: Identifiant de l'assiette
-          example: "AC1-172014607-2304250003-1-1"
+          examples: ["AC1-172014607-2304250003-1-1"]
         idgen:
           type: string
           description: Identifiant du générateur
-          example: "AC1-172014607-2304250003-1"
+          examples: ["AC1-172014607-2304250003-1"]
         nomass:
           type: string
           description: Nom abrégé de l'assiette
         typeAss:
           type: string
           description: Nature de l'assiette selon sa vocation principale et la catégorie de SUP
-          example: Périmètre des abords
+          examples: ["Périmètre des abords"]
         modegeoass:
           type: string
           description: Description de la méthode utilisée pour générer la géométrie de l'assiette
-          example: Égale au générateur
+          examples: ["Égale au générateur"]
         paramcalc:
           type: number
           description: Valeur du paramètre ayant permis de calculer l'assiette lorsque celle-ci correspond à un objet tampon
         srcgeoass:
           type: number
           description: Type de carte, de référentiel géographique utilisé en tant que source de géoréférencement lors de la digitalisation de la géométrie
-          example: "Cadastre"
+          examples: ["Cadastre"]
         datesrcass:
           type: string
           description: Date d'actualité du référentiel utilisé lors du géoréférencement de l'objet
-          example: "20180101"
+          examples: ["20180101"]
         # "angle1": null,
         # "angle2": null,
         # "rayon": null,
@@ -677,7 +681,7 @@ components:
         nomsuplitt:
           type: string
           description: Nom littéral de la servitude, figurant dans l'acte l'ayant instaurée
-          example: "Deux fontaines ; Eglise Saint-Michel ; Presbytère"
+          examples: ["Deux fontaines ; Eglise Saint-Michel ; Presbytère"]
       required:
         - type
         - id
