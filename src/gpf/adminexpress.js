@@ -30,7 +30,7 @@ export async function getAdminUnits(lon, lat) {
     logger.info(`[adminexpress] getAdminUnits(${lon},${lat})...`);
 
     // note that EPSG:4326 means lat,lon order for GeoServer -> flipped coordinates...
-    const cql_filter = `INTERSECTS(geom,Point(${lat} ${lon}))`;
+    const cql_filter = `INTERSECTS(geometrie,Point(${lat} ${lon}))`;
 
     // TODO : avoid useless geometry retrieval at WFS level
     const url = 'https://data.geopf.fr/wfs?' + new URLSearchParams({

@@ -347,23 +347,23 @@ components:
         bbox:
           schema:
             $ref: '#/components/schemas/BoundingBox'
-        nom:
+        nom_officiel:
           type: string
           description: Le nom de l'unité administrative.
           example: "Chamonix-Mont-Blanc"
-        nom_m:
+        nom_officiel_en_majuscules:
           type: string
           description: Le nom de l'unité administrative en majuscule.
           example: "CHAMONIX-MONT-BLANC"
-        insee_com:
+        code_insee:
           type: string
-          description: Le code INSEE de la commune.
+          description: Le code INSEE de l'unité administrative.
           example: "74056"
-        insee_dep:
+        code_insee_du_departement:
           type: string
           description: Le code INSEE du département.
           example: "74"
-        insee_reg:
+        code_insee_de_la_region:
           type: string
           description: Le code INSEE de la région.
           example: "74"
@@ -375,15 +375,23 @@ components:
           type: number
           description: La population de la commune (non disponible pour les départements et régions)
           example: 8642
-        insee_can:
+        date_du_recensement:
+          type: string
+          description: La date du recensement
+          example: "2022-01-01Z"
+        organisme_recenseur:
+          type: string
+          description: L'organisme recenseur
+          example: "INSEE"
+        code_insee_du_canton:
           type: string
           description: Le code INSEE du canton
           example: "10"
-        insee_arr:
+        code_insee_de_l_arrondissement:
           type: string
           description: Le code INSEE de l'arrondissement
           example: "2"
-        siren_epci:
+        codes_siren_des_epci:
           type: string
           description: Le code SIREN des EPCI
           example: "200023372"

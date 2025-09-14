@@ -25,21 +25,22 @@ describe("Test getAdminUnits",() => {
         {
             const departement = items.filter((item)=>item.type === 'departement')[0];
             expect(departement).not.toBeUndefined();
-            expect(departement.nom).toEqual('Doubs');
-            expect(departement.nom_m).toEqual('DOUBS');
-            expect(departement.insee_dep).toEqual('25');
-            expect(departement.insee_reg).toEqual('27');
-            expect(departement.insee_reg).toEqual('27');
+            expect(departement.nom_officiel).toEqual('Doubs');
+            expect(departement.nom_officiel_en_majuscules).toEqual('DOUBS');
+            expect(departement.code_insee).toEqual('25');
+            expect(departement.code_insee_de_la_region).toEqual('27');
+            expect(departement.code_siren).toEqual('222500019');
         }
 
         // check item of type commune
         {
             const commune = items.filter((item)=>item.type === 'commune')[0];
             expect(commune).not.toBeUndefined();
-            expect(commune.nom).toEqual('Loray');
-            expect(commune.nom_m).toEqual('LORAY');
-            expect(commune.insee_dep).toEqual('25');
-            expect(commune.insee_reg).toEqual('27');
+            expect(commune.nom_officiel).toEqual('Loray');
+            expect(commune.nom_officiel_en_majuscules).toEqual('LORAY');
+            expect(commune.code_insee_du_departement).toEqual('25');
+            expect(commune.code_insee_de_la_region).toEqual('27');
+            expect(commune.code_siren).toEqual('212503494');
         }
     });
 });
