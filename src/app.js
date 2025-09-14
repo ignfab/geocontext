@@ -44,6 +44,10 @@ app.get('/openapi.yaml', function (req, res) {
     return res.send(yaml.dump(specs));
 });
 
+app.get('/openapi.json', function (req, res) {
+    return res.send(specs);
+});
+
 
 import { query, matchedData, validationResult } from 'express-validator';
 
