@@ -11,7 +11,7 @@ info:
   license:
     name: MIT
     url: http://www.apache.org/licenses/LICENSE-2.0.html
-  version: 0.5.9
+  version: 0.6.0
 
 servers:
  - url: http://localhost:3000
