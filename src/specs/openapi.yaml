@@ -24,6 +24,8 @@ externalDocs:
   url: https://github.com/mborne/geocontext#readme
 
 tags:
+  - name: geocode
+    description: Géocodage
   - name: altitude
     description: Altitude
   - name: administratif
@@ -32,6 +34,80 @@ tags:
     description: Géoportail de l'Urbanisme
 
 paths:
+
+  #---------------------------------------------------
+  # /v1/geocode
+  #---------------------------------------------------
+  /v1/geocode:
+    get:
+      summary: Renvoie les coordonnées (lon,lat) d'un lieu en complétant les informations.
+      description: Le service service d'autocompletion de la Géoplateforme est appelé avec le texte en paramètres.
+      operationId: geocode
+      tags:
+        - geocode
+      parameters:
+        - name: text
+          in: query
+          description: Le texte devant être completé
+          required: true
+          schema:
+            type: string
+          example: "2, avenue pasteur saint m"
+      responses:
+        "200":
+          description: Une liste de suggestions de completions possibles
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeocodeResponse"
+              example:
+                [
+                  {
+                    "country": "StreetAddress",
+                    "city": "Saint-Malo",
+                    "x": -2.004141,
+                    "y": 48.655722,
+                    "zipcode": "35400",
+                    "street": "2 av pasteur",
+                    "classification": 7,
+                    "kind": "",
+                    "fulltext": "2 av pasteur,35400 Saint-Malo",
+                  },
+                  {
+                    "country": "PositionOfInterest",
+                    "names": [
+                      "Saint-Malo"
+                    ],
+                    "zipcode": "35400",
+                    "zipcodes": [
+                      "35400"
+                    ],
+                    "metropole": true,
+                    "city": "Saint-Malo",
+                    "street": "Saint-Malo",
+                    "poiType": [
+                      "lieu-dit habité",
+                      "zone d'habitation"
+                    ],
+                    "kind": "lieu-dit habité",
+                    "fulltext": "Saint-Malo, 35400 Saint-Malo",
+                    "classification": 7,
+                    "x": -1.994067,
+                    "y": 48.647186
+                  }
+                ]
+        '400':
+          description: Mauvaise requête (paramètre invalide)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestResponse'
+        '500':
+          description: Erreur système
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /v1/altitude:
     get:
@@ -284,8 +360,6 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
 
 
-
-
 components:
   schemas:
     ErrorResponse:
@@ -300,6 +374,8 @@ components:
         message:
           type: string
           examples: ["Invalid request parameters"]
+
+
 
     #---------------------------------------------------
     # /v1/altitude
@@ -698,3 +774,118 @@ components:
         type: number
       minItems: 4
       maxItems: 4
+
+
+    #---------------------------------------------------
+    # /v1/geocode
+    #---------------------------------------------------
+
+    GeocodeResponse:
+      type: array
+      items:
+        oneOf:
+          - $ref: "#/components/schemas/GeocodeAddress"
+          - $ref: "#/components/schemas/GeocodePoi"
+
+    GeocodeAddress:
+      type: object
+      required:
+        - country
+        - city
+        - x
+        - y
+        - zipcode
+        - street
+        - classification
+        - kind
+        - fulltext
+        - metropole
+      properties:
+        country:
+          type: string
+        city:
+          type: string
+        x:
+          type: number
+          format: float
+        y:
+          type: number
+          format: float
+        zipcode:
+          type: string
+          minLength: 5
+          maxLength: 5
+        street:
+          type: string
+        classification:
+          type: integer
+          format: int32
+        kind:
+          type: string
+        fulltext:
+          type: string
+        metropole:
+          type: boolean
+    GeocodePoi:
+      type: object
+      required:
+        - country
+        - city
+        - x
+        - y
+        - zipcode
+        - zipcodes
+        - poiType
+        - street
+        - classification
+        - kind
+        - fulltext
+        - metropole
+      properties:
+        country:
+          type: string
+        city:
+          type: string
+        x:
+          type: number
+          format: float
+        y:
+          type: number
+          format: float
+        zipcode:
+          type: string
+          minLength: 5
+          maxLength: 5
+        zipcodes:
+          type: array
+          items:
+            type: string
+            minLength: 5
+            maxLength: 5
+        poiType:
+          type: array
+          items:
+            type: string
+        street:
+          type: string
+        classification:
+          type: integer
+          format: int32
+        kind:
+          type: string
+        fulltext:
+          type: string
+        metropole:
+          type: boolean
+    GeocodeError:
+      type: object
+      required:
+        - status
+        - results
+      properties:
+        status:
+          type: string
+        results:
+          type: array
+          items:
+            type: object

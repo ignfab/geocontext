@@ -18,6 +18,19 @@ describe("GET /v1/altitude", () => {
 });
 
 
+describe("GET /v1/geocode", () => {
+    it("should return a JSON response with code 200 for 'Mairie de Loray'", async () => {
+        const text = "Mairie de Loray";
+        request(app)
+            .get(`/v1/geocode?text=${encodeURI(text)}`)
+            .expect('Content-Type', /json/)
+            .expect(200)
+            .then((res: any) => {
+                expect(res.statusCode).toBe(200);
+            })
+    });
+});
+
 describe("GET /v1/urbanisme", () => {
     it("should return a JSON response with code 200 for Chamonix", async () => {
         const c = chamonix.coordinates;
