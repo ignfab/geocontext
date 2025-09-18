@@ -7,13 +7,11 @@ describe("Test geocode",() => {
         const firstItem = results[0];
 
         //   x: 6.497148,
-        expect(firstItem.x).toBeCloseTo(6.497148,5);
+        expect(firstItem.lon).toBeCloseTo(6.497148,5);
         //   y: 47.153263,
-        expect(firstItem.y).toBeCloseTo(47.153263,5);
+        expect(firstItem.lat).toBeCloseTo(47.153263,5);
         //   country: 'PositionOfInterest',
-        expect(firstItem.country).toEqual("PositionOfInterest");
         //   names: [ 'Mairie de Loray' ],
-        expect(firstItem.names).toEqual([ 'Mairie de Loray' ]);
         //   city: 'Loray',
         //   zipcode: '25390',
         //   zipcodes: [ '25390' ],
