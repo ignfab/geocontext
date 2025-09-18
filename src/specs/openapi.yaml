@@ -62,26 +62,19 @@ paths:
               example:
                 [
                   {
-                    "x": 2.439737,
-                    "y": 48.847697,
-                    "country": "PositionOfInterest",
-                    "names": [
-                      "Mairie de Vincennes"
-                    ],
-                    "city": "Vincennes",
-                    "zipcode": "94300",
-                    "zipcodes": [
-                      "94300"
-                    ],
-                    "metropole": true,
-                    "poiType": [
-                      "mairie",
-                      "zone d'activité ou d'intérêt"
-                    ],
-                    "street": "Mairie de Vincennes",
-                    "kind": "mairie",
-                    "fulltext": "Mairie de Vincennes, 94300 Vincennes",
-                    "classification": 9
+                    "lon": 2.439737,
+                    "lat": 48.847697,
+                    "fulltext": "Mairie de Vincennes, 94300 Vincennes"
+                  },
+                  {
+                    "lon": 3.908234,
+                    "lat": 45.143204,
+                    "fulltext": "Rue de la Mairie, 43800 Saint-Vincent"
+                  },
+                  {
+                    "lon": 4.113469,
+                    "lat": 46.004651,
+                    "fulltext": "Mairie, 42120 Saint-Vincent-de-Boisset"
                   }
                 ]
         '400':
