@@ -1,6 +1,6 @@
 {
   "name": "geocontext",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "An experimental API providing spatial context for LLM",
   "main": "index.js",
   "type": "module",

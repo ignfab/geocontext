@@ -5,13 +5,10 @@ info:
     Cette API **expérimentale** vise à faciliter l'exploitation des données de la Géoplateforme avec des LLM.
     Elle a vocation à devenir un module API Carto facilitant l'utilisation 
     des données de la Géoplateforme si son utilité est confirmée.
-
-    NB : Il convient en parallèle d'intégrer l'appel à un service de géocodage 
-    (voir [gpf-autocompletion.yaml](gpf-autocompletion.yaml) pour intégrer celui de la Géoplateforme)
   license:
     name: MIT
     url: http://www.apache.org/licenses/LICENSE-2.0.html
-  version: 0.6.0
+  version: 0.6.1
 
 servers:
  - url: http://localhost:3000
@@ -52,48 +49,39 @@ paths:
           required: true
           schema:
             type: string
-          example: "2, avenue pasteur saint m"
+            example: "Mairie de Vincennes"
       responses:
         "200":
           description: Une liste de suggestions de completions possibles
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GeocodeResponse"
+                type: array
+                items:
+                  $ref: '#/components/schemas/GeocodeItem'
               example:
                 [
                   {
-                    "country": "StreetAddress",
-                    "city": "Saint-Malo",
-                    "x": -2.004141,
-                    "y": 48.655722,
-                    "zipcode": "35400",
-                    "street": "2 av pasteur",
-                    "classification": 7,
-                    "kind": "",
-                    "fulltext": "2 av pasteur,35400 Saint-Malo",
-                  },
-                  {
+                    "x": 2.439737,
+                    "y": 48.847697,
                     "country": "PositionOfInterest",
                     "names": [
-                      "Saint-Malo"
+                      "Mairie de Vincennes"
                     ],
-                    "zipcode": "35400",
+                    "city": "Vincennes",
+                    "zipcode": "94300",
                     "zipcodes": [
-                      "35400"
+                      "94300"
                     ],
                     "metropole": true,
-                    "city": "Saint-Malo",
-                    "street": "Saint-Malo",
                     "poiType": [
-                      "lieu-dit habité",
-                      "zone d'habitation"
+                      "mairie",
+                      "zone d'activité ou d'intérêt"
                     ],
-                    "kind": "lieu-dit habité",
-                    "fulltext": "Saint-Malo, 35400 Saint-Malo",
-                    "classification": 7,
-                    "x": -1.994067,
-                    "y": 48.647186
+                    "street": "Mairie de Vincennes",
+                    "kind": "mairie",
+                    "fulltext": "Mairie de Vincennes, 94300 Vincennes",
+                    "classification": 9
                   }
                 ]
         '400':
@@ -374,8 +362,6 @@ components:
         message:
           type: string
           examples: ["Invalid request parameters"]
-
-
 
     #---------------------------------------------------
     # /v1/altitude
@@ -780,112 +766,21 @@ components:
     # /v1/geocode
     #---------------------------------------------------
 
-    GeocodeResponse:
-      type: array
-      items:
-        oneOf:
-          - $ref: "#/components/schemas/GeocodeAddress"
-          - $ref: "#/components/schemas/GeocodePoi"
-
-    GeocodeAddress:
+    GeocodeItem:
       type: object
       required:
-        - country
-        - city
-        - x
-        - y
-        - zipcode
-        - street
-        - classification
-        - kind
+        - lon
+        - lat
         - fulltext
-        - metropole
       properties:
-        country:
-          type: string
-        city:
-          type: string
-        x:
+        lon:
           type: number
           format: float
-        y:
+          description: La longitude (lon)
+        lat:
           type: number
           format: float
-        zipcode:
-          type: string
-          minLength: 5
-          maxLength: 5
-        street:
-          type: string
-        classification:
-          type: integer
-          format: int32
-        kind:
-          type: string
+          description: La latitude (lat)
         fulltext:
           type: string
-        metropole:
-          type: boolean
-    GeocodePoi:
-      type: object
-      required:
-        - country
-        - city
-        - x
-        - y
-        - zipcode
-        - zipcodes
-        - poiType
-        - street
-        - classification
-        - kind
-        - fulltext
-        - metropole
-      properties:
-        country:
-          type: string
-        city:
-          type: string
-        x:
-          type: number
-          format: float
-        y:
-          type: number
-          format: float
-        zipcode:
-          type: string
-          minLength: 5
-          maxLength: 5
-        zipcodes:
-          type: array
-          items:
-            type: string
-            minLength: 5
-            maxLength: 5
-        poiType:
-          type: array
-          items:
-            type: string
-        street:
-          type: string
-        classification:
-          type: integer
-          format: int32
-        kind:
-          type: string
-        fulltext:
-          type: string
-        metropole:
-          type: boolean
-    GeocodeError:
-      type: object
-      required:
-        - status
-        - results
-      properties:
-        status:
-          type: string
-        results:
-          type: array
-          items:
-            type: object
+          description: Le texte de recherche complété

@@ -4,7 +4,7 @@ An **experimental** API providing spatial context for LLM.
 
 ## Motivation
 
-REST/GeoJSON API can be invoked by LLMs for RAG purpose. Meanwhile, trying to integrate the use [apicarto.ign.fr](https://apicarto.ign.fr) from IGNF in ChatGPT leads to consider the following points (see [apicarto - issue #109 (french)](https://github.com/IGNF/apicarto/issues/109)) :
+Meanwhile, an intent to use [apicarto.ign.fr](https://apicarto.ign.fr) from IGNF in ChatGPT leads to consider the following points (see [apicarto - issue #109 (french)](https://github.com/IGNF/apicarto/issues/109)) :
 
 * Some **input params** are not relevant (too many options, GeoJSON input geom instead vs lon,lat,...)
 * Some **default values** are not adapted (there is no reason to define defaults limits to 5000 features)
@@ -33,7 +33,7 @@ This is an attempt to create a "facade" over existing spatial services to ease u
 
 ## Warning
 
-> Cette API est un POC ayant vocation à devenir un module APICARTO facilitant l'utilisation des données de la Géoplateforme si son utilité est confirmé.
+> Cette API est un POC ayant vocation à devenir un module APICARTO facilitant l'utilisation des données de la Géoplateforme si son utilité est confirmée.
 
 This API is a Proof of Concept (POC) intended to become an APICARTO module facilitating the use of Géoplateforme data if its usefulness is confirmed.
 

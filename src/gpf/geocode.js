@@ -13,9 +13,14 @@ export async function geocode(text) {
     logger.info(`geocode(${JSON.stringify(text)})...`);
     
     const url = 'https://data.geopf.fr/geocodage/completion/?' + new URLSearchParams({
-      text: text
+      text: text,
+      maximumResponses: 3
     }).toString();
 
     const json = await fetchJSON(url);
-    return json.results;
+    return json.results.map((item)=>{return {
+      lon: item.x,
+      lat: item.y,
+      fulltext: item.fulltext
+    }});
 }
