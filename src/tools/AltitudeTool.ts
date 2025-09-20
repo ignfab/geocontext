@@ -13,15 +13,15 @@ class AltitudeTool extends MCPTool<AltitudeInput> {
   name = "altitude";
   description = "Renvoie l’altitude pour une position donnée par sa longitude et sa latitude.";
 
-    schema = {
-      lon: {
-        type: z.number(),
-        description: "La longitude du point",
-      },
-      lat: {
-        type: z.number(),
-        description: "La latitude du point",
-      },
+  schema = {
+    lon: {
+      type: z.number(),
+      description: "La longitude du point",
+    },
+    lat: {
+      type: z.number(),
+      description: "La latitude du point",
+    },
   };
 
   async execute(input: AltitudeInput) {
