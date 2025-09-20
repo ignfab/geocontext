@@ -1,5 +1,3 @@
-import logger from "../logger.js";
-
 import GeoJSONReader from 'jsts/org/locationtech/jts/io/GeoJSONReader.js'
 import { DistanceOp } from 'jsts/org/locationtech/jts/operation/distance.js'
 

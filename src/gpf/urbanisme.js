@@ -4,7 +4,7 @@ import { fetchJSON } from "../helpers/http.js";
 import logger from "../logger.js";
 
 // https://data.geopf.fr/wfs/ows?service=WFS&version=2.0.0&request=GetCapabilities
-const URBANISME_TYPES = [
+export const URBANISME_TYPES = [
     'wfs_scot:scot',
     'wfs_du:document',
     'wfs_du:zone_urba',
@@ -16,6 +16,9 @@ const URBANISME_TYPES = [
     'wfs_du:prescription_lin',
     'wfs_du:prescription_surf'
 ];
+
+export const URBANISME_SOURCE = "Géoplateforme - (WFS Géoportail de l'Urbanisme)";
+
 
 /**
  * Get urbanism infos for a given location
@@ -57,7 +60,7 @@ export async function getUrbanisme(lon, lat) {
                 sourceGeom,
                 feature.geometry
             ) * 1000.0),
-            source: "Géoplateforme - (WFS Géoportail de l'Urbanisme)",
+            source: URBANISME_SOURCE,
         }, feature.properties);
     });
 }
@@ -108,7 +111,7 @@ export async function getAssiettesServitudes(lon, lat) {
                 sourceGeom,
                 feature.geometry
             ) * 1000.0),
-            source: "Géoplateforme - (WFS Géoportail de l'Urbanisme)",
+            source: URBANISME_SOURCE,
         }, feature.properties);
     });
 }
