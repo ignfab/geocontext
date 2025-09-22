@@ -1,6 +1,6 @@
 import { MCPServer } from "mcp-framework";
 
-const server = new MCPServer({
+const mcpServer = new MCPServer({
   // transport: {
   //   type: "http-stream",
   //   options: {
@@ -12,4 +12,4 @@ const server = new MCPServer({
   // }
 });
 
-await server.start();
+await mcpServer.start();
