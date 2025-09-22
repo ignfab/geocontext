@@ -2,12 +2,6 @@
 
 Un serveur MCP expérimental fournissant du contexte spatial pour les LLM.
 
-## Paramétrage
-
-| Nom               | Description                                                                                                         | Valeur par défaut |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------- | ----------------- |
-| `TRANSPORT_TYPE`  | [Transport](https://mcp-framework.com/docs/Transports/transports-overview) permet de choisir entre "stdio" et "http" | "stdio"           |
-
 ## Fonctionnalités
 
 ### Utiliser des services spatiaux
@@ -102,10 +96,22 @@ npm run build
 }
 ```
 
+
+## Paramétrage
+
+Pour une utilisation avancée :
+
+| Nom               | Description                                                                                                         | Valeur par défaut |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| `TRANSPORT_TYPE`  | [Transport](https://mcp-framework.com/docs/Transports/transports-overview) permet de choisir entre "stdio" et "http" | "stdio"           |
+
 ## Crédits
 
 * [mcp-framework](https://mcp-framework.com)
 * [@camptocamp/ogc-client](https://camptocamp.github.io/ogc-client/#/)
 * [jsts](https://bjornharrtell.github.io/jsts/)
 
-##
+## Licence
+
+[MIT](LICENSE)
+
