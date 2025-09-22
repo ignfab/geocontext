@@ -6,8 +6,7 @@ Un serveur MCP expérimental fournissant du contexte spatial pour les LLM.
 
 ### Utiliser des services spatiaux
 
-!!!info Principe
-    Mise à disposition de services utilitaires de la Géoplateforme.
+Quelques services de la Géoplateforme :
 
 * [geocode(text)](src/tools/GeocodeTool.ts) s'appuie sur le [service d’autocomplétion de la Géoplateforme](https://geoservices.ign.fr/documentation/services/services-geoplateforme/autocompletion) pour **convertir un nom de lieu en position (lon,lat)**.
 
@@ -19,8 +18,7 @@ Un serveur MCP expérimental fournissant du contexte spatial pour les LLM.
 
 ### Recherche d'informations pour un lieu
 
-!!!info Principe
-    L'idée est de répondre à des précises en traitant côté serveur les appels aux services WFS de la Géoplateforme.
+L'idée est ici de répondre à des précises en traitant côté serveur les appels aux services WFS de la Géoplateforme :
 
 * [adminexpress(lon,lat)](src/tools/AdminexpressTool.ts) permet de **récupérer les informations administratives (commune, département, région,...)** pour un lieu donné par sa position.
 * [cadastre(lon,lat)](src/tools/CadastreTool.ts) permet de **récupérer les informations cadastrales (parcelle, feuille,...)**.
@@ -29,8 +27,7 @@ Un serveur MCP expérimental fournissant du contexte spatial pour les LLM.
 
 ### Recherche d'information générique
 
-!!!info Principe
-    L'idée est ici de laisser le LLM exploiter les possibilités offertes par le LLM (**BLINDAGE EN COURS**)
+L'idée est ici de laisser le LLM exploiter les possibilités offertes par le LLM (**BLINDAGE EN COURS**) :
 
 * [gpf_get_feature_types()](src/tools/GpfWfsGetTypesTool.ts) pour **lister les tables disponibles sur le WFS de la Géoplateforme** ([GetCapabilities](https://data.geopf.fr/wfs/ows?service=WFS&version=2.0.0&request=GetCapabilities))
 
