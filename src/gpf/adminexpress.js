@@ -8,8 +8,8 @@ import _ from 'lodash';
  * 
  * https://data.geopf.fr/wfs/ows?service=WFS&version=2.0.0&request=GetCapabilities
  */
-const ADMINEXPRESS_SOURCE = "Géoplateforme (WFS, ADMINEXPRESS-COG.LATEST)";
-const ADMINEXPRESS_TYPES = [
+export const ADMINEXPRESS_SOURCE = "Géoplateforme (WFS, ADMINEXPRESS-COG.LATEST)";
+export const ADMINEXPRESS_TYPES = [
     'commune', 
     'canton',
     'collectivite_territoriale',

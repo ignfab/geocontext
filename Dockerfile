@@ -2,16 +2,14 @@ FROM node:22-alpine
 
 RUN npm install -g npm
 
-RUN mkdir /opt/geocontext
 WORKDIR /opt/geocontext
 
-COPY package.json package-lock.json .
-RUN npm install --omit=dev
-
-COPY server.js .
+COPY tsconfig.json package.json package-lock.json .
+RUN npm install
 COPY src src/
-COPY public public/
+RUN npm run build
 
 USER node
 EXPOSE 3000
+ENV TRANSPORT_TYPE=http
 CMD ["npm", "start"]

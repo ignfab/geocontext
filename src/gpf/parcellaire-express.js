@@ -8,8 +8,8 @@ import { fetchJSON } from '../helpers/http.js';
 // CADASTRALPARCELS.PARCELLAIRE_EXPRESS:
 // https://data.geopf.fr/wfs/ows?service=WFS&version=2.0.0&request=GetCapabilities
 
-const PARCELLAIRE_EXPRESS_SOURCE = "Géoplateforme (WFS, CADASTRALPARCELS.PARCELLAIRE_EXPRESS)";
-const PARCELLAIRE_EXPRESS_TYPES = [
+export const PARCELLAIRE_EXPRESS_SOURCE = "Géoplateforme (WFS, CADASTRALPARCELS.PARCELLAIRE_EXPRESS)";
+export const PARCELLAIRE_EXPRESS_TYPES = [
     'arrondissement', 
     'commune',
     'feuille',
