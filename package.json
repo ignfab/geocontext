@@ -1,6 +1,6 @@
 {
   "name": "@mborne/geocontext",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "An experimental MCP server providing spatial context for LLM.",
   "type": "module",
   "bin": {
