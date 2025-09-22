@@ -23,7 +23,7 @@ class GpfWfsGetFeaturesTool extends MCPTool<GpfWfsGetFeaturesInput> {
     },
     cql_filter: {
       type: z.string().optional(),
-      description: "Le filtre au format cql_filter de GeoServer (ATTENTION : EPSG:4326 = lat,lon avec GeoServer)"
+      description: "Le filtre au format cql_filter de GeoServer. ATTENTION : il faut permuter les coordonnées pour EPSG:4326 (ex : 'DWITHIN(geom,Point(${lat} ${lon}),10,meters)')"
     },
     property_names: {
       type: z.array(z.string()).optional(),

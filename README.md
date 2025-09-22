@@ -1,6 +1,12 @@
 # geocontext
 
-An experimental MCP server providing spatial tools.
+An experimental MCP server providing spatial context for LLM.
+
+## Parameters
+
+| Name             | Description                                                                                                       | Default value |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------- | ------------- |
+| `TRANSPORT_TYPE` | [Transport](https://mcp-framework.com/docs/Transports/transports-overview) for the MCP server ("stdio" or "http") | "stdio"       |
 
 ## Usage
 
@@ -41,6 +47,26 @@ or
   }
 }
 ```
+
+### Usage with docker
+
+```bash
+docker compose build
+docker compose up -d
+```
+
+Then :
+
+```json
+{
+  "mcpServers": {
+    "server-name": {
+      "url": "http://localhost:3000/mcp"
+    }
+  }
+}
+```
+
 
 ## Credits
 

@@ -1,7 +1,7 @@
 {
-  "name": "geocontext",
+  "name": "@mborne/geocontext",
   "version": "0.7.0",
-  "description": "An experimental API providing spatial context for LLM",
+  "description": "An experimental MCP server providing spatial context for LLM.",
   "type": "module",
   "bin": {
     "geocontext": "./dist/index.js"
@@ -28,7 +28,6 @@
   "homepage": "https://github.com/mborne/geocontext#readme",
   "scripts": {
     "build": "tsc && mcp-build",
-    "postinstall": "npm run build",
     "watch": "tsc --watch",
     "start": "node dist/index.js",
     "test": "node --no-warnings --experimental-vm-modules ./node_modules/jest/bin/jest.js",
