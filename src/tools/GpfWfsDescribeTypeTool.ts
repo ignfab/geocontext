@@ -18,7 +18,11 @@ class GpfWfsDescribeTypeTool extends MCPTool<GpfWfsTypeInput> {
   };
 
   async execute(input: GpfWfsTypeInput) {
-    return await wfsClient.getFeatureType(input.typename);
+    const result = await wfsClient.getFeatureType(input.typename);
+    if ( result === null ) {
+      return `Le type ${input.typename} n'existe pas (utiliser gpf_get_feature_types pour lister les types disponibles)`;
+    }
+    return result;
   }
 }
 

@@ -17,10 +17,6 @@ describe("Test getAdminUnits",() => {
             "arrondissement"
         ]);
 
-        for ( const item of items ){
-            expect(item.source).toEqual('Géoplateforme (WFS, ADMINEXPRESS-COG.LATEST)');
-        }
-
         // check item of type departement
         {
             const departement = items.filter((item)=>item.type === 'departement')[0];

@@ -49,8 +49,7 @@ export async function getAdminUnits(lon, lat) {
         return Object.assign({
             type: type,
             id: feature.id,
-            bbox: feature.bbox,
-            source: ADMINEXPRESS_SOURCE,
+            bbox: feature.bbox
         }, feature.properties);
     });
 }

@@ -91,7 +91,11 @@ class GpfWfsGetFeaturesTool extends MCPTool<GpfWfsGetFeaturesInput> {
       return featureCollection;
     }catch(e){
       logger.error(`[gpf_wfs_get_features] ${e}`);
-      return `Erreur lors de la récupération des objets : ${e}`;
+      return {
+        type: "error",
+        message: "Une erreur est survenue lors de la récupération des objets (utiliser gpf_wfs_describe_type pour lister les types disponibles avant d'appeler gpf_wfs_get_features)",
+        details: `${e}`
+      }
     }
   }
 }

@@ -1,6 +1,8 @@
 import logger from "../logger.js";
 import { fetchJSON } from "../helpers/http.js";
 
+export const ALTITUDE_SOURCE = "Géoplateforme (altimétrie)";
+
 /**
  * Get altitude for a given location.
  * 
@@ -18,7 +20,6 @@ export async function getAltitudeByLocation(lon, lat) {
         const json = await fetchJSON(url);
         const elevation = json.elevations[0] ;
         return {
-            source: "Géoplateforme (altimétrie)",
             lon: lon,
             lat: lat,
             altitude: elevation.z,
@@ -26,7 +27,6 @@ export async function getAltitudeByLocation(lon, lat) {
         };
     }catch(e){
         return {
-            source: "Géoplateforme (altimétrie)",
             lon: lon,
             lat: lat,
             altitude: null,

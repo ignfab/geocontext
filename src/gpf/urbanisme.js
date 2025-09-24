@@ -59,8 +59,7 @@ export async function getUrbanisme(lon, lat) {
             distance: (distance(
                 sourceGeom,
                 feature.geometry
-            ) * 1000.0),
-            source: URBANISME_SOURCE,
+            ) * 1000.0)
         }, feature.properties);
     });
 }
@@ -110,8 +109,7 @@ export async function getAssiettesServitudes(lon, lat) {
             distance: (distance(
                 sourceGeom,
                 feature.geometry
-            ) * 1000.0),
-            source: URBANISME_SOURCE,
+            ) * 1000.0)
         }, feature.properties);
     });
 }

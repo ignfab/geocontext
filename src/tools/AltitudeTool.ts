@@ -1,7 +1,7 @@
 import { MCPTool } from "mcp-framework";
 import { z } from "zod";
 
-import { getAltitudeByLocation } from "../gpf/altitude.js";
+import { ALTITUDE_SOURCE, getAltitudeByLocation } from "../gpf/altitude.js";
 import logger from "../logger.js";
 
 interface AltitudeInput {
@@ -11,7 +11,7 @@ interface AltitudeInput {
 
 class AltitudeTool extends MCPTool<AltitudeInput> {
   name = "altitude";
-  description = "Renvoie l’altitude pour une position donnée par sa longitude et sa latitude.";
+  description = `Renvoie l’altitude pour une position donnée par sa longitude et sa latitude (source : ${ALTITUDE_SOURCE}).`;
 
   schema = {
     lon: {

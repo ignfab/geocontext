@@ -1,6 +1,8 @@
 import logger from "../logger.js";
 import { fetchJSON } from "../helpers/http.js";
 
+export const GEOCODE_SOURCE = "Géoplateforme (service d'autocomplétion)";
+
 /**
  * Get coordinates for a given location
  * 

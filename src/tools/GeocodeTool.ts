@@ -1,6 +1,6 @@
 import { MCPTool } from "mcp-framework";
 import { z } from "zod";
-import { geocode } from "../gpf/geocode.js";
+import { geocode, GEOCODE_SOURCE } from "../gpf/geocode.js";
 
 import logger from "../logger.js";
 
@@ -10,7 +10,7 @@ interface GeocodeInput {
 
 class GeocodeTool extends MCPTool<GeocodeInput> {
   name = "geocode";
-  description = "Renvoie les coordonnées (lon,lat) d'un lieu en complétant les informations.";
+  description = `Renvoie les coordonnées (lon,lat) d'un lieu en complétant les informations (source : ${GEOCODE_SOURCE}).`;
 
   schema = {
     text: {

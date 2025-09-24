@@ -13,10 +13,6 @@ describe("Test getParcellaireExpress",() => {
             "parcelle"
         ]);
 
-        for ( const item of items ){
-            expect(item.source).toEqual('Géoplateforme (WFS, CADASTRALPARCELS.PARCELLAIRE_EXPRESS)');
-        }
-
         // check item of type parcelle
         {
             const parcelle = items.filter((item)=>item.type === 'parcelle')[0];

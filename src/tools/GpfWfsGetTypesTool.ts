@@ -1,5 +1,4 @@
 import { MCPTool } from "mcp-framework";
-import { GPF_WFS_URL } from "../gpf/wfs.js";
 
 import { wfsClient } from "../gpf/wfs.js";
 

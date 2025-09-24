@@ -62,6 +62,11 @@ npm run build
 }
 ```
 
+### Debug de la version locale
+
+```bash
+npx @modelcontextprotocol/inspector node dist/index.js
+```
 
 ## Paramétrage
 

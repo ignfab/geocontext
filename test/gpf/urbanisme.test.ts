@@ -9,10 +9,6 @@ describe("Test getUrbanisme",() => {
         const itemsTypes = items.map((item) => item.type);
         expect(itemsTypes).toContain('document');
 
-        for ( const item of items ){
-            expect(item.source).toEqual("Géoplateforme - (WFS Géoportail de l'Urbanisme)");
-        }
-
         // check item of type document
         {
             const document = items.filter((item)=>item.type === 'document')[0];
@@ -31,10 +27,6 @@ describe("Test getAssiettesServitudes",() => {
 
         const itemsTypes = items.map((item) => item.type);
         expect(itemsTypes).toContain('assiette_sup_s');
-
-        for ( const item of items ){
-            expect(item.source).toEqual("Géoplateforme - (WFS Géoportail de l'Urbanisme)");
-        }
 
         const names = items.map((item)=>item.nomsuplitt);
         expect(names).toContain("Croix de l'ancien cimetière");

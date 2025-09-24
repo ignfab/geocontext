@@ -9,7 +9,6 @@ describe("Test getAltitudeByLocation",() => {
         expect(result.lon).toBeCloseTo(2.333333);
         expect(result.altitude).toBeCloseTo(34.8,1);
         expect(result.accuracy).toEqual("Variable suivant la source de mesure");
-        expect(result.source).toEqual("Géoplateforme (altimétrie)");
     });
 
 
