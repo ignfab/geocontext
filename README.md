@@ -2,6 +2,25 @@
 
 Un serveur MCP expérimental fournissant du contexte spatial pour les LLM.
 
+## Motivation
+
+Les assistants s'appuyant sur des LLM renforcent l'idée que la magie est possible avec l'informatique. Il n'en est rien. Pour qu'un assistant soit en mesure de fournir des réponses sur l'actualité, il faut par exemple l'interfacer avec un moteur de recherche à même de lui fournir les articles récents publiés dans les différents journaux.
+
+A date, si un utilisateur pose une question impliquant que l'assistant soit en mesure de [connaître la position d'une adresse, il y a de bonne chance que la réponse soit plausible mais fausse](https://github.com/mborne/llm-experimentations/tree/main/chatgpt-geocodage-limites#readme).
+
+S'il est techniquement possible de brancher des API REST/GeoJSON telle APICARTO, la conception de ces dernières n'est pas adaptée (5000 résultat par défaut, grosse géométrie dans les réponses, géométries complexes à fournir,...).
+
+L'idée est ici d'**expérimenter la conception d'un MCP rendant les données et les services de la Géoplateforme accessibles par un LLM** (dans un premier temps).
+
+## Mises en garde
+
+- Ce développement a été initié à titre personnel en mode POC et il n'a pas vocation a être industrialisé sous sa forme actuelle.
+- S'il s'avère utile de l'industrialiser, le dépôt sera migré sous responsabilité IGN et l'outil sera renommé (ex : `IGNF/mcp-gpf-server`)
+- Plusieurs problèmes ont été identifiés et sont en cours de mitigation/résolution (c.f. [issues](https://github.com/mborne/geocontext/issues?q=is%3Aissue%20state%3Aopen%20label%3Ametadata)).
+- Cet outil n'est pas magique (voir [Fonctionnalités](#fonctionnalités) pour avoir une idée de ses capacités)
+
+
+
 ## Utilisation
 
 ### Utilisation de la version publiée
@@ -116,11 +135,39 @@ L'idée est ici de laisser le LLM exploiter les possibilités offertes par le LL
 > Ex : "Quelles sont les 5 communes les plus peuplées du Doubs (25) (source : ADMINEXPRESS-COG.LATEST:commune)?"
 
 
+
+## Contribution
+
+### Problèmes et demandes d'évolutions
+
+N'hésitez pas à [créer une issue](https://github.com/mborne/geocontext/issues) si vous rencontrez un problème! Merci de fournir :
+
+- L'assistant et le modèle utilisé
+- La demande que vous faite à l'assistant (ex : "Combien y a-t'il de pont franchissant la seine?")
+
+### Proposer une nouvelle fonctionnalité
+
+N'hésitez pas :
+
+- Forker le dépôt
+- Créer un nouveau tool
+- Tester de votre côté
+- Faire une pull-request
+
+
+
 ## Crédits
 
-* [mcp-framework](https://mcp-framework.com)
-* [@camptocamp/ogc-client](https://camptocamp.github.io/ogc-client/#/)
-* [jsts](https://bjornharrtell.github.io/jsts/)
+* [mcp-framework](https://mcp-framework.com) fournit le **cadre de développement du MCP** :
+
+```bash
+# Par exemple, pour exposer la liste des couches WMTS
+mcp add tool gpf_wmts_layers
+```
+
+* [@camptocamp/ogc-client](https://camptocamp.github.io/ogc-client/#/) pour la **lecture des réponses XML des services WFS, WMTS,...**
+
+* [jsts](https://bjornharrtell.github.io/jsts/) pour les **traitements géométriques** (ex : tri des réponses par distance au point recherché).
 
 ## Licence
 
