@@ -47,12 +47,11 @@ export class WfsClient {
     }
 
     async searchFeatureTypes(query: string, maxResults: number = 20) : Promise<WfsFeatureTypeBrief[]> {
+        await this.endpoint.isReady();
         const featureTypes = await this.endpoint.getFeatureTypes();
         if ( ! this.featureTypeSearch ) {
-            await this.endpoint.isReady();
             this.featureTypeSearch = new FeatureTypeSearch(featureTypes);
         }
-        await this.endpoint.isReady();
         const searchResults = this.featureTypeSearch.search(query).slice(0, maxResults);
         return searchResults.map((result) => {
             return featureTypes.find((featureType) => featureType.name === result.id);

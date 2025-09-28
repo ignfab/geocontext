@@ -13,7 +13,6 @@ class GpfWfsSearchTypesTool extends MCPTool<GpfWfsSearchTypesInput> {
     "Recherche par mot clé dans la liste des types WFS de la Géoplateforme (GPF). Remarques :",
     "- La recherche est une recherche textuelle simple (mini-search).",
     "- Un LLM peut enrichir la recherche avec des mots clés supplémentaires.",
-    "- Seules les propriétés title et abstract sont utilisées pour la recherche.",
     "- La recherche est limitée par défaut à 10 résultats",
     "- Le paramètre max_results permet de changer le nombre de résultats (par exemple pour trouver toutes les tables BDTOPO ou toutes les tables communes)",
   ].join("\r\n");

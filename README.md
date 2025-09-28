@@ -147,7 +147,7 @@ L'idée est ici de répondre à des précises en traitant côté serveur les app
 * [gpf_wfs_describe_type(typename)](src/tools/GpfWfsDescribeTypeTool.ts) pour récupérer le **schéma d'une table** ([DescribeFeatureType](https://data.geopf.fr/wfs/ows?service=WFS&version=2.0.0&request=DescribeFeatureType&typename=ADMINEXPRESS-COG.LATEST:commune&outputFormat=application/json))
 
 > - Quelles sont les informations disponibles pour les communes avec ADMINEXPRESS-COG.LATEST?
-> - Compare la structure de ADMINEXPRESS-COG commune pour toutes les versions disponibles
+> - Compare le modèle des communes entre ADMINEXPRESS-COG:2024 et ADMINEXPRESS-COG.LATEST
 
 #### Explorer les données des tables
 
