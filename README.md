@@ -4,22 +4,26 @@ Un serveur MCP expérimental fournissant du contexte spatial pour les LLM.
 
 ## Motivation
 
-Les assistants s'appuyant sur des LLM renforcent l'idée que la magie est possible avec l'informatique. Il n'en est rien. Pour qu'un assistant soit en mesure de fournir des réponses sur l'actualité, il faut par exemple l'interfacer avec un moteur de recherche à même de lui fournir les articles récents publiés dans les différents journaux.
+Les LLM renforcent l'idée que la magie est possible avec l'informatique. Il n'en est rien. Pour qu'un assistant soit en mesure de connaître la date et l'heure, il faut par exemple l'interfacer avec un [MCP time](https://mcpservers.org/servers/modelcontextprotocol/time). De même, pour qu'il soit en mesure de lire une page, il faut par exemple l'interfacer un [MCP fetch](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch#readme).
 
-A date, si un utilisateur pose une question impliquant que l'assistant soit en mesure de [connaître la position d'une adresse, il y a de bonne chance que la réponse soit plausible mais fausse](https://github.com/mborne/llm-experimentations/tree/main/chatgpt-geocodage-limites#readme).
+En matière de données géographique, si un utilisateur pose une question impliquant que l'assistant soit en mesure de [connaître la position d'une adresse, il y a de bonne chance que la réponse soit plausible mais fausse](https://github.com/mborne/llm-experimentations/tree/main/chatgpt-geocodage-limites#readme).
 
 S'il est techniquement possible de brancher des API REST/GeoJSON telle APICARTO, la conception de ces dernières n'est pas adaptée (5000 résultat par défaut, grosse géométrie dans les réponses, géométries complexes à fournir,...).
 
-L'idée est ici d'**expérimenter la conception d'un MCP rendant les données et les services de la Géoplateforme accessibles par un LLM** (dans un premier temps).
+L'idée est ici d'**expérimenter la conception d'un MCP rendant les données et les services de la Géoplateforme accessibles par un LLM**.
 
 ## Mises en garde
 
 - Ce développement a été initié à titre personnel en mode POC et il n'a pas vocation a être industrialisé sous sa forme actuelle.
 - S'il s'avère utile de l'industrialiser, le dépôt sera migré sous responsabilité IGN et l'outil sera renommé (ex : `IGNF/mcp-gpf-server`)
-- Plusieurs problèmes ont été identifiés et sont en cours de mitigation/résolution (c.f. [issues](https://github.com/mborne/geocontext/issues?q=is%3Aissue%20state%3Aopen%20label%3Ametadata)).
+- Plusieurs problèmes et améliorations possibles ont été identifiés et sont en cours de mitigation/résolution (c.f. [issues](https://github.com/mborne/geocontext/issues?q=is%3Aissue%20state%3Aopen%20label%3Ametadata)).
 - Cet outil n'est pas magique (voir [Fonctionnalités](#fonctionnalités) pour avoir une idée de ses capacités)
 
+## Principes de conception
 
+- **Ne pas copier les données de la Géoplateforme** (but : identifier les améliorations possibles sur le services plutôt que les doublonner)
+- **Limiter au maximum la taille des réponses** (but : optimiser le nombre de jeton)
+- ...
 
 ## Utilisation
 
@@ -107,15 +111,24 @@ Quelques services de la Géoplateforme :
 
 * [altitude(lon,lat)](src/tools/AltitudeTool.ts) s'appuie sur le [service de calcul altimétrique de la Géoplateforme](https://geoservices.ign.fr/documentation/services/services-geoplateforme/altimetrie) pour **convertir une position en altitude**. 
 
-> Ex : "Quelle est l'altitude de la mairie de Loray?"
+> Ex : "Quelle est l'altitude de la mairie de Loray (25)?"
 
 ### Recherche d'informations pour un lieu
 
 L'idée est ici de répondre à des précises en traitant côté serveur les appels aux services WFS de la Géoplateforme :
 
 * [adminexpress(lon,lat)](src/tools/AdminexpressTool.ts) permet de **récupérer les informations administratives (commune, département, région,...)** pour un lieu donné par sa position.
+
+> Ex : Quelles sont les informations administrative pour la mairie de Vincennes?
+
 * [cadastre(lon,lat)](src/tools/CadastreTool.ts) permet de **récupérer les informations cadastrales (parcelle, feuille,...)**.
+
+> Ex : Quelles sont les informations du cadastre pour la mairie de Vincennes?
+
 * [urbanisme(lon,lat)](src/tools/UrbanismeTool.ts) permet de **récupérer les informations d'urbanisme (PLU,POS,CC,PSMV)**
+
+> Ex : Quel est le document PLU en vigueur pour le port de Marseille?
+
 * [assiette_sup(lon,lat)](src/tools/AssietteSupTool.ts) permet de **récupérer les Servitude d'Utilité Publiques (SUP)**
 
 ### Recherche d'information générique
@@ -124,7 +137,7 @@ L'idée est ici de laisser le LLM exploiter les possibilités offertes par le LL
 
 * [gpf_get_feature_types()](src/tools/GpfWfsGetTypesTool.ts) pour **lister les tables disponibles sur le WFS de la Géoplateforme** ([GetCapabilities](https://data.geopf.fr/wfs/ows?service=WFS&version=2.0.0&request=GetCapabilities))
 
-> Ex : "Quelles sont les données disponibles pour les communes?", "Quels sont les millésimes ADMINEXPRESS disponibles sur la Géoplateforme?"
+> Ex : "Quels sont les millésimes ADMINEXPRESS disponibles sur la Géoplateforme?"
 
 * [gpf_wfs_describe_type(typename)](src/tools/GpfWfsDescribeTypeTool.ts) pour récupérer le **schéma d'une table** ([DescribeFeatureType](https://data.geopf.fr/wfs/ows?service=WFS&version=2.0.0&request=DescribeFeatureType&typename=ADMINEXPRESS-COG.LATEST:commune&outputFormat=application/json))
 
@@ -132,8 +145,7 @@ L'idée est ici de laisser le LLM exploiter les possibilités offertes par le LL
 
 * [gpf_wfs_get_features(typename,...)](src/tools/GpfWfsGetFeaturesTool.ts) pour **récupérer les données d'une table** ([GetFeature](https://data.geopf.fr/wfs/ows?service=WFS&version=2.0.0&request=GetFeature&typename=ADMINEXPRESS-COG.LATEST:commune&outputFormat=application/json&count=1))
 
-> Ex : "Quelles sont les 5 communes les plus peuplées du Doubs (25) (source : ADMINEXPRESS-COG.LATEST:commune)?"
-
+> Ex : "Quelles sont les 5 communes les plus peuplées du Doubs (25)?"
 
 
 ## Contribution
