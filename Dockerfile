@@ -4,8 +4,9 @@ RUN npm install -g npm
 
 WORKDIR /opt/geocontext
 
-COPY tsconfig.json package.json package-lock.json .
-RUN npm install
+#  package-lock.json
+COPY tsconfig.json package.json .
+RUN npm install --no-dev
 COPY src src/
 RUN npm run build
 
