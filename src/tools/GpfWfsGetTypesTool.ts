@@ -14,7 +14,9 @@ class GpfGetFeatureTypes extends MCPTool<WfsTypesInput> {
   };
 
   async execute(input: WfsTypesInput) {
-    return wfsClient.getFeatureTypes();
+    const featureTypes = await wfsClient.getFeatureTypes();
+    const featureTypeNames = featureTypes.map((featureType) => featureType.name);
+    return featureTypeNames;
   }
 }
 
