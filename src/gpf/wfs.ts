@@ -2,7 +2,11 @@ export const GPF_WFS_URL = "https://data.geopf.fr/wfs";
 
 import { WfsEndpoint, WfsFeatureTypeBrief } from "@camptocamp/ogc-client";
 
-
+export class FeatureTypeNotFoundError extends Error {
+    constructor(name: string) {
+        super(`Type '${name}' not found`);
+    }
+}
 
 export class WfsClient {
     private endpoint: WfsEndpoint;
@@ -23,8 +27,10 @@ export class WfsClient {
         if ( this.featureTypes.has(name) ) {
             return this.featureTypes.get(name);
         }
-        // TODO : gérer le cas où le type n'existe pas
         const featureType = await this.endpoint.getFeatureTypeFull(name);
+        if ( ! featureType ) {
+            throw new FeatureTypeNotFoundError(name);
+        }
         this.featureTypes.set(name, featureType);
         return featureType;
     }
