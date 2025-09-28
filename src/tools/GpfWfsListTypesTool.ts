@@ -5,12 +5,12 @@ import { wfsClient } from "../gpf/wfs.js";
 interface WfsTypesInput {
 }
 
-class GpfGetFeatureTypes extends MCPTool<WfsTypesInput> {
-  name = "gpf_get_feature_types";
+class GpfWfsListTypesTools extends MCPTool<WfsTypesInput> {
+  name = "gpf_wfs_list_types";
   description = [
     "Renvoie la liste des types WFS de la Géoplateforme (GPF). ATTENTION :",
     "- Il y a plus de 700 résultats possibles",
-    "- Il est conseillé d'utiliser de préférence gpf_search_feature_types pour filtrer les résultats.",
+    "- Il est conseillé d'utiliser de préférence gpf_wfs_search_types pour filtrer les résultats.",
   ].join("\r\n");
 
   schema = {
@@ -24,4 +24,4 @@ class GpfGetFeatureTypes extends MCPTool<WfsTypesInput> {
   }
 }
 
-export default GpfGetFeatureTypes;
+export default GpfWfsListTypesTools;

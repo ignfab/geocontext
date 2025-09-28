@@ -5,25 +5,21 @@ import { fetchJSON } from "../helpers/http.js";
 
 interface GpfWfsGetFeaturesInput {
   typename: string;
-  cql_filter?: string;
   property_names?: string[];
-  sort_by?: string;
   count?: number;
+  sort_by?: string;
+  cql_filter?: string;
   result_type?: 'results' | 'hits' | 'url';
 }
 
 class GpfWfsGetFeaturesTool extends MCPTool<GpfWfsGetFeaturesInput> {
   name = "gpf_wfs_get_features";
-  description = "Permet de récupérer les objets pour un type WFS après avoir récupérer le nom avec gpf_wfs_types (ex : BDTOPO_V3:batiment) et les propriétés disponibles avec gpf_wfs_describe_type.";
+  description = "Permet de récupérer les objets pour un type WFS.";
 
   schema = {
     typename: {
       type: z.string(),
-      description: "Le nom du type (ex : BDTOPO_V3:batiment)"
-    },
-    cql_filter: {
-      type: z.string().optional(),
-      description: "Le filtre au format cql_filter de GeoServer. ATTENTION : il faut permuter les coordonnées pour EPSG:4326 (ex : 'DWITHIN(geom,Point(${lat} ${lon}),10,meters)')"
+      description: "Le nom du type (ex : BDTOPO_V3:batiment). Important : Utiliser gpf_wfs_search_types pour trouver les types disponibles."
     },
     property_names: {
       type: z.array(z.string()).optional(),
@@ -37,9 +33,18 @@ class GpfWfsGetFeaturesTool extends MCPTool<GpfWfsGetFeaturesInput> {
       type: z.number().optional(),
       description: "Le nombre d'objets à récupérer (ex : 10)"
     },
+    cql_filter: {
+      type: z.string().optional(),
+      description: "Le filtre au format cql_filter de GeoServer. ATTENTION : il faut permuter les coordonnées pour EPSG:4326 (ex : 'DWITHIN(geom,Point(${lat} ${lon}),10,meters)')"
+    },
     result_type: {
       type: z.enum(['results', 'hits', 'url']).optional(),
-      description: "Type de résultat : 'results' pour les données complètes (défaut), 'hits' pour le comptage uniquement, 'url' pour récupérer les données côté client"
+      description: [
+        "Type de résultat : ",
+        "- 'results' pour les données complètes (défaut)",
+        "- 'hits' pour le comptage uniquement",
+        "- 'url' pour récupérer l'URL de la requête (ex : affichage des données côté client dans une carte)"
+      ].join("\r\n")
     }
   };
 

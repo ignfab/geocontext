@@ -2,13 +2,15 @@ import { MCPTool } from "mcp-framework";
 import { z } from "zod";
 import { wfsClient } from "../gpf/wfs.js";
 
-interface GpfWfsTypeInput {
+interface GpfWfsDescribeTypeInput {
   typename: string;
 }
 
-class GpfWfsDescribeTypeTool extends MCPTool<GpfWfsTypeInput> {
+class GpfWfsDescribeTypeTool extends MCPTool<GpfWfsDescribeTypeInput> {
   name = "gpf_wfs_describe_type";
-  description = "Renvoie la description détaillée d'un type WFS.";
+  description = [
+    "Renvoie la description détaillée d'un type WFS donné par son nom fourni par gpf_wfs_search_types.",
+  ].join("\r\n");
 
   schema = {
     typename: {
@@ -17,7 +19,7 @@ class GpfWfsDescribeTypeTool extends MCPTool<GpfWfsTypeInput> {
     },
   };
 
-  async execute(input: GpfWfsTypeInput) {
+  async execute(input: GpfWfsDescribeTypeInput) {
     try {
       const featureType = await wfsClient.getFeatureType(input.typename);
       // remove useless fields outputFormats and otherCrs
