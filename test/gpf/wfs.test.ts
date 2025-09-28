@@ -1,4 +1,4 @@
-import { wfsClient } from "../../src/gpf/wfs";
+import { FeatureTypeNotFoundError, wfsClient } from "../../src/gpf/wfs";
 
 describe("Test WfsClient",() => {
     describe("getFeatureTypes",() => {
@@ -17,6 +17,10 @@ describe("Test WfsClient",() => {
             const featureType = await wfsClient.getFeatureType("BDTOPO_V3:batiment");
             expect(featureType).toBeDefined();
             expect(featureType?.name).toEqual("BDTOPO_V3:batiment");
+        });
+
+        it("should throw an error if the feature type does not exist", async () => {
+            await expect(wfsClient.getFeatureType("BDTOPO_V3:not_found")).rejects.toThrow(FeatureTypeNotFoundError);
         });
     });
 
