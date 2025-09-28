@@ -11,7 +11,7 @@ interface AltitudeInput {
 
 class AltitudeTool extends MCPTool<AltitudeInput> {
   name = "altitude";
-  description = `Renvoie l’altitude pour une position donnée par sa longitude et sa latitude (source : ${ALTITUDE_SOURCE}).`;
+  description = `Renvoie l'altitude pour une position donnée par sa longitude et sa latitude (source : ${ALTITUDE_SOURCE}).`;
 
   schema = {
     lon: {

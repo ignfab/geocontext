@@ -22,7 +22,7 @@ L'idée est ici d'**expérimenter la conception d'un MCP rendant les données et
 ## Principes de conception
 
 - **Ne pas copier les données de la Géoplateforme** (but : identifier les améliorations possibles sur le services plutôt que les doublonner)
-- **Limiter au maximum la taille des réponses** (but : optimiser le nombre de jeton)
+- **Limiter au maximum la taille des réponses** (but : optimiser le nombre de jeton / éviter les hallucinations / pouvoir utiliser des modèles locaux)
 - ...
 
 ## Utilisation
@@ -107,11 +107,11 @@ Quelques services de la Géoplateforme :
 
 * [geocode(text)](src/tools/GeocodeTool.ts) s'appuie sur le [service d’autocomplétion de la Géoplateforme](https://geoservices.ign.fr/documentation/services/services-geoplateforme/autocompletion) pour **convertir un nom de lieu en position (lon,lat)**.
 
-> Quelle est la position (lon,lat) de la mairie de Vincennes?
+> Ex : Quelle est la position (lon,lat) de la mairie de Vincennes?
 
 * [altitude(lon,lat)](src/tools/AltitudeTool.ts) s'appuie sur le [service de calcul altimétrique de la Géoplateforme](https://geoservices.ign.fr/documentation/services/services-geoplateforme/altimetrie) pour **convertir une position en altitude**. 
 
-> Ex : "Quelle est l'altitude de la mairie de Loray (25)?"
+> Ex : Quelle est l'altitude de la mairie de Loray (25)?
 
 ### Recherche d'informations pour un lieu
 
@@ -131,22 +131,30 @@ L'idée est ici de répondre à des précises en traitant côté serveur les app
 
 * [assiette_sup(lon,lat)](src/tools/AssietteSupTool.ts) permet de **récupérer les Servitude d'Utilité Publiques (SUP)**
 
-### Recherche d'information générique
+### Explorer les données vecteurs
 
-L'idée est ici de laisser le LLM exploiter les possibilités offertes par le LLM (**BLINDAGE EN COURS**) :
+#### Explorer les tables
 
-* [gpf_get_feature_types()](src/tools/GpfWfsGetTypesTool.ts) pour **lister les tables disponibles sur le WFS de la Géoplateforme** ([GetCapabilities](https://data.geopf.fr/wfs/ows?service=WFS&version=2.0.0&request=GetCapabilities))
+* [gpf_wfs_list_types()](src/tools/GpfWfsListTypesTool.ts) pour **lister les tables disponibles sur le WFS de la Géoplateforme** ([GetCapabilities](https://data.geopf.fr/wfs/ows?service=WFS&version=2.0.0&request=GetCapabilities)) - **déprécié (trop de résultats)** 
+* [gpf_wfs_search_types(keywords,max_results=10)](src/tools/GpfSearchFeatureTypes.ts) pour **rechercher les tables disponibles sur le WFS de la Géoplateforme** ([GetCapabilities](https://data.geopf.fr/wfs/ows?service=WFS&version=2.0.0&request=GetCapabilities))
 
-> Ex : "Quels sont les millésimes ADMINEXPRESS disponibles sur la Géoplateforme?"
+> - Quels sont les millésimes ADMINEXPRESS disponibles sur la Géoplateforme?
+> - Quelle est la table de la BDTOPO correspondant aux bâtiments?
+> - Dans quelle table de la BDTOPO peut-on trouver les ponts?
+
+#### Explorer la structure des tables
 
 * [gpf_wfs_describe_type(typename)](src/tools/GpfWfsDescribeTypeTool.ts) pour récupérer le **schéma d'une table** ([DescribeFeatureType](https://data.geopf.fr/wfs/ows?service=WFS&version=2.0.0&request=DescribeFeatureType&typename=ADMINEXPRESS-COG.LATEST:commune&outputFormat=application/json))
 
-> Ex : "Quelles sont les informations disponibles pour les communes avec ADMINEXPRESS-COG.LATEST?"
+> - Quelles sont les informations disponibles pour les communes avec ADMINEXPRESS-COG.LATEST?
+> - Compare la structure de ADMINEXPRESS-COG commune pour toutes les versions disponibles
+
+#### Explorer les données des tables
 
 * [gpf_wfs_get_features(typename,...)](src/tools/GpfWfsGetFeaturesTool.ts) pour **récupérer les données d'une table** ([GetFeature](https://data.geopf.fr/wfs/ows?service=WFS&version=2.0.0&request=GetFeature&typename=ADMINEXPRESS-COG.LATEST:commune&outputFormat=application/json&count=1))
 
-> Ex : "Quelles sont les 5 communes les plus peuplées du Doubs (25)?"
-
+> - Quelles sont les 5 communes les plus peuplées du Doubs (25)?
+> - Combien y-a-t'il de bâtiments à moins de 5 km de la tour Eiffel?
 
 ## Contribution
 
@@ -178,7 +186,7 @@ mcp add tool gpf_wmts_layers
 ```
 
 * [@camptocamp/ogc-client](https://camptocamp.github.io/ogc-client/#/) pour la **lecture des réponses XML des services WFS, WMTS,...**
-
+* [MiniSearch](https://github.com/lucaong/minisearch) pour la **recherche par mot clé**.
 * [jsts](https://bjornharrtell.github.io/jsts/) pour les **traitements géométriques** (ex : tri des réponses par distance au point recherché).
 
 ## Licence
