@@ -1,6 +1,7 @@
 export const GPF_WFS_URL = "https://data.geopf.fr/wfs";
 
-import { WfsEndpoint, WfsFeatureTypeFull } from "@camptocamp/ogc-client";
+import { WfsEndpoint, WfsFeatureTypeBrief, WfsFeatureTypeFull } from "@camptocamp/ogc-client";
+import MiniSearch from 'minisearch'
 
 export class FeatureTypeNotFoundError extends Error {
     constructor(name: string) {
@@ -8,18 +9,54 @@ export class FeatureTypeNotFoundError extends Error {
     }
 }
 
+
+export class FeatureTypeSearch {
+    private miniSearch: MiniSearch;
+
+    constructor(private featureTypes: WfsFeatureTypeBrief[]) {
+        this.miniSearch = new MiniSearch({
+            idField: 'name',
+            fields: ['name', 'title', 'description'],
+        });
+        this.miniSearch.addAll(this.featureTypes);
+    }
+
+    search(query: string) {
+        return this.miniSearch.search(query, { 
+            boost: { title: 2 },
+            fuzzy: 0.2
+        });
+    }
+
+}
+
 export class WfsClient {
     private endpoint: WfsEndpoint;
 
     private featureTypes: Map<string, WfsFeatureTypeFull> = new Map();
 
+    private featureTypeSearch: FeatureTypeSearch;
+
     constructor(public baseUrl: string = GPF_WFS_URL) {
         this.endpoint = new WfsEndpoint(this.baseUrl);
     }
 
-    async getFeatureTypes() {
+    async getFeatureTypes() : Promise<WfsFeatureTypeBrief[]> {
         await this.endpoint.isReady();
         return this.endpoint.getFeatureTypes();
+    }
+
+    async searchFeatureTypes(query: string, maxResults: number = 20) : Promise<WfsFeatureTypeBrief[]> {
+        const featureTypes = await this.endpoint.getFeatureTypes();
+        if ( ! this.featureTypeSearch ) {
+            await this.endpoint.isReady();
+            this.featureTypeSearch = new FeatureTypeSearch(featureTypes);
+        }
+        await this.endpoint.isReady();
+        const searchResults = this.featureTypeSearch.search(query).slice(0, maxResults);
+        return searchResults.map((result) => {
+            return featureTypes.find((featureType) => featureType.name === result.id);
+        });
     }
 
     async getFeatureType(name: string): Promise<WfsFeatureTypeFull> {
@@ -35,8 +72,8 @@ export class WfsClient {
         return featureType;
     }
 
-
 }
+
 
 
 export const wfsClient = new WfsClient();

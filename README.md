@@ -135,9 +135,13 @@ L'idée est ici de répondre à des précises en traitant côté serveur les app
 
 L'idée est ici de laisser le LLM exploiter les possibilités offertes par le LLM (**BLINDAGE EN COURS**) :
 
-* [gpf_get_feature_types()](src/tools/GpfWfsGetTypesTool.ts) pour **lister les tables disponibles sur le WFS de la Géoplateforme** ([GetCapabilities](https://data.geopf.fr/wfs/ows?service=WFS&version=2.0.0&request=GetCapabilities))
+* [gpf_get_feature_types()](src/tools/GpfGetFeatureTypes.ts) pour **lister les tables disponibles sur le WFS de la Géoplateforme** ([GetCapabilities](https://data.geopf.fr/wfs/ows?service=WFS&version=2.0.0&request=GetCapabilities)) - **déprécié** (trop de résultat)
 
 > Ex : "Quels sont les millésimes ADMINEXPRESS disponibles sur la Géoplateforme?"
+
+* [gpf_search_feature_types(keywords,max_results=10)](src/tools/GpfSearchFeatureTypes.ts) pour **rechercher les tables disponibles sur le WFS de la Géoplateforme** ([GetCapabilities](https://data.geopf.fr/wfs/ows?service=WFS&version=2.0.0&request=GetCapabilities))
+
+> Ex : "Compare la structure de ADMINEXPRESS-COG commune pour toutes les versions disponibles"
 
 * [gpf_wfs_describe_type(typename)](src/tools/GpfWfsDescribeTypeTool.ts) pour récupérer le **schéma d'une table** ([DescribeFeatureType](https://data.geopf.fr/wfs/ows?service=WFS&version=2.0.0&request=DescribeFeatureType&typename=ADMINEXPRESS-COG.LATEST:commune&outputFormat=application/json))
 
