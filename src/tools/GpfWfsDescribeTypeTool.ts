@@ -19,7 +19,9 @@ class GpfWfsDescribeTypeTool extends MCPTool<GpfWfsTypeInput> {
 
   async execute(input: GpfWfsTypeInput) {
     try {
-      const result = await wfsClient.getFeatureType(input.typename);
+      const featureType = await wfsClient.getFeatureType(input.typename);
+      // remove useless fields outputFormats and otherCrs
+      const { outputFormats, otherCrs, ...result } = featureType;
       return result;
     }catch(e){
       return {

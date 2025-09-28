@@ -1,6 +1,6 @@
 export const GPF_WFS_URL = "https://data.geopf.fr/wfs";
 
-import { WfsEndpoint, WfsFeatureTypeBrief } from "@camptocamp/ogc-client";
+import { WfsEndpoint, WfsFeatureTypeFull } from "@camptocamp/ogc-client";
 
 export class FeatureTypeNotFoundError extends Error {
     constructor(name: string) {
@@ -11,7 +11,7 @@ export class FeatureTypeNotFoundError extends Error {
 export class WfsClient {
     private endpoint: WfsEndpoint;
 
-    private featureTypes: Map<string, WfsFeatureTypeBrief> = new Map();
+    private featureTypes: Map<string, WfsFeatureTypeFull> = new Map();
 
     constructor(public baseUrl: string = GPF_WFS_URL) {
         this.endpoint = new WfsEndpoint(this.baseUrl);
@@ -22,7 +22,7 @@ export class WfsClient {
         return this.endpoint.getFeatureTypes();
     }
 
-    async getFeatureType(name: string) {
+    async getFeatureType(name: string): Promise<WfsFeatureTypeFull> {
         await this.endpoint.isReady();
         if ( this.featureTypes.has(name) ) {
             return this.featureTypes.get(name);
