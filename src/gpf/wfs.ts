@@ -16,14 +16,14 @@ export class FeatureTypeSearch {
     constructor(private featureTypes: WfsFeatureTypeBrief[]) {
         this.miniSearch = new MiniSearch({
             idField: 'name',
-            fields: ['name', 'title', 'description'],
+            fields: ['name', 'title', 'abstract'],
         });
         this.miniSearch.addAll(this.featureTypes);
     }
 
     search(query: string) {
         return this.miniSearch.search(query, { 
-            boost: { title: 2 },
+            boost: { name: 3, title: 2 },
             fuzzy: 0.2
         });
     }
