@@ -1,6 +1,6 @@
 {
   "name": "@mborne/geocontext",
-  "version": "0.7.6",
+  "version": "0.7.7",
   "description": "An experimental MCP server providing spatial context for LLM.",
   "type": "module",
   "bin": {
@@ -40,7 +40,8 @@
     "mcp-framework": "^0.2.15",
     "minisearch": "^7.2.0",
     "node-fetch": "^3.3.2",
-    "winston": "^3.17.0"
+    "winston": "^3.17.0",
+    "lodash": "^4.17.21"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
@@ -51,7 +52,6 @@
     "@types/supertest": "^6.0.3",
     "geojson": "^0.5.0",
     "jest": "^30.2.0",
-    "lodash": "^4.17.21",
     "supertest": "^7.1.4",
     "ts-jest": "^29.4.4",
     "ts-node": "^10.9.2",
