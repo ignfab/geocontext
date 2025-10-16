@@ -54,7 +54,7 @@ Ensuite :
 ```json
 {
   "mcpServers": {
-    "server-name": {
+    "geocontext": {
       "url": "http://localhost:3000/mcp"
     }
   }

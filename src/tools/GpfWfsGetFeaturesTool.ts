@@ -5,7 +5,7 @@ import { fetchJSON } from "../helpers/http.js";
 
 interface GpfWfsGetFeaturesInput {
   typename: string;
-  property_names?: string[];
+  property_names?: string;
   count?: number;
   sort_by?: string;
   cql_filter?: string;
@@ -22,8 +22,8 @@ class GpfWfsGetFeaturesTool extends MCPTool<GpfWfsGetFeaturesInput> {
       description: "Le nom du type (ex : BDTOPO_V3:batiment). Important : Utiliser gpf_wfs_search_types pour trouver les types disponibles."
     },
     property_names: {
-      type: z.array(z.string()).optional(),
-      description: 'La liste des propriétés (ex : [code_insee,nom_officiel,geometrie]). NB : adapter geometrie avec geometryName au niveau du type WFS. '
+      type: z.string().optional(),
+      description: 'La liste des propriétés séparées par des virgules (ex : "code_insee,nom_officiel,geometrie"). NB : adapter geometrie avec geometryName au niveau du type WFS. '
     },
     sort_by: {
       type: z.string().optional(),
@@ -66,10 +66,10 @@ class GpfWfsGetFeaturesTool extends MCPTool<GpfWfsGetFeaturesInput> {
     if (input.sort_by) {
       params.sortBy = input.sort_by;
     }
-    if (input.property_names) {
-      params.propertyName = input.property_names.join(',');
+    if (input.property_names && input.property_names.length > 0) {
+      params.propertyName = input.property_names;
     }
-    
+
     // Si result_type est 'hits', on utilise count=1 pour récupérer juste le totalFeatures
     if (input.result_type === 'hits') {
       params.count = 1;
