@@ -14,9 +14,9 @@ L'idée est ici d'**expérimenter la conception d'un MCP rendant les données et
 
 ## Mises en garde
 
-- Ce développement a été initié à titre personnel en mode POC et il n'a pas vocation a être industrialisé sous sa forme actuelle.
+- Ce développement est un POC en incubation avec IgnFab (migration en cours de `mborne/geocontext` en `ignfab/geocontext`)
 - S'il s'avère utile de l'industrialiser, le dépôt sera migré sous responsabilité IGN et l'outil sera renommé (ex : `IGNF/mcp-gpf-server`)
-- Plusieurs problèmes et améliorations possibles ont été identifiés et sont en cours de mitigation/résolution (c.f. [issues](https://github.com/mborne/geocontext/issues?q=is%3Aissue%20state%3Aopen%20label%3Ametadata)).
+- Plusieurs problèmes et améliorations possibles ont été identifiés et sont en cours de mitigation/résolution (c.f. [issues](https://github.com/ignfab/geocontext/issues?q=is%3Aissue%20state%3Aopen%20label%3Ametadata)).
 - Cet outil n'est pas magique (voir [Fonctionnalités](#fonctionnalités) pour avoir une idée de ses capacités)
 
 ## Principes de conception
@@ -36,7 +36,7 @@ Par exemple, avec "Cursor Settings / MCP / Add server" :
   "mcpServers": {
     "geocontext": {
       "command": "npx",
-      "args": ["-y", "@mborne/geocontext"]
+      "args": ["-y", "@ignfab/geocontext"]
     }
   }
 }
@@ -66,7 +66,7 @@ Ensuite :
 ### Construction de la version locale
 
 ```bash
-git clone https://github.com/mborne/geocontext
+git clone https://github.com/ignfab/geocontext
 cd geocontext
 npm install
 npm run build
@@ -160,7 +160,7 @@ L'idée est ici de répondre à des précises en traitant côté serveur les app
 
 ### Problèmes et demandes d'évolutions
 
-N'hésitez pas à [créer une issue](https://github.com/mborne/geocontext/issues) si vous rencontrez un problème! Merci de fournir :
+N'hésitez pas à [créer une issue](https://github.com/ignfab/geocontext/issues) si vous rencontrez un problème! Merci de fournir :
 
 - L'assistant et le modèle utilisé
 - La demande que vous faite à l'assistant (ex : "Combien y a-t'il de pont franchissant la seine?")

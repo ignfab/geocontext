@@ -1,5 +1,5 @@
 {
-  "name": "@mborne/geocontext",
+  "name": "@ignfab/geocontext",
   "version": "0.7.8",
   "description": "An experimental MCP server providing spatial context for LLM.",
   "type": "module",
@@ -11,7 +11,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mborne/geocontext.git"
+    "url": "git+https://github.com/ignfab/geocontext.git"
   },
   "keywords": [
     "llm",
@@ -23,9 +23,9 @@
   "author": "MBorne <mborne@users.noreply.github.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/mborne/geocontext/issues"
+    "url": "https://github.com/ignfab/geocontext/issues"
   },
-  "homepage": "https://github.com/mborne/geocontext#readme",
+  "homepage": "https://github.com/ignfab/geocontext#readme",
   "scripts": {
     "build": "tsc && npx mcp-build",
     "watch": "tsc --watch",
