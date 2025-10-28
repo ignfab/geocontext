@@ -14,7 +14,7 @@ L'idée est ici d'**expérimenter la conception d'un MCP rendant les données et
 
 ## Mises en garde
 
-- Ce développement est un POC en incubation avec IgnFab (migration en cours de `mborne/geocontext` en `ignfab/geocontext`)
+- Ce développement est un POC en incubation avec IgnFab (archivage en cours de [mborne/geocontext](https://github.com/mborne/geocontext))
 - S'il s'avère utile de l'industrialiser, le dépôt sera migré sous responsabilité IGN et l'outil sera renommé (ex : `IGNF/mcp-gpf-server`)
 - Plusieurs problèmes et améliorations possibles ont été identifiés et sont en cours de mitigation/résolution (c.f. [issues](https://github.com/ignfab/geocontext/issues?q=is%3Aissue%20state%3Aopen%20label%3Ametadata)).
 - Cet outil n'est pas magique (voir [Fonctionnalités](#fonctionnalités) pour avoir une idée de ses capacités)
@@ -192,4 +192,5 @@ mcp add tool gpf_wmts_layers
 ## Licence
 
 [MIT](LICENSE)
+
 
