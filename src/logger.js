@@ -30,6 +30,5 @@ const logger = createLogger({
     ],
 });
 
-logger.info(`LOG_FORMAT=${LOG_FORMAT}, LOG_LEVEL=${LOG_LEVEL}`);
 export default logger;
 
