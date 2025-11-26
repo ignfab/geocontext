@@ -1,4 +1,4 @@
-import { createLogger, format, transports } from 'winston';
+import { config, createLogger, format, transports } from 'winston';
 
 const LOG_LEVEL = process.env.LOG_LEVEL ? process.env.LOG_LEVEL : 'debug';
 
@@ -20,7 +20,7 @@ const logger = createLogger({
          * see https://github.com/winstonjs/winston/blob/master/docs/transports.md#console-transport
          */
         new transports.Console({
-            stderrLevels: Object.keys(winston.config.npm.levels), 
+            stderrLevels: Object.keys(config.npm.levels), 
         })
     ] : [
         new transports.File({
