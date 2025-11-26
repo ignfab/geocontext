@@ -26,3 +26,10 @@ jobs:
     - run: npm ci
     - run: npm run build --if-present
     - run: npm test
+    # basic functional testing
+    # https://github.com/modelcontextprotocol/inspector?tab=readme-ov-file#cli-mode
+    - name: List tools
+      run: npx @modelcontextprotocol/inspector --cli node dist/index.js --method tools/list
+    - name: Call tool geocode
+      run: npx @modelcontextprotocol/inspector --cli node dist/index.js --method tools/call --tool-name geocode --tool-arg text=vincennes
+
