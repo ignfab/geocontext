@@ -1,4 +1,4 @@
-import { createLogger, format, transports } from 'winston';
+import { config, createLogger, format, transports } from 'winston';
 
 const LOG_LEVEL = process.env.LOG_LEVEL ? process.env.LOG_LEVEL : 'debug';
 
@@ -15,7 +15,13 @@ const logger = createLogger({
     level: LOG_LEVEL,
     format: formats[LOG_FORMAT],
     transports: process.env.NODE_ENV != 'test' ? [
-        new transports.Console()
+        /*
+         * logs all logs level to stderr as stdout is reserved for MCP
+         * see https://github.com/winstonjs/winston/blob/master/docs/transports.md#console-transport
+         */
+        new transports.Console({
+            stderrLevels: Object.keys(config.npm.levels), 
+        })
     ] : [
         new transports.File({
             filename: 'geocontext.log',
@@ -24,6 +30,5 @@ const logger = createLogger({
     ],
 });
 
-logger.info(`LOG_FORMAT=${LOG_FORMAT}, LOG_LEVEL=${LOG_LEVEL}`);
 export default logger;
 

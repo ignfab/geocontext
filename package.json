@@ -1,6 +1,6 @@
 {
   "name": "@ignfab/geocontext",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "description": "An experimental MCP server providing spatial context for LLM.",
   "type": "module",
   "bin": {
@@ -37,25 +37,26 @@
     "@camptocamp/ogc-client": "^1.3.0",
     "https-proxy-agent": "^7.0.6",
     "jsts": "^2.12.1",
-    "mcp-framework": "^0.2.15",
+    "lodash": "^4.17.21",
+    "mcp-framework": "^0.2.17",
     "minisearch": "^7.2.0",
     "node-fetch": "^3.3.2",
-    "winston": "^3.17.0",
-    "lodash": "^4.17.21"
+    "winston": "^3.18.3",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/geojson": "^7946.0.16",
     "@types/jest": "^30.0.0",
-    "@types/lodash": "^4.17.20",
-    "@types/node": "^24.5.2",
+    "@types/lodash": "^4.17.21",
+    "@types/node": "^24.10.1",
     "@types/supertest": "^6.0.3",
     "geojson": "^0.5.0",
     "jest": "^30.2.0",
     "supertest": "^7.1.4",
-    "ts-jest": "^29.4.4",
+    "ts-jest": "^29.4.5",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.3"
   },
   "engines": {
     "node": ">=18.19.0"
