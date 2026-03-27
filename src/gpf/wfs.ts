@@ -1,7 +1,8 @@
 export const GPF_WFS_URL = "https://data.geopf.fr/wfs";
 
-import { WfsEndpoint, WfsFeatureTypeBrief, WfsFeatureTypeFull } from "@camptocamp/ogc-client";
 import MiniSearch from 'minisearch'
+
+import { Collection, getCollections} from '@ignfab/gpf-schema-store';
 
 export class FeatureTypeNotFoundError extends Error {
     constructor(name: string) {
@@ -13,17 +14,36 @@ export class FeatureTypeNotFoundError extends Error {
 export class FeatureTypeSearch {
     private miniSearch: MiniSearch;
 
-    constructor(private featureTypes: WfsFeatureTypeBrief[]) {
+    constructor(private featureTypes: Collection[]) {
         this.miniSearch = new MiniSearch({
-            idField: 'name',
-            fields: ['name', 'title', 'abstract'],
+            idField: 'id',
+            fields: [
+                'id',
+                'namespace',
+                'name',
+                'title',
+                'description',
+                'properties'
+            ],
         });
-        this.miniSearch.addAll(this.featureTypes);
+        const flattenFeatureTypes = this.featureTypes.map((featureType) => {
+            return {
+                ...featureType,
+                properties: JSON.stringify(featureType.properties)
+            }
+        });
+        this.miniSearch.addAll(flattenFeatureTypes);
     }
 
     search(query: string) {
         return this.miniSearch.search(query, { 
-            boost: { name: 3, title: 2 },
+            boost: { 
+                id: 3.0, 
+                namespace: 5.0,
+                title: 2.0,
+                description: 1.5,
+                properties: 1.3
+            },
             fuzzy: 0.2
         });
     }
@@ -31,44 +51,38 @@ export class FeatureTypeSearch {
 }
 
 export class WfsClient {
-    private endpoint: WfsEndpoint;
-
-    private featureTypes: Map<string, WfsFeatureTypeFull> = new Map();
+    /**
+     * id -> Collection
+     */
+    private featureTypes: Map<string, Collection> = new Map();
 
     private featureTypeSearch: FeatureTypeSearch;
 
     constructor(public baseUrl: string = GPF_WFS_URL) {
-        this.endpoint = new WfsEndpoint(this.baseUrl);
-    }
-
-    async getFeatureTypes() : Promise<WfsFeatureTypeBrief[]> {
-        await this.endpoint.isReady();
-        return this.endpoint.getFeatureTypes();
-    }
-
-    async searchFeatureTypes(query: string, maxResults: number = 20) : Promise<WfsFeatureTypeBrief[]> {
-        await this.endpoint.isReady();
-        const featureTypes = await this.endpoint.getFeatureTypes();
-        if ( ! this.featureTypeSearch ) {
-            this.featureTypeSearch = new FeatureTypeSearch(featureTypes);
+        const collections = getCollections();
+        for ( const collection of collections) {
+            this.featureTypes.set(collection.id, collection);
         }
+        this.featureTypeSearch = new FeatureTypeSearch(collections);
+    }
+
+    async getFeatureTypes() : Promise<Collection[]> {
+        return Array.from(this.featureTypes.values());
+    }
+
+    async searchFeatureTypes(query: string, maxResults: number = 20) : Promise<Collection[]> {
         const searchResults = this.featureTypeSearch.search(query).slice(0, maxResults);
         return searchResults.map((result) => {
-            return featureTypes.find((featureType) => featureType.name === result.id);
+            return this.featureTypes.get(result.id);
         });
     }
 
-    async getFeatureType(name: string): Promise<WfsFeatureTypeFull> {
-        await this.endpoint.isReady();
+    async getFeatureType(name: string): Promise<Collection> {
         if ( this.featureTypes.has(name) ) {
             return this.featureTypes.get(name);
-        }
-        const featureType = await this.endpoint.getFeatureTypeFull(name);
-        if ( ! featureType ) {
+        }else{
             throw new FeatureTypeNotFoundError(name);
         }
-        this.featureTypes.set(name, featureType);
-        return featureType;
     }
 
 }

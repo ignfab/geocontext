@@ -7,7 +7,7 @@ describe("Test WfsClient",() => {
             expect(featureTypes).toBeDefined();
             expect(featureTypes.length).toBeGreaterThan(0);
 
-            const featureTypeNames= featureTypes.map((featureType)=>featureType.name);
+            const featureTypeNames= featureTypes.map((featureType)=>featureType.id);
             expect(featureTypeNames).toContain("BDTOPO_V3:batiment");
         });
     });
@@ -17,14 +17,14 @@ describe("Test WfsClient",() => {
             const featureTypes = await wfsClient.searchFeatureTypes("bâtiments bdtopo");
             expect(featureTypes).toBeDefined();
             expect(featureTypes.length).toBeGreaterThan(0);
-            const featureTypeNames= featureTypes.map((featureType)=>featureType.name);
+            const featureTypeNames= featureTypes.map((featureType)=>featureType.id);
             expect(featureTypeNames).toContain("BDTOPO_V3:batiment");
         });
         it("should find BDTOPO_V3:departement and ADMINEXPRESS-COG.LATEST:departement for 'départements'", async () => {
             const featureTypes = await wfsClient.searchFeatureTypes("départements");
             expect(featureTypes).toBeDefined();
             expect(featureTypes.length).toBeGreaterThan(0);
-            const featureTypeNames= featureTypes.map((featureType)=>featureType.name);
+            const featureTypeNames= featureTypes.map((featureType)=>featureType.id);
             expect(featureTypeNames).toContain("BDTOPO_V3:departement");
             expect(featureTypeNames).toContain("ADMINEXPRESS-COG.LATEST:departement");
         });
@@ -35,7 +35,7 @@ describe("Test WfsClient",() => {
         it("should return the feature type with BDTOPO_V3:batiment", async () => {
             const featureType = await wfsClient.getFeatureType("BDTOPO_V3:batiment");
             expect(featureType).toBeDefined();
-            expect(featureType?.name).toEqual("BDTOPO_V3:batiment");
+            expect(featureType?.id).toEqual("BDTOPO_V3:batiment");
         });
 
         it("should throw an error if the feature type does not exist", async () => {
