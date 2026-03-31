@@ -1,4 +1,4 @@
-import { FeatureTypeNotFoundError, wfsClient } from "../../src/gpf/wfs";
+import { FeatureTypeNotFoundError, WfsClient, wfsClient } from "../../src/gpf/wfs";
 
 describe("Test WfsClient",() => {
     describe("getFeatureTypes",() => {
@@ -27,6 +27,20 @@ describe("Test WfsClient",() => {
             const featureTypeNames= featureTypes.map((featureType)=>featureType.id);
             expect(featureTypeNames).toContain("BDTOPO_V3:departement");
             expect(featureTypeNames).toContain("ADMINEXPRESS-COG.LATEST:departement");
+        });
+
+        it("should allow overriding search tuning in WfsClient constructor", async () => {
+            const tuned = new WfsClient(undefined, {
+                search: {
+                    fuzzy: 0.1,
+                    boost: { title: 4.0 },
+                }
+            });
+            const featureTypes = await tuned.searchFeatureTypes("bâtiments bdtopo");
+            expect(featureTypes).toBeDefined();
+            expect(featureTypes.length).toBeGreaterThan(0);
+            const featureTypeNames= featureTypes.map((featureType)=>featureType.id);
+            expect(featureTypeNames).toContain("BDTOPO_V3:batiment");
         });
 
     });
