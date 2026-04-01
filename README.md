@@ -98,6 +98,15 @@ Pour une utilisation avancée :
 | Nom              | Description                                                                                                          | Valeur par défaut |
 | ---------------- | -------------------------------------------------------------------------------------------------------------------- | ----------------- |
 | `TRANSPORT_TYPE` | [Transport](https://mcp-framework.com/docs/Transports/transports-overview) permet de choisir entre "stdio" et "http" | "stdio"           |
+| `GPF_WFS_SEARCH_OPTIONS` | Chaîne JSON optionnelle pour ajuster la recherche `gpf_wfs_search_types` (`fuzzy`, `boost.namespace`, `boost.name`, `boost.title`, `boost.description`, `boost.properties`). | options par défaut de `@ignfab/gpf-schema-store` |
+
+Exemple :
+
+```bash
+export GPF_WFS_SEARCH_OPTIONS='{"fuzzy":0.05,"boost":{"title":4,"name":5}}'
+```
+
+Si `GPF_WFS_SEARCH_OPTIONS` est absent ou vide, les options par défaut restent celles de `@ignfab/gpf-schema-store`.
 
 ## Fonctionnalités
 

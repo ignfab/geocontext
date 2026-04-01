@@ -1,6 +1,68 @@
-import { FeatureTypeNotFoundError, WfsClient, wfsClient } from "../../src/gpf/wfs";
+import { FeatureTypeNotFoundError, WfsClient, wfsClient, loadSearchOptionsFromEnv } from "../../src/gpf/wfs";
+
+const GPF_WFS_SEARCH_OPTIONS_ENV = "GPF_WFS_SEARCH_OPTIONS";
 
 describe("Test WfsClient",() => {
+    let previousSearchOptionsEnv: string | undefined;
+
+    beforeEach(() => {
+        previousSearchOptionsEnv = process.env[GPF_WFS_SEARCH_OPTIONS_ENV];
+        delete process.env[GPF_WFS_SEARCH_OPTIONS_ENV];
+    });
+
+    afterEach(() => {
+        if (previousSearchOptionsEnv === undefined) {
+            delete process.env[GPF_WFS_SEARCH_OPTIONS_ENV];
+            return;
+        }
+        process.env[GPF_WFS_SEARCH_OPTIONS_ENV] = previousSearchOptionsEnv;
+    });
+
+    describe("loadSearchOptionsFromEnv", () => {
+        it("should return undefined when env var is not set", () => {
+            expect(loadSearchOptionsFromEnv()).toBeUndefined();
+        });
+
+        it("should parse valid JSON options", () => {
+            process.env[GPF_WFS_SEARCH_OPTIONS_ENV] = JSON.stringify({
+                fuzzy: 0.05,
+                boost: {
+                    title: 4,
+                    name: 5,
+                },
+            });
+
+            expect(loadSearchOptionsFromEnv()).toEqual({
+                fuzzy: 0.05,
+                boost: {
+                    title: 4,
+                    name: 5,
+                },
+            });
+        });
+
+        it("should throw on invalid JSON", () => {
+            process.env[GPF_WFS_SEARCH_OPTIONS_ENV] = '{"fuzzy":0.1';
+            expect(() => loadSearchOptionsFromEnv()).toThrow("Invalid GPF_WFS_SEARCH_OPTIONS");
+        });
+
+        it("should throw on invalid option keys", () => {
+            process.env[GPF_WFS_SEARCH_OPTIONS_ENV] = JSON.stringify({
+                unsupported: 1,
+            });
+            expect(() => loadSearchOptionsFromEnv()).toThrow("unexpected key 'unsupported'");
+        });
+
+        it("should throw on invalid option value types", () => {
+            process.env[GPF_WFS_SEARCH_OPTIONS_ENV] = JSON.stringify({
+                boost: {
+                    title: "4",
+                },
+            });
+            expect(() => loadSearchOptionsFromEnv()).toThrow("expected 'boost.title' to be a finite number");
+        });
+    });
+
     describe("getFeatureTypes",() => {
         it("should return the list of feature types with BDTOPO_V3:batiment", async () => {
             const featureTypes = await wfsClient.getFeatureTypes();
