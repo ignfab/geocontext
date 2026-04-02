@@ -3,3 +3,5 @@
 /*.log
 /dist/
 /.vscode/
+.npmrc
+.codex

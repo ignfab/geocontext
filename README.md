@@ -77,7 +77,7 @@ npm run build
 ```json
 {
   "mcpServers": {
-    "mcp-helloworld": {
+    "geocontext": {
       "command": "node",
       "args":["/chemin/absolu/vers/geocontext/dist/index.js"]
     }
@@ -98,6 +98,21 @@ Pour une utilisation avancée :
 | Nom              | Description                                                                                                          | Valeur par défaut |
 | ---------------- | -------------------------------------------------------------------------------------------------------------------- | ----------------- |
 | `TRANSPORT_TYPE` | [Transport](https://mcp-framework.com/docs/Transports/transports-overview) permet de choisir entre "stdio" et "http" | "stdio"           |
+| `GPF_WFS_SEARCH_OPTIONS` | Chaîne JSON optionnelle pour ajuster la recherche `gpf_wfs_search_types` (`fuzzy`, `boost.namespace`, `boost.name`, `boost.title`, `boost.description`, `boost.properties`). | options par défaut de `@ignfab/gpf-schema-store` |
+
+Exemple :
+
+```bash
+export GPF_WFS_SEARCH_OPTIONS='{"fuzzy":0.05,"boost":{"title":4,"name":5}}'
+```
+
+Si `GPF_WFS_SEARCH_OPTIONS` est absent ou vide, les options par défaut restent celles de `@ignfab/gpf-schema-store`.
+
+Remarque :
+
+- Les outils `gpf_wfs_list_types`, `gpf_wfs_search_types` et `gpf_wfs_describe_type` s'appuient sur un catalogue de schémas embarqué fourni par `@ignfab/gpf-schema-store`.
+- L'outil `gpf_wfs_get_features` interroge toujours le service WFS de la Géoplateforme en direct.
+- Le catalogue embarqué améliore la description des featureTypes mais il peut être légèrement décalé par rapport à l'état courant du WFS.
 
 ## Fonctionnalités
 
@@ -135,8 +150,8 @@ L'idée est ici de répondre à des précises en traitant côté serveur les app
 
 #### Explorer les tables
 
-* [gpf_wfs_list_types()](src/tools/GpfWfsListTypesTool.ts) pour **lister les tables disponibles sur le WFS de la Géoplateforme** ([GetCapabilities](https://data.geopf.fr/wfs/ows?service=WFS&version=2.0.0&request=GetCapabilities)) - **déprécié (trop de résultats)** 
-* [gpf_wfs_search_types(keywords,max_results=10)](src/tools/GpfSearchFeatureTypes.ts) pour **rechercher les tables disponibles sur le WFS de la Géoplateforme** ([GetCapabilities](https://data.geopf.fr/wfs/ows?service=WFS&version=2.0.0&request=GetCapabilities))
+* [gpf_wfs_list_types()](src/tools/GpfWfsListTypesTool.ts) pour **lister les tables connues du catalogue de schémas embarqué** - **déprécié (trop de résultats)**
+* [gpf_wfs_search_types(keywords,max_results=10)](src/tools/GpfWfsSearchTypesTool.ts) pour **rechercher des tables dans le catalogue de schémas embarqué**. La recherche est textuelle et configurable via `GPF_WFS_SEARCH_OPTIONS`.
 
 > - Quels sont les millésimes ADMINEXPRESS disponibles sur la Géoplateforme?
 > - Quelle est la table de la BDTOPO correspondant aux bâtiments?
@@ -144,14 +159,14 @@ L'idée est ici de répondre à des précises en traitant côté serveur les app
 
 #### Explorer la structure des tables
 
-* [gpf_wfs_describe_type(typename)](src/tools/GpfWfsDescribeTypeTool.ts) pour récupérer le **schéma d'une table** ([DescribeFeatureType](https://data.geopf.fr/wfs/ows?service=WFS&version=2.0.0&request=DescribeFeatureType&typename=ADMINEXPRESS-COG.LATEST:commune&outputFormat=application/json))
+* [gpf_wfs_describe_type(typename)](src/tools/GpfWfsDescribeTypeTool.ts) pour récupérer le **schéma détaillé d'une table** depuis le catalogue embarqué (`id`, `namespace`, `name`, `title`, `description`, `properties`)
 
 > - Quelles sont les informations disponibles pour les communes avec ADMINEXPRESS-COG.LATEST?
 > - Compare le modèle des communes entre ADMINEXPRESS-COG:2024 et ADMINEXPRESS-COG.LATEST
 
 #### Explorer les données des tables
 
-* [gpf_wfs_get_features(typename,...)](src/tools/GpfWfsGetFeaturesTool.ts) pour **récupérer les données d'une table** ([GetFeature](https://data.geopf.fr/wfs/ows?service=WFS&version=2.0.0&request=GetFeature&typename=ADMINEXPRESS-COG.LATEST:commune&outputFormat=application/json&count=1))
+* [gpf_wfs_get_features(typename,...)](src/tools/GpfWfsGetFeaturesTool.ts) pour **récupérer les données d'une table** depuis le service WFS de la Géoplateforme ([GetFeature](https://data.geopf.fr/wfs/ows?service=WFS&version=2.0.0&request=GetFeature&typename=ADMINEXPRESS-COG.LATEST:commune&outputFormat=application/json&count=1))
 
 > - Quelles sont les 5 communes les plus peuplées du Doubs (25)?
 > - Combien y-a-t'il de bâtiments à moins de 5 km de la tour Eiffel?
@@ -186,7 +201,8 @@ mcp add tool gpf_wmts_layers
 ```
 
 * [@camptocamp/ogc-client](https://camptocamp.github.io/ogc-client/#/) pour la **lecture des réponses XML des services WFS, WMTS,...**
-* [MiniSearch](https://github.com/lucaong/minisearch) pour la **recherche par mot clé**.
+* [@ignfab/gpf-schema-store](https://www.npmjs.com/package/@ignfab/gpf-schema-store) pour le **catalogue de schémas embarqué** utilisé par les outils d'exploration WFS.
+* [MiniSearch](https://github.com/lucaong/minisearch) pour la **recherche par mot clé** utilisée dans `@ignfab/gpf-schema-store`.
 * [jsts](https://bjornharrtell.github.io/jsts/) pour les **traitements géométriques** (ex : tri des réponses par distance au point recherché).
 
 ## Licence

@@ -31,7 +31,7 @@ class GpfWfsSearchTypesTool extends MCPTool<GpfWfsSearchTypesInput> {
   async execute(input: GpfWfsSearchTypesInput) {
     const maxResults = input.max_results || 10;
     const featureTypes = await wfsClient.searchFeatureTypes(input.query, maxResults);
-    const featureTypeNames = featureTypes.map((featureType) => featureType.name);
+    const featureTypeNames = featureTypes.map((featureType) => featureType.id);
     return featureTypeNames;
   }
 }
