@@ -18,6 +18,20 @@ describe("Test getUrbanisme",() => {
         }
 
     });
+
+    it("should filter non relevant urbanisme properties", async () => {
+        const c = chamonix.coordinates;
+        const items : any[] = await getUrbanisme(c[0],c[1]);
+
+        expect(items.length).toBeGreaterThan(0);
+
+        for (const item of items) {
+            expect(item).not.toHaveProperty('gpu_status');
+            expect(item).not.toHaveProperty('urlfic');
+            expect(Object.values(item)).not.toContain(null);
+            expect(Object.values(item)).not.toContain('');
+        }
+    });
 });
 
 describe("Test getAssiettesServitudes",() => {

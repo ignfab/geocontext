@@ -19,6 +19,25 @@ export const URBANISME_TYPES = [
 
 export const URBANISME_SOURCE = "Géoplateforme - (WFS Géoportail de l'Urbanisme)";
 
+const URBANISME_EXCLUDED_PROPERTIES = new Set([
+    'gpu_status',
+    'urlfic'
+]);
+
+function sanitizeUrbanismeItem(item) {
+    const sanitized = {};
+    for (const [key, value] of Object.entries(item)) {
+        if (URBANISME_EXCLUDED_PROPERTIES.has(key)) {
+            continue;
+        }
+        if (value === null || value === '') {
+            continue;
+        }
+        sanitized[key] = value;
+    }
+    return sanitized;
+}
+
 
 /**
  * Get urbanism infos for a given location
@@ -52,7 +71,7 @@ export async function getUrbanisme(lon, lat) {
         // parse type from id (ex: "commune.3837")
         const type = feature.id.split('.')[0];
         // ignore geometry and extend properties
-        return Object.assign({
+        const item = Object.assign({
             type: type,
             id: feature.id,
             bbox: feature.bbox,
@@ -61,6 +80,7 @@ export async function getUrbanisme(lon, lat) {
                 feature.geometry
             ) * 1000.0)
         }, feature.properties);
+        return sanitizeUrbanismeItem(item);
     });
 }
 

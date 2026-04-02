@@ -7,9 +7,17 @@ interface UrbanismeInput {
   lat: number;
 }
 
+const URBANISME_TOOL_DESCRIPTION = [
+  `Renvoie les informations du document d'urbanisme (PLU, PLUi, POS, CC, PSMV) pour une position donnee par sa longitude et sa latitude (source: ${URBANISME_SOURCE}).`,
+  "Modeles d'URL Geoportail Urbanisme:",
+  "- fiche document: https://www.geoportail-urbanisme.gouv.fr/document/by-id/{gpu_doc_id}",
+  "- carte: https://www.geoportail-urbanisme.gouv.fr/map/?documentId={gpu_doc_id}",
+  "- fichier: https://www.geoportail-urbanisme.gouv.fr/api/document/{gpu_doc_id}/files/{nomfic}",
+].join("\n");
+
 class UrbanismeTool extends MCPTool<UrbanismeInput> {
   name = "urbanisme";
-  description = `Renvoie les informations du document d'urbanisme (PLU, PLUi, POS, CC, PSMV) pour une position donnée par sa longitude et sa latitude (source: ${URBANISME_SOURCE}).`;
+  description = URBANISME_TOOL_DESCRIPTION;
 
   schema = {
     lon: {
