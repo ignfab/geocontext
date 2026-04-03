@@ -1,3 +1,5 @@
+import GpfWfsDescribeTypeTool from "../../src/tools/GpfWfsDescribeTypeTool";
+import GpfWfsListTypesTool from "../../src/tools/GpfWfsListTypesTool";
 import GpfWfsSearchTypesTool from "../../src/tools/GpfWfsSearchTypesTool";
 import { FeatureTypeNotFoundError, WfsClient, wfsClient, loadMiniSearchOptionsFromEnv } from "../../src/gpf/wfs";
 
@@ -209,5 +211,130 @@ describe("Test GpfWfsSearchTypesTool",() => {
             throw new Error("expected text content");
         }
         expect(textContent.text).toContain("la requête de recherche ne doit pas être vide");
+    });
+});
+
+describe("Test GpfWfsListTypesTool",() => {
+    it("should expose an enriched MCP definition", () => {
+        const tool = new GpfWfsListTypesTool();
+        expect(tool.toolDefinition.title).toEqual("Liste complète des types WFS");
+        expect(tool.toolDefinition.inputSchema.properties).toEqual({});
+        expect(tool.toolDefinition.outputSchema).toBeDefined();
+    });
+
+    it("should return both text content and structuredContent", async () => {
+        const tool = new GpfWfsListTypesTool();
+        const response = await tool.toolCall({
+            params: {
+                name: "gpf_wfs_list_types",
+                arguments: {},
+            },
+        });
+
+        expect(response.isError).toBeUndefined();
+        expect(response.content[0]).toMatchObject({
+            type: "text",
+        });
+        const textContent = response.content[0];
+        if (textContent.type !== "text") {
+            throw new Error("expected text content");
+        }
+        const results = JSON.parse(textContent.text);
+        expect(results.length).toBeGreaterThan(0);
+        expect(response.structuredContent).toBeDefined();
+        expect(response.structuredContent).toMatchObject({
+            results: expect.arrayContaining([
+                expect.objectContaining({
+                    id: "BDTOPO_V3:batiment",
+                }),
+            ]),
+        });
+    });
+});
+
+describe("Test GpfWfsDescribeTypeTool",() => {
+    it("should expose an enriched MCP definition", () => {
+        const tool = new GpfWfsDescribeTypeTool();
+        expect(tool.toolDefinition.title).toEqual("Description d’un type WFS");
+        expect(tool.toolDefinition.inputSchema.properties?.typename).toMatchObject({
+            type: "string",
+            minLength: 1,
+        });
+        expect(tool.toolDefinition.outputSchema).toBeDefined();
+    });
+
+    it("should return both text content and structuredContent", async () => {
+        const tool = new GpfWfsDescribeTypeTool();
+        const response = await tool.toolCall({
+            params: {
+                name: "gpf_wfs_describe_type",
+                arguments: {
+                    typename: "BDTOPO_V3:batiment",
+                },
+            },
+        });
+
+        expect(response.isError).toBeUndefined();
+        expect(response.content[0]).toMatchObject({
+            type: "text",
+        });
+        const textContent = response.content[0];
+        if (textContent.type !== "text") {
+            throw new Error("expected text content");
+        }
+        expect(JSON.parse(textContent.text)).toMatchObject({
+            id: "BDTOPO_V3:batiment",
+        });
+        expect(response.structuredContent).toBeDefined();
+        expect(response.structuredContent).toMatchObject({
+            result: {
+                id: "BDTOPO_V3:batiment",
+            },
+        });
+    });
+
+    it("should return isError=true for invalid input", async () => {
+        const tool = new GpfWfsDescribeTypeTool();
+        const response = await tool.toolCall({
+            params: {
+                name: "gpf_wfs_describe_type",
+                arguments: {
+                    typename: "",
+                },
+            },
+        });
+
+        expect(response.isError).toBe(true);
+        expect(response.content[0]).toMatchObject({
+            type: "text",
+        });
+        const textContent = response.content[0];
+        if (textContent.type !== "text") {
+            throw new Error("expected text content");
+        }
+        expect(textContent.text).toContain("le nom du type ne doit pas être vide");
+    });
+
+    it("should return isError=true when the type does not exist", async () => {
+        const tool = new GpfWfsDescribeTypeTool();
+        const response = await tool.toolCall({
+            params: {
+                name: "gpf_wfs_describe_type",
+                arguments: {
+                    typename: "BDTOPO_V3:not_found",
+                },
+            },
+        });
+
+        expect(response.isError).toBe(true);
+        expect(response.content[0]).toMatchObject({
+            type: "text",
+        });
+        const textContent = response.content[0];
+        if (textContent.type !== "text") {
+            throw new Error("expected text content");
+        }
+        expect(textContent.text).toContain("Type 'BDTOPO_V3:not_found' not found");
+        expect(textContent.text).toContain("gpf_wfs_search_types");
     });
 });
