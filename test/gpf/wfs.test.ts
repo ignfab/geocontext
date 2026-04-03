@@ -1,4 +1,5 @@
 import GpfWfsDescribeTypeTool from "../../src/tools/GpfWfsDescribeTypeTool";
+import GpfWfsGetFeaturesTool from "../../src/tools/GpfWfsGetFeaturesTool";
 import GpfWfsListTypesTool from "../../src/tools/GpfWfsListTypesTool";
 import GpfWfsSearchTypesTool from "../../src/tools/GpfWfsSearchTypesTool";
 import { FeatureTypeNotFoundError, WfsClient, wfsClient, loadMiniSearchOptionsFromEnv } from "../../src/gpf/wfs";
@@ -219,10 +220,10 @@ describe("Test GpfWfsListTypesTool",() => {
         const tool = new GpfWfsListTypesTool();
         expect(tool.toolDefinition.title).toEqual("Liste complète des types WFS");
         expect(tool.toolDefinition.inputSchema.properties).toEqual({});
-        expect(tool.toolDefinition.outputSchema).toBeDefined();
+        expect(tool.toolDefinition.outputSchema).toBeUndefined();
     });
 
-    it("should return both text content and structuredContent", async () => {
+    it("should return text content without structuredContent", async () => {
         const tool = new GpfWfsListTypesTool();
         const response = await tool.toolCall({
             params: {
@@ -241,14 +242,12 @@ describe("Test GpfWfsListTypesTool",() => {
         }
         const results = JSON.parse(textContent.text);
         expect(results.length).toBeGreaterThan(0);
-        expect(response.structuredContent).toBeDefined();
-        expect(response.structuredContent).toMatchObject({
-            results: expect.arrayContaining([
-                expect.objectContaining({
-                    id: "BDTOPO_V3:batiment",
-                }),
-            ]),
-        });
+        expect(results).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                id: "BDTOPO_V3:batiment",
+            }),
+        ]));
+        expect(response.structuredContent).toBeUndefined();
     });
 });
 
@@ -336,5 +335,144 @@ describe("Test GpfWfsDescribeTypeTool",() => {
         }
         expect(textContent.text).toContain("Type 'BDTOPO_V3:not_found' not found");
         expect(textContent.text).toContain("gpf_wfs_search_types");
+    });
+});
+
+describe("Test GpfWfsGetFeaturesTool",() => {
+    class TestableGpfWfsGetFeaturesTool extends GpfWfsGetFeaturesTool {
+        respond(data: unknown) {
+            return this.createSuccessResponse(data);
+        }
+    }
+
+    const featureCollection: {
+        type: string;
+        features: Array<{
+            type: string;
+            id: string;
+            geometry: null;
+            properties: {
+                code_insee: string;
+            };
+        }>;
+        totalFeatures: number;
+    } = {
+        type: "FeatureCollection",
+        features: [
+            {
+                type: "Feature",
+                id: "commune.1",
+                geometry: null,
+                properties: {
+                    code_insee: "01001",
+                },
+            },
+        ],
+        totalFeatures: 34877,
+    };
+
+    it("should expose an enriched MCP definition", () => {
+        const tool = new GpfWfsGetFeaturesTool();
+        expect(tool.toolDefinition.title).toEqual("Lecture d’objets WFS");
+        expect(tool.toolDefinition.inputSchema.properties?.typename).toMatchObject({
+            type: "string",
+            minLength: 1,
+        });
+        expect(tool.toolDefinition.inputSchema.properties?.count).toMatchObject({
+            type: "integer",
+            minimum: 1,
+            maximum: 1000,
+        });
+        expect(tool.toolDefinition.outputSchema).toBeUndefined();
+    });
+
+    it("should return a FeatureCollection without structuredContent for results", () => {
+        const tool = new TestableGpfWfsGetFeaturesTool();
+        const response = tool.respond(featureCollection);
+
+        expect("isError" in response).toBe(false);
+        expect(response.structuredContent).toBeUndefined();
+        expect(response.content[0]).toMatchObject({
+            type: "text",
+        });
+        const textContent = response.content[0];
+        if (textContent.type !== "text") {
+            throw new Error("expected text content");
+        }
+        expect(JSON.parse(textContent.text)).toMatchObject({
+            type: "FeatureCollection",
+            features: expect.any(Array),
+        });
+    });
+
+    it("should return text content and structuredContent for hits", () => {
+        const tool = new TestableGpfWfsGetFeaturesTool();
+        const response = tool.respond({
+            result_type: "hits",
+            totalFeatures: featureCollection.totalFeatures,
+        });
+
+        expect("isError" in response).toBe(false);
+        expect(response.content[0]).toMatchObject({
+            type: "text",
+        });
+        const textContent = response.content[0];
+        if (textContent.type !== "text") {
+            throw new Error("expected text content");
+        }
+        expect(Number(JSON.parse(textContent.text))).toBeGreaterThan(0);
+        expect(response.structuredContent).toMatchObject({
+            result_type: "hits",
+            totalFeatures: expect.any(Number),
+        });
+    });
+
+    it("should return text content and structuredContent for url", async () => {
+        const tool = new GpfWfsGetFeaturesTool();
+        const response = await tool.toolCall({
+            params: {
+                name: "gpf_wfs_get_features",
+                arguments: {
+                    typename: "ADMINEXPRESS-COG.LATEST:commune",
+                    result_type: "url",
+                },
+            },
+        });
+
+        expect(response.isError).toBeUndefined();
+        expect(response.content[0]).toMatchObject({
+            type: "text",
+        });
+        const textContent = response.content[0];
+        if (textContent.type !== "text") {
+            throw new Error("expected text content");
+        }
+        expect(textContent.text).toContain("service=WFS");
+        expect(response.structuredContent).toMatchObject({
+            result_type: "url",
+            url: expect.stringContaining("service=WFS"),
+        });
+    });
+
+    it("should return isError=true for invalid input", async () => {
+        const tool = new GpfWfsGetFeaturesTool();
+        const response = await tool.toolCall({
+            params: {
+                name: "gpf_wfs_get_features",
+                arguments: {
+                    typename: "",
+                },
+            },
+        });
+
+        expect(response.isError).toBe(true);
+        expect(response.content[0]).toMatchObject({
+            type: "text",
+        });
+        const textContent = response.content[0];
+        if (textContent.type !== "text") {
+            throw new Error("expected text content");
+        }
+        expect(textContent.text).toContain("le nom du type ne doit pas être vide");
     });
 });
