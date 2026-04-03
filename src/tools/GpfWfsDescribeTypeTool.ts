@@ -23,12 +23,14 @@ class GpfWfsDescribeTypeTool extends MCPTool<GpfWfsDescribeTypeInput> {
   async execute(input: GpfWfsDescribeTypeInput) {
     try {
       return await wfsClient.getFeatureType(input.typename);
-    }catch(e){
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+
       return {
         type: "error",
-        message: e.message,
-        help: `Utiliser gpf_get_feature_types pour trouver les types disponibles`
-      }
+        message,
+        help: "Utiliser gpf_wfs_search_types pour trouver les types disponibles",
+      };
     }
   }
 }
