@@ -1,12 +1,12 @@
 # cql_filter GeoServer
 
-Utiliser `cql_filter` avec `gpf_wfs_get_features` pour restreindre les objets renvoyes.
+Utiliser `cql_filter` avec `gpf_wfs_get_features` pour restreindre les objets renvoyés.
 
 ## Rappels importants
 
-- Utiliser les noms exacts des proprietes du type WFS.
-- Pour les connaitre, appeler `gpf_wfs_describe_type` avant d'ecrire le filtre.
-- En `EPSG:4326`, les coordonnees des geometries s'ecrivent en `lat lon` (y x), y compris pour les points, lignes et polygones.
+- Utiliser les noms exacts des propriétés du type WFS.
+- Pour les connaître, appeler `gpf_wfs_describe_type` avant d'écrire le filtre.
+- En `EPSG:4326`, les coordonnées des géométries s'écrivent en `lat lon` (y x), y compris pour les points, lignes et polygones.
 
 ## Exemples
 
@@ -22,7 +22,7 @@ Utiliser `cql_filter` avec `gpf_wfs_get_features` pour restreindre les objets re
 
 `INTERSECTS(geom,POLYGON((48.85 2.34,48.86 2.34,48.86 2.36,48.85 2.36,48.85 2.34)))`
 
-## Operateurs frequents
+## Opérateurs fréquents
 
 - `=`
 - `<>`
@@ -34,8 +34,8 @@ Utiliser `cql_filter` avec `gpf_wfs_get_features` pour restreindre les objets re
 - `DWITHIN(...)`
 - `INTERSECTS(...)`
 
-## Pieges frequents
+## Pièges fréquents
 
-- Utiliser un nom de propriete inexistant.
+- Utiliser un nom de propriété inexistant.
 - Oublier que `EPSG:4326` attend `lat lon`.
 - Confondre filtrage (`cql_filter`) et restriction de champs (`property_names`).

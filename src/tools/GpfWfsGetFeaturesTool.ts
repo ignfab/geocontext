@@ -4,6 +4,11 @@ import { GPF_WFS_URL } from "../gpf/wfs.js";
 import { fetchJSON } from "../helpers/http.js";
 import logger from "../logger.js";
 
+// This tool intentionally does not expose a single outputSchemaShape.
+// `result_type="results"` can return a large FeatureCollection, and we
+// avoid duplicating that payload into structuredContent. Compact modes
+// (`hits`, `url`) are handled explicitly in createSuccessResponse().
+
 const gpfWfsGetFeaturesHitsOutputSchema = z.object({
   result_type: z.literal("hits").describe("Indique que la réponse contient uniquement un comptage."),
   totalFeatures: z.number().describe("Le nombre total d'objets correspondant à la requête."),
