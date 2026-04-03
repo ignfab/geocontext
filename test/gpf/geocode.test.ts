@@ -21,8 +21,24 @@ describe("Test geocode",() => {
         //   kind: 'mairie',
         //   fulltext: 'Mairie de Loray, 25390 Loray',
         expect(firstItem.fulltext).toEqual('Mairie de Loray, 25390 Loray');
+        expect(firstItem.kind).toEqual('mairie');
+        expect(firstItem.city).toEqual('Loray');
+        expect(firstItem.zipcode).toEqual('25390');
         //   classification: 9
 
+    });
+
+    it("should honor maximumResponses", async () => {
+        const results : any[] = await geocode("Saint-Mande", 1);
+
+        expect(results).toHaveLength(1);
+        expect(results[0].fulltext).toEqual("Saint-Mandé, 94160");
+    });
+
+    it("should return an empty array for blank text", async () => {
+        const results : any[] = await geocode("   ");
+
+        expect(results).toEqual([]);
     });
 
 });

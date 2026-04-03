@@ -16,23 +16,19 @@ export async function getAltitudeByLocation(lon, lat) {
     logger.info(`getAltitudeByLocation(${lon},${lat})...`);
     
     const url = `https://data.geopf.fr/altimetrie/1.0/calcul/alti/rest/elevation.json?lon=${lon}&lat=${lat}&resource=ign_rge_alti_wld`;
-    try {
-        const json = await fetchJSON(url);
-        const elevation = json.elevations[0] ;
-        return {
-            lon: lon,
-            lat: lat,
-            altitude: elevation.z,
-            accuracy: elevation.acc,
-        };
-    }catch(e){
-        return {
-            lon: lon,
-            lat: lat,
-            altitude: null,
-            accuracy: 'No data',
-        };
+
+    const json = await fetchJSON(url);
+    const elevation = json?.elevations?.[0];
+
+    if (!elevation) {
+        throw new Error("No elevation data returned by the altitude service");
     }
 
+    return {
+        lon: lon,
+        lat: lat,
+        altitude: elevation.z,
+        accuracy: elevation.acc,
+    };
 
 }
