@@ -12,9 +12,10 @@ export const GEOCODE_SOURCE = "Géoplateforme (service d'autocomplétion)";
  * 
  * @param {string} text
  * @param {number} [maximumResponses=3]
+ * @param {(url: string) => Promise<any>} [fetcher]
  * @returns 
  */
-export async function geocode(text, maximumResponses = 3) {
+export async function geocode(text, maximumResponses = 3, fetcher = fetchJSON) {
     const normalizedText = typeof text === "string" ? text.trim() : "";
 
     if (!normalizedText) {
@@ -28,7 +29,7 @@ export async function geocode(text, maximumResponses = 3) {
       maximumResponses: String(maximumResponses)
     }).toString();
 
-    const json = await fetchJSON(url);
+    const json = await fetcher(url);
     const results = Array.isArray(json?.results) ? json.results : [];
     return results.map((item)=>{return {
       lon: item.x,

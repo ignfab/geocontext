@@ -10,14 +10,15 @@ export const ALTITUDE_SOURCE = "Géoplateforme (altimétrie)";
  * 
  * @param {number} lon 
  * @param {number} lat 
+ * @param {(url: string) => Promise<any>} [fetcher]
  * @returns 
  */
-export async function getAltitudeByLocation(lon, lat) {
+export async function getAltitudeByLocation(lon, lat, fetcher = fetchJSON) {
     logger.info(`getAltitudeByLocation(${lon},${lat})...`);
     
     const url = `https://data.geopf.fr/altimetrie/1.0/calcul/alti/rest/elevation.json?lon=${lon}&lat=${lat}&resource=ign_rge_alti_wld`;
 
-    const json = await fetchJSON(url);
+    const json = await fetcher(url);
     const elevation = json?.elevations?.[0];
 
     if (!elevation) {

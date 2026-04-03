@@ -1,7 +1,8 @@
-import { logger, MCPTool } from "mcp-framework";
+import { MCPTool } from "mcp-framework";
 import { z } from "zod";
 import { GPF_WFS_URL } from "../gpf/wfs.js";
 import { fetchJSON } from "../helpers/http.js";
+import logger from "../logger.js";
 
 const gpfWfsGetFeaturesHitsOutputSchema = z.object({
   result_type: z.literal("hits").describe("Indique que la réponse contient uniquement un comptage."),
@@ -118,7 +119,7 @@ class GpfWfsGetFeaturesTool extends MCPTool<GpfWfsGetFeaturesInput> {
   }
 
   async execute(input: GpfWfsGetFeaturesInput) {
-    const params : any = {
+    const params: Record<string, string> = {
       service: 'WFS',
       request: 'GetFeature',
       typeName: input.typename,
@@ -130,7 +131,7 @@ class GpfWfsGetFeaturesTool extends MCPTool<GpfWfsGetFeaturesInput> {
       params.cql_filter = input.cql_filter;
     }
     if (input.count) {
-      params.count = input.count;
+      params.count = String(input.count);
     }
     if (input.sort_by) {
       params.sortBy = input.sort_by;
@@ -140,8 +141,10 @@ class GpfWfsGetFeaturesTool extends MCPTool<GpfWfsGetFeaturesInput> {
     }
 
     // Si result_type est 'hits', on utilise count=1 pour récupérer juste le totalFeatures
+    // On fait cela parce que geoserver ne renvoie pas de json avec resultType=hits
+    // il faut quand même faire une requete getfeature pour récupérer le totalFeatures...
     if (input.result_type === 'hits') {
-      params.count = 1;
+      params.count = "1";
       // On n'a pas besoin des propriétés détaillées pour un comptage
       delete params.propertyName;
     }

@@ -47,9 +47,10 @@ function filterByDistance(items){
  * 
  * @param {number} lon 
  * @param {number} lat 
+ * @param {(url: string) => Promise<any>} [fetcher]
  * @returns 
  */
-export async function getParcellaireExpress(lon, lat) {
+export async function getParcellaireExpress(lon, lat, fetcher = fetchJSON) {
     logger.info(`getParcellaireExpress(${lon},${lat}) ...`);
     // note that EPSG:4326 means lat,lon order for GeoServer -> flipped coordinates...
     const cql_filter = `DWITHIN(geom,Point(${lat} ${lon}),10,meters)`;
@@ -68,7 +69,10 @@ export async function getParcellaireExpress(lon, lat) {
         cql_filter: cql_filter
     }).toString();
 
-    const featureCollection = await fetchJSON(url);
+    const featureCollection = await fetcher(url);
+    if (!Array.isArray(featureCollection?.features)) {
+        throw new Error("Le service PARCELLAIRE_EXPRESS n'a pas retourné de collection d'objets exploitable");
+    }
     return filterByDistance(featureCollection.features.map((feature) => {
         // parse type from id (ex: "commune.3837")
         const type = feature.id.split('.')[0];

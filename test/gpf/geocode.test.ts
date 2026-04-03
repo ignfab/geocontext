@@ -1,10 +1,33 @@
 import GeocodeTool from "../../src/tools/GeocodeTool";
 import {geocode} from "../../src/gpf/geocode.js";
 
+const geocodeResponse = {
+    results: [
+        {
+            x: 6.497148,
+            y: 47.153263,
+            fulltext: "Mairie de Loray, 25390 Loray",
+            kind: "mairie",
+            city: "Loray",
+            zipcode: "25390",
+        },
+        {
+            x: 2.41935,
+            y: 48.841291,
+            fulltext: "Saint-Mandé, 94160",
+            kind: "commune",
+            city: "Saint-Mandé",
+            zipcode: "94160",
+        },
+    ],
+};
+
 describe("Test geocode",() => {
     it("should return the expected value for 'Mairie de Loray'", async () => {
-        const results : any[] = await geocode("Mairie de Loray");
-        expect(results.length).toBeGreaterThanOrEqual(0);
+        const results : any[] = await geocode("Mairie de Loray", 3, async () => ({
+            results: [geocodeResponse.results[0]],
+        }));
+        expect(results.length).toBeGreaterThan(0);
         const firstItem = results[0];
 
         //   x: 6.497148,
@@ -30,7 +53,9 @@ describe("Test geocode",() => {
     });
 
     it("should honor maximumResponses", async () => {
-        const results : any[] = await geocode("Saint-Mande", 1);
+        const results : any[] = await geocode("Saint-Mande", 1, async () => ({
+            results: [geocodeResponse.results[1]],
+        }));
 
         expect(results).toHaveLength(1);
         expect(results[0].fulltext).toEqual("Saint-Mandé, 94160");
@@ -45,6 +70,16 @@ describe("Test geocode",() => {
 });
 
 describe("Test GeocodeTool",() => {
+    class TestableGeocodeTool extends GeocodeTool {
+        async execute() {
+            return {
+                results: [await geocode("Saint-Mande", 1, async () => ({
+                    results: [geocodeResponse.results[1]],
+                })).then((items) => items[0])],
+            };
+        }
+    }
+
     it("should expose an enriched MCP definition", () => {
         const tool = new GeocodeTool();
         expect(tool.toolDefinition.title).toEqual("Géocodage de lieux et d’adresses");
@@ -61,7 +96,7 @@ describe("Test GeocodeTool",() => {
     });
 
     it("should return both text content and structuredContent", async () => {
-        const tool = new GeocodeTool();
+        const tool = new TestableGeocodeTool();
         const response = await tool.toolCall({
             params: {
                 name: "geocode",

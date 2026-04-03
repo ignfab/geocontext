@@ -2,10 +2,28 @@ import AltitudeTool from "../../src/tools/AltitudeTool";
 import {getAltitudeByLocation} from "../../src/gpf/altitude.js";
 import { paris } from "../samples";
 
+const parisElevationResponse = {
+    elevations: [
+        {
+            z: 34.78,
+            acc: "Variable suivant la source de mesure",
+        },
+    ],
+};
+
+const voidElevationResponse = {
+    elevations: [
+        {
+            z: -99999,
+            acc: "Variable suivant la source de mesure",
+        },
+    ],
+};
+
 describe("Test getAltitudeByLocation",() => {
     it("should return ~34.8 meters for Paris", async () => {
         const c = paris.coordinates;
-        const result = await getAltitudeByLocation(c[0],c[1]);
+        const result = await getAltitudeByLocation(c[0],c[1], async () => parisElevationResponse);
         expect(result.lat).toBeCloseTo(48.866667);
         expect(result.lon).toBeCloseTo(2.333333);
         expect(result.altitude).toBeCloseTo(34.8,1);
@@ -14,15 +32,14 @@ describe("Test getAltitudeByLocation",() => {
 
 
     it("should throw return null for 0.0,0.0", async () => {
-        const c = paris.coordinates;
-        const result = await getAltitudeByLocation(0.0,0.0);
+        const result = await getAltitudeByLocation(0.0,0.0, async () => voidElevationResponse);
         expect(result.altitude).toEqual(-99999);
         expect(result.accuracy).toEqual("Variable suivant la source de mesure");
     });
 
 
     it("should throw for 600.0,600.0", async () => {
-        await expect(getAltitudeByLocation(600.0,600.0)).rejects.toThrow(
+        await expect(getAltitudeByLocation(600.0,600.0, async () => ({ elevations: [] }))).rejects.toThrow(
             "No elevation data returned by the altitude service"
         );
     });
@@ -30,6 +47,14 @@ describe("Test getAltitudeByLocation",() => {
 });
 
 describe("Test AltitudeTool",() => {
+    class TestableAltitudeTool extends AltitudeTool {
+        async execute() {
+            return {
+                result: await getAltitudeByLocation(paris.coordinates[0], paris.coordinates[1], async () => parisElevationResponse),
+            };
+        }
+    }
+
     it("should expose an enriched MCP definition", () => {
         const tool = new AltitudeTool();
         expect(tool.toolDefinition.title).toEqual("Altitude d’une position");
@@ -48,7 +73,7 @@ describe("Test AltitudeTool",() => {
 
     it("should return both text content and structuredContent", async () => {
         const c = paris.coordinates;
-        const tool = new AltitudeTool();
+        const tool = new TestableAltitudeTool();
         const response = await tool.toolCall({
             params: {
                 name: "altitude",

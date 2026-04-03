@@ -18,6 +18,7 @@ export const URBANISME_TYPES = [
 ];
 
 export const URBANISME_SOURCE = "Géoplateforme - (WFS Géoportail de l'Urbanisme)";
+const URBANISME_INVALID_COLLECTION_ERROR = "Le service Urbanisme n'a pas retourné de collection d'objets exploitable";
 
 const URBANISME_EXCLUDED_PROPERTIES = new Set([
     'gpu_status',
@@ -44,9 +45,10 @@ function sanitizeUrbanismeItem(item) {
  *
  * @param {number} lon 
  * @param {number} lat 
+ * @param {(url: string) => Promise<any>} [fetcher]
  * @returns 
  */
-export async function getUrbanisme(lon, lat) {
+export async function getUrbanisme(lon, lat, fetcher = fetchJSON) {
     logger.info(`getUrbanisme(${lon},${lat})...`);
 
     // note that EPSG:4326 means lat,lon order for GeoServer -> flipped coordinates...
@@ -66,7 +68,10 @@ export async function getUrbanisme(lon, lat) {
         cql_filter: cql_filter
     }).toString();
 
-    const featureCollection = await fetchJSON(url);
+    const featureCollection = await fetcher(url);
+    if (!Array.isArray(featureCollection?.features)) {
+        throw new Error(URBANISME_INVALID_COLLECTION_ERROR);
+    }
     return featureCollection.features.map((feature) => {
         // parse type from id (ex: "commune.3837")
         const type = feature.id.split('.')[0];
@@ -95,9 +100,10 @@ const ASSIETTES_SUP_TYPES = [
  *
  * @param {number} lon 
  * @param {number} lat 
+ * @param {(url: string) => Promise<any>} [fetcher]
  * @returns 
  */
-export async function getAssiettesServitudes(lon, lat) {
+export async function getAssiettesServitudes(lon, lat, fetcher = fetchJSON) {
     logger.info(`getAssiettesServitudes(${lon},${lat})...`);
 
     // note that EPSG:4326 means lat,lon order for GeoServer -> flipped coordinates...
@@ -117,7 +123,10 @@ export async function getAssiettesServitudes(lon, lat) {
         cql_filter: cql_filter
     }).toString();
 
-    const featureCollection = await fetchJSON(url);
+    const featureCollection = await fetcher(url);
+    if (!Array.isArray(featureCollection?.features)) {
+        throw new Error(URBANISME_INVALID_COLLECTION_ERROR);
+    }
     return featureCollection.features.map((feature) => {
         // parse type from id (ex: "commune.3837")
         const type = feature.id.split('.')[0];
@@ -133,5 +142,3 @@ export async function getAssiettesServitudes(lon, lat) {
         }, feature.properties);
     });
 }
-
-
