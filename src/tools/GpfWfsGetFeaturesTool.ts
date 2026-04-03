@@ -28,8 +28,10 @@ class GpfWfsGetFeaturesTool extends MCPTool<GpfWfsGetFeaturesInput> {
   title = "Lecture d’objets WFS";
   description = [
     "Récupère les objets d'un type WFS à partir d'un `typename` valide, avec filtres, tri et sélection de propriétés optionnels.",
+    "Exécute une requête WFS sur un type connu (`typename`) et renvoie soit les objets trouvés, soit leur nombre total, soit l'URL WFS correspondante.",
     "Utiliser `gpf_wfs_search_types` puis `gpf_wfs_describe_type` avant ce tool lorsque le type ou ses propriétés ne sont pas connus.",
     "Le paramètre `result_type` permet de récupérer soit les données complètes (`results`), soit uniquement le comptage (`hits`), soit l'URL WFS générée (`url`).",
+    "Les paramètres optionnels permettent de filtrer, trier ou restreindre les champs et le nombre d'objets renvoyés.", 
   ].join("\r\n");
 
   schema = z.object({
