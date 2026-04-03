@@ -4,37 +4,46 @@ import {
     Collection,
     getCollectionCatalog,
     MiniSearchCollectionSearchEngine,
-    MiniSearchCollectionSearchEngineOptions,
+    MiniSearchCollectionSearchOptions,
 } from '@ignfab/gpf-schema-store';
 
 // --- Constants ---
 
 export const GPF_WFS_URL = "https://data.geopf.fr/wfs";
 
-// Environment variable used to inject search engine options at runtime (JSON string).
-const GPF_WFS_SEARCH_OPTIONS_ENV = "GPF_WFS_SEARCH_OPTIONS";
+// Environment variable used to inject MiniSearch options at runtime (JSON string).
+const GPF_WFS_MINISEARCH_OPTIONS_ENV = "GPF_WFS_MINISEARCH_OPTIONS";
 
 // Keys accepted at the top level of the search options object.
-const TOP_LEVEL_SEARCH_OPTION_KEYS = ["fuzzy", "boost"] as const;
+const TOP_LEVEL_MINISEARCH_OPTION_KEYS = ["fields", "combineWith", "fuzzy", "boost"] as const;
 
-// Keys accepted inside the nested `boost` object.
-const BOOST_SEARCH_OPTION_KEYS = [
+// Shared keys used by both `fields` and `boost` in MiniSearchCollectionSearchOptions.
+const MINISEARCH_INDEXED_OPTION_KEYS = [
     "namespace",
     "name",
     "title",
     "description",
     "properties",
+    "enums",
+    "identifierTokens",
 ] as const;
+
+const MINISEARCH_FIELD_OPTION_KEYS = MINISEARCH_INDEXED_OPTION_KEYS;
+const MINISEARCH_COMBINE_WITH_VALUES = ["AND", "OR"] as const;
+const MINISEARCH_BOOST_OPTION_KEYS = MINISEARCH_INDEXED_OPTION_KEYS;
 
 // --- Types ---
 
-type BoostSearchOptionKey = typeof BOOST_SEARCH_OPTION_KEYS[number];
+type MiniSearchFieldOptionKey = typeof MINISEARCH_FIELD_OPTION_KEYS[number];
+type MiniSearchBoostOptionKey = typeof MINISEARCH_BOOST_OPTION_KEYS[number];
+type MiniSearchOptions = MiniSearchCollectionSearchOptions;
 
 // --- Errors ---
 
 export class FeatureTypeNotFoundError extends Error {
     constructor(name: string) {
         super(`Type '${name}' not found`);
+        this.name = "FeatureTypeNotFoundError";
     }
 }
 
@@ -49,25 +58,53 @@ function isFiniteNumber(value: unknown): value is number {
 }
 
 function invalidSearchOptionsError(reason: string): Error {
-    return new Error(`Invalid ${GPF_WFS_SEARCH_OPTIONS_ENV}: ${reason}`);
+    return new Error(`Invalid ${GPF_WFS_MINISEARCH_OPTIONS_ENV}: ${reason}`);
 }
 
 // --- Search options parsing ---
 
-// Parses and validates a plain-object value into MiniSearchCollectionSearchEngineOptions.
+// Parses and validates a plain-object value into MiniSearchCollectionSearchOptions.
 // Throws a descriptive error if the value has unexpected keys or wrong value types.
-function parseSearchOptions(value: unknown): MiniSearchCollectionSearchEngineOptions {
+function parseMiniSearchOptions(value: unknown): MiniSearchOptions {
     if (!isPlainObject(value)) {
         throw invalidSearchOptionsError("expected a JSON object");
     }
 
     for (const key of Object.keys(value)) {
-        if (!TOP_LEVEL_SEARCH_OPTION_KEYS.includes(key as typeof TOP_LEVEL_SEARCH_OPTION_KEYS[number])) {
+        if (!TOP_LEVEL_MINISEARCH_OPTION_KEYS.includes(key as typeof TOP_LEVEL_MINISEARCH_OPTION_KEYS[number])) {
             throw invalidSearchOptionsError(`unexpected key '${key}'`);
         }
     }
 
-    const options: MiniSearchCollectionSearchEngineOptions = {};
+    const options: MiniSearchOptions = {};
+
+    if (value.fields !== undefined) {
+        if (!Array.isArray(value.fields)) {
+            throw invalidSearchOptionsError("expected 'fields' to be an array");
+        }
+        const fields: MiniSearchFieldOptionKey[] = [];
+        for (const field of value.fields) {
+            if (typeof field !== "string") {
+                throw invalidSearchOptionsError("expected every 'fields' item to be a string");
+            }
+            if (!MINISEARCH_FIELD_OPTION_KEYS.includes(field as MiniSearchFieldOptionKey)) {
+                throw invalidSearchOptionsError(`unexpected value 'fields.${field}'`);
+            }
+            fields.push(field as MiniSearchFieldOptionKey);
+        }
+        options.fields = fields;
+    }
+
+    if (value.combineWith !== undefined) {
+        if (typeof value.combineWith !== "string") {
+            throw invalidSearchOptionsError("expected 'combineWith' to be a string");
+        }
+        const combineWith = value.combineWith as typeof MINISEARCH_COMBINE_WITH_VALUES[number];
+        if (!MINISEARCH_COMBINE_WITH_VALUES.includes(combineWith)) {
+            throw invalidSearchOptionsError("expected 'combineWith' to be 'AND' or 'OR'");
+        }
+        options.combineWith = combineWith;
+    }
 
     if (value.fuzzy !== undefined) {
         if (!isFiniteNumber(value.fuzzy)) {
@@ -81,16 +118,16 @@ function parseSearchOptions(value: unknown): MiniSearchCollectionSearchEngineOpt
             throw invalidSearchOptionsError("expected 'boost' to be an object");
         }
 
-        const boost: Partial<Record<BoostSearchOptionKey, number>> = {};
+        const boost: Partial<Record<MiniSearchBoostOptionKey, number>> = {};
         for (const key of Object.keys(value.boost)) {
-            if (!BOOST_SEARCH_OPTION_KEYS.includes(key as BoostSearchOptionKey)) {
+            if (!MINISEARCH_BOOST_OPTION_KEYS.includes(key as MiniSearchBoostOptionKey)) {
                 throw invalidSearchOptionsError(`unexpected key 'boost.${key}'`);
             }
             const rawScore = value.boost[key];
             if (!isFiniteNumber(rawScore)) {
                 throw invalidSearchOptionsError(`expected 'boost.${key}' to be a finite number`);
             }
-            boost[key as BoostSearchOptionKey] = rawScore;
+            boost[key as MiniSearchBoostOptionKey] = rawScore;
         }
         options.boost = boost;
     }
@@ -98,10 +135,20 @@ function parseSearchOptions(value: unknown): MiniSearchCollectionSearchEngineOpt
     return options;
 }
 
-// Reads search options from the GPF_WFS_SEARCH_OPTIONS environment variable.
+function createMiniSearchEngineOptions(miniSearch?: MiniSearchOptions) {
+    if (!miniSearch) {
+        return undefined;
+    }
+
+    return {
+        defaultSearchOptions: miniSearch,
+    };
+}
+
+// Reads MiniSearch options from the GPF_WFS_MINISEARCH_OPTIONS environment variable.
 // Returns undefined when the variable is absent or empty.
-export function loadSearchOptionsFromEnv(): MiniSearchCollectionSearchEngineOptions | undefined {
-    const rawValue = process.env[GPF_WFS_SEARCH_OPTIONS_ENV];
+export function loadMiniSearchOptionsFromEnv(): MiniSearchOptions | undefined {
+    const rawValue = process.env[GPF_WFS_MINISEARCH_OPTIONS_ENV];
     if (!rawValue || rawValue.trim() === "") {
         return undefined;
     }
@@ -114,7 +161,7 @@ export function loadSearchOptionsFromEnv(): MiniSearchCollectionSearchEngineOpti
         throw invalidSearchOptionsError(`expected valid JSON (${reason})`);
     }
 
-    return parseSearchOptions(parsedValue);
+    return parseMiniSearchOptions(parsedValue);
 }
 
 // --- WFS client ---
@@ -125,10 +172,11 @@ export class WfsClient {
 
     constructor(
         public baseUrl: string = GPF_WFS_URL,
-        options: { search?: MiniSearchCollectionSearchEngineOptions } = {},
+        options: { miniSearch?: MiniSearchOptions } = {},
     ) {
+        const searchEngineOptions = createMiniSearchEngineOptions(options.miniSearch);
         this.catalog = getCollectionCatalog({
-            engineFactory: (items) => new MiniSearchCollectionSearchEngine(items, options.search),
+            engineFactory: (items) => new MiniSearchCollectionSearchEngine(items, searchEngineOptions),
         });
     }
 
@@ -139,7 +187,6 @@ export class WfsClient {
     async searchFeatureTypes(query: string, maxResults: number = 20): Promise<Collection[]> {
         return this.catalog.search(query, {
             limit: maxResults,
-            combineWith: 'AND',
         });
     }
 
@@ -155,7 +202,7 @@ export class WfsClient {
 
 // --- Default singleton ---
 
-// Pre-configured client using the default GPF endpoint and optional env-based search options.
+// Pre-configured client using the default GPF endpoint and optional env-based MiniSearch options.
 export const wfsClient = new WfsClient(undefined, {
-    search: loadSearchOptionsFromEnv(),
+    miniSearch: loadMiniSearchOptionsFromEnv(),
 });

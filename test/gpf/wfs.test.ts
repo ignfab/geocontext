@@ -1,30 +1,32 @@
-import { FeatureTypeNotFoundError, WfsClient, wfsClient, loadSearchOptionsFromEnv } from "../../src/gpf/wfs";
+import { FeatureTypeNotFoundError, WfsClient, wfsClient, loadMiniSearchOptionsFromEnv } from "../../src/gpf/wfs";
 
-const GPF_WFS_SEARCH_OPTIONS_ENV = "GPF_WFS_SEARCH_OPTIONS";
+const GPF_WFS_MINISEARCH_OPTIONS_ENV = "GPF_WFS_MINISEARCH_OPTIONS";
 
 describe("Test WfsClient",() => {
-    let previousSearchOptionsEnv: string | undefined;
+    let previousMiniSearchOptionsEnv: string | undefined;
 
     beforeEach(() => {
-        previousSearchOptionsEnv = process.env[GPF_WFS_SEARCH_OPTIONS_ENV];
-        delete process.env[GPF_WFS_SEARCH_OPTIONS_ENV];
+        previousMiniSearchOptionsEnv = process.env[GPF_WFS_MINISEARCH_OPTIONS_ENV];
+        delete process.env[GPF_WFS_MINISEARCH_OPTIONS_ENV];
     });
 
     afterEach(() => {
-        if (previousSearchOptionsEnv === undefined) {
-            delete process.env[GPF_WFS_SEARCH_OPTIONS_ENV];
+        if (previousMiniSearchOptionsEnv === undefined) {
+            delete process.env[GPF_WFS_MINISEARCH_OPTIONS_ENV];
             return;
         }
-        process.env[GPF_WFS_SEARCH_OPTIONS_ENV] = previousSearchOptionsEnv;
+        process.env[GPF_WFS_MINISEARCH_OPTIONS_ENV] = previousMiniSearchOptionsEnv;
     });
 
-    describe("loadSearchOptionsFromEnv", () => {
+    describe("loadMiniSearchOptionsFromEnv", () => {
         it("should return undefined when env var is not set", () => {
-            expect(loadSearchOptionsFromEnv()).toBeUndefined();
+            expect(loadMiniSearchOptionsFromEnv()).toBeUndefined();
         });
 
         it("should parse valid JSON options", () => {
-            process.env[GPF_WFS_SEARCH_OPTIONS_ENV] = JSON.stringify({
+            process.env[GPF_WFS_MINISEARCH_OPTIONS_ENV] = JSON.stringify({
+                fields: ["title", "identifierTokens"],
+                combineWith: "OR",
                 fuzzy: 0.05,
                 boost: {
                     title: 4,
@@ -32,7 +34,9 @@ describe("Test WfsClient",() => {
                 },
             });
 
-            expect(loadSearchOptionsFromEnv()).toEqual({
+            expect(loadMiniSearchOptionsFromEnv()).toEqual({
+                fields: ["title", "identifierTokens"],
+                combineWith: "OR",
                 fuzzy: 0.05,
                 boost: {
                     title: 4,
@@ -42,24 +46,38 @@ describe("Test WfsClient",() => {
         });
 
         it("should throw on invalid JSON", () => {
-            process.env[GPF_WFS_SEARCH_OPTIONS_ENV] = '{"fuzzy":0.1';
-            expect(() => loadSearchOptionsFromEnv()).toThrow("Invalid GPF_WFS_SEARCH_OPTIONS");
+            process.env[GPF_WFS_MINISEARCH_OPTIONS_ENV] = '{"fuzzy":0.1';
+            expect(() => loadMiniSearchOptionsFromEnv()).toThrow("Invalid GPF_WFS_MINISEARCH_OPTIONS");
         });
 
         it("should throw on invalid option keys", () => {
-            process.env[GPF_WFS_SEARCH_OPTIONS_ENV] = JSON.stringify({
+            process.env[GPF_WFS_MINISEARCH_OPTIONS_ENV] = JSON.stringify({
                 unsupported: 1,
             });
-            expect(() => loadSearchOptionsFromEnv()).toThrow("unexpected key 'unsupported'");
+            expect(() => loadMiniSearchOptionsFromEnv()).toThrow("unexpected key 'unsupported'");
         });
 
         it("should throw on invalid option value types", () => {
-            process.env[GPF_WFS_SEARCH_OPTIONS_ENV] = JSON.stringify({
+            process.env[GPF_WFS_MINISEARCH_OPTIONS_ENV] = JSON.stringify({
                 boost: {
                     title: "4",
                 },
             });
-            expect(() => loadSearchOptionsFromEnv()).toThrow("expected 'boost.title' to be a finite number");
+            expect(() => loadMiniSearchOptionsFromEnv()).toThrow("expected 'boost.title' to be a finite number");
+        });
+
+        it("should throw on invalid fields value", () => {
+            process.env[GPF_WFS_MINISEARCH_OPTIONS_ENV] = JSON.stringify({
+                fields: ["title", "not_a_field"],
+            });
+            expect(() => loadMiniSearchOptionsFromEnv()).toThrow("unexpected value 'fields.not_a_field'");
+        });
+
+        it("should throw on invalid combineWith value", () => {
+            process.env[GPF_WFS_MINISEARCH_OPTIONS_ENV] = JSON.stringify({
+                combineWith: "XOR",
+            });
+            expect(() => loadMiniSearchOptionsFromEnv()).toThrow("expected 'combineWith' to be 'AND' or 'OR'");
         });
     });
 
@@ -93,7 +111,9 @@ describe("Test WfsClient",() => {
 
         it("should allow overriding search tuning in WfsClient constructor", async () => {
             const tuned = new WfsClient(undefined, {
-                search: {
+                miniSearch: {
+                    fields: ["title", "identifierTokens"],
+                    combineWith: "OR",
                     fuzzy: 0.1,
                     boost: { title: 4.0 },
                 }
