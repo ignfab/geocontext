@@ -9,7 +9,8 @@ interface GpfWfsDescribeTypeInput {
 class GpfWfsDescribeTypeTool extends MCPTool<GpfWfsDescribeTypeInput> {
   name = "gpf_wfs_describe_type";
   description = [
-    "Renvoie la description détaillée d'un type WFS donné par son nom fourni par gpf_wfs_search_types.",
+    "Renvoie la description détaillée d'un type WFS (propriétés, géométrie, valeurs possibles) à partir de son nom fourni par gpf_wfs_search_types.",
+    "NB : gpf_wfs_search_types renvoie déjà le titre et la description du type ; utiliser cet outil uniquement pour obtenir la liste des propriétés.",
   ].join("\r\n");
 
   schema = {
@@ -22,12 +23,14 @@ class GpfWfsDescribeTypeTool extends MCPTool<GpfWfsDescribeTypeInput> {
   async execute(input: GpfWfsDescribeTypeInput) {
     try {
       return await wfsClient.getFeatureType(input.typename);
-    }catch(e){
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+
       return {
         type: "error",
-        message: e.message,
-        help: `Utiliser gpf_get_feature_types pour trouver les types disponibles`
-      }
+        message,
+        help: "Utiliser gpf_wfs_search_types pour trouver les types disponibles",
+      };
     }
   }
 }

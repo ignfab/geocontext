@@ -14,7 +14,7 @@ L'idée est ici d'**expérimenter la conception d'un MCP rendant les données et
 
 ## Mises en garde
 
-- Ce développement est un POC en incubation avec IgnFab (archivage en cours de [mborne/geocontext](https://github.com/mborne/geocontext))
+- Ce développement est un POC en incubation au sein d'ignfab (archivage en cours de [mborne/geocontext](https://github.com/mborne/geocontext))
 - S'il s'avère utile de l'industrialiser, le dépôt sera migré sous responsabilité IGN et l'outil sera renommé (ex : `IGNF/mcp-gpf-server`)
 - Plusieurs problèmes et améliorations possibles ont été identifiés et sont en cours de mitigation/résolution (c.f. [issues](https://github.com/ignfab/geocontext/issues?q=is%3Aissue%20state%3Aopen%20label%3Ametadata)).
 - Cet outil n'est pas magique (voir [Fonctionnalités](#fonctionnalités) pour avoir une idée de ses capacités)
@@ -74,6 +74,8 @@ npm run build
 
 ### Utilisation de la version locale
 
+#### Avec un client MCP compatible JSON
+
 ```json
 {
   "mcpServers": {
@@ -84,6 +86,27 @@ npm run build
   }
 }
 ```
+
+#### Avec Codex CLI / VS Code
+
+Avec Codex CLI ou l'extension Codex pour VS Code, la configuration se fait dans `~/.codex/config.toml` :
+
+```toml
+[mcp_servers.geocontext]
+command = "node"
+args = ["/chemin/absolu/vers/geocontext/dist/index.js"]
+
+# Définition d'un corporate proxy si nécessaire
+[mcp_servers.geocontext.env]
+HTTPS_PROXY = "http://proxy.domain.fr:3128"
+HTTP_PROXY = "http://proxy.domain.fr:3128"
+NO_PROXY = "localhost,127.0.0.1"
+http_proxy = "http://proxy.domain.fr:3128"
+https_proxy = "http://proxy.domain.fr:3128"
+no_proxy = "localhost,127.0.0.1"
+```
+
+Après mise à jour de `~/.codex/config.toml`, relancer la session Codex CLI ou recharger VS Code si l'extension Codex est déjà ouverte.
 
 ### Debug de la version locale
 
@@ -98,15 +121,15 @@ Pour une utilisation avancée :
 | Nom              | Description                                                                                                          | Valeur par défaut |
 | ---------------- | -------------------------------------------------------------------------------------------------------------------- | ----------------- |
 | `TRANSPORT_TYPE` | [Transport](https://mcp-framework.com/docs/Transports/transports-overview) permet de choisir entre "stdio" et "http" | "stdio"           |
-| `GPF_WFS_SEARCH_OPTIONS` | Chaîne JSON optionnelle pour ajuster la recherche `gpf_wfs_search_types` (`fuzzy`, `boost.namespace`, `boost.name`, `boost.title`, `boost.description`, `boost.properties`). | options par défaut de `@ignfab/gpf-schema-store` |
+| `GPF_WFS_MINISEARCH_OPTIONS` | Chaîne JSON optionnelle pour ajuster les options MiniSearch utilisées par `gpf_wfs_search_types` (`fields`, `combineWith`, `fuzzy`, `boost.namespace`, `boost.name`, `boost.title`, `boost.description`, `boost.properties`, `boost.enums`, `boost.identifierTokens`). | options par défaut de `@ignfab/gpf-schema-store` |
 
 Exemple :
 
 ```bash
-export GPF_WFS_SEARCH_OPTIONS='{"fuzzy":0.05,"boost":{"title":4,"name":5}}'
+export GPF_WFS_MINISEARCH_OPTIONS='{"fields":["title","identifierTokens"],"combineWith":"OR","fuzzy":0.05,"boost":{"title":4,"name":5}}'
 ```
 
-Si `GPF_WFS_SEARCH_OPTIONS` est absent ou vide, les options par défaut restent celles de `@ignfab/gpf-schema-store`.
+Si `GPF_WFS_MINISEARCH_OPTIONS` est absent ou vide, les options par défaut restent celles de `@ignfab/gpf-schema-store`, y compris le comportement par défaut `OR` de MiniSearch pour `combineWith`.
 
 Remarque :
 
@@ -151,7 +174,7 @@ L'idée est ici de répondre à des précises en traitant côté serveur les app
 #### Explorer les tables
 
 * [gpf_wfs_list_types()](src/tools/GpfWfsListTypesTool.ts) pour **lister les tables connues du catalogue de schémas embarqué** - **déprécié (trop de résultats)**
-* [gpf_wfs_search_types(keywords,max_results=10)](src/tools/GpfWfsSearchTypesTool.ts) pour **rechercher des tables dans le catalogue de schémas embarqué**. La recherche est textuelle et configurable via `GPF_WFS_SEARCH_OPTIONS`.
+* [gpf_wfs_search_types(keywords,max_results=10)](src/tools/GpfWfsSearchTypesTool.ts) pour **rechercher des tables dans le catalogue de schémas embarqué**. La recherche est textuelle et configurable via `GPF_WFS_MINISEARCH_OPTIONS`.
 
 > - Quels sont les millésimes ADMINEXPRESS disponibles sur la Géoplateforme?
 > - Quelle est la table de la BDTOPO correspondant aux bâtiments?
