@@ -49,6 +49,11 @@ docker compose build
 docker compose up -d
 ```
 
+Remarque :
+
+- le `docker-compose.yaml` fournit `HTTP_HOST=0.0.0.0` pour rendre le serveur HTTP joignable depuis l'hôte ;
+- sans ce paramètre, `mcp-framework` écoute par défaut sur `127.0.0.1` en mode HTTP, ce qui n'est pas adapté à une exécution en conteneur.
+
 Ensuite :
 
 ```json
@@ -121,6 +126,7 @@ Pour une utilisation avancée :
 | Nom              | Description                                                                                                          | Valeur par défaut |
 | ---------------- | -------------------------------------------------------------------------------------------------------------------- | ----------------- |
 | `TRANSPORT_TYPE` | [Transport](https://mcp-framework.com/docs/Transports/transports-overview) permet de choisir entre "stdio" et "http" | "stdio"           |
+| `HTTP_HOST` | Adresse d'écoute en mode HTTP. Utile avec Docker pour exposer le service via `0.0.0.0`. | défaut `mcp-framework` (`127.0.0.1`) |
 | `GPF_WFS_MINISEARCH_OPTIONS` | Chaîne JSON optionnelle pour ajuster les options MiniSearch utilisées par `gpf_wfs_search_types` (`fields`, `combineWith`, `fuzzy`, `boost.namespace`, `boost.name`, `boost.title`, `boost.description`, `boost.properties`, `boost.enums`, `boost.identifierTokens`). | options par défaut de `@ignfab/gpf-schema-store` |
 
 Exemple :

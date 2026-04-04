@@ -11,6 +11,7 @@ services:
       - https_proxy
       - HTTP_PROXY
       - HTTPS_PROXY
+      - HTTP_HOST=0.0.0.0
     ports:
     - ${APP_PORT:-3000}:3000
     deploy:

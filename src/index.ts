@@ -21,6 +21,7 @@ const TRANSPORTS: Record<string, any> = {
   'http': {
     type: "http-stream",
     options: {
+      host: process.env.HTTP_HOST,
       port: 3000,
       cors: {
         allowOrigin: "*"
