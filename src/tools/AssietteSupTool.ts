@@ -1,30 +1,52 @@
-import { logger, MCPTool } from "mcp-framework";
+import { MCPTool } from "mcp-framework";
 import { z } from "zod";
+
 import { getAssiettesServitudes, URBANISME_SOURCE } from "../gpf/urbanisme.js";
+import logger from "../logger.js";
+import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "./toolAnnotations.js";
 
-interface SupInput {
-  lon: number;
-  lat: number;
-}
+const assietteSupInputSchema = z.object({
+  lon: z
+    .number()
+    .min(-180)
+    .max(180)
+    .describe("La longitude du point."),
+  lat: z
+    .number()
+    .min(-90)
+    .max(90)
+    .describe("La latitude du point."),
+});
 
-class AssietteSupTool extends MCPTool<SupInput> {
+type AssietteSupInput = z.infer<typeof assietteSupInputSchema>;
+
+const assietteSupResultSchema = z
+  .object({
+    type: z.string().describe("Le type d'assiette de servitude d'utilité publique renvoyé."),
+    id: z.string().describe("L'identifiant de l'assiette."),
+    bbox: z.array(z.number()).describe("La boîte englobante de l'assiette.").optional(),
+    distance: z.number().describe("La distance entre le point demandé et l'assiette retenue."),
+  })
+  .catchall(z.unknown());
+
+const assietteSupOutputSchema = z.object({
+  results: z.array(assietteSupResultSchema).describe("La liste des assiettes de servitudes d'utilité publique pertinentes pour le point demandé."),
+});
+
+class AssietteSupTool extends MCPTool<AssietteSupInput> {
   name = "assiette_sup";
-  description = `Renvoie les assiettes des servitudes d'utilité publique (SUP) pour une position donnée par sa longitude et sa latitude (source: ${URBANISME_SOURCE}).`;
+  title = "Servitudes d’utilité publique";
+  annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
+  description = `Renvoie, pour un point donné par sa longitude et sa latitude, la liste des assiettes de servitudes d'utilité publique (SUP) pertinentes à proximité, avec leurs propriétés associées. Les résultats peuvent inclure des assiettes ponctuelles, linéaires ou surfaciques. (source : ${URBANISME_SOURCE}).`;
+  protected outputSchemaShape = assietteSupOutputSchema;
 
-  schema = {
-    lon: {
-      type: z.number(),
-      description: "La longitude du point",
-    },
-    lat: {
-      type: z.number(),
-      description: "La latitude du point",
-    },
-  };
+  schema = assietteSupInputSchema;
 
-  async execute(input: SupInput) {
+  async execute(input: AssietteSupInput) {
     logger.info(`assiette_sup(${input.lon},${input.lat})...`);
-    return getAssiettesServitudes(input.lon, input.lat);
+    return {
+      results: await getAssiettesServitudes(input.lon, input.lat),
+    };
   }
 }
 

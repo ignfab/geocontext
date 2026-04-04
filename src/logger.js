@@ -6,6 +6,7 @@ const formats = {
     json: format.json(),
     simple: format.simple()
 };
+
 const LOG_FORMAT = process.env.LOG_FORMAT ? process.env.LOG_FORMAT : 'simple';
 if ( ! Object.keys(formats).includes(LOG_FORMAT) ){
     throw new Error(`LOG_FORMAT=${LOG_FORMAT} not found!`);

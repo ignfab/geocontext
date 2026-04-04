@@ -1,6 +1,7 @@
 {
     "compilerOptions": {
         "outDir": "./dist/",
+        "rootDir": "./src",
         "noImplicitAny": true,
         "moduleResolution": "node",
         "sourceMap": true,

@@ -1,7 +1,7 @@
+import _ from 'lodash';
+
 import { fetchJSON } from '../helpers/http.js';
 import logger from '../logger.js';
-
-import _ from 'lodash';
 
 /**
  * ADMINEXPRESS-COG.LATEST:{type}
@@ -24,9 +24,10 @@ export const ADMINEXPRESS_TYPES = [
  *
  * @param {number} lon 
  * @param {number} lat 
+ * @param {(url: string) => Promise<any>} [fetcher]
  * @returns {object[]}
  */
-export async function getAdminUnits(lon, lat) {
+export async function getAdminUnits(lon, lat, fetcher = fetchJSON) {
     logger.info(`[adminexpress] getAdminUnits(${lon},${lat})...`);
 
     // note that EPSG:4326 means lat,lon order for GeoServer -> flipped coordinates...
@@ -41,7 +42,10 @@ export async function getAdminUnits(lon, lat) {
         cql_filter: cql_filter
     }).toString();
 
-    const featureCollection = await fetchJSON(url);
+    const featureCollection = await fetcher(url);
+    if (!Array.isArray(featureCollection?.features)) {
+        throw new Error("Le service ADMINEXPRESS n'a pas retourné de collection d'objets exploitable");
+    }
     return featureCollection.features.map((feature) => {
         // parse type from id (ex: "commune.3837")
         const type = feature.id.split('.')[0];
@@ -53,4 +57,3 @@ export async function getAdminUnits(lon, lat) {
         }, feature.properties);
     });
 }
-
