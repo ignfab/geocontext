@@ -1,7 +1,7 @@
 {
   "name": "@ignfab/geocontext",
   "version": "0.9.2",
-  "description": "An experimental MCP server providing spatial context for LLM.",
+  "description": "An experimental MCP server providing access to the services and data of the french Geoplateform",
   "type": "module",
   "bin": {
     "geocontext": "./dist/index.js"
