@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { geocode, GEOCODE_SOURCE } from "../gpf/geocode.js";
 import logger from "../logger.js";
-import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "./toolAnnotations.js";
+import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 
 const geocodeInputSchema = z.object({
   text: z

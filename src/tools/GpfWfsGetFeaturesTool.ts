@@ -4,7 +4,7 @@ import { z } from "zod";
 import { GPF_WFS_URL } from "../gpf/wfs.js";
 import { fetchJSON } from "../helpers/http.js";
 import logger from "../logger.js";
-import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "./toolAnnotations.js";
+import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 
 // This tool intentionally does not expose a single outputSchemaShape.
 // - `result_type="results"` can return a large FeatureCollection, and we

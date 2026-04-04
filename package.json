@@ -27,11 +27,15 @@
   },
   "homepage": "https://github.com/ignfab/geocontext#readme",
   "scripts": {
-    "build": "tsc && npx mcp-build",
+    "clean:dist": "rm -rf dist",
+    "copy:resources": "mkdir -p dist/resources/content && cp -R src/resources/content/. dist/resources/content/",
+    "build": "npm run clean:dist && tsc && npx mcp-build && npm run copy:resources",
     "watch": "tsc --watch",
     "start": "node dist/index.js",
     "test": "node --no-warnings --experimental-vm-modules ./node_modules/jest/bin/jest.js",
-    "coverage": "node --no-warnings --experimental-vm-modules ./node_modules/jest/bin/jest.js --coverage"
+    "coverage": "node --no-warnings --experimental-vm-modules ./node_modules/jest/bin/jest.js --coverage",
+    "reset": "rm -rf node_modules package-lock.json dist build .next .turbo coverage",
+    "fresh": "npm run reset && npm cache verify && npm install && npm run build && npm test"
   },
   "dependencies": {
     "@camptocamp/ogc-client": "^1.3.0",

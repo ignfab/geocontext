@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { ALTITUDE_SOURCE, getAltitudeByLocation } from "../gpf/altitude.js";
 import logger from "../logger.js";
-import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "./toolAnnotations.js";
+import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 
 const altitudeInputSchema = z.object({
   lon: z

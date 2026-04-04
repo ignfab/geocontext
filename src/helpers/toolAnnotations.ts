@@ -3,4 +3,4 @@ export const READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS = {
   destructiveHint: false,
   idempotentHint: true,
   openWorldHint: true,
-} as const;
+};

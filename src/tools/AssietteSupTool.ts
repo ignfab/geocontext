@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { getAssiettesServitudes, URBANISME_SOURCE } from "../gpf/urbanisme.js";
 import logger from "../logger.js";
-import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "./toolAnnotations.js";
+import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 
 const assietteSupInputSchema = z.object({
   lon: z
