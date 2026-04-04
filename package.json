@@ -1,6 +1,6 @@
 {
   "name": "@ignfab/geocontext",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "description": "An experimental MCP server providing spatial context for LLM.",
   "type": "module",
   "bin": {
