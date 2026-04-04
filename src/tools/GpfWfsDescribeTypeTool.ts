@@ -1,7 +1,19 @@
 import { MCPTool } from "mcp-framework";
 import { z } from "zod";
 import type { Collection } from "@ignfab/gpf-schema-store";
+
 import { wfsClient } from "../gpf/wfs.js";
+import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "./toolAnnotations.js";
+
+const gpfWfsDescribeTypeInputSchema = z.object({
+  typename: z
+    .string()
+    .trim()
+    .min(1, "le nom du type ne doit pas être vide")
+    .describe("Le nom du type (ex : BDTOPO_V3:batiment)"),
+});
+
+type GpfWfsDescribeTypeInput = z.infer<typeof gpfWfsDescribeTypeInputSchema>;
 
 const gpfWfsPropertySchema = z.object({
   name: z.string().describe("Le nom de la propriété."),
@@ -23,13 +35,10 @@ const gpfWfsDescribeTypeOutputSchema = z.object({
   }).describe("La description détaillée du type WFS."),
 });
 
-interface GpfWfsDescribeTypeInput {
-  typename: string;
-}
-
 class GpfWfsDescribeTypeTool extends MCPTool<GpfWfsDescribeTypeInput> {
   name = "gpf_wfs_describe_type";
   title = "Description d’un type WFS";
+  annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
   description = [
     "Renvoie le schéma détaillé d'un type WFS à partir de son identifiant (`typename`) : identifiants, description et liste des propriétés.",
     "Utiliser ce tool après `gpf_wfs_search_types` pour inspecter les propriétés disponibles avant d'appeler `gpf_wfs_get_features`.",
@@ -37,13 +46,7 @@ class GpfWfsDescribeTypeTool extends MCPTool<GpfWfsDescribeTypeInput> {
   ].join("\r\n");
   protected outputSchemaShape = gpfWfsDescribeTypeOutputSchema;
 
-  schema = z.object({
-    typename: z
-      .string()
-      .trim()
-      .min(1, "le nom du type ne doit pas être vide")
-      .describe("Le nom du type (ex : BDTOPO_V3:batiment)"),
-  });
+  schema = gpfWfsDescribeTypeInputSchema;
 
   async execute(input: GpfWfsDescribeTypeInput) {
     try {
@@ -55,27 +58,6 @@ class GpfWfsDescribeTypeTool extends MCPTool<GpfWfsDescribeTypeInput> {
       const message = e instanceof Error ? e.message : String(e);
       throw new Error(`${message}. Utiliser gpf_wfs_search_types pour trouver un type valide.`);
     }
-  }
-
-  protected createSuccessResponse(data: unknown) {
-    if (
-      typeof data === "object" &&
-      data !== null &&
-      "result" in data &&
-      typeof data.result === "object" &&
-      data.result !== null
-    ) {
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify(data.result),
-          },
-        ],
-      };
-    }
-
-    return super.createSuccessResponse(data);
   }
 }
 

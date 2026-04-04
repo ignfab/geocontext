@@ -1,5 +1,5 @@
-import logger from "../logger.js";
 import { fetchJSON } from "../helpers/http.js";
+import logger from "../logger.js";
 
 export const ALTITUDE_SOURCE = "Géoplateforme (altimétrie)";
 
@@ -22,7 +22,7 @@ export async function getAltitudeByLocation(lon, lat, fetcher = fetchJSON) {
     const elevation = json?.elevations?.[0];
 
     if (!elevation) {
-        throw new Error("No elevation data returned by the altitude service");
+        throw new Error("Le service d'altitude n'a renvoyé aucune donnée d'altitude");
     }
 
     return {

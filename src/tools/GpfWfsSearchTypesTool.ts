@@ -1,6 +1,25 @@
 import { MCPTool } from "mcp-framework";
 import { z } from "zod";
+
+import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "./toolAnnotations.js";
 import { wfsClient } from "../gpf/wfs.js";
+
+const gpfWfsSearchTypesInputSchema = z.object({
+  query: z
+    .string()
+    .trim()
+    .min(1, "la requête de recherche ne doit pas être vide")
+    .describe("La requête de recherche"),
+  max_results: z
+    .number()
+    .int()
+    .min(1)
+    .max(50)
+    .optional()
+    .describe("Le nombre maximum de résultats à retourner (entre 1 et 50). Défaut : 10."),
+});
+
+type GpfWfsSearchTypesInput = z.infer<typeof gpfWfsSearchTypesInputSchema>;
 
 const gpfWfsSearchTypeResultSchema = z.object({
   id: z.string().describe("L'identifiant complet du type WFS."),
@@ -12,14 +31,10 @@ const gpfWfsSearchTypesOutputSchema = z.object({
   results: z.array(gpfWfsSearchTypeResultSchema).describe("La liste ordonnée des types WFS trouvés."),
 });
 
-interface GpfWfsSearchTypesInput {
-  query: string;
-  max_results?: number;
-}
-
 class GpfWfsSearchTypesTool extends MCPTool<GpfWfsSearchTypesInput> {
   name = "gpf_wfs_search_types";
   title = "Recherche de types WFS";
+  annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
   description = [
     "Recherche des types WFS de la Géoplateforme (GPF) à partir de mots-clés afin de trouver un identifiant de type (`typename`) valide.",
     "Utiliser ce tool avant `gpf_wfs_describe_type` ou `gpf_wfs_get_features` lorsque le nom exact du type n'est pas connu.",
@@ -28,20 +43,7 @@ class GpfWfsSearchTypesTool extends MCPTool<GpfWfsSearchTypesInput> {
   ].join("\r\n");
   protected outputSchemaShape = gpfWfsSearchTypesOutputSchema;
 
-  schema = z.object({
-    query: z
-      .string()
-      .trim()
-      .min(1, "la requête de recherche ne doit pas être vide")
-      .describe("La requête de recherche"),
-    max_results: z
-      .number()
-      .int()
-      .min(1)
-      .max(50)
-      .optional()
-      .describe("Le nombre maximum de résultats à retourner (entre 1 et 50). Défaut : 10."),
-  });
+  schema = gpfWfsSearchTypesInputSchema;
 
   async execute(input: GpfWfsSearchTypesInput) {
     const maxResults = input.max_results || 10;
@@ -53,26 +55,6 @@ class GpfWfsSearchTypesTool extends MCPTool<GpfWfsSearchTypesInput> {
         description: featureType.description,
       })),
     };
-  }
-
-  protected createSuccessResponse(data: unknown) {
-    if (
-      typeof data === "object" &&
-      data !== null &&
-      "results" in data &&
-      Array.isArray(data.results)
-    ) {
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify(data.results),
-          },
-        ],
-      };
-    }
-
-    return super.createSuccessResponse(data);
   }
 }
 

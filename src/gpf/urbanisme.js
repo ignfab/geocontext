@@ -1,4 +1,3 @@
-
 import distance from "../helpers/distance.js";
 import { fetchJSON } from "../helpers/http.js";
 import logger from "../logger.js";

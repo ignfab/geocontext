@@ -1,7 +1,7 @@
+import _ from 'lodash';
+
 import { fetchJSON } from '../helpers/http.js';
 import logger from '../logger.js';
-
-import _ from 'lodash';
 
 /**
  * ADMINEXPRESS-COG.LATEST:{type}

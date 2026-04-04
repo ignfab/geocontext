@@ -1,8 +1,26 @@
 import { MCPTool } from "mcp-framework";
 import { z } from "zod";
-import { geocode, GEOCODE_SOURCE } from "../gpf/geocode.js";
 
+import { geocode, GEOCODE_SOURCE } from "../gpf/geocode.js";
 import logger from "../logger.js";
+import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "./toolAnnotations.js";
+
+const geocodeInputSchema = z.object({
+  text: z
+    .string()
+    .trim()
+    .min(1, "le texte ne doit pas être vide")
+    .describe("Le texte devant être completé et géocodé"),
+  maximumResponses: z
+    .number()
+    .int()
+    .min(1)
+    .max(10)
+    .optional()
+    .describe("Le nombre maximum de résultats à retourner (entre 1 et 10). Défaut : 3."),
+});
+
+type GeocodeInput = z.infer<typeof geocodeInputSchema>;
 
 const geocodeResultSchema = z.object({
   lon: z.number().describe("La longitude du résultat."),
@@ -17,57 +35,20 @@ const geocodeOutputSchema = z.object({
   results: z.array(geocodeResultSchema).describe("La liste ordonnée des résultats géocodés."),
 });
 
-interface GeocodeInput {
-  text: string;
-  maximumResponses?: number;
-}
-
 class GeocodeTool extends MCPTool<GeocodeInput> {
   name = "geocode";
   title = "Géocodage de lieux et d’adresses";
+  annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
   description = `Renvoie des résultats d'autocomplétion géocodés à partir d'un texte libre (lieu, adresse, POI), avec coordonnées, libellé complet et informations de localisation (kind, city, zipcode). (source : ${GEOCODE_SOURCE}).`;
   protected outputSchemaShape = geocodeOutputSchema;
 
-  schema = z.object({
-    text: z
-      .string()
-      .trim()
-      .min(1, "le texte ne doit pas être vide")
-      .describe("Le texte devant être completé et géocodé"),
-    maximumResponses: z
-      .number()
-      .int()
-      .min(1)
-      .max(10)
-      .optional()
-      .describe("Le nombre maximum de résultats à retourner (entre 1 et 10). Défaut : 3."),
-  });
+  schema = geocodeInputSchema;
 
   async execute(input: GeocodeInput) {
     logger.info(`geocode(${input.text}, ${input.maximumResponses ?? 3})...`);
     return {
       results: await geocode(input.text, input.maximumResponses),
     };
-  }
-
-  protected createSuccessResponse(data: unknown) {
-    if (
-      typeof data === "object" &&
-      data !== null &&
-      "results" in data &&
-      Array.isArray(data.results)
-    ) {
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify(data.results),
-          },
-        ],
-      };
-    }
-
-    return super.createSuccessResponse(data);
   }
 }
 

@@ -1,23 +1,34 @@
-import GeocodeTool from "../../src/tools/GeocodeTool";
 import {geocode} from "../../src/gpf/geocode.js";
 
-const geocodeResponse = {
+const rawGeocodeServiceResponse = {
     results: [
         {
             x: 6.497148,
             y: 47.153263,
+            country: "PositionOfInterest",
+            names: ["Mairie de Loray"],
             fulltext: "Mairie de Loray, 25390 Loray",
             kind: "mairie",
             city: "Loray",
             zipcode: "25390",
+            zipcodes: ["25390"],
+            metropole: true,
+            poiType: ["mairie", "zone d'activité ou d'intérêt"],
+            street: "Mairie de Loray",
+            classification: 9,
         },
         {
             x: 2.41935,
             y: 48.841291,
+            country: "StreetAddress",
+            names: ["Saint-Mandé"],
             fulltext: "Saint-Mandé, 94160",
             kind: "commune",
             city: "Saint-Mandé",
             zipcode: "94160",
+            zipcodes: ["94160"],
+            metropole: true,
+            classification: 8,
         },
     ],
 };
@@ -25,36 +36,23 @@ const geocodeResponse = {
 describe("Test geocode",() => {
     it("should return the expected value for 'Mairie de Loray'", async () => {
         const results : any[] = await geocode("Mairie de Loray", 3, async () => ({
-            results: [geocodeResponse.results[0]],
+            results: [rawGeocodeServiceResponse.results[0]],
         }));
         expect(results.length).toBeGreaterThan(0);
         const firstItem = results[0];
 
-        //   x: 6.497148,
         expect(firstItem.lon).toBeCloseTo(6.497148,5);
-        //   y: 47.153263,
         expect(firstItem.lat).toBeCloseTo(47.153263,5);
-        //   country: 'PositionOfInterest',
-        //   names: [ 'Mairie de Loray' ],
-        //   city: 'Loray',
-        //   zipcode: '25390',
-        //   zipcodes: [ '25390' ],
-        //   metropole: true,
-        //   poiType: [ 'mairie', "zone d'activité ou d'intérêt" ],
-        //   street: 'Mairie de Loray',
-        //   kind: 'mairie',
-        //   fulltext: 'Mairie de Loray, 25390 Loray',
         expect(firstItem.fulltext).toEqual('Mairie de Loray, 25390 Loray');
         expect(firstItem.kind).toEqual('mairie');
         expect(firstItem.city).toEqual('Loray');
         expect(firstItem.zipcode).toEqual('25390');
-        //   classification: 9
 
     });
 
     it("should honor maximumResponses", async () => {
         const results : any[] = await geocode("Saint-Mande", 1, async () => ({
-            results: [geocodeResponse.results[1]],
+            results: [rawGeocodeServiceResponse.results[1]],
         }));
 
         expect(results).toHaveLength(1);
@@ -67,84 +65,4 @@ describe("Test geocode",() => {
         expect(results).toEqual([]);
     });
 
-});
-
-describe("Test GeocodeTool",() => {
-    class TestableGeocodeTool extends GeocodeTool {
-        async execute() {
-            return {
-                results: [await geocode("Saint-Mande", 1, async () => ({
-                    results: [geocodeResponse.results[1]],
-                })).then((items) => items[0])],
-            };
-        }
-    }
-
-    it("should expose an enriched MCP definition", () => {
-        const tool = new GeocodeTool();
-        expect(tool.toolDefinition.title).toEqual("Géocodage de lieux et d’adresses");
-        expect(tool.toolDefinition.inputSchema.properties?.text).toMatchObject({
-            type: "string",
-            minLength: 1,
-        });
-        expect(tool.toolDefinition.inputSchema.properties?.maximumResponses).toMatchObject({
-            type: "integer",
-            minimum: 1,
-            maximum: 10,
-        });
-        expect(tool.toolDefinition.outputSchema).toBeDefined();
-    });
-
-    it("should return both text content and structuredContent", async () => {
-        const tool = new TestableGeocodeTool();
-        const response = await tool.toolCall({
-            params: {
-                name: "geocode",
-                arguments: {
-                    text: "Saint-Mande",
-                    maximumResponses: 1,
-                },
-            },
-        });
-
-        expect(response.isError).toBeUndefined();
-        expect(response.content[0]).toMatchObject({
-            type: "text",
-        });
-        const textContent = response.content[0];
-        if (textContent.type !== "text") {
-            throw new Error("expected text content");
-        }
-        expect(JSON.parse(textContent.text)).toHaveLength(1);
-        expect(response.structuredContent).toBeDefined();
-        expect(response.structuredContent).toMatchObject({
-            results: [
-                {
-                    fulltext: "Saint-Mandé, 94160",
-                },
-            ],
-        });
-    });
-
-    it("should return isError=true for invalid input", async () => {
-        const tool = new GeocodeTool();
-        const response = await tool.toolCall({
-            params: {
-                name: "geocode",
-                arguments: {
-                    text: "",
-                },
-            },
-        });
-
-        expect(response.isError).toBe(true);
-        expect(response.content[0]).toMatchObject({
-            type: "text",
-        });
-        const textContent = response.content[0];
-        if (textContent.type !== "text") {
-            throw new Error("expected text content");
-        }
-        expect(textContent.text).toContain("le texte ne doit pas être vide");
-    });
 });

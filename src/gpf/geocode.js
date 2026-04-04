@@ -1,5 +1,5 @@
-import logger from "../logger.js";
 import { fetchJSON } from "../helpers/http.js";
+import logger from "../logger.js";
 
 export const GEOCODE_SOURCE = "Géoplateforme (service d'autocomplétion)";
 

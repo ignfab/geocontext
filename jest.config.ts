@@ -3,7 +3,7 @@ import { createJsWithTsEsmPreset, type JestConfigWithTsJest } from 'ts-jest'
 const MILLISECONDS = 1000;
 
 const presetConfig = createJsWithTsEsmPreset({
-
+  tsconfig: 'tsconfig.test.json',
 })
 
 const jestConfig: JestConfigWithTsJest = {

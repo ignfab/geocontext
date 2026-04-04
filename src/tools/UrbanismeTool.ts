@@ -1,12 +1,24 @@
 import { MCPTool } from "mcp-framework";
 import { z } from "zod";
+
 import { getUrbanisme, URBANISME_SOURCE } from "../gpf/urbanisme.js";
 import logger from "../logger.js";
+import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "./toolAnnotations.js";
 
-interface UrbanismeInput {
-  lon: number;
-  lat: number;
-}
+const urbanismeInputSchema = z.object({
+  lon: z
+    .number()
+    .min(-180)
+    .max(180)
+    .describe("La longitude du point."),
+  lat: z
+    .number()
+    .min(-90)
+    .max(90)
+    .describe("La latitude du point."),
+});
+
+type UrbanismeInput = z.infer<typeof urbanismeInputSchema>;
 
 const urbanismeResultSchema = z
   .object({
@@ -34,47 +46,17 @@ const URBANISME_TOOL_DESCRIPTION = [
 class UrbanismeTool extends MCPTool<UrbanismeInput> {
   name = "urbanisme";
   title = "Informations d’urbanisme";
+  annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
   description = URBANISME_TOOL_DESCRIPTION;
   protected outputSchemaShape = urbanismeOutputSchema;
 
-  schema = z.object({
-    lon: z
-      .number()
-      .min(-180)
-      .max(180)
-      .describe("La longitude du point."),
-    lat: z
-      .number()
-      .min(-90)
-      .max(90)
-      .describe("La latitude du point."),
-  });
+  schema = urbanismeInputSchema;
 
   async execute(input: UrbanismeInput) {
     logger.info(`urbanisme(${input.lon},${input.lat})...`);
     return {
       results: await getUrbanisme(input.lon, input.lat),
     };
-  }
-
-  protected createSuccessResponse(data: unknown) {
-    if (
-      typeof data === "object" &&
-      data !== null &&
-      "results" in data &&
-      Array.isArray(data.results)
-    ) {
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify(data.results),
-          },
-        ],
-      };
-    }
-
-    return super.createSuccessResponse(data);
   }
 }
 

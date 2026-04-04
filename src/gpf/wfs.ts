@@ -42,7 +42,7 @@ type MiniSearchOptions = MiniSearchCollectionSearchOptions;
 
 export class FeatureTypeNotFoundError extends Error {
     constructor(name: string) {
-        super(`Type '${name}' not found`);
+        super(`Le type '${name}' est introuvable`);
         this.name = "FeatureTypeNotFoundError";
     }
 }

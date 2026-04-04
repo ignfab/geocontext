@@ -1,9 +1,8 @@
-import logger from '../logger.js';
+import _ from 'lodash';
 
 import distance from '../helpers/distance.js';
-
-import _ from 'lodash';
 import { fetchJSON } from '../helpers/http.js';
+import logger from '../logger.js';
 
 // CADASTRALPARCELS.PARCELLAIRE_EXPRESS:
 // https://data.geopf.fr/wfs/ows?service=WFS&version=2.0.0&request=GetCapabilities
