@@ -157,6 +157,10 @@ Quelques services de la Géoplateforme :
 
 > Ex : Quelle est l'altitude de la mairie de Loray (25)?
 
+* [show_ign_map(geojsonUrl?,title?)](src/tools/ShowIgnMapTool.ts) affiche une **carte IGN interactive** avec le fond WMTS Plan IGN v2 et, si `geojsonUrl` est fournie, un **overlay GeoJSON chargé depuis `https://data.geopf.fr`**.
+
+> Ex : Affiche sur une carte IGN les communes renvoyées par cette URL WFS.
+
 ### Recherche d'informations pour un lieu
 
 L'idée est ici de répondre à des précises en traitant côté serveur les appels aux services WFS de la Géoplateforme :
@@ -196,6 +200,8 @@ L'idée est ici de répondre à des précises en traitant côté serveur les app
 #### Explorer les données des tables
 
 * [gpf_wfs_get_features(typename,...)](src/tools/GpfWfsGetFeaturesTool.ts) pour **récupérer les données d'une table** depuis le service WFS de la Géoplateforme ([GetFeature](https://data.geopf.fr/wfs/ows?service=WFS&version=2.0.0&request=GetFeature&typename=ADMINEXPRESS-COG.LATEST:commune&outputFormat=application/json&count=1))
+
+Le paramètre `result_type="url"` permet de récupérer directement une URL sur `https://data.geopf.fr`, qui peut ensuite être fournie à `show_ign_map(geojsonUrl=...)` pour affichage cartographique.
 
 > - Quelles sont les 5 communes les plus peuplées du Doubs (25)?
 > - Combien y-a-t'il de bâtiments à moins de 5 km de la tour Eiffel?

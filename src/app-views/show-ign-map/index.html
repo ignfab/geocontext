@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Carte IGN</title>
+  <style>
+    :root {
+      --color-background-primary: light-dark(#fbfaf5, #1f2123);
+      --color-background-secondary: light-dark(#f0ede3, #2b3035);
+      --color-border-primary: light-dark(#d4ceb8, #495159);
+      --color-text-primary: light-dark(#1f252b, #edf1f3);
+      --color-text-secondary: light-dark(#56636f, #b8c5cf);
+      --color-accent: #145266;
+      --color-accent-strong: #c95b2b;
+      --font-sans: ui-sans-serif, system-ui, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--color-background-primary);
+      color: var(--color-text-primary);
+      font-family: var(--font-sans);
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    #app {
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      width: 100%;
+      height: 100%;
+      background:
+        radial-gradient(circle at top left, rgba(20, 82, 102, 0.08), transparent 32%),
+        linear-gradient(180deg, var(--color-background-primary), var(--color-background-secondary));
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px 10px;
+    }
+
+    .title-block {
+      min-width: 0;
+    }
+
+    .title {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .subtitle {
+      margin-top: 4px;
+      font-size: 12px;
+      color: var(--color-text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    .zoom-button {
+      border: 1px solid var(--color-border-primary);
+      background: rgba(255, 255, 255, 0.8);
+      color: var(--color-text-primary);
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    .zoom-button:hover {
+      border-color: var(--color-accent);
+    }
+
+    .status {
+      padding: 0 16px 10px;
+      font-size: 12px;
+      color: var(--color-text-secondary);
+    }
+
+    .status[data-level="error"] {
+      color: var(--color-accent-strong);
+    }
+
+    .map-shell {
+      position: relative;
+      min-height: 240px;
+      padding: 0 12px 12px;
+    }
+
+    .map-frame {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      min-height: 240px;
+      border: 1px solid var(--color-border-primary);
+      border-radius: 18px;
+      overflow: hidden;
+      background: #dfe8ec;
+      box-shadow: 0 14px 32px rgba(0, 0, 0, 0.12);
+      cursor: grab;
+    }
+
+    .map-frame.dragging {
+      cursor: grabbing;
+    }
+
+    .tiles {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+    }
+
+    .tile {
+      position: absolute;
+      width: 256px;
+      height: 256px;
+      user-select: none;
+      -webkit-user-drag: none;
+      image-rendering: auto;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .legend {
+      position: absolute;
+      left: 14px;
+      bottom: 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      background: rgba(27, 35, 43, 0.78);
+      color: #f8fbfd;
+      font-size: 11px;
+      backdrop-filter: blur(8px);
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: var(--color-accent-strong);
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35);
+    }
+
+    .empty {
+      position: absolute;
+      right: 14px;
+      bottom: 14px;
+      padding: 7px 10px;
+      border-radius: 10px;
+      background: rgba(248, 251, 253, 0.92);
+      color: #24313a;
+      font-size: 11px;
+      border: 1px solid rgba(36, 49, 58, 0.14);
+      backdrop-filter: blur(8px);
+    }
+
+    .attribution {
+      position: absolute;
+      right: 14px;
+      top: 14px;
+      padding: 6px 8px;
+      border-radius: 10px;
+      background: rgba(248, 251, 253, 0.9);
+      color: #24313a;
+      font-size: 11px;
+      border: 1px solid rgba(36, 49, 58, 0.12);
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="toolbar">
+      <div class="title-block">
+        <h1 id="title" class="title">Carte IGN</h1>
+        <div id="subtitle" class="subtitle">Fond WMTS IGN Plan IGN v2</div>
+      </div>
+      <div class="controls">
+        <button id="zoom-out" class="zoom-button" type="button" aria-label="Zoom arrière">-</button>
+        <button id="zoom-in" class="zoom-button" type="button" aria-label="Zoom avant">+</button>
+      </div>
+    </div>
+    <div id="status" class="status">Initialisation de la vue…</div>
+    <div class="map-shell">
+      <div id="map" class="map-frame">
+        <div id="tiles" class="tiles"></div>
+        <svg id="overlay" class="overlay" aria-hidden="true"></svg>
+        <div class="attribution">IGN Plan IGN v2</div>
+        <div id="empty" class="empty">Aucun overlay</div>
+        <div id="legend" class="legend" hidden>
+          <span class="legend-dot"></span>
+          <span id="legend-text">Overlay GeoJSON</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    const TILE_SIZE = 256;
+    const MIN_ZOOM = 2;
+    const MAX_ZOOM = 18;
+    const DEFAULT_TITLE = "Carte IGN";
+    const DEFAULT_BOUNDS = [-5.5, 41.0, 9.8, 51.5];
+    const WMTS_TEMPLATE = "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/png&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}";
+    const SVG_NS = "http://www.w3.org/2000/svg";
+
+    const app = document.getElementById("app");
+    const mapEl = document.getElementById("map");
+    const tilesEl = document.getElementById("tiles");
+    const overlayEl = document.getElementById("overlay");
+    const titleEl = document.getElementById("title");
+    const subtitleEl = document.getElementById("subtitle");
+    const statusEl = document.getElementById("status");
+    const emptyEl = document.getElementById("empty");
+    const legendEl = document.getElementById("legend");
+    const legendTextEl = document.getElementById("legend-text");
+    const zoomInButton = document.getElementById("zoom-in");
+    const zoomOutButton = document.getElementById("zoom-out");
+
+    const state = {
+      title: DEFAULT_TITLE,
+      geojsonUrl: undefined,
+      geojson: undefined,
+      centerLon: 2.3,
+      centerLat: 46.6,
+      zoom: 6,
+      drag: null,
+      loadId: 0,
+    };
+
+    let nextRequestId = 1;
+
+    function sendRequest(method, params) {
+      const id = nextRequestId++;
+      return new Promise((resolve, reject) => {
+        function listener(event) {
+          if (event.data?.id !== id) {
+            return;
+          }
+          window.removeEventListener("message", listener);
+          if ("result" in event.data) {
+            resolve(event.data.result);
+            return;
+          }
+          reject(event.data?.error);
+        }
+        window.addEventListener("message", listener);
+        window.parent.postMessage({ jsonrpc: "2.0", id, method, params }, "*");
+      });
+    }
+
+    function onNotification(method, handler) {
+      window.addEventListener("message", (event) => {
+        if (event.data?.method === method) {
+          handler(event.data.params);
+        }
+      });
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(Math.max(value, min), max);
+    }
+
+    function normalizeLongitude(lon) {
+      let value = lon;
+      while (value < -180) {
+        value += 360;
+      }
+      while (value > 180) {
+        value -= 360;
+      }
+      return value;
+    }
+
+    function lonLatToWorld(lon, lat, zoom) {
+      const safeLat = clamp(lat, -85.05112878, 85.05112878);
+      const scale = TILE_SIZE * 2 ** zoom;
+      const x = ((normalizeLongitude(lon) + 180) / 360) * scale;
+      const sin = Math.sin((safeLat * Math.PI) / 180);
+      const y = (0.5 - Math.log((1 + sin) / (1 - sin)) / (4 * Math.PI)) * scale;
+      return { x, y };
+    }
+
+    function worldToLonLat(x, y, zoom) {
+      const scale = TILE_SIZE * 2 ** zoom;
+      const lon = (x / scale) * 360 - 180;
+      const n = Math.PI - (2 * Math.PI * y) / scale;
+      const lat = (180 / Math.PI) * Math.atan(Math.sinh(n));
+      return { lon: normalizeLongitude(lon), lat: clamp(lat, -85.05112878, 85.05112878) };
+    }
+
+    function geometryCoordinates(geometry, callback) {
+      if (!geometry) {
+        return;
+      }
+      switch (geometry.type) {
+        case "Point":
+          callback(geometry.coordinates);
+          return;
+        case "MultiPoint":
+        case "LineString":
+          geometry.coordinates.forEach(callback);
+          return;
+        case "MultiLineString":
+        case "Polygon":
+          geometry.coordinates.forEach((line) => line.forEach(callback));
+          return;
+        case "MultiPolygon":
+          geometry.coordinates.forEach((polygon) => polygon.forEach((line) => line.forEach(callback)));
+          return;
+        case "GeometryCollection":
+          geometry.geometries.forEach((item) => geometryCoordinates(item, callback));
+          return;
+        default:
+          return;
+      }
+    }
+
+    function getFeatureCollection(geojson) {
+      if (!geojson || typeof geojson !== "object") {
+        return [];
+      }
+      if (geojson.type === "FeatureCollection" && Array.isArray(geojson.features)) {
+        return geojson.features;
+      }
+      if (geojson.type === "Feature") {
+        return [geojson];
+      }
+      return [{ type: "Feature", properties: {}, geometry: geojson }];
+    }
+
+    function computeBounds(geojson) {
+      let minLon = Infinity;
+      let minLat = Infinity;
+      let maxLon = -Infinity;
+      let maxLat = -Infinity;
+
+      getFeatureCollection(geojson).forEach((feature) => {
+        geometryCoordinates(feature.geometry, ([lon, lat]) => {
+          if (!Number.isFinite(lon) || !Number.isFinite(lat)) {
+            return;
+          }
+          minLon = Math.min(minLon, lon);
+          minLat = Math.min(minLat, lat);
+          maxLon = Math.max(maxLon, lon);
+          maxLat = Math.max(maxLat, lat);
+        });
+      });
+
+      if (!Number.isFinite(minLon)) {
+        return null;
+      }
+
+      return [minLon, minLat, maxLon, maxLat];
+    }
+
+    function getViewportSize() {
+      const rect = mapEl.getBoundingClientRect();
+      return {
+        width: Math.max(rect.width, 1),
+        height: Math.max(rect.height, 1),
+      };
+    }
+
+    function fitBounds(bounds) {
+      const { width, height } = getViewportSize();
+      const padding = 36;
+      const [minLon, minLat, maxLon, maxLat] = bounds;
+
+      if (minLon === maxLon && minLat === maxLat) {
+        state.centerLon = minLon;
+        state.centerLat = minLat;
+        state.zoom = 13;
+        return;
+      }
+
+      let bestZoom = MIN_ZOOM;
+      for (let zoom = MAX_ZOOM; zoom >= MIN_ZOOM; zoom -= 1) {
+        const northWest = lonLatToWorld(minLon, maxLat, zoom);
+        const southEast = lonLatToWorld(maxLon, minLat, zoom);
+        const bboxWidth = Math.abs(southEast.x - northWest.x);
+        const bboxHeight = Math.abs(southEast.y - northWest.y);
+        if (bboxWidth <= width - padding * 2 && bboxHeight <= height - padding * 2) {
+          bestZoom = zoom;
+          break;
+        }
+      }
+
+      state.centerLon = (minLon + maxLon) / 2;
+      state.centerLat = (minLat + maxLat) / 2;
+      state.zoom = bestZoom;
+    }
+
+    function setStatus(message, level = "info") {
+      statusEl.dataset.level = level;
+      statusEl.textContent = message;
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    function projectCoordinate(lon, lat, viewport) {
+      const world = lonLatToWorld(lon, lat, state.zoom);
+      return {
+        x: world.x - viewport.leftWorld,
+        y: world.y - viewport.topWorld,
+      };
+    }
+
+    function polylineToPath(line, viewport, closed) {
+      if (!Array.isArray(line) || line.length === 0) {
+        return "";
+      }
+
+      return line
+        .map(([lon, lat], index) => {
+          const point = projectCoordinate(lon, lat, viewport);
+          return `${index === 0 ? "M" : "L"}${point.x.toFixed(2)} ${point.y.toFixed(2)}`;
+        })
+        .join(" ") + (closed ? " Z" : "");
+    }
+
+    function appendPoint(coordinates, viewport) {
+      const [lon, lat] = coordinates;
+      const point = projectCoordinate(lon, lat, viewport);
+      const circle = document.createElementNS(SVG_NS, "circle");
+      circle.setAttribute("cx", point.x.toFixed(2));
+      circle.setAttribute("cy", point.y.toFixed(2));
+      circle.setAttribute("r", "5");
+      circle.setAttribute("fill", "#c95b2b");
+      circle.setAttribute("stroke", "#ffffff");
+      circle.setAttribute("stroke-width", "2");
+      overlayEl.appendChild(circle);
+    }
+
+    function appendPath(pathData, options) {
+      if (!pathData) {
+        return;
+      }
+      const path = document.createElementNS(SVG_NS, "path");
+      path.setAttribute("d", pathData);
+      path.setAttribute("fill", options.fill);
+      path.setAttribute("fill-opacity", options.fillOpacity);
+      path.setAttribute("stroke", options.stroke);
+      path.setAttribute("stroke-width", options.strokeWidth);
+      path.setAttribute("stroke-linejoin", "round");
+      path.setAttribute("stroke-linecap", "round");
+      overlayEl.appendChild(path);
+    }
+
+    function renderFeatureGeometry(geometry, viewport) {
+      if (!geometry) {
+        return;
+      }
+      switch (geometry.type) {
+        case "Point":
+          appendPoint(geometry.coordinates, viewport);
+          return;
+        case "MultiPoint":
+          geometry.coordinates.forEach((point) => appendPoint(point, viewport));
+          return;
+        case "LineString":
+          appendPath(polylineToPath(geometry.coordinates, viewport, false), {
+            fill: "none",
+            fillOpacity: "0",
+            stroke: "#145266",
+            strokeWidth: "3",
+          });
+          return;
+        case "MultiLineString":
+          geometry.coordinates.forEach((line) => {
+            appendPath(polylineToPath(line, viewport, false), {
+              fill: "none",
+              fillOpacity: "0",
+              stroke: "#145266",
+              strokeWidth: "3",
+            });
+          });
+          return;
+        case "Polygon":
+          geometry.coordinates.forEach((ring, index) => {
+            appendPath(polylineToPath(ring, viewport, true), {
+              fill: index === 0 ? "#c95b2b" : "#ffffff",
+              fillOpacity: index === 0 ? "0.18" : "1",
+              stroke: "#c95b2b",
+              strokeWidth: "2",
+            });
+          });
+          return;
+        case "MultiPolygon":
+          geometry.coordinates.forEach((polygon) => {
+            polygon.forEach((ring, index) => {
+              appendPath(polylineToPath(ring, viewport, true), {
+                fill: index === 0 ? "#c95b2b" : "#ffffff",
+                fillOpacity: index === 0 ? "0.18" : "1",
+                stroke: "#c95b2b",
+                strokeWidth: "2",
+              });
+            });
+          });
+          return;
+        case "GeometryCollection":
+          geometry.geometries.forEach((item) => renderFeatureGeometry(item, viewport));
+          return;
+        default:
+          return;
+      }
+    }
+
+    function renderOverlay(viewport) {
+      overlayEl.replaceChildren();
+      overlayEl.setAttribute("viewBox", `0 0 ${viewport.width} ${viewport.height}`);
+      overlayEl.setAttribute("width", String(viewport.width));
+      overlayEl.setAttribute("height", String(viewport.height));
+
+      const features = getFeatureCollection(state.geojson);
+      features.forEach((feature) => renderFeatureGeometry(feature.geometry, viewport));
+
+      const hasOverlay = features.length > 0;
+      emptyEl.hidden = hasOverlay;
+      legendEl.hidden = !hasOverlay;
+      if (hasOverlay) {
+        legendTextEl.textContent = `${features.length} objet${features.length > 1 ? "s" : ""} GeoJSON`;
+      }
+    }
+
+    function tileUrl(x, y, z) {
+      return WMTS_TEMPLATE
+        .replace("{x}", String(x))
+        .replace("{y}", String(y))
+        .replace("{z}", String(z));
+    }
+
+    function renderTiles(viewport) {
+      tilesEl.replaceChildren();
+      const tilesPerAxis = 2 ** state.zoom;
+      const startX = Math.floor(viewport.leftWorld / TILE_SIZE);
+      const endX = Math.floor((viewport.leftWorld + viewport.width) / TILE_SIZE);
+      const startY = Math.floor(viewport.topWorld / TILE_SIZE);
+      const endY = Math.floor((viewport.topWorld + viewport.height) / TILE_SIZE);
+
+      for (let x = startX; x <= endX; x += 1) {
+        for (let y = startY; y <= endY; y += 1) {
+          if (y < 0 || y >= tilesPerAxis) {
+            continue;
+          }
+          const wrappedX = ((x % tilesPerAxis) + tilesPerAxis) % tilesPerAxis;
+          const image = document.createElement("img");
+          image.className = "tile";
+          image.alt = "";
+          image.draggable = false;
+          image.style.left = `${x * TILE_SIZE - viewport.leftWorld}px`;
+          image.style.top = `${y * TILE_SIZE - viewport.topWorld}px`;
+          image.src = tileUrl(wrappedX, y, state.zoom);
+          tilesEl.appendChild(image);
+        }
+      }
+    }
+
+    function render() {
+      const { width, height } = getViewportSize();
+      const centerWorld = lonLatToWorld(state.centerLon, state.centerLat, state.zoom);
+      const viewport = {
+        width,
+        height,
+        leftWorld: centerWorld.x - width / 2,
+        topWorld: centerWorld.y - height / 2,
+      };
+
+      titleEl.textContent = state.title || DEFAULT_TITLE;
+      subtitleEl.innerHTML = state.geojsonUrl
+        ? `Fond WMTS IGN Plan IGN v2 · <span title="${escapeHtml(state.geojsonUrl)}">Overlay chargé depuis data.geopf.fr</span>`
+        : "Fond WMTS IGN Plan IGN v2";
+
+      renderTiles(viewport);
+      renderOverlay(viewport);
+    }
+
+    function setCenterFromWorld(x, y) {
+      const lonLat = worldToLonLat(x, y, state.zoom);
+      state.centerLon = lonLat.lon;
+      state.centerLat = lonLat.lat;
+    }
+
+    function zoomBy(delta, anchorX, anchorY) {
+      const nextZoom = clamp(state.zoom + delta, MIN_ZOOM, MAX_ZOOM);
+      if (nextZoom === state.zoom) {
+        return;
+      }
+
+      const { width, height } = getViewportSize();
+      const centerWorld = lonLatToWorld(state.centerLon, state.centerLat, state.zoom);
+      const beforeX = centerWorld.x - width / 2 + anchorX;
+      const beforeY = centerWorld.y - height / 2 + anchorY;
+      const beforeLonLat = worldToLonLat(beforeX, beforeY, state.zoom);
+
+      state.zoom = nextZoom;
+
+      const afterAnchor = lonLatToWorld(beforeLonLat.lon, beforeLonLat.lat, state.zoom);
+      setCenterFromWorld(afterAnchor.x - anchorX + width / 2, afterAnchor.y - anchorY + height / 2);
+      render();
+    }
+
+    function applyToolInput(args = {}) {
+      state.title = typeof args.title === "string" && args.title.trim() ? args.title.trim() : DEFAULT_TITLE;
+      state.geojsonUrl = typeof args.geojsonUrl === "string" && args.geojsonUrl.trim() ? args.geojsonUrl.trim() : undefined;
+
+      if (!state.geojsonUrl) {
+        state.geojson = undefined;
+        fitBounds(DEFAULT_BOUNDS);
+        setStatus("Fond IGN affiché. Aucun overlay GeoJSON n’a été fourni.");
+        render();
+        return;
+      }
+
+      const loadId = ++state.loadId;
+      state.geojson = undefined;
+      setStatus("Chargement du GeoJSON depuis data.geopf.fr…");
+      render();
+
+      fetch(state.geojsonUrl, {
+        headers: {
+          Accept: "application/json, application/geo+json",
+        },
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+          return response.json();
+        })
+        .then((geojson) => {
+          if (loadId !== state.loadId) {
+            return;
+          }
+          state.geojson = geojson;
+          const bounds = computeBounds(geojson);
+          if (bounds) {
+            fitBounds(bounds);
+            const featureCount = getFeatureCollection(geojson).length;
+            setStatus(`Overlay GeoJSON chargé depuis data.geopf.fr (${featureCount} objet${featureCount > 1 ? "s" : ""}).`);
+          } else {
+            fitBounds(DEFAULT_BOUNDS);
+            setStatus("Le GeoJSON ne contient pas de géométrie exploitable.", "error");
+          }
+          render();
+        })
+        .catch((error) => {
+          if (loadId !== state.loadId) {
+            return;
+          }
+          state.geojson = undefined;
+          fitBounds(DEFAULT_BOUNDS);
+          setStatus(`Impossible de charger le GeoJSON : ${error instanceof Error ? error.message : "erreur inconnue"}.`, "error");
+          render();
+        });
+    }
+
+    mapEl.addEventListener("mousedown", (event) => {
+      event.preventDefault();
+      const centerWorld = lonLatToWorld(state.centerLon, state.centerLat, state.zoom);
+      state.drag = {
+        startX: event.clientX,
+        startY: event.clientY,
+        centerX: centerWorld.x,
+        centerY: centerWorld.y,
+      };
+      mapEl.classList.add("dragging");
+    });
+
+    window.addEventListener("mousemove", (event) => {
+      if (!state.drag) {
+        return;
+      }
+      const dx = event.clientX - state.drag.startX;
+      const dy = event.clientY - state.drag.startY;
+      setCenterFromWorld(state.drag.centerX - dx, state.drag.centerY - dy);
+      render();
+    });
+
+    window.addEventListener("mouseup", () => {
+      state.drag = null;
+      mapEl.classList.remove("dragging");
+    });
+
+    mapEl.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      const rect = mapEl.getBoundingClientRect();
+      zoomBy(event.deltaY < 0 ? 1 : -1, event.clientX - rect.left, event.clientY - rect.top);
+    }, { passive: false });
+
+    zoomInButton.addEventListener("click", () => {
+      const { width, height } = getViewportSize();
+      zoomBy(1, width / 2, height / 2);
+    });
+
+    zoomOutButton.addEventListener("click", () => {
+      const { width, height } = getViewportSize();
+      zoomBy(-1, width / 2, height / 2);
+    });
+
+    window.addEventListener("resize", () => {
+      render();
+    });
+
+    onNotification("ui/notifications/tool-input", (params) => {
+      applyToolInput(params?.arguments ?? {});
+    });
+
+    onNotification("ui/notifications/tool-result", (params) => {
+      const text = params?.content?.[0]?.text;
+      if (!text) {
+        return;
+      }
+      try {
+        const parsed = JSON.parse(text);
+        applyToolInput(parsed);
+      } catch (_error) {
+        // Ignore fallback text that is not JSON.
+      }
+    });
+
+    async function main() {
+      try {
+        const init = await sendRequest("initialize", {
+          capabilities: {},
+          clientInfo: { name: "geocontext-map-ui", version: "1.0.0" },
+          protocolVersion: "2026-01-26",
+        });
+        const vars = init?.hostContext?.styles?.variables;
+        if (vars) {
+          for (const [key, value] of Object.entries(vars)) {
+            if (value) {
+              document.documentElement.style.setProperty(key, value);
+            }
+          }
+        }
+      } finally {
+        window.parent.postMessage({
+          jsonrpc: "2.0",
+          method: "notifications/initialized",
+          params: {},
+        }, "*");
+      }
+
+      fitBounds(DEFAULT_BOUNDS);
+      setStatus("Fond IGN prêt.");
+      render();
+    }
+
+    main().catch((error) => {
+      setStatus(`Initialisation impossible : ${error instanceof Error ? error.message : "erreur inconnue"}.`, "error");
+    });
+  </script>
+</body>
+</html>
