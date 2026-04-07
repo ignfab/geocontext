@@ -17,7 +17,7 @@ const gpfWfsSearchTypesInputSchema = z.object({
     .max(50)
     .optional()
     .describe("Le nombre maximum de résultats à retourner (entre 1 et 50). Défaut : 10."),
-});
+}).strict();
 
 type GpfWfsSearchTypesInput = z.infer<typeof gpfWfsSearchTypesInputSchema>;
 

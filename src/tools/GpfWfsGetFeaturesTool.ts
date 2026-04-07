@@ -53,7 +53,7 @@ const gpfWfsGetFeaturesInputSchema = z.object({
       "- `hits` : retourne uniquement le nombre total d'objets correspondant à la requête",
       "- `url` : retourne uniquement l'URL WFS construite pour la requête, utile pour inspection, débogage ou réutilisation côté client",
     ].join("\r\n"))
-});
+}).strict();
 
 type GpfWfsGetFeaturesInput = z.infer<typeof gpfWfsGetFeaturesInputSchema>;
 

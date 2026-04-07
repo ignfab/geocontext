@@ -11,7 +11,7 @@ const gpfWfsDescribeTypeInputSchema = z.object({
     .trim()
     .min(1, "le nom du type ne doit pas être vide")
     .describe("Le nom du type (ex : BDTOPO_V3:batiment)"),
-});
+}).strict();
 
 type GpfWfsDescribeTypeInput = z.infer<typeof gpfWfsDescribeTypeInputSchema>;
 

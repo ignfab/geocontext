@@ -4,7 +4,7 @@ import { z } from "zod";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import { wfsClient } from "../gpf/wfs.js";
 
-const gpfWfsListTypesInputSchema = z.object({});
+const gpfWfsListTypesInputSchema = z.object({}).strict();
 
 type GpfWfsListTypesInput = z.infer<typeof gpfWfsListTypesInputSchema>;
 
