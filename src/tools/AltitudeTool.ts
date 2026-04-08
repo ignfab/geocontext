@@ -16,7 +16,7 @@ const altitudeInputSchema = z.object({
     .min(-90)
     .max(90)
     .describe("La latitude du point."),
-});
+}).strict();
 
 type AltitudeInput = z.infer<typeof altitudeInputSchema>;
 

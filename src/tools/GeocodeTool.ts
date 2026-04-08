@@ -18,7 +18,7 @@ const geocodeInputSchema = z.object({
     .max(10)
     .optional()
     .describe("Le nombre maximum de résultats à retourner (entre 1 et 10). Défaut : 3."),
-});
+}).strict();
 
 type GeocodeInput = z.infer<typeof geocodeInputSchema>;
 

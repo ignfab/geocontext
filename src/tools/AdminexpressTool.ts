@@ -16,7 +16,7 @@ const adminexpressInputSchema = z.object({
     .min(-90)
     .max(90)
     .describe("La latitude du point."),
-});
+}).strict();
 
 type AdminexpressInput = z.infer<typeof adminexpressInputSchema>;
 
