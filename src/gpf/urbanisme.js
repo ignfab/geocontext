@@ -1,5 +1,5 @@
 import distance from "../helpers/distance.js";
-import { fetchJSON } from "../helpers/http.js";
+import { fetchWfsFeatures } from "../helpers/wfs.js";
 import logger from "../logger.js";
 
 // https://data.geopf.fr/wfs/ows?service=WFS&version=2.0.0&request=GetCapabilities
@@ -59,7 +59,7 @@ function buildFeatureRef(knownTypeNames, featureId) {
  * @param {(url: string) => Promise<any>} [fetcher]
  * @returns 
  */
-export async function getUrbanisme(lon, lat, fetcher = fetchJSON) {
+export async function getUrbanisme(lon, lat, fetcher) {
     logger.info(`getUrbanisme(${lon},${lat})...`);
 
     // note that EPSG:4326 means lat,lon order for GeoServer -> flipped coordinates...
@@ -70,20 +70,8 @@ export async function getUrbanisme(lon, lat, fetcher = fetchJSON) {
         "coordinates": [lon,lat]
     };
 
-    // TODO : avoid useless geometry retrieval at WFS level
-    const url = 'https://data.geopf.fr/wfs?' + new URLSearchParams({
-        service: 'WFS',
-        request: 'GetFeature',
-        typeName: URBANISME_TYPES.join(','),
-        outputFormat: 'application/json',
-        cql_filter: cql_filter
-    }).toString();
-
-    const featureCollection = await fetcher(url);
-    if (!Array.isArray(featureCollection?.features)) {
-        throw new Error(URBANISME_INVALID_COLLECTION_ERROR);
-    }
-    return featureCollection.features.map((feature) => {
+    const features = await fetchWfsFeatures(URBANISME_TYPES, cql_filter, 'Urbanisme', fetcher);
+    return features.map((feature) => {
         // parse type from id (ex: "commune.3837")
         const type = feature.id.split('.')[0];
         const featureRef = buildFeatureRef(URBANISME_TYPES, feature.id);
@@ -116,7 +104,7 @@ const ASSIETTES_SUP_TYPES = [
  * @param {(url: string) => Promise<any>} [fetcher]
  * @returns 
  */
-export async function getAssiettesServitudes(lon, lat, fetcher = fetchJSON) {
+export async function getAssiettesServitudes(lon, lat, fetcher) {
     logger.info(`getAssiettesServitudes(${lon},${lat})...`);
 
     // note that EPSG:4326 means lat,lon order for GeoServer -> flipped coordinates...
@@ -127,20 +115,8 @@ export async function getAssiettesServitudes(lon, lat, fetcher = fetchJSON) {
         "coordinates": [lon,lat]
     };
 
-    // TODO : avoid useless geometry retrieval at WFS level
-    const url = 'https://data.geopf.fr/wfs?' + new URLSearchParams({
-        service: 'WFS',
-        request: 'GetFeature',
-        typeName: ASSIETTES_SUP_TYPES.join(','),
-        outputFormat: 'application/json',
-        cql_filter: cql_filter
-    }).toString();
-
-    const featureCollection = await fetcher(url);
-    if (!Array.isArray(featureCollection?.features)) {
-        throw new Error(URBANISME_INVALID_COLLECTION_ERROR);
-    }
-    return featureCollection.features.map((feature) => {
+    const features = await fetchWfsFeatures(ASSIETTES_SUP_TYPES, cql_filter, 'Urbanisme', fetcher);
+    return features.map((feature) => {
         // parse type from id (ex: "commune.3837")
         const type = feature.id.split('.')[0];
         const featureRef = buildFeatureRef(ASSIETTES_SUP_TYPES, feature.id);

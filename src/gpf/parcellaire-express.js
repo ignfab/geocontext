@@ -1,7 +1,7 @@
 import _ from 'lodash';
 
 import distance from '../helpers/distance.js';
-import { fetchJSON } from '../helpers/http.js';
+import { fetchWfsFeatures } from '../helpers/wfs.js';
 import logger from '../logger.js';
 
 // CADASTRALPARCELS.PARCELLAIRE_EXPRESS:
@@ -49,30 +49,19 @@ function filterByDistance(items){
  * @param {(url: string) => Promise<any>} [fetcher]
  * @returns 
  */
-export async function getParcellaireExpress(lon, lat, fetcher = fetchJSON) {
+export async function getParcellaireExpress(lon, lat, fetcher) {
     logger.info(`getParcellaireExpress(${lon},${lat}) ...`);
     // note that EPSG:4326 means lat,lon order for GeoServer -> flipped coordinates...
     const cql_filter = `DWITHIN(geom,Point(${lat} ${lon}),10,meters)`;
+    const typeNames = PARCELLAIRE_EXPRESS_TYPES.map((type) => `CADASTRALPARCELS.PARCELLAIRE_EXPRESS:${type}`);
 
     const sourceGeom = {
         "type": "Point",
         "coordinates": [lon,lat]
     };
 
-    // TODO : avoid useless geometry retrieval at WFS level
-    const url = 'https://data.geopf.fr/wfs?' + new URLSearchParams({
-        service: 'WFS',
-        request: 'GetFeature',
-        typeName: PARCELLAIRE_EXPRESS_TYPES.map((type) => { return `CADASTRALPARCELS.PARCELLAIRE_EXPRESS:${type}` }).join(','),
-        outputFormat: 'application/json',
-        cql_filter: cql_filter
-    }).toString();
-
-    const featureCollection = await fetcher(url);
-    if (!Array.isArray(featureCollection?.features)) {
-        throw new Error("Le service PARCELLAIRE_EXPRESS n'a pas retourné de collection d'objets exploitable");
-    }
-    return filterByDistance(featureCollection.features.map((feature) => {
+    const features = await fetchWfsFeatures(typeNames, cql_filter, 'PARCELLAIRE_EXPRESS', fetcher);
+    return filterByDistance(features.map((feature) => {
         // parse type from id (ex: "commune.3837")
         const type = feature.id.split('.')[0];
         // ignore geometry and extend properties
