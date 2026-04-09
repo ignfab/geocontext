@@ -13,6 +13,7 @@ describe("Test GpfWfsSearchTypesTool",() => {
                         id: "BDTOPO_V3:batiment",
                         title: "Batiment",
                         description: "Description de test",
+                        score: 12.5,
                     },
                 ],
             };
@@ -58,6 +59,7 @@ describe("Test GpfWfsSearchTypesTool",() => {
             results: [
                 {
                     id: "BDTOPO_V3:batiment",
+                    score: 12.5,
                 },
             ],
         });
@@ -66,9 +68,63 @@ describe("Test GpfWfsSearchTypesTool",() => {
             results: [
                 {
                     id: "BDTOPO_V3:batiment",
+                    score: 12.5,
                 },
             ],
         });
+    });
+
+    it("should omit score when it is undefined", async () => {
+        class TestableGpfWfsSearchTypesToolWithoutScore extends GpfWfsSearchTypesTool {
+            async execute() {
+                return {
+                    results: [
+                        {
+                            id: "BDTOPO_V3:batiment",
+                            title: "Batiment",
+                            description: "Description de test",
+                        },
+                    ],
+                };
+            }
+        }
+
+        const tool = new TestableGpfWfsSearchTypesToolWithoutScore();
+        const response = await tool.toolCall({
+            params: {
+                name: "gpf_wfs_search_types",
+                arguments: {
+                    query: "batiment",
+                    max_results: 1,
+                },
+            },
+        });
+
+        expect(response.isError).toBeUndefined();
+        expect(response.content[0]).toMatchObject({
+            type: "text",
+        });
+        const textContent = response.content[0];
+        if (textContent.type !== "text") {
+            throw new Error("expected text content");
+        }
+
+        const parsedTextContent = JSON.parse(textContent.text);
+        expect(parsedTextContent.results[0]).toMatchObject({
+            id: "BDTOPO_V3:batiment",
+        });
+        expect(parsedTextContent.results[0]).not.toHaveProperty("score");
+
+        expect(response.structuredContent).toBeDefined();
+        expect(response.structuredContent).toMatchObject({
+            results: [
+                {
+                    id: "BDTOPO_V3:batiment",
+                },
+            ],
+        });
+        const structuredContent = response.structuredContent as { results: Array<Record<string, unknown>> };
+        expect(structuredContent.results[0]).not.toHaveProperty("score");
     });
 
     it("should return isError=true for invalid input", async () => {

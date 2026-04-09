@@ -182,7 +182,7 @@ L'idée est ici de répondre à des précises en traitant côté serveur les app
 #### Explorer les tables
 
 * [gpf_wfs_list_types()](src/tools/GpfWfsListTypesTool.ts) pour **lister de façon exhaustive les types WFS connus du catalogue de schémas embarqué**. Cet outil est surtout utile pour un inventaire complet ou une exploration globale du catalogue ; pour trouver rapidement un type pertinent, préférer `gpf_wfs_search_types`.
-* [gpf_wfs_search_types(keywords,max_results=10)](src/tools/GpfWfsSearchTypesTool.ts) pour **rechercher un type WFS pertinent à partir de mots-clés et obtenir un `typename` valide**. La recherche est textuelle et configurable via `GPF_WFS_MINISEARCH_OPTIONS`.
+* [gpf_wfs_search_types(keywords,max_results=10)](src/tools/GpfWfsSearchTypesTool.ts) pour **rechercher un type WFS pertinent à partir de mots-clés et obtenir un `typename` valide**. La recherche est textuelle, configurable via `GPF_WFS_MINISEARCH_OPTIONS`, et renvoie aussi un score de pertinence quand il est disponible.
 
 > - Quels sont les millésimes ADMINEXPRESS disponibles sur la Géoplateforme?
 > - Quelle est la table de la BDTOPO correspondant aux bâtiments?

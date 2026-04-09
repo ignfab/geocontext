@@ -2,6 +2,7 @@
 
 import {
     Collection,
+    CollectionSearchResult,
     getCollectionCatalog,
     MiniSearchCollectionSearchEngine,
     MiniSearchCollectionSearchOptions,
@@ -184,8 +185,8 @@ export class WfsClient {
         return this.catalog.list();
     }
 
-    async searchFeatureTypes(query: string, maxResults: number = 20): Promise<Collection[]> {
-        return this.catalog.search(query, {
+    async searchFeatureTypesWithScores(query: string, maxResults: number = 20): Promise<CollectionSearchResult[]> {
+        return this.catalog.searchWithScores(query, {
             limit: maxResults,
         });
     }
