@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getAdminUnits, ADMINEXPRESS_TYPES, ADMINEXPRESS_SOURCE } from "../gpf/adminexpress.js";
 import logger from "../logger.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
+import { featureRefSchema } from "../helpers/schemas.js";
 
 const adminexpressInputSchema = z.object({
   lon: z
@@ -19,11 +20,6 @@ const adminexpressInputSchema = z.object({
 }).strict();
 
 type AdminexpressInput = z.infer<typeof adminexpressInputSchema>;
-
-const featureRefSchema = z.object({
-  typename: z.string().describe("Le `typename` WFS réutilisable pour une requête ultérieure."),
-  feature_id: z.string().describe("L'identifiant WFS réutilisable du feature."),
-});
 
 const adminexpressResultSchema = z
   .object({

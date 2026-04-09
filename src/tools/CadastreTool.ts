@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getParcellaireExpress, PARCELLAIRE_EXPRESS_TYPES, PARCELLAIRE_EXPRESS_SOURCE } from "../gpf/parcellaire-express.js";
 import logger from "../logger.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
+import { featureRefSchema } from "../helpers/schemas.js";
 
 const cadastreInputSchema = z.object({
   lon: z
@@ -19,11 +20,6 @@ const cadastreInputSchema = z.object({
 }).strict();
 
 type CadastreInput = z.infer<typeof cadastreInputSchema>;
-
-const featureRefSchema = z.object({
-  typename: z.string().describe("Le `typename` WFS réutilisable pour une requête ultérieure."),
-  feature_id: z.string().describe("L'identifiant WFS réutilisable du feature."),
-});
 
 const cadastreResultSchema = z
   .object({

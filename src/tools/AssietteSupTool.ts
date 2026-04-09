@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getAssiettesServitudes, URBANISME_SOURCE } from "../gpf/urbanisme.js";
 import logger from "../logger.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
+import { featureRefSchema } from "../helpers/schemas.js";
 
 const assietteSupInputSchema = z.object({
   lon: z
@@ -19,11 +20,6 @@ const assietteSupInputSchema = z.object({
 }).strict();
 
 type AssietteSupInput = z.infer<typeof assietteSupInputSchema>;
-
-const featureRefSchema = z.object({
-  typename: z.string().describe("Le `typename` WFS réutilisable pour une requête ultérieure."),
-  feature_id: z.string().describe("L'identifiant WFS réutilisable du feature."),
-});
 
 const assietteSupResultSchema = z
   .object({

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getUrbanisme, URBANISME_SOURCE } from "../gpf/urbanisme.js";
 import logger from "../logger.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
+import { featureRefSchema } from "../helpers/schemas.js";
 
 const urbanismeInputSchema = z.object({
   lon: z
@@ -19,11 +20,6 @@ const urbanismeInputSchema = z.object({
 }).strict();
 
 type UrbanismeInput = z.infer<typeof urbanismeInputSchema>;
-
-const featureRefSchema = z.object({
-  typename: z.string().describe("Le `typename` WFS réutilisable pour une requête ultérieure."),
-  feature_id: z.string().describe("L'identifiant WFS réutilisable du feature."),
-});
 
 const urbanismeResultSchema = z
   .object({
