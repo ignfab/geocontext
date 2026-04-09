@@ -92,6 +92,10 @@ describe("Test getUrbanisme",() => {
         {
             const document = items.filter((item)=>item.type === 'document')[0];
             expect(document).not.toBeUndefined();
+            expect(document.feature_ref).toEqual({
+                typename: "wfs_du:document",
+                feature_id: "document.1",
+            });
             // might change (ex : PLU -> PLUi)
             expect(document.du_type).toEqual('PLU');
         }
@@ -124,5 +128,9 @@ describe("Test getAssiettesServitudes",() => {
         const names = items.map((item)=>item.nomsuplitt);
         expect(names).toContain("Croix de l'ancien cimetière");
         expect(names).toContain('Fontaine-lavoir');
+        expect(items[0].feature_ref).toEqual({
+            typename: "wfs_sup:assiette_sup_s",
+            feature_id: "assiette_sup_s.1",
+        });
     });
 });

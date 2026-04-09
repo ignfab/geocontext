@@ -20,11 +20,17 @@ const urbanismeInputSchema = z.object({
 
 type UrbanismeInput = z.infer<typeof urbanismeInputSchema>;
 
+const featureRefSchema = z.object({
+  typename: z.string().describe("Le `typename` WFS réutilisable pour une requête ultérieure."),
+  feature_id: z.string().describe("L'identifiant WFS réutilisable du feature."),
+});
+
 const urbanismeResultSchema = z
   .object({
     type: z.string().describe("Le type d'objet d'urbanisme renvoyé."),
     id: z.string().describe("L'identifiant de l'objet d'urbanisme."),
     bbox: z.array(z.number()).describe("La boîte englobante de l'objet d'urbanisme.").optional(),
+    feature_ref: featureRefSchema.describe("Référence WFS réutilisable, notamment avec `gpf_wfs_get_features` et `spatial_operator = \"intersects_feature\"`.").optional(),
     distance: z.number().describe("La distance entre le point demandé et l'objet d'urbanisme retenu."),
   })
   .catchall(z.unknown());
@@ -36,6 +42,7 @@ const urbanismeOutputSchema = z.object({
 const URBANISME_TOOL_DESCRIPTION = [
   `Renvoie, pour un point donné par sa longitude et sa latitude, la liste des objets d'urbanisme pertinents du Géoportail de l'Urbanisme (document, zones, prescriptions, informations, etc.), avec leurs propriétés associées. (source : ${URBANISME_SOURCE}).`,
   "Les résultats peuvent notamment inclure le document d'urbanisme applicable ainsi que des éléments réglementaires associés à proximité du point.",
+  "Quand un objet correspond à une couche WFS réutilisable, il expose aussi un `feature_ref` compatible avec `gpf_wfs_get_features` et `spatial_operator=\"intersects_feature\"`.",
   "Modèles d'URL Géoportail de l'Urbanisme :",
   "- fiche document: https://www.geoportail-urbanisme.gouv.fr/document/by-id/{gpu_doc_id}",
   "- carte: https://www.geoportail-urbanisme.gouv.fr/map/?documentId={gpu_doc_id}",

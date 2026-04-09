@@ -38,6 +38,18 @@ function sanitizeUrbanismeItem(item) {
     return sanitized;
 }
 
+function buildFeatureRef(knownTypeNames, featureId) {
+    const featureType = featureId.split('.')[0];
+    const typename = knownTypeNames.find((candidate) => candidate.endsWith(`:${featureType}`));
+    if (!typename) {
+        return undefined;
+    }
+    return {
+        typename,
+        feature_id: featureId,
+    };
+}
+
 
 /**
  * Get urbanism infos for a given location
@@ -74,11 +86,13 @@ export async function getUrbanisme(lon, lat, fetcher = fetchJSON) {
     return featureCollection.features.map((feature) => {
         // parse type from id (ex: "commune.3837")
         const type = feature.id.split('.')[0];
+        const featureRef = buildFeatureRef(URBANISME_TYPES, feature.id);
         // ignore geometry and extend properties
         const item = Object.assign({
             type: type,
             id: feature.id,
             bbox: feature.bbox,
+            ...(featureRef ? { feature_ref: featureRef } : {}),
             distance: (distance(
                 sourceGeom,
                 feature.geometry
@@ -129,11 +143,13 @@ export async function getAssiettesServitudes(lon, lat, fetcher = fetchJSON) {
     return featureCollection.features.map((feature) => {
         // parse type from id (ex: "commune.3837")
         const type = feature.id.split('.')[0];
+        const featureRef = buildFeatureRef(ASSIETTES_SUP_TYPES, feature.id);
         // ignore geometry and extend properties
         return Object.assign({
             type: type,
             id: feature.id,
             bbox: feature.bbox,
+            ...(featureRef ? { feature_ref: featureRef } : {}),
             distance: (distance(
                 sourceGeom,
                 feature.geometry

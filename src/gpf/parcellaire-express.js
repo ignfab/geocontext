@@ -80,6 +80,10 @@ export async function getParcellaireExpress(lon, lat, fetcher = fetchJSON) {
             type: type,
             id: feature.id,
             bbox: feature.bbox,
+            feature_ref: {
+                typename: `CADASTRALPARCELS.PARCELLAIRE_EXPRESS:${type}`,
+                feature_id: feature.id,
+            },
             distance: distance(
                 sourceGeom,
                 feature.geometry

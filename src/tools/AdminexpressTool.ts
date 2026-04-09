@@ -20,11 +20,17 @@ const adminexpressInputSchema = z.object({
 
 type AdminexpressInput = z.infer<typeof adminexpressInputSchema>;
 
+const featureRefSchema = z.object({
+  typename: z.string().describe("Le `typename` WFS réutilisable pour une requête ultérieure."),
+  feature_id: z.string().describe("L'identifiant WFS réutilisable du feature."),
+});
+
 const adminexpressResultSchema = z
   .object({
     type: z.string().describe(`Le type d'unité administrative (${ADMINEXPRESS_TYPES.join(", ")}).`),
     id: z.string().describe("L'identifiant de l'unité administrative."),
     bbox: z.array(z.number()).describe("La boîte englobante de l'unité administrative.").optional(),
+    feature_ref: featureRefSchema.describe("Référence WFS réutilisable, notamment avec `gpf_wfs_get_features` et `spatial_operator = \"intersects_feature\"`."),
   })
   .catchall(z.unknown());
 
@@ -36,7 +42,7 @@ class AdminexpressTool extends MCPTool<AdminexpressInput> {
   name = "adminexpress";
   title = "Unités administratives";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
-  description = `Renvoie, pour un point donné par sa longitude et sa latitude, la liste des unités administratives (${ADMINEXPRESS_TYPES.join(', ')}) qui le couvrent, sous forme d'objets typés contenant leurs propriétés administratives. (source : ${ADMINEXPRESS_SOURCE}).`;
+  description = `Renvoie, pour un point donné par sa longitude et sa latitude, la liste des unités administratives (${ADMINEXPRESS_TYPES.join(', ')}) qui le couvrent, sous forme d'objets typés contenant leurs propriétés administratives. Les résultats incluent un \`feature_ref\` WFS réutilisable. (source : ${ADMINEXPRESS_SOURCE}).`;
   protected outputSchemaShape = adminexpressOutputSchema;
 
   schema = adminexpressInputSchema;

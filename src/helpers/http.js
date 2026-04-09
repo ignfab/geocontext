@@ -129,3 +129,22 @@ export async function fetchJSON(url) {
     logger.debug(`[HTTP] GET ${url} : ${JSON.stringify(result)}`)
     return result;
 }
+
+function buildFetchOptions(method, body, headers) {
+    return {
+        ...fetchOpts,
+        method,
+        headers: new Headers({
+            ...Object.fromEntries(fetchOpts.headers.entries()),
+            ...(headers || {})
+        }),
+        ...(body !== undefined ? { body } : {})
+    };
+}
+
+export async function fetchJSONPost(url, body = "", headers = {}) {
+    logger.info(`[HTTP] POST ${url} ...`);
+    const result = await fetch(url, buildFetchOptions("POST", body, headers)).then(parseJsonResponse);
+    logger.debug(`[HTTP] POST ${url} : ${JSON.stringify(result)}`);
+    return result;
+}

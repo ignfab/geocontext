@@ -53,7 +53,11 @@ export async function getAdminUnits(lon, lat, fetcher = fetchJSON) {
         return Object.assign({
             type: type,
             id: feature.id,
-            bbox: feature.bbox
+            bbox: feature.bbox,
+            feature_ref: {
+                typename: `ADMINEXPRESS-COG.LATEST:${type}`,
+                feature_id: feature.id,
+            },
         }, feature.properties);
     });
 }
