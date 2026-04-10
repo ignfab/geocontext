@@ -54,7 +54,7 @@ describe("Test WfsClient",() => {
             process.env[GPF_WFS_MINISEARCH_OPTIONS_ENV] = JSON.stringify({
                 unsupported: 1,
             });
-            expect(() => loadMiniSearchOptionsFromEnv()).toThrow("unexpected key 'unsupported'");
+            expect(() => loadMiniSearchOptionsFromEnv()).toThrow("Unrecognized key(s) in object: 'unsupported'");
         });
 
         it("should throw on invalid option value types", () => {
@@ -63,21 +63,21 @@ describe("Test WfsClient",() => {
                     title: "4",
                 },
             });
-            expect(() => loadMiniSearchOptionsFromEnv()).toThrow("expected 'boost.title' to be a finite number");
+            expect(() => loadMiniSearchOptionsFromEnv()).toThrow("boost.title: Expected number, received string");
         });
 
         it("should throw on invalid fields value", () => {
             process.env[GPF_WFS_MINISEARCH_OPTIONS_ENV] = JSON.stringify({
                 fields: ["title", "not_a_field"],
             });
-            expect(() => loadMiniSearchOptionsFromEnv()).toThrow("unexpected value 'fields.not_a_field'");
+            expect(() => loadMiniSearchOptionsFromEnv()).toThrow("fields.1:");
         });
 
         it("should throw on invalid combineWith value", () => {
             process.env[GPF_WFS_MINISEARCH_OPTIONS_ENV] = JSON.stringify({
                 combineWith: "XOR",
             });
-            expect(() => loadMiniSearchOptionsFromEnv()).toThrow("expected 'combineWith' to be 'AND' or 'OR'");
+            expect(() => loadMiniSearchOptionsFromEnv()).toThrow("combineWith:");
         });
     });
 

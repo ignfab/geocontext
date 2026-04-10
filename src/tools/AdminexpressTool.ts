@@ -2,21 +2,12 @@ import { MCPTool } from "mcp-framework";
 import { z } from "zod";
 
 import { getAdminUnits, ADMINEXPRESS_TYPES, ADMINEXPRESS_SOURCE } from "../gpf/adminexpress.js";
-import logger from "../logger.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
-import { featureRefSchema } from "../helpers/schemas.js";
+import { featureRefSchema, lonSchema, latSchema } from "../helpers/schemas.js";
 
 const adminexpressInputSchema = z.object({
-  lon: z
-    .number()
-    .min(-180)
-    .max(180)
-    .describe("La longitude du point."),
-  lat: z
-    .number()
-    .min(-90)
-    .max(90)
-    .describe("La latitude du point."),
+  lon: lonSchema,
+  lat: latSchema,
 }).strict();
 
 type AdminexpressInput = z.infer<typeof adminexpressInputSchema>;
@@ -44,7 +35,6 @@ class AdminexpressTool extends MCPTool<AdminexpressInput> {
   schema = adminexpressInputSchema;
 
   async execute(input: AdminexpressInput) {
-    logger.info(`adminexpress(${input.lon},${input.lat})...`);
     return {
       results: await getAdminUnits(input.lon, input.lat),
     };

@@ -2,21 +2,12 @@ import { MCPTool } from "mcp-framework";
 import { z } from "zod";
 
 import { getParcellaireExpress, PARCELLAIRE_EXPRESS_TYPES, PARCELLAIRE_EXPRESS_SOURCE } from "../gpf/parcellaire-express.js";
-import logger from "../logger.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
-import { featureRefSchema } from "../helpers/schemas.js";
+import { featureRefSchema, lonSchema, latSchema } from "../helpers/schemas.js";
 
 const cadastreInputSchema = z.object({
-  lon: z
-    .number()
-    .min(-180)
-    .max(180)
-    .describe("La longitude du point."),
-  lat: z
-    .number()
-    .min(-90)
-    .max(90)
-    .describe("La latitude du point."),
+  lon: lonSchema,
+  lat: latSchema,
 }).strict();
 
 type CadastreInput = z.infer<typeof cadastreInputSchema>;
@@ -46,7 +37,6 @@ class CadastreTool extends MCPTool<CadastreInput> {
   schema = cadastreInputSchema;
 
   async execute(input: CadastreInput) {
-    logger.info(`cadastre(${input.lon},${input.lat})...`);
     return {
       results: await getParcellaireExpress(input.lon, input.lat),
     };

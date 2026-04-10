@@ -1,5 +1,5 @@
 import distance from "../helpers/distance.js";
-import { fetchWfsFeatures } from "../helpers/wfs.js";
+import { fetchWfsFeatures, mapWfsFeature, toGeoJsonPoint } from "../helpers/wfs.js";
 import logger from "../logger.js";
 
 // https://data.geopf.fr/wfs/ows?service=WFS&version=2.0.0&request=GetCapabilities
@@ -17,7 +17,6 @@ export const URBANISME_TYPES = [
 ];
 
 export const URBANISME_SOURCE = "Géoplateforme - (WFS Géoportail de l'Urbanisme)";
-const URBANISME_INVALID_COLLECTION_ERROR = "Le service Urbanisme n'a pas retourné de collection d'objets exploitable";
 
 const URBANISME_EXCLUDED_PROPERTIES = new Set([
     'gpu_status',
@@ -38,18 +37,6 @@ function sanitizeUrbanismeItem(item) {
     return sanitized;
 }
 
-function buildFeatureRef(knownTypeNames, featureId) {
-    const featureType = featureId.split('.')[0];
-    const typename = knownTypeNames.find((candidate) => candidate.endsWith(`:${featureType}`));
-    if (!typename) {
-        return undefined;
-    }
-    return {
-        typename,
-        feature_id: featureId,
-    };
-}
-
 
 /**
  * Get urbanism infos for a given location
@@ -65,27 +52,14 @@ export async function getUrbanisme(lon, lat, fetcher) {
     // note that EPSG:4326 means lat,lon order for GeoServer -> flipped coordinates...
     const cql_filter = `DWITHIN(the_geom,Point(${lat} ${lon}),30,meters)`;
 
-    const sourceGeom = {
-        "type": "Point",
-        "coordinates": [lon,lat]
-    };
+    const sourceGeom = toGeoJsonPoint(lon, lat);
 
     const features = await fetchWfsFeatures(URBANISME_TYPES, cql_filter, 'Urbanisme', fetcher);
     return features.map((feature) => {
-        // parse type from id (ex: "commune.3837")
-        const type = feature.id.split('.')[0];
-        const featureRef = buildFeatureRef(URBANISME_TYPES, feature.id);
-        // ignore geometry and extend properties
-        const item = Object.assign({
-            type: type,
-            id: feature.id,
-            bbox: feature.bbox,
-            ...(featureRef ? { feature_ref: featureRef } : {}),
-            distance: (distance(
-                sourceGeom,
-                feature.geometry
-            ) * 1000.0)
-        }, feature.properties);
+        const item = {
+            ...mapWfsFeature(feature, URBANISME_TYPES),
+            distance: distance(sourceGeom, feature.geometry) * 1000.0,
+        };
         return sanitizeUrbanismeItem(item);
     });
 }
@@ -110,26 +84,11 @@ export async function getAssiettesServitudes(lon, lat, fetcher) {
     // note that EPSG:4326 means lat,lon order for GeoServer -> flipped coordinates...
     const cql_filter = `DWITHIN(the_geom,Point(${lat} ${lon}),30,meters)`;
 
-    const sourceGeom = {
-        "type": "Point",
-        "coordinates": [lon,lat]
-    };
+    const sourceGeom = toGeoJsonPoint(lon, lat);
 
     const features = await fetchWfsFeatures(ASSIETTES_SUP_TYPES, cql_filter, 'Urbanisme', fetcher);
-    return features.map((feature) => {
-        // parse type from id (ex: "commune.3837")
-        const type = feature.id.split('.')[0];
-        const featureRef = buildFeatureRef(ASSIETTES_SUP_TYPES, feature.id);
-        // ignore geometry and extend properties
-        return Object.assign({
-            type: type,
-            id: feature.id,
-            bbox: feature.bbox,
-            ...(featureRef ? { feature_ref: featureRef } : {}),
-            distance: (distance(
-                sourceGeom,
-                feature.geometry
-            ) * 1000.0)
-        }, feature.properties);
-    });
+    return features.map((feature) => ({
+        ...mapWfsFeature(feature, ASSIETTES_SUP_TYPES),
+        distance: distance(sourceGeom, feature.geometry) * 1000.0,
+    }));
 }

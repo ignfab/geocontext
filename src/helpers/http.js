@@ -24,11 +24,7 @@ function getChild(element, localName) {
 function extractXmlError(text) {
     try {
         const root = parseXml(text).children.find((child) => child instanceof XmlElement);
-        if (!root) {
-            return null;
-        }
-
-        const rootName = root.name.split(":").pop();
+        const rootName = root?.name.split(":").pop();
         if (rootName !== "ExceptionReport" && rootName !== "ServiceExceptionReport") {
             return null;
         }

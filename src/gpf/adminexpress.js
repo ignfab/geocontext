@@ -1,6 +1,4 @@
-import _ from 'lodash';
-
-import { fetchWfsFeatures } from '../helpers/wfs.js';
+import { fetchWfsFeatures, mapWfsFeature } from '../helpers/wfs.js';
 import logger from '../logger.js';
 
 /**
@@ -35,18 +33,5 @@ export async function getAdminUnits(lon, lat, fetcher) {
     const typeNames = ADMINEXPRESS_TYPES.map((type) => `ADMINEXPRESS-COG.LATEST:${type}`);
 
     const features = await fetchWfsFeatures(typeNames, cql_filter, 'ADMINEXPRESS', fetcher);
-    return features.map((feature) => {
-        // parse type from id (ex: "commune.3837")
-        const type = feature.id.split('.')[0];
-        // ignore geometry and extend properties
-        return Object.assign({
-            type: type,
-            id: feature.id,
-            bbox: feature.bbox,
-            feature_ref: {
-                typename: `ADMINEXPRESS-COG.LATEST:${type}`,
-                feature_id: feature.id,
-            },
-        }, feature.properties);
-    });
+    return features.map((feature) => mapWfsFeature(feature, typeNames));
 }

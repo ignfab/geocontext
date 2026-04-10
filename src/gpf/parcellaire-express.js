@@ -1,7 +1,7 @@
 import _ from 'lodash';
 
 import distance from '../helpers/distance.js';
-import { fetchWfsFeatures } from '../helpers/wfs.js';
+import { fetchWfsFeatures, mapWfsFeature, toGeoJsonPoint } from '../helpers/wfs.js';
 import logger from '../logger.js';
 
 // CADASTRALPARCELS.PARCELLAIRE_EXPRESS:
@@ -55,31 +55,14 @@ export async function getParcellaireExpress(lon, lat, fetcher) {
     const cql_filter = `DWITHIN(geom,Point(${lat} ${lon}),10,meters)`;
     const typeNames = PARCELLAIRE_EXPRESS_TYPES.map((type) => `CADASTRALPARCELS.PARCELLAIRE_EXPRESS:${type}`);
 
-    const sourceGeom = {
-        "type": "Point",
-        "coordinates": [lon,lat]
-    };
+    const sourceGeom = toGeoJsonPoint(lon, lat);
 
     const features = await fetchWfsFeatures(typeNames, cql_filter, 'PARCELLAIRE_EXPRESS', fetcher);
-    return filterByDistance(features.map((feature) => {
-        // parse type from id (ex: "commune.3837")
-        const type = feature.id.split('.')[0];
-        // ignore geometry and extend properties
-        return Object.assign({
-            type: type,
-            id: feature.id,
-            bbox: feature.bbox,
-            feature_ref: {
-                typename: `CADASTRALPARCELS.PARCELLAIRE_EXPRESS:${type}`,
-                feature_id: feature.id,
-            },
-            distance: distance(
-                sourceGeom,
-                feature.geometry
-            ),
-            source: PARCELLAIRE_EXPRESS_SOURCE,
-        }, feature.properties);
-    }));
+    return filterByDistance(features.map((feature) => ({
+        ...mapWfsFeature(feature, typeNames),
+        distance: distance(sourceGeom, feature.geometry),
+        source: PARCELLAIRE_EXPRESS_SOURCE,
+    })));
 }
 
 

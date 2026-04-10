@@ -6,6 +6,7 @@ import {
     MiniSearchCollectionSearchEngine,
     MiniSearchCollectionSearchOptions,
 } from '@ignfab/gpf-schema-store';
+import { z } from 'zod';
 
 // --- Constants ---
 
@@ -13,9 +14,6 @@ export const GPF_WFS_URL = "https://data.geopf.fr/wfs";
 
 // Environment variable used to inject MiniSearch options at runtime (JSON string).
 const GPF_WFS_MINISEARCH_OPTIONS_ENV = "GPF_WFS_MINISEARCH_OPTIONS";
-
-// Keys accepted at the top level of the search options object.
-const TOP_LEVEL_MINISEARCH_OPTION_KEYS = ["fields", "combineWith", "fuzzy", "boost"] as const;
 
 // Shared keys used by both `fields` and `boost` in MiniSearchCollectionSearchOptions.
 const MINISEARCH_INDEXED_OPTION_KEYS = [
@@ -28,14 +26,10 @@ const MINISEARCH_INDEXED_OPTION_KEYS = [
     "identifierTokens",
 ] as const;
 
-const MINISEARCH_FIELD_OPTION_KEYS = MINISEARCH_INDEXED_OPTION_KEYS;
 const MINISEARCH_COMBINE_WITH_VALUES = ["AND", "OR"] as const;
-const MINISEARCH_BOOST_OPTION_KEYS = MINISEARCH_INDEXED_OPTION_KEYS;
 
 // --- Types ---
 
-type MiniSearchFieldOptionKey = typeof MINISEARCH_FIELD_OPTION_KEYS[number];
-type MiniSearchBoostOptionKey = typeof MINISEARCH_BOOST_OPTION_KEYS[number];
 type MiniSearchOptions = MiniSearchCollectionSearchOptions;
 
 // --- Errors ---
@@ -49,90 +43,30 @@ export class FeatureTypeNotFoundError extends Error {
 
 // --- Helpers ---
 
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-    return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function isFiniteNumber(value: unknown): value is number {
-    return typeof value === "number" && Number.isFinite(value);
-}
-
 function invalidSearchOptionsError(reason: string): Error {
     return new Error(`Invalid ${GPF_WFS_MINISEARCH_OPTIONS_ENV}: ${reason}`);
 }
 
-// --- Search options parsing ---
+// --- Search options schema ---
+
+const miniSearchOptionsSchema = z.object({
+    fields: z.array(z.enum(MINISEARCH_INDEXED_OPTION_KEYS)).optional(),
+    combineWith: z.enum(MINISEARCH_COMBINE_WITH_VALUES).optional(),
+    fuzzy: z.number().finite().optional(),
+    boost: z.record(z.enum(MINISEARCH_INDEXED_OPTION_KEYS), z.number().finite()).optional(),
+}).strict();
 
 // Parses and validates a plain-object value into MiniSearchCollectionSearchOptions.
 // Throws a descriptive error if the value has unexpected keys or wrong value types.
 function parseMiniSearchOptions(value: unknown): MiniSearchOptions {
-    if (!isPlainObject(value)) {
-        throw invalidSearchOptionsError("expected a JSON object");
+    const result = miniSearchOptionsSchema.safeParse(value);
+    if (!result.success) {
+        const issue = result.error.issues[0];
+        const path = issue.path.length > 0 ? issue.path.join('.') : undefined;
+        const detail = path ? `${path}: ${issue.message}` : issue.message;
+        throw invalidSearchOptionsError(detail);
     }
-
-    for (const key of Object.keys(value)) {
-        if (!TOP_LEVEL_MINISEARCH_OPTION_KEYS.includes(key as typeof TOP_LEVEL_MINISEARCH_OPTION_KEYS[number])) {
-            throw invalidSearchOptionsError(`unexpected key '${key}'`);
-        }
-    }
-
-    const options: MiniSearchOptions = {};
-
-    if (value.fields !== undefined) {
-        if (!Array.isArray(value.fields)) {
-            throw invalidSearchOptionsError("expected 'fields' to be an array");
-        }
-        const fields: MiniSearchFieldOptionKey[] = [];
-        for (const field of value.fields) {
-            if (typeof field !== "string") {
-                throw invalidSearchOptionsError("expected every 'fields' item to be a string");
-            }
-            if (!MINISEARCH_FIELD_OPTION_KEYS.includes(field as MiniSearchFieldOptionKey)) {
-                throw invalidSearchOptionsError(`unexpected value 'fields.${field}'`);
-            }
-            fields.push(field as MiniSearchFieldOptionKey);
-        }
-        options.fields = fields;
-    }
-
-    if (value.combineWith !== undefined) {
-        if (typeof value.combineWith !== "string") {
-            throw invalidSearchOptionsError("expected 'combineWith' to be a string");
-        }
-        const combineWith = value.combineWith as typeof MINISEARCH_COMBINE_WITH_VALUES[number];
-        if (!MINISEARCH_COMBINE_WITH_VALUES.includes(combineWith)) {
-            throw invalidSearchOptionsError("expected 'combineWith' to be 'AND' or 'OR'");
-        }
-        options.combineWith = combineWith;
-    }
-
-    if (value.fuzzy !== undefined) {
-        if (!isFiniteNumber(value.fuzzy)) {
-            throw invalidSearchOptionsError("expected 'fuzzy' to be a finite number");
-        }
-        options.fuzzy = value.fuzzy;
-    }
-
-    if (value.boost !== undefined) {
-        if (!isPlainObject(value.boost)) {
-            throw invalidSearchOptionsError("expected 'boost' to be an object");
-        }
-
-        const boost: Partial<Record<MiniSearchBoostOptionKey, number>> = {};
-        for (const key of Object.keys(value.boost)) {
-            if (!MINISEARCH_BOOST_OPTION_KEYS.includes(key as MiniSearchBoostOptionKey)) {
-                throw invalidSearchOptionsError(`unexpected key 'boost.${key}'`);
-            }
-            const rawScore = value.boost[key];
-            if (!isFiniteNumber(rawScore)) {
-                throw invalidSearchOptionsError(`expected 'boost.${key}' to be a finite number`);
-            }
-            boost[key as MiniSearchBoostOptionKey] = rawScore;
-        }
-        options.boost = boost;
-    }
-
-    return options;
+    return result.data;
 }
 
 function createMiniSearchEngineOptions(miniSearch?: MiniSearchOptions) {

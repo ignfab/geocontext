@@ -26,3 +26,34 @@ export async function fetchWfsFeatures(typeNames, cqlFilter, errorLabel, fetcher
     }
     return featureCollection.features;
 }
+
+/**
+ * Builds a GeoJSON Point from longitude and latitude.
+ *
+ * @param {number} lon
+ * @param {number} lat
+ * @returns {object} GeoJSON Point
+ */
+export function toGeoJsonPoint(lon, lat) {
+    return { type: "Point", coordinates: [lon, lat] };
+}
+
+/**
+ * Maps a raw WFS feature into a flat result object, stripping geometry
+ * and resolving a reusable feature_ref from the known type names.
+ *
+ * @param {object}  feature        - Raw GeoJSON feature from WFS
+ * @param {string[]} knownTypeNames - Fully qualified WFS type names used for feature_ref resolution
+ * @returns {object} Flat result with type, id, bbox, optional feature_ref, and spread properties
+ */
+export function mapWfsFeature(feature, knownTypeNames) {
+    const type = feature.id.split('.')[0];
+    const typename = knownTypeNames.find((t) => t.endsWith(`:${type}`));
+    return {
+        ...feature.properties,
+        type,
+        id: feature.id,
+        bbox: feature.bbox,
+        ...(typename ? { feature_ref: { typename, feature_id: feature.id } } : {}),
+    };
+}

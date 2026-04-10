@@ -2,7 +2,6 @@ import { MCPTool } from "mcp-framework";
 import { z } from "zod";
 
 import { geocode, GEOCODE_SOURCE } from "../gpf/geocode.js";
-import logger from "../logger.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 
 const geocodeInputSchema = z.object({
@@ -45,7 +44,6 @@ class GeocodeTool extends MCPTool<GeocodeInput> {
   schema = geocodeInputSchema;
 
   async execute(input: GeocodeInput) {
-    logger.info(`geocode(${input.text}, ${input.maximumResponses ?? 3})...`);
     return {
       results: await geocode(input.text, input.maximumResponses),
     };
