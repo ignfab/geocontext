@@ -49,8 +49,8 @@ function sanitizeUrbanismeItem(item) {
 export async function getUrbanisme(lon, lat, fetcher) {
     logger.info(`getUrbanisme(${lon},${lat})...`);
 
-    // note that EPSG:4326 means lat,lon order for GeoServer -> flipped coordinates...
-    const cql_filter = `DWITHIN(the_geom,Point(${lat} ${lon}),30,meters)`;
+    // Using EWKT format with SRID=4326 prefix for standard lon,lat order
+    const cql_filter = `DWITHIN(the_geom,SRID=4326;POINT(${lon} ${lat}),30,meters)`;
 
     const sourceGeom = toGeoJsonPoint(lon, lat);
 
@@ -81,8 +81,8 @@ const ASSIETTES_SUP_TYPES = [
 export async function getAssiettesServitudes(lon, lat, fetcher) {
     logger.info(`getAssiettesServitudes(${lon},${lat})...`);
 
-    // note that EPSG:4326 means lat,lon order for GeoServer -> flipped coordinates...
-    const cql_filter = `DWITHIN(the_geom,Point(${lat} ${lon}),30,meters)`;
+    // Using EWKT format with SRID=4326 prefix for standard lon,lat order
+    const cql_filter = `DWITHIN(the_geom,SRID=4326;POINT(${lon} ${lat}),30,meters)`;
 
     const sourceGeom = toGeoJsonPoint(lon, lat);
 

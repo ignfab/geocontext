@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { generatePublishedInputSchema } from "../../helpers/jsonSchema.js";
+import { lonSchema, latSchema } from "../../helpers/schemas.js";
 
 export const DEFAULT_LIMIT = 100;
 export const MAX_LIMIT = 1000;
@@ -8,26 +9,6 @@ export const REQUEST_GET_URL_MAX_LENGTH = 6000;
 export const WHERE_OPERATORS = ["eq", "ne", "lt", "lte", "gt", "gte", "in", "is_null"] as const;
 export const SPATIAL_OPERATORS = ["bbox", "intersects_point", "dwithin_point", "intersects_feature"] as const;
 export const ORDER_DIRECTIONS = ["asc", "desc"] as const;
-
-/**
- * Builds a longitude schema with a shared numeric range and caller-provided description.
- *
- * @param description Human-readable field description exposed in the published schema.
- * @returns A bounded Zod schema for WGS84 longitude values.
- */
-function longitudeSchema(description: string) {
-  return z.number().finite().min(-180).max(180).describe(description);
-}
-
-/**
- * Builds a latitude schema with a shared numeric range and caller-provided description.
- *
- * @param description Human-readable field description exposed in the published schema.
- * @returns A bounded Zod schema for WGS84 latitude values.
- */
-function latitudeSchema(description: string) {
-  return z.number().finite().min(-90).max(90).describe(description);
-}
 
 const whereClauseSchema = z.object({
   property: z.string().trim().min(1).describe("Nom exact d'une propriété non géométrique du type WFS. Utiliser `gpf_wfs_describe_type` pour connaître les noms exacts disponibles."),
@@ -77,14 +58,14 @@ export const gpfWfsGetFeaturesInputSchema = z.object({
     .enum(SPATIAL_OPERATORS)
     .optional()
     .describe("Type optionnel de filtre spatial."),
-  bbox_west: longitudeSchema("Longitude ouest en WGS84 `lon/lat`, utilisée avec `spatial_operator = \"bbox\"`.").optional(),
-  bbox_south: latitudeSchema("Latitude sud en WGS84 `lon/lat`, utilisée avec `spatial_operator = \"bbox\"`.").optional(),
-  bbox_east: longitudeSchema("Longitude est en WGS84 `lon/lat`, utilisée avec `spatial_operator = \"bbox\"`.").optional(),
-  bbox_north: latitudeSchema("Latitude nord en WGS84 `lon/lat`, utilisée avec `spatial_operator = \"bbox\"`.").optional(),
-  intersects_lon: longitudeSchema("Longitude du point en WGS84 `lon/lat`, utilisée avec `spatial_operator = \"intersects_point\"`.").optional(),
-  intersects_lat: latitudeSchema("Latitude du point en WGS84 `lon/lat`, utilisée avec `spatial_operator = \"intersects_point\"`.").optional(),
-  dwithin_lon: longitudeSchema("Longitude du point en WGS84 `lon/lat`, utilisée avec `spatial_operator = \"dwithin_point\"`.").optional(),
-  dwithin_lat: latitudeSchema("Latitude du point en WGS84 `lon/lat`, utilisée avec `spatial_operator = \"dwithin_point\"`.").optional(),
+  bbox_west: lonSchema.describe("Longitude ouest en WGS84 `lon/lat`, utilisée avec `spatial_operator = \"bbox\"`.").optional(),
+  bbox_south: latSchema.describe("Latitude sud en WGS84 `lon/lat`, utilisée avec `spatial_operator = \"bbox\"`.").optional(),
+  bbox_east: lonSchema.describe("Longitude est en WGS84 `lon/lat`, utilisée avec `spatial_operator = \"bbox\"`.").optional(),
+  bbox_north: latSchema.describe("Latitude nord en WGS84 `lon/lat`, utilisée avec `spatial_operator = \"bbox\"`.").optional(),
+  intersects_lon: lonSchema.describe("Longitude du point en WGS84 `lon/lat`, utilisée avec `spatial_operator = \"intersects_point\"`.").optional(),
+  intersects_lat: latSchema.describe("Latitude du point en WGS84 `lon/lat`, utilisée avec `spatial_operator = \"intersects_point\"`.").optional(),
+  dwithin_lon: lonSchema.describe("Longitude du point en WGS84 `lon/lat`, utilisée avec `spatial_operator = \"dwithin_point\"`.").optional(),
+  dwithin_lat: latSchema.describe("Latitude du point en WGS84 `lon/lat`, utilisée avec `spatial_operator = \"dwithin_point\"`.").optional(),
   dwithin_distance_m: z.number().finite().positive().describe("Distance en mètres, utilisée avec `spatial_operator = \"dwithin_point\"`.").optional(),
   intersects_feature_typename: z.string().trim().min(1).optional().describe("Type WFS du feature de référence, utilisé avec `spatial_operator = \"intersects_feature\"`."),
   intersects_feature_id: z.string().trim().min(1).optional().describe("Identifiant du feature de référence, utilisé avec `spatial_operator = \"intersects_feature\"`."),

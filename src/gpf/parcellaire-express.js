@@ -51,8 +51,8 @@ function filterByDistance(items){
  */
 export async function getParcellaireExpress(lon, lat, fetcher) {
     logger.info(`getParcellaireExpress(${lon},${lat}) ...`);
-    // note that EPSG:4326 means lat,lon order for GeoServer -> flipped coordinates...
-    const cql_filter = `DWITHIN(geom,Point(${lat} ${lon}),10,meters)`;
+    // Using EWKT format with SRID=4326 prefix for standard lon,lat order
+    const cql_filter = `DWITHIN(geom,SRID=4326;POINT(${lon} ${lat}),10,meters)`;
     const typeNames = PARCELLAIRE_EXPRESS_TYPES.map((type) => `CADASTRALPARCELS.PARCELLAIRE_EXPRESS:${type}`);
 
     const sourceGeom = toGeoJsonPoint(lon, lat);

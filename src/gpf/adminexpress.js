@@ -28,8 +28,8 @@ export const ADMINEXPRESS_TYPES = [
 export async function getAdminUnits(lon, lat, fetcher) {
     logger.info(`[adminexpress] getAdminUnits(${lon},${lat})...`);
 
-    // note that EPSG:4326 means lat,lon order for GeoServer -> flipped coordinates...
-    const cql_filter = `INTERSECTS(geometrie,Point(${lat} ${lon}))`;
+    // Using EWKT format with SRID=4326 prefix for standard lon,lat order
+    const cql_filter = `INTERSECTS(geometrie,SRID=4326;POINT(${lon} ${lat}))`;
     const typeNames = ADMINEXPRESS_TYPES.map((type) => `ADMINEXPRESS-COG.LATEST:${type}`);
 
     const features = await fetchWfsFeatures(typeNames, cql_filter, 'ADMINEXPRESS', fetcher);
