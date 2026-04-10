@@ -29,7 +29,7 @@ function filterByDistance(items){
     const result = [];
     let lastType = null;
     for ( const item of sortedItems ){
-        if ( lastType == item.type ){
+        if ( lastType === item.type ){
             continue;
         }
         result.push(item);
