@@ -25,6 +25,7 @@ const gpfWfsSearchTypeResultSchema = z.object({
   id: z.string().describe("L'identifiant complet du type WFS."),
   title: z.string().describe("Le titre lisible du type WFS."),
   description: z.string().describe("La description du type WFS."),
+  score: z.number().describe("Le score de pertinence de la recherche.").optional(),
 });
 
 const gpfWfsSearchTypesOutputSchema = z.object({
@@ -38,7 +39,7 @@ class GpfWfsSearchTypesTool extends MCPTool<GpfWfsSearchTypesInput> {
   description = [
     "Recherche des types WFS de la Géoplateforme (GPF) à partir de mots-clés afin de trouver un identifiant de type (`typename`) valide.",
     "Utiliser ce tool avant `gpf_wfs_describe_type` ou `gpf_wfs_get_features` lorsque le nom exact du type n'est pas connu.",
-    "La recherche est textuelle (mini-search) et retourne une liste ordonnée de candidats avec leur identifiant, leur titre et leur description.",
+    "La recherche est textuelle (mini-search) et retourne une liste ordonnée de candidats avec leur identifiant, leur titre, leur description et un score de pertinence éventuel.",
     "Le paramètre `max_results` permet d'élargir le nombre de candidats retournés (10 par défaut).",
   ].join("\r\n");
   protected outputSchemaShape = gpfWfsSearchTypesOutputSchema;
@@ -47,12 +48,13 @@ class GpfWfsSearchTypesTool extends MCPTool<GpfWfsSearchTypesInput> {
 
   async execute(input: GpfWfsSearchTypesInput) {
     const maxResults = input.max_results || 10;
-    const featureTypes = await wfsClient.searchFeatureTypes(input.query, maxResults);
+    const featureTypes = await wfsClient.searchFeatureTypesWithScores(input.query, maxResults);
     return {
-      results: featureTypes.map((featureType) => ({
-        id: featureType.id,
-        title: featureType.title,
-        description: featureType.description,
+      results: featureTypes.map(({ collection, score }) => ({
+        id: collection.id,
+        title: collection.title,
+        description: collection.description,
+        ...(score !== undefined ? { score } : {}),
       })),
     };
   }
