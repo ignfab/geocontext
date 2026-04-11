@@ -10,6 +10,10 @@ describe("Test CadastreTool",() => {
                         type: "commune",
                         id: "commune.1",
                         bbox: [6.49, 47.15, 6.50, 47.16],
+                        feature_ref: {
+                            typename: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:commune",
+                            feature_id: "commune.1",
+                        },
                         nom_officiel: "Loray",
                         distance: 5,
                         source: "mock",
@@ -18,6 +22,10 @@ describe("Test CadastreTool",() => {
                         type: "parcelle",
                         id: "parcelle.1",
                         bbox: [6.49, 47.15, 6.50, 47.16],
+                        feature_ref: {
+                            typename: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:parcelle",
+                            feature_id: "parcelle.1",
+                        },
                         idu: "25349000AD0023",
                         distance: 0,
                         source: "mock",
@@ -69,6 +77,10 @@ describe("Test CadastreTool",() => {
             expect.objectContaining({
                 type: "parcelle",
                 idu: "25349000AD0023",
+                feature_ref: {
+                    typename: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:parcelle",
+                    feature_id: "parcelle.1",
+                },
             }),
         ]));
         expect(response.structuredContent).toMatchObject({
@@ -76,10 +88,18 @@ describe("Test CadastreTool",() => {
                 expect.objectContaining({
                     type: "commune",
                     nom_officiel: "Loray",
+                    feature_ref: {
+                        typename: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:commune",
+                        feature_id: "commune.1",
+                    },
                 }),
                 expect.objectContaining({
                     type: "parcelle",
                     idu: "25349000AD0023",
+                    feature_ref: {
+                        typename: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:parcelle",
+                        feature_id: "parcelle.1",
+                    },
                 }),
             ]),
         });

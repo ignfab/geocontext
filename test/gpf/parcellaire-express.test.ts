@@ -64,6 +64,10 @@ describe("Test getParcellaireExpress",() => {
         {
             const parcelle = items.filter((item)=>item.type === 'parcelle')[0];
             expect(parcelle).not.toBeUndefined();
+            expect(parcelle.feature_ref).toEqual({
+                typename: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:parcelle",
+                feature_id: "parcelle.1",
+            });
             expect(parcelle.idu).toEqual('25349000AD0023');
         }
 

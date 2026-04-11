@@ -10,12 +10,20 @@ describe("Test UrbanismeTool",() => {
                     {
                         type: "document",
                         id: "document.1",
+                        feature_ref: {
+                            typename: "wfs_du:document",
+                            feature_id: "document.1",
+                        },
                         du_type: "PLU",
                         distance: 0,
                     },
                     {
                         type: "zone_urba",
                         id: "zone_urba.1",
+                        feature_ref: {
+                            typename: "wfs_du:zone_urba",
+                            feature_id: "zone_urba.1",
+                        },
                         libelle: "Zone U",
                         distance: 5,
                     },
@@ -66,6 +74,10 @@ describe("Test UrbanismeTool",() => {
             expect.objectContaining({
                 type: "document",
                 du_type: "PLU",
+                feature_ref: {
+                    typename: "wfs_du:document",
+                    feature_id: "document.1",
+                },
             }),
         ]));
         expect(response.structuredContent).toMatchObject({
@@ -73,10 +85,18 @@ describe("Test UrbanismeTool",() => {
                 expect.objectContaining({
                     type: "document",
                     du_type: "PLU",
+                    feature_ref: {
+                        typename: "wfs_du:document",
+                        feature_id: "document.1",
+                    },
                 }),
                 expect.objectContaining({
                     type: "zone_urba",
                     libelle: "Zone U",
+                    feature_ref: {
+                        typename: "wfs_du:zone_urba",
+                        feature_id: "zone_urba.1",
+                    },
                 }),
             ]),
         });
@@ -115,12 +135,20 @@ describe("Test AssietteSupTool",() => {
                     {
                         type: "assiette_sup_s",
                         id: "assiette_sup_s.1",
+                        feature_ref: {
+                            typename: "wfs_sup:assiette_sup_s",
+                            feature_id: "assiette_sup_s.1",
+                        },
                         nomsuplitt: "Croix de l'ancien cimetière",
                         distance: 0,
                     },
                     {
                         type: "assiette_sup_s",
                         id: "assiette_sup_s.2",
+                        feature_ref: {
+                            typename: "wfs_sup:assiette_sup_s",
+                            feature_id: "assiette_sup_s.2",
+                        },
                         nomsuplitt: "Fontaine-lavoir",
                         distance: 10,
                     },
@@ -171,6 +199,10 @@ describe("Test AssietteSupTool",() => {
             expect.objectContaining({
                 type: "assiette_sup_s",
                 nomsuplitt: "Croix de l'ancien cimetière",
+                feature_ref: {
+                    typename: "wfs_sup:assiette_sup_s",
+                    feature_id: "assiette_sup_s.1",
+                },
             }),
         ]));
         expect(response.structuredContent).toMatchObject({
@@ -178,10 +210,18 @@ describe("Test AssietteSupTool",() => {
                 expect.objectContaining({
                     type: "assiette_sup_s",
                     nomsuplitt: "Croix de l'ancien cimetière",
+                    feature_ref: {
+                        typename: "wfs_sup:assiette_sup_s",
+                        feature_id: "assiette_sup_s.1",
+                    },
                 }),
                 expect.objectContaining({
                     type: "assiette_sup_s",
                     nomsuplitt: "Fontaine-lavoir",
+                    feature_ref: {
+                        typename: "wfs_sup:assiette_sup_s",
+                        feature_id: "assiette_sup_s.2",
+                    },
                 }),
             ]),
         });

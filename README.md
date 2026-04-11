@@ -141,7 +141,7 @@ Si `GPF_WFS_MINISEARCH_OPTIONS` est absent ou vide, les options par défaut rest
 
 Remarque :
 
-- Les outils `gpf_wfs_list_types`, `gpf_wfs_search_types` et `gpf_wfs_describe_type` s'appuient sur un catalogue de schémas embarqué fourni par `@ignfab/gpf-schema-store`.
+- Les outils `gpf_wfs_search_types` et `gpf_wfs_describe_type` s'appuient sur un catalogue de schémas embarqué fourni par `@ignfab/gpf-schema-store`.
 - L'outil `gpf_wfs_get_features` interroge toujours le service WFS de la Géoplateforme en direct.
 - Le catalogue embarqué améliore la description des featureTypes mais il peut être légèrement décalé par rapport à l'état courant du WFS.
 
@@ -177,12 +177,13 @@ L'idée est ici de répondre à des précises en traitant côté serveur les app
 
 * [assiette_sup(lon,lat)](src/tools/AssietteSupTool.ts) permet de **récupérer les Servitude d'Utilité Publiques (SUP)**
 
+Les tools WFS orientés "objet" (`adminexpress`, `cadastre`, `urbanisme`, `assiette_sup`) exposent un `feature_ref { typename, feature_id }` quand l'objet source est réutilisable tel quel dans un appel ultérieur à `gpf_wfs_get_features`, notamment avec `spatial_operator="intersects_feature"`.
+
 ### Explorer les données vecteurs
 
 #### Explorer les tables
 
-* [gpf_wfs_list_types()](src/tools/GpfWfsListTypesTool.ts) pour **lister de façon exhaustive les types WFS connus du catalogue de schémas embarqué**. Cet outil est surtout utile pour un inventaire complet ou une exploration globale du catalogue ; pour trouver rapidement un type pertinent, préférer `gpf_wfs_search_types`.
-* [gpf_wfs_search_types(keywords,max_results=10)](src/tools/GpfWfsSearchTypesTool.ts) pour **rechercher un type WFS pertinent à partir de mots-clés et obtenir un `typename` valide**. La recherche est textuelle, configurable via `GPF_WFS_MINISEARCH_OPTIONS`, et renvoie aussi un score de pertinence quand il est disponible.
+* [gpf_wfs_search_types(keywords,max_results=10)](src/tools/GpfWfsSearchTypesTool.ts) pour **rechercher un type WFS pertinent à partir de mots-clés et obtenir un `typename` valide**. La recherche est textuelle et configurable via `GPF_WFS_MINISEARCH_OPTIONS`.
 
 > - Quels sont les millésimes ADMINEXPRESS disponibles sur la Géoplateforme?
 > - Quelle est la table de la BDTOPO correspondant aux bâtiments?
@@ -197,7 +198,22 @@ L'idée est ici de répondre à des précises en traitant côté serveur les app
 
 #### Explorer les données des tables
 
-* [gpf_wfs_get_features(typename,...)](src/tools/GpfWfsGetFeaturesTool.ts) pour **récupérer les données d'une table** depuis le service WFS de la Géoplateforme ([GetFeature](https://data.geopf.fr/wfs/ows?service=WFS&version=2.0.0&request=GetFeature&typename=ADMINEXPRESS-COG.LATEST:commune&outputFormat=application/json&count=1))
+* [gpf_wfs_get_features(typename,...)](src/tools/GpfWfsGetFeaturesTool.ts) pour **récupérer les données d'une table** depuis le service WFS de la Géoplateforme sans écrire de CQL à la main.
+
+Le tool accepte un contrat structuré :
+
+- `select` pour choisir les propriétés à renvoyer
+- `where` pour filtrer les objets
+- `order_by` pour trier les résultats
+- `spatial_operator` et ses paramètres dédiés pour le spatial en `lon/lat`
+- `result_type="request"` pour récupérer la requête compilée en `POST`, ainsi qu'une `get_url` dérivée quand elle reste raisonnablement portable en GET
+
+Exemples :
+
+- `where=[{ property: "code_insee", operator: "eq", value: "25000" }]`
+- `spatial_operator="bbox"` avec `bbox_west`, `bbox_south`, `bbox_east`, `bbox_north`
+- `spatial_operator="dwithin_point"` avec `dwithin_lon`, `dwithin_lat`, `dwithin_distance_m`
+- `spatial_operator="intersects_feature"` avec `intersects_feature_typename` et `intersects_feature_id` issus d'une `feature_ref`
 
 > - Quelles sont les 5 communes les plus peuplées du Doubs (25)?
 > - Combien y-a-t'il de bâtiments à moins de 5 km de la tour Eiffel?
@@ -231,7 +247,6 @@ N'hésitez pas :
 mcp add tool gpf_wmts_layers
 ```
 
-* [@camptocamp/ogc-client](https://camptocamp.github.io/ogc-client/#/) pour la **lecture des réponses XML des services WFS, WMTS,...**
 * [@ignfab/gpf-schema-store](https://www.npmjs.com/package/@ignfab/gpf-schema-store) pour le **catalogue de schémas embarqué** utilisé par les outils d'exploration WFS.
 * [MiniSearch](https://github.com/lucaong/minisearch) pour la **recherche par mot clé** utilisée dans `@ignfab/gpf-schema-store`.
 * [jsts](https://bjornharrtell.github.io/jsts/) pour les **traitements géométriques** (ex : tri des réponses par distance au point recherché).

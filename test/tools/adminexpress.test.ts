@@ -6,6 +6,10 @@ const adminexpressResults = [
         type: "commune",
         id: "commune.1",
         bbox: [6.4, 47.1, 6.5, 47.2],
+        feature_ref: {
+            typename: "ADMINEXPRESS-COG.LATEST:commune",
+            feature_id: "commune.1",
+        },
         nom_officiel: "Loray",
         nom_officiel_en_majuscules: "LORAY",
         code_insee_du_departement: "25",
@@ -16,6 +20,10 @@ const adminexpressResults = [
         type: "departement",
         id: "departement.1",
         bbox: [6.4, 47.1, 6.5, 47.2],
+        feature_ref: {
+            typename: "ADMINEXPRESS-COG.LATEST:departement",
+            feature_id: "departement.1",
+        },
         nom_officiel: "Doubs",
         nom_officiel_en_majuscules: "DOUBS",
         code_insee: "25",
@@ -76,10 +84,18 @@ describe("Test AdminexpressTool",() => {
             expect.objectContaining({
                 type: "commune",
                 nom_officiel: "Loray",
+                feature_ref: {
+                    typename: "ADMINEXPRESS-COG.LATEST:commune",
+                    feature_id: "commune.1",
+                },
             }),
             expect.objectContaining({
                 type: "departement",
                 nom_officiel: "Doubs",
+                feature_ref: {
+                    typename: "ADMINEXPRESS-COG.LATEST:departement",
+                    feature_id: "departement.1",
+                },
             }),
         ]));
         expect(response.structuredContent).toMatchObject({
@@ -87,10 +103,18 @@ describe("Test AdminexpressTool",() => {
                 expect.objectContaining({
                     type: "commune",
                     nom_officiel: "Loray",
+                    feature_ref: {
+                        typename: "ADMINEXPRESS-COG.LATEST:commune",
+                        feature_id: "commune.1",
+                    },
                 }),
                 expect.objectContaining({
                     type: "departement",
                     nom_officiel: "Doubs",
+                    feature_ref: {
+                        typename: "ADMINEXPRESS-COG.LATEST:departement",
+                        feature_id: "departement.1",
+                    },
                 }),
             ]),
         });

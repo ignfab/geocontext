@@ -1,6 +1,4 @@
-import _ from 'lodash';
-
-import { fetchJSON } from '../helpers/http.js';
+import { fetchWfsFeatures, mapWfsFeature } from '../helpers/wfs.js';
 import logger from '../logger.js';
 
 /**
@@ -27,33 +25,13 @@ export const ADMINEXPRESS_TYPES = [
  * @param {(url: string) => Promise<any>} [fetcher]
  * @returns {object[]}
  */
-export async function getAdminUnits(lon, lat, fetcher = fetchJSON) {
+export async function getAdminUnits(lon, lat, fetcher) {
     logger.info(`[adminexpress] getAdminUnits(${lon},${lat})...`);
 
-    // note that EPSG:4326 means lat,lon order for GeoServer -> flipped coordinates...
-    const cql_filter = `INTERSECTS(geometrie,Point(${lat} ${lon}))`;
+    // Using EWKT format with SRID=4326 prefix for standard lon,lat order
+    const cql_filter = `INTERSECTS(geometrie,SRID=4326;POINT(${lon} ${lat}))`;
+    const typeNames = ADMINEXPRESS_TYPES.map((type) => `ADMINEXPRESS-COG.LATEST:${type}`);
 
-    // TODO : avoid useless geometry retrieval at WFS level
-    const url = 'https://data.geopf.fr/wfs?' + new URLSearchParams({
-        service: 'WFS',
-        request: 'GetFeature',
-        typeName: ADMINEXPRESS_TYPES.map((type) => { return `ADMINEXPRESS-COG.LATEST:${type}` }).join(','),
-        outputFormat: 'application/json',
-        cql_filter: cql_filter
-    }).toString();
-
-    const featureCollection = await fetcher(url);
-    if (!Array.isArray(featureCollection?.features)) {
-        throw new Error("Le service ADMINEXPRESS n'a pas retourné de collection d'objets exploitable");
-    }
-    return featureCollection.features.map((feature) => {
-        // parse type from id (ex: "commune.3837")
-        const type = feature.id.split('.')[0];
-        // ignore geometry and extend properties
-        return Object.assign({
-            type: type,
-            id: feature.id,
-            bbox: feature.bbox
-        }, feature.properties);
-    });
+    const features = await fetchWfsFeatures(typeNames, cql_filter, 'ADMINEXPRESS', fetcher);
+    return features.map((feature) => mapWfsFeature(feature, typeNames));
 }

@@ -5,7 +5,6 @@ import CadastreTool from "../../src/tools/CadastreTool";
 import GeocodeTool from "../../src/tools/GeocodeTool";
 import GpfWfsDescribeTypeTool from "../../src/tools/GpfWfsDescribeTypeTool";
 import GpfWfsGetFeaturesTool from "../../src/tools/GpfWfsGetFeaturesTool";
-import GpfWfsListTypesTool from "../../src/tools/GpfWfsListTypesTool";
 import GpfWfsSearchTypesTool from "../../src/tools/GpfWfsSearchTypesTool";
 import UrbanismeTool from "../../src/tools/UrbanismeTool";
 
@@ -44,11 +43,6 @@ const strictInputCases = [
     label: "GpfWfsGetFeaturesTool",
     tool: new GpfWfsGetFeaturesTool(),
     validArguments: { typename: "BDTOPO_V3:batiment" },
-  },
-  {
-    label: "GpfWfsListTypesTool",
-    tool: new GpfWfsListTypesTool(),
-    validArguments: {},
   },
   {
     label: "GpfWfsSearchTypesTool",
