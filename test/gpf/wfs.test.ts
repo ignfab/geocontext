@@ -92,19 +92,19 @@ describe("Test WfsClient",() => {
         });
     });
 
-    describe("searchFeatureTypes",() => {
+    describe("searchFeatureTypesWithScores",() => {
         it("should find BDTOPO_V3:batiment for 'bâtiments bdtopo'", async () => {
-            const featureTypes = await wfsClient.searchFeatureTypes("bâtiments bdtopo");
+            const featureTypes = await wfsClient.searchFeatureTypesWithScores("bâtiments bdtopo");
             expect(featureTypes).toBeDefined();
             expect(featureTypes.length).toBeGreaterThan(0);
-            const featureTypeNames= featureTypes.map((featureType)=>featureType.id);
+            const featureTypeNames= featureTypes.map((featureType)=>featureType.collection.id);
             expect(featureTypeNames).toContain("BDTOPO_V3:batiment");
         });
         it("should find BDTOPO_V3:departement and ADMINEXPRESS-COG.LATEST:departement for 'départements'", async () => {
-            const featureTypes = await wfsClient.searchFeatureTypes("départements");
+            const featureTypes = await wfsClient.searchFeatureTypesWithScores("départements");
             expect(featureTypes).toBeDefined();
             expect(featureTypes.length).toBeGreaterThan(0);
-            const featureTypeNames= featureTypes.map((featureType)=>featureType.id);
+            const featureTypeNames= featureTypes.map((featureType)=>featureType.collection.id);
             expect(featureTypeNames).toContain("BDTOPO_V3:departement");
             expect(featureTypeNames).toContain("ADMINEXPRESS-COG.LATEST:departement");
         });
@@ -118,13 +118,21 @@ describe("Test WfsClient",() => {
                     boost: { title: 4.0 },
                 }
             });
-            const featureTypes = await tuned.searchFeatureTypes("bâtiments bdtopo");
+            const featureTypes = await tuned.searchFeatureTypesWithScores("bâtiments bdtopo");
             expect(featureTypes).toBeDefined();
             expect(featureTypes.length).toBeGreaterThan(0);
-            const featureTypeNames= featureTypes.map((featureType)=>featureType.id);
+            const featureTypeNames= featureTypes.map((featureType)=>featureType.collection.id);
             expect(featureTypeNames).toContain("BDTOPO_V3:batiment");
         });
+        it("should return scored results for 'bâtiments bdtopo'", async () => {
+            const featureTypes = await wfsClient.searchFeatureTypesWithScores("bâtiments bdtopo");
+            expect(featureTypes).toBeDefined();
+            expect(featureTypes.length).toBeGreaterThan(0);
 
+            const batimentResult = featureTypes.find((featureType) => featureType.collection.id === "BDTOPO_V3:batiment");
+            expect(batimentResult).toBeDefined();
+            expect(batimentResult?.score).toEqual(expect.any(Number));
+        });
     });
 
     describe("getFeatureType",() => {
