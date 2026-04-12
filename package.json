@@ -27,7 +27,7 @@
   },
   "homepage": "https://github.com/ignfab/geocontext#readme",
   "scripts": {
-    "clean:dist": "rm -rf dist",
+    "clean:dist": "node scripts/dist-clean.js",
     "build": "npm run clean:dist && tsc && npx mcp-build",
     "watch": "tsc --watch",
     "start": "node dist/index.js",
