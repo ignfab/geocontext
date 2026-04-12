@@ -4,6 +4,7 @@ WORKDIR /opt/geocontext
 COPY package.json package-lock.json tsconfig.json ./
 RUN npm ci
 COPY src src/
+COPY scripts scripts/
 RUN npm run build
 
 FROM node:22-alpine
