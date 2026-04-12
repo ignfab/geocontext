@@ -18,7 +18,7 @@ const urbanismeResultSchema = z
     id: z.string().describe("L'identifiant de l'objet d'urbanisme."),
     bbox: z.array(z.number()).describe("La boîte englobante de l'objet d'urbanisme.").optional(),
     feature_ref: featureRefSchema.describe("Référence WFS réutilisable, notamment avec `gpf_wfs_get_features` et `spatial_operator = \"intersects_feature\"`.").optional(),
-    distance: z.number().describe("La distance entre le point demandé et l'objet d'urbanisme retenu."),
+    distance: z.number().describe("La distance en mètre entre le point demandé et l'objet d'urbanisme retenu."),
   })
   .catchall(z.unknown());
 

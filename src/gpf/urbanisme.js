@@ -58,7 +58,7 @@ export async function getUrbanisme(lon, lat, fetcher) {
     return features.map((feature) => {
         const item = {
             ...mapWfsFeature(feature, URBANISME_TYPES),
-            distance: distance(sourceGeom, feature.geometry) * 1000.0,
+            distance: distance(sourceGeom, feature.geometry),
         };
         return sanitizeUrbanismeItem(item);
     });
@@ -89,6 +89,6 @@ export async function getAssiettesServitudes(lon, lat, fetcher) {
     const features = await fetchWfsFeatures(ASSIETTES_SUP_TYPES, cql_filter, 'Urbanisme', fetcher);
     return features.map((feature) => ({
         ...mapWfsFeature(feature, ASSIETTES_SUP_TYPES),
-        distance: distance(sourceGeom, feature.geometry) * 1000.0,
+        distance: distance(sourceGeom, feature.geometry),
     }));
 }
