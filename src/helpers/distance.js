@@ -27,7 +27,7 @@ export default function distance(gA, gB) {
     }
 
     /*
-     * harversine distance between the 2 nearest points (see https://turfjs.org/docs/api/distance)
+     * haversine distance between the 2 nearest points (see https://turfjs.org/docs/api/distance)
      */
     return turfDistance(
         turfPoint([nearestPoints[0].x, nearestPoints[0].y]), 
