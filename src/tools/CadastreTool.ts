@@ -18,7 +18,7 @@ const cadastreResultSchema = z
     id: z.string().describe("L'identifiant de l'objet cadastral."),
     bbox: z.array(z.number()).describe("La boîte englobante de l'objet cadastral.").optional(),
     feature_ref: featureRefSchema.describe("Référence WFS réutilisable, notamment avec `gpf_wfs_get_features` et `spatial_operator = \"intersects_feature\"`."),
-    distance: z.number().describe("La distance en mètre entre le point demandé et l'objet cadastral retenu."),
+    distance: z.number().describe("La distance en mètres entre le point demandé et l'objet cadastral retenu."),
     source: z.string().describe("La source des données cadastrales."),
   })
   .catchall(z.unknown());
