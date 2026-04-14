@@ -6,8 +6,10 @@ import {point as turfPoint} from '@turf/helpers'
 
 /**
  * Compute approximative distance in meters between gA and gB.
+ * 
+ * TODO: replace the lon/lat planar nearest-point step with a geodesic geometry distance.
  *
- * @param {object} gA GeoJSON Point
+ * @param {object} gA GeoJSON Geometry
  * @param {object} gB GeoJSON Geometry
  */
 export default function distance(gA, gB) {
@@ -35,4 +37,3 @@ export default function distance(gA, gB) {
         { units: 'meters' }
     );
 }
-
