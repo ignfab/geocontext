@@ -14,7 +14,7 @@ describe("gpfWfsGetFeatures/compile", () => {
       { name: "code_insee", type: "string" },
       { name: "nature", type: "string", enum: ["Chapelle", "Eglise"] },
       { name: "population", type: "integer" },
-      { name: "hauteur", type: "numeric" },
+      { name: "hauteur", type: "float" },
       { name: "actif", type: "boolean" },
       { name: "date_creation", type: "string" },
       { name: "geometrie", type: "multipolygon", defaultCrs: "EPSG:4326" },

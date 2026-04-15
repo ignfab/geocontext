@@ -12,7 +12,7 @@ describe("Test GpfWfsDescribeTypeTool",() => {
         properties: [
             {
                 name: "hauteur",
-                type: "number",
+                type: "float",
             },
         ],
     };
