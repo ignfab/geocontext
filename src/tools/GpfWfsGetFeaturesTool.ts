@@ -5,16 +5,16 @@ import { wfsClient } from "../gpf/wfs.js";
 import { fetchJSONPost } from "../helpers/http.js";
 import logger from "../logger.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
-import { compileQueryParts, geometryToEwkt, getGeometryProperty, getSpatialFilter } from "./gpfWfsGetFeatures/compile.js";
-import { buildMainRequest, buildReferenceGeometryRequest, type CompiledRequest } from "./gpfWfsGetFeatures/request.js";
-import { transformFeatureCollectionResponse } from "./gpfWfsGetFeatures/response.js";
+import { compileQueryParts, geometryToEwkt, getGeometryProperty, getSpatialFilter } from "../helpers/wfs_internal/compile.js";
+import { buildMainRequest, buildReferenceGeometryRequest, type CompiledRequest } from "../helpers/wfs_internal/request.js";
+import { transformFeatureCollectionResponse } from "../helpers/wfs_internal/response.js";
 import {
   gpfWfsGetFeaturesHitsOutputSchema,
   gpfWfsGetFeaturesInputSchema,
   type GpfWfsGetFeaturesInput,
   gpfWfsGetFeaturesPublishedInputSchema,
   gpfWfsGetFeaturesRequestOutputSchema,
-} from "./gpfWfsGetFeatures/schema.js";
+} from "../helpers/wfs_internal/schema.js";
 
 class GpfWfsGetFeaturesTool extends MCPTool<GpfWfsGetFeaturesInput> {
   name = "gpf_wfs_get_features";

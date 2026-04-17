@@ -1,7 +1,7 @@
 import type { Collection } from "@ignfab/gpf-schema-store";
 
-import { compileQueryParts, geometryToEwkt } from "../../src/tools/gpfWfsGetFeatures/compile";
-import type { GpfWfsGetFeaturesInput } from "../../src/tools/gpfWfsGetFeatures/schema";
+import { compileQueryParts, geometryToEwkt } from "../../../src/helpers/wfs_internal/compile";
+import type { GpfWfsGetFeaturesInput } from "../../../src/helpers/wfs_internal/schema";
 
 describe("gpfWfsGetFeatures/compile", () => {
   const featureType: Collection = {
@@ -119,4 +119,5 @@ describe("gpfWfsGetFeatures/compile", () => {
     expect(geometryToEwkt({ type: "MultiPoint", coordinates: [[2.3, 48.8], [2.4, 48.9]] })).toEqual("SRID=4326;MULTIPOINT((2.3 48.8),(2.4 48.9))");
     expect(geometryToEwkt({ type: "LineString", coordinates: [[2.3, 48.8], [2.4, 48.9]] })).toEqual("SRID=4326;LINESTRING(2.3 48.8,2.4 48.9)");
   });
+
 });
