@@ -119,4 +119,5 @@ describe("gpfWfsGetFeatures/compile", () => {
     expect(geometryToEwkt({ type: "MultiPoint", coordinates: [[2.3, 48.8], [2.4, 48.9]] })).toEqual("SRID=4326;MULTIPOINT((2.3 48.8),(2.4 48.9))");
     expect(geometryToEwkt({ type: "LineString", coordinates: [[2.3, 48.8], [2.4, 48.9]] })).toEqual("SRID=4326;LINESTRING(2.3 48.8,2.4 48.9)");
   });
+
 });

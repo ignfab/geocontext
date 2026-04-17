@@ -602,19 +602,35 @@ export function getSpatialFilter(input: GpfWfsGetFeaturesInput): SpatialFilter |
 }
 
 /**
- * Builds the list of non-geometric properties to request from the WFS layer.
+ * Build the list of property names to return in the WFS response according to the `select` and `result_type` input parameters.
  *
+ * Note that :
+ * - When `select` is omitted and `result_type` is `results`, all non-geometric properties are returned.
+ * - When `select` is provided, the specified properties are validated according to the featureType from the Catalog.
+ *  
  * @param featureType Feature type definition loaded from the embedded catalog.
  * @param geometryProperty Geometry property already resolved for the feature type.
  * @param input Normalized tool input.
- * @returns The list of selected property names, or every non-geometric property when `select` is omitted.
+ * @returns The list of non-geometric property names to include in the WFS `propertyName` parameter, or an empty list to include all properties.
+*
  */
 function buildSelectList(featureType: Collection, geometryProperty: CollectionProperty, input: GpfWfsGetFeaturesInput) {
-  return input.select && input.select.length > 0
-    ? input.select.map((propertyName) => compileSelectProperty(featureType, geometryProperty, propertyName))
-    : featureType.properties
+  // if `select` is specified, we only return the requested properties (after validation)
+  if (input.select && input.select.length > 0) {
+    return input.select.map((propertyName) => compileSelectProperty(featureType, geometryProperty, propertyName));
+  }
+
+  // if `select` is omitted and result_type is `results`,
+  // we return every non-geometric property 
+  if (input.result_type === "results") {
+    return featureType.properties
       .filter((property) => !property.defaultCrs)
       .map((property) => property.name);
+  }
+
+  // if `select` is omitted and result_type is `hits` or `request`
+  // we don't specify any propertyName
+  return [];
 }
 
 // --- Query Compilation ---
