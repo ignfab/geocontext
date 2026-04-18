@@ -15,7 +15,7 @@ type GenericFeatureCollection = {
  * objects that can be reused by follow-up requests.
  *
  * @param featureCollection Raw FeatureCollection returned by the WFS endpoint.
- * @returns A transformed FeatureCollection with `geometry` nulled out and optional `feature_ref` metadata.
+ * @returns A transformed FeatureCollection with geometry-related fields removed and optional `feature_ref` metadata.
  */
 export function transformFeatureCollectionResponse(featureCollection: GenericFeatureCollection) {
   if (!Array.isArray(featureCollection.features)) {
@@ -25,10 +25,7 @@ export function transformFeatureCollectionResponse(featureCollection: GenericFea
   const transformedFeatures = featureCollection.features.map((feature) => {
     const { geometry: _geometry, geometry_name: _geometryName, ...rest } = feature;
 
-    const nextFeature: Record<string, unknown> = {
-      ...rest,
-      geometry: null,
-    };
+    const nextFeature: Record<string, unknown> = { ...rest };
 
     if (typeof feature.id === "string") {
       nextFeature.feature_ref = {
@@ -40,8 +37,6 @@ export function transformFeatureCollectionResponse(featureCollection: GenericFea
     return nextFeature;
   });
 
-  return {
-    ...featureCollection,
-    features: transformedFeatures,
-  };
+  const { crs: _crs, ...restCollection } = featureCollection;
+  return { ...restCollection, features: transformedFeatures };
 }
