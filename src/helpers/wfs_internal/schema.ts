@@ -38,7 +38,7 @@ export const gpfWfsGetFeaturesInputSchema = z.object({
   result_type: z
     .enum(["results", "hits", "request"])
     .default("results")
-    .describe("`results` renvoie une FeatureCollection, `hits` renvoie uniquement le nombre total d'objets correspondant à la requête, `request` renvoie la requête compilée."),
+    .describe("`results` renvoie une FeatureCollection, `hits` renvoie uniquement le nombre total d'objets correspondant à la requête, `request` renvoie la requête WFS compilée destinée à `create_map` (`geojson_url`) ou au débogage. La géométrie est automatiquement ajoutée aux propriétés sélectionnées (`select`) pour garantir l'affichage cartographique."),
   select: z
     .array(z.string().trim().min(1))
     .min(1)
@@ -87,7 +87,7 @@ export const gpfWfsGetFeaturesHitsOutputSchema = z.object({
 });
 
 export const gpfWfsGetFeaturesRequestOutputSchema = z.object({
-  result_type: z.literal("request").describe("Indique que la réponse contient la requête compilée."),
+  result_type: z.literal("request").describe("Indique que la réponse contient la requête WFS compilée (équivalent enrichi géométrie pour `create_map` et le débogage)."),
   method: z.literal("POST").describe("Méthode HTTP réellement utilisée pour exécuter la requête."),
   url: z.string().describe("URL de base appelée pour la requête POST."),
   query: z.record(z.string()).describe("Paramètres WFS envoyés dans la query string."),

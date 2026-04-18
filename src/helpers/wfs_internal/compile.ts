@@ -607,6 +607,7 @@ export function getSpatialFilter(input: GpfWfsGetFeaturesInput): SpatialFilter |
  * Note that :
  * - When `select` is omitted and `result_type` is `results`, all non-geometric properties are returned.
  * - When `select` is provided, the specified properties are validated according to the featureType from the Catalog.
+ * - When `result_type` is `request` and `select` is provided, the geometry column is automatically appended.
  *  
  * @param featureType Feature type definition loaded from the embedded catalog.
  * @param geometryProperty Geometry property already resolved for the feature type.
@@ -617,7 +618,11 @@ export function getSpatialFilter(input: GpfWfsGetFeaturesInput): SpatialFilter |
 function buildSelectList(featureType: Collection, geometryProperty: CollectionProperty, input: GpfWfsGetFeaturesInput) {
   // if `select` is specified, we only return the requested properties (after validation)
   if (input.select && input.select.length > 0) {
-    return input.select.map((propertyName) => compileSelectProperty(featureType, geometryProperty, propertyName));
+    const selectedProperties = input.select.map((propertyName) => compileSelectProperty(featureType, geometryProperty, propertyName));
+    if (input.result_type === "request") {
+      return [...selectedProperties, geometryProperty.name];
+    }
+    return selectedProperties;
   }
 
   // if `select` is omitted and result_type is `results`,

@@ -95,6 +95,16 @@ describe("gpfWfsGetFeatures/compile", () => {
     }, featureType)).toThrow("`select` accepte uniquement");
   });
 
+  it("should append geometry to propertyName for request when select is provided", () => {
+    const compiled = compileQueryParts({
+      ...baseInput,
+      result_type: "request",
+      select: ["code_insee", "population"],
+    }, featureType);
+
+    expect(compiled.propertyName).toEqual("code_insee,population,geometrie");
+  });
+
   it("should reject stray spatial params without operator", () => {
     expect(() => compileQueryParts({
       ...baseInput,

@@ -165,6 +165,7 @@ describe("Test GpfWfsGetFeaturesTool",() => {
                 arguments: {
                     typename: "ADMINEXPRESS-COG.LATEST:commune",
                     result_type: "request",
+                    select: ["code_insee"],
                     where: [
                         {
                             property: "code_insee",
@@ -188,6 +189,7 @@ describe("Test GpfWfsGetFeaturesTool",() => {
         expect(request.method).toEqual("POST");
         expect(request.url).toContain("https://data.geopf.fr/wfs");
         expect(request.query.service).toEqual("WFS");
+        expect(request.query.propertyName).toEqual("code_insee,geometrie");
         expect(request.body).toContain("cql_filter=");
         expect(response.structuredContent).toMatchObject({
             result_type: "request",
