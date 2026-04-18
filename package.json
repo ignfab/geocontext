@@ -44,7 +44,7 @@
     "https-proxy-agent": "^7.0.6",
     "jsts": "^2.12.1",
     "lodash": "^4.17.21",
-    "mcp-framework": "^0.2.21",
+    "mcp-framework": "^0.2.22",
     "node-fetch": "^3.3.2",
     "winston": "^3.18.3",
     "zod": "^3.25.76"

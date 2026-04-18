@@ -1,54 +1,91 @@
 import { MCPServer } from "mcp-framework";
-
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { readFileSync } from "fs";
 
-// Get the directory of the current module (dist directory)
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-// Get version from package.json
-const pkgMetadata = JSON.parse(readFileSync(join(__dirname, '../package.json'), 'utf-8'));
-const VERSION = pkgMetadata.version;
-
-/**
- * Available transports
- */
-const TRANSPORTS: Record<string, any> = {
-  'stdio': {
-    type: "stdio"
+const TRANSPORTS = {
+  stdio: {
+    type: "stdio",
   },
-  'http': {
+  http: {
     type: "http-stream",
     options: {
-      host: process.env.HTTP_HOST,
       port: 3000,
       cors: {
-        allowOrigin: "*"
-      }
-    }
-  }
+        allowOrigin: "*",
+      },
+    },
+  },
+} as const;
+
+type TransportType = keyof typeof TRANSPORTS;
+
+function isTransportType(value: string): value is TransportType {
+  return Object.prototype.hasOwnProperty.call(TRANSPORTS, value);
 }
 
+function getTransportType(): TransportType {
+  const transportType = process.env.TRANSPORT_TYPE ?? "stdio";
 
-async function main() {
-  // get transport type from environment variable
-  const TRANSPORT_TYPE = process.env.TRANSPORT_TYPE || "stdio";
-  if (TRANSPORT_TYPE !== "stdio" && TRANSPORT_TYPE !== "http") {
-    throw new Error(`Invalid transport type: ${TRANSPORT_TYPE}`);
+  if (!isTransportType(transportType)) {
+    throw new Error(`Invalid transport type: ${transportType}`);
   }
 
-  // start MCP server
+  return transportType;
+}
+
+function buildTransport(transportType: TransportType) {
+  if (transportType !== "http") {
+    return TRANSPORTS[transportType];
+  }
+
+  const host = process.env.HTTP_HOST?.trim();
+  if (!host) {
+    return TRANSPORTS.http;
+  }
+
+  return {
+    ...TRANSPORTS.http,
+    options: {
+      ...TRANSPORTS.http.options,
+      host,
+    },
+  };
+}
+
+function getVersion(): string {
+  const pkgMetadata = JSON.parse(
+    readFileSync(join(__dirname, "../package.json"), "utf-8")
+  );
+
+  if (!pkgMetadata?.version || typeof pkgMetadata.version !== "string") {
+    throw new Error("Missing or invalid version in package.json");
+  }
+
+  return pkgMetadata.version;
+}
+
+async function main() {
+  const transportType = getTransportType();
+  const transport = buildTransport(transportType);
+  const version = getVersion();
+
   const mcpServer = new MCPServer({
-    name: 'geocontext',
-    version: VERSION,
+    name: "geocontext",
+    version,
     basePath: __dirname,
-    transport: TRANSPORTS[TRANSPORT_TYPE],
+    transport,
   });
+
   await mcpServer.start();
 }
 
 main().catch((error) => {
-  console.error("Fatal error in main():", error);
+  console.error(
+    "Fatal error in main():",
+    error instanceof Error ? error.stack : String(error)
+  );
   process.exit(1);
 });
