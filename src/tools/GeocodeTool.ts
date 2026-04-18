@@ -38,7 +38,11 @@ class GeocodeTool extends MCPTool<GeocodeInput> {
   name = "geocode";
   title = "Géocodage de lieux et d’adresses";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
-  description = `Renvoie des résultats d'autocomplétion géocodés à partir d'un texte libre (lieu, adresse, POI), avec coordonnées, libellé complet et informations de localisation (kind, city, zipcode). (source : ${GEOCODE_SOURCE}).`;
+  description = [
+    "Renvoie des résultats d'autocomplétion géocodés à partir d'un texte libre (lieu, adresse, POI), avec coordonnées, libellé complet et informations de localisation (`kind`, `city`, `zipcode`).",
+    "Les coordonnées `lon/lat` retournées sont directement réutilisables dans tous les autres tools. Le champ `kind` indique le type de résultat (ex : `monument`, `street`, `city`, `locality`).",
+    `(source : ${GEOCODE_SOURCE}).`
+  ].join("\n");
   protected outputSchemaShape = geocodeOutputSchema;
 
   schema = geocodeInputSchema;

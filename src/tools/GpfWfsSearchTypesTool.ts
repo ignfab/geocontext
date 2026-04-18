@@ -38,10 +38,11 @@ class GpfWfsSearchTypesTool extends MCPTool<GpfWfsSearchTypesInput> {
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
   description = [
     "Recherche des types WFS de la Géoplateforme (GPF) à partir de mots-clés afin de trouver un identifiant de type (`typename`) valide.",
-    "Utiliser ce tool avant `gpf_wfs_describe_type` ou `gpf_wfs_get_features` lorsque le nom exact du type n'est pas connu.",
     "La recherche est textuelle (mini-search) et retourne une liste ordonnée de candidats avec leur identifiant, leur titre, leur description et un score de pertinence éventuel.",
     "Le paramètre `max_results` permet d'élargir le nombre de candidats retournés (10 par défaut).",
-  ].join("\r\n");
+    "**Important** : Utiliser ce tool avant `gpf_wfs_describe_type` ou `gpf_wfs_get_features` lorsque le nom exact du type n'est pas connu.",
+    "**Important** : Privilégier des termes métier en français pour la recherche."
+  ].join("\n");
   protected outputSchemaShape = gpfWfsSearchTypesOutputSchema;
 
   schema = gpfWfsSearchTypesInputSchema;

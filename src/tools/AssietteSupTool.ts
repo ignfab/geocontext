@@ -30,7 +30,12 @@ class AssietteSupTool extends MCPTool<AssietteSupInput> {
   name = "assiette_sup";
   title = "Servitudes d’utilité publique";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
-  description = `Renvoie, pour un point donné par sa longitude et sa latitude, la liste des assiettes de servitudes d'utilité publique (SUP) pertinentes à proximité, avec leurs propriétés associées. Les résultats peuvent inclure des assiettes ponctuelles, linéaires ou surfaciques et exposent un \`feature_ref\` WFS réutilisable quand il est disponible. (source : ${URBANISME_SOURCE}).`;
+  description = [
+    "Renvoie, pour un point donné par sa longitude et sa latitude, la liste des assiettes de servitudes d'utilité publique (SUP) pertinentes à proximité, avec leurs propriétés associées.",
+    "Une SUP est une contrainte légale sur l'usage du sol liée à un équipement ou une infrastructure publique (ex : AC pour patrimoine, EL pour voirie, PT pour télécoms, I pour installations classées...).",
+    "Les résultats peuvent inclure des assiettes ponctuelles, linéaires ou surfaciques et exposent un `feature_ref` WFS réutilisable quand il est disponible.",
+    `(source : ${URBANISME_SOURCE}).`
+  ].join("\n");
   protected outputSchemaShape = assietteSupOutputSchema;
 
   schema = assietteSupInputSchema;

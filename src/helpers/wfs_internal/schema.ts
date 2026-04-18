@@ -38,7 +38,7 @@ export const gpfWfsGetFeaturesInputSchema = z.object({
   result_type: z
     .enum(["results", "hits", "request"])
     .default("results")
-    .describe("`results` renvoie une FeatureCollection, `hits` renvoie uniquement le nombre total d'objets correspondant à la requête, `request` renvoie la requête WFS compilée destinée à `create_map` (`geojson_url`) ou au débogage. La géométrie est automatiquement ajoutée aux propriétés sélectionnées (`select`) pour garantir l'affichage cartographique."),
+    .describe("`results` renvoie une FeatureCollection avec les propriétés attributaires uniquement — **les géométries ne sont pas incluses**, ce mode ne peut donc pas être utilisé directement pour cartographier. `hits` renvoie uniquement le nombre total d'objets correspondant à la requête. `request` renvoie l'URL WFS compilée (`get_url`) à destination de `create_map` via `geojson_url`, ou pour déboguer la requête générée. **La géométrie est automatiquement ajoutée aux propriétés du `select`** pour garantir l'affichage cartographique."),
   select: z
     .array(z.string().trim().min(1))
     .min(1)

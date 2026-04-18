@@ -27,9 +27,10 @@ const urbanismeOutputSchema = z.object({
 });
 
 const URBANISME_TOOL_DESCRIPTION = [
-  `Renvoie, pour un point donné par sa longitude et sa latitude, la liste des objets d'urbanisme pertinents du Géoportail de l'Urbanisme (document, zones, prescriptions, informations, etc.), avec leurs propriétés associées. (source : ${URBANISME_SOURCE}).`,
+  `Renvoie, pour un point donné par sa \`longitude\` et sa \`latitude\`, la liste des objets d'urbanisme pertinents du Géoportail de l'Urbanisme (document, zones, prescriptions, informations, etc.), avec leurs propriétés associées. (source : ${URBANISME_SOURCE}).`,
   "Les résultats peuvent notamment inclure le document d'urbanisme applicable ainsi que des éléments réglementaires associés à proximité du point.",
   "Quand un objet correspond à une couche WFS réutilisable, il expose aussi un `feature_ref` compatible avec `gpf_wfs_get_features` et `spatial_operator=\"intersects_feature\"`.",
+  "Le zonage PLU (zone U, AU, A, N...) est inclus dans les zones retournées et constitue souvent l'information principale recherchée.",
   "Modèles d'URL Géoportail de l'Urbanisme :",
   "- fiche document: https://www.geoportail-urbanisme.gouv.fr/document/by-id/{gpu_doc_id}",
   "- carte: https://www.geoportail-urbanisme.gouv.fr/map/?documentId={gpu_doc_id}",

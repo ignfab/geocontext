@@ -42,8 +42,9 @@ class GpfWfsDescribeTypeTool extends MCPTool<GpfWfsDescribeTypeInput> {
   description = [
     "Renvoie le schéma détaillé d'un type WFS à partir de son identifiant (`typename`) : identifiants, description et liste des propriétés.",
     "Utiliser ce tool après `gpf_wfs_search_types` pour inspecter les propriétés disponibles avant d'appeler `gpf_wfs_get_features`.",
-    "La sortie inclut notamment le type des propriétés, leur description, et leurs valeurs possibles (`enum`) lorsqu'elles existent.",
-  ].join("\r\n");
+    "La sortie inclut notamment le type des propriétés, leur description, leurs valeurs possibles (`enum`) lorsqu'elles existent",
+    "**Appel fortement recommandé si les noms exacts des propriétés ne sont pas connus : un nom de propriété incorrect provoque une erreur**."
+  ].join("\n");
   protected outputSchemaShape = gpfWfsDescribeTypeOutputSchema;
 
   schema = gpfWfsDescribeTypeInputSchema;

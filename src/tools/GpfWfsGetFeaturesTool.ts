@@ -27,7 +27,7 @@ class GpfWfsGetFeaturesTool extends MCPTool<GpfWfsGetFeaturesInput> {
     "Exemple bbox : `spatial_operator=\"bbox\"` avec `bbox_west`, `bbox_south`, `bbox_east`, `bbox_north` en `lon/lat`.",
     "Exemple distance : `spatial_operator=\"dwithin_point\"` avec `dwithin_lon`, `dwithin_lat`, `dwithin_distance_m`.",
     "Exemple réutilisation : `spatial_operator=\"intersects_feature\"` avec `intersects_feature_typename` et `intersects_feature_id` issus d'une `feature_ref`.",
-  ].join("\r\n");
+  ].join("\n");
 
   schema = gpfWfsGetFeaturesInputSchema;
 
