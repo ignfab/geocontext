@@ -339,7 +339,7 @@ describe("Test GpfWfsGetFeaturesTool",() => {
         expect(textContent.text).toContain("numberMatched=\"unknown\"");
     });
 
-    it("should return feature_ref for non point layers and strip geometry", async () => {
+    it("should return feature_ref for non point layers with geometry set to null", async () => {
         const tool = new TestableGpfWfsGetFeaturesTool();
         tool.featureTypes[polygonFeatureType.id] = polygonFeatureType;
         tool.nextResponse = {
@@ -372,7 +372,7 @@ describe("Test GpfWfsGetFeaturesTool",() => {
         }
         const results = JSON.parse(textContent.text);
         expect(results).not.toHaveProperty("crs");
-        expect(results.features[0]).not.toHaveProperty("geometry");
+        expect(results.features[0].geometry).toBeNull();
         expect(results.features[0].feature_ref).toEqual({
             typename: "ADMINEXPRESS-COG.LATEST:commune",
             feature_id: "commune.1",
@@ -380,7 +380,7 @@ describe("Test GpfWfsGetFeaturesTool",() => {
         expect(results.features[0].geometry_name).toBeUndefined();
     });
 
-    it("should strip point geometry too and keep feature_ref only", async () => {
+    it("should set point geometry to null and keep feature_ref", async () => {
         const tool = new TestableGpfWfsGetFeaturesTool();
         tool.featureTypes[pointFeatureType.id] = pointFeatureType;
         tool.nextResponse = {
@@ -414,7 +414,7 @@ describe("Test GpfWfsGetFeaturesTool",() => {
             throw new Error("expected text content");
         }
         const results = JSON.parse(textContent.text);
-        expect(results.features[0]).not.toHaveProperty("geometry");
+        expect(results.features[0].geometry).toBeNull();
         expect(results.features[0].feature_ref).toEqual({
             typename: "BDTOPO_V3:point_d_acces",
             feature_id: "point_d_acces.1",

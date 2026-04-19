@@ -11,11 +11,11 @@ type GenericFeatureCollection = {
 };
 
 /**
- * Removes raw geometry payloads from a FeatureCollection and exposes lightweight `feature_ref`
- * objects that can be reused by follow-up requests.
+ * Removes raw geometry payloads from a FeatureCollection, keeps GeoJSON validity by forcing
+ * `geometry: null`, and exposes lightweight `feature_ref` objects reusable by follow-up requests.
  *
  * @param featureCollection Raw FeatureCollection returned by the WFS endpoint.
- * @returns A transformed FeatureCollection with geometry-related fields removed and optional `feature_ref` metadata.
+ * @returns A transformed FeatureCollection with raw geometry fields removed, `geometry: null`, and optional `feature_ref` metadata.
  */
 export function transformFeatureCollectionResponse(featureCollection: GenericFeatureCollection) {
   if (!Array.isArray(featureCollection.features)) {
@@ -25,7 +25,10 @@ export function transformFeatureCollectionResponse(featureCollection: GenericFea
   const transformedFeatures = featureCollection.features.map((feature) => {
     const { geometry: _geometry, geometry_name: _geometryName, ...rest } = feature;
 
-    const nextFeature: Record<string, unknown> = { ...rest };
+    const nextFeature: Record<string, unknown> = {
+      ...rest,
+      geometry: null,
+    };
 
     if (typeof feature.id === "string") {
       nextFeature.feature_ref = {
