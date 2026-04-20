@@ -204,7 +204,6 @@ class GpfWfsGetFeaturesTool extends MCPTool<GpfWfsGetFeaturesInput> {
     const resolvedGeometryRef = await this.resolveIntersectsFeatureGeometry(input);
     const compiled = compileQueryParts(input, featureType, resolvedGeometryRef);
     const request = buildMainRequest(input, compiled);
-    logger.info(`[gpf_wfs_get_features] POST ${request.url}?${new URLSearchParams(request.query).toString()}`);
 
     if (input.result_type === "request") {
       return {
@@ -219,6 +218,7 @@ class GpfWfsGetFeaturesTool extends MCPTool<GpfWfsGetFeaturesInput> {
 
     let featureCollection: any;
     try {
+      logger.info(`[gpf_wfs_get_features] POST ${request.url}?${new URLSearchParams(request.query).toString()}`);
       featureCollection = await this.fetchFeatureCollection(request);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
