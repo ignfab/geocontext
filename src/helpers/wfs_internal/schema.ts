@@ -4,7 +4,7 @@ import { generatePublishedInputSchema } from "../../helpers/jsonSchema.js";
 import { lonSchema, latSchema } from "../../helpers/schemas.js";
 
 export const DEFAULT_LIMIT = 100;
-export const MAX_LIMIT = 1000;
+export const MAX_LIMIT = 5000;
 export const REQUEST_GET_URL_MAX_LENGTH = 6000;
 export const WHERE_OPERATORS = ["eq", "ne", "lt", "lte", "gt", "gte", "in", "is_null"] as const;
 export const SPATIAL_OPERATORS = ["bbox", "intersects_point", "dwithin_point", "intersects_feature"] as const;

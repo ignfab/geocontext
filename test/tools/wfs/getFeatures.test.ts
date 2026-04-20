@@ -101,7 +101,7 @@ describe("Test GpfWfsGetFeaturesTool",() => {
         expect(tool.toolDefinition.inputSchema.properties?.limit).toMatchObject({
             type: "integer",
             minimum: 1,
-            maximum: 1000,
+            maximum: 5000,
         });
         expect(tool.toolDefinition.inputSchema.properties?.select).toMatchObject({
             type: "array",
