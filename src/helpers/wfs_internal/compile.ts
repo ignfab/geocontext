@@ -233,7 +233,8 @@ export function getGeometryProperty(featureType: Collection) {
 function getPropertyOrThrow(featureType: Collection, propertyName: string) {
   const property = featureType.properties.find((candidate) => candidate.name === propertyName);
   if (!property) {
-    throw new Error(`La propriété '${propertyName}' n'existe pas pour '${featureType.id}'. Utiliser une propriété parmi : ${getPropertyList(featureType)}.`);
+    //throw new Error(`La propriété '${propertyName}' n'existe pas pour '${featureType.id}'. Utiliser une propriété parmi : ${getPropertyList(featureType)}.`);
+    throw new Error(`La propriété '${propertyName}' n'existe pas pour '${featureType.id}'. Appelle \`gpf_wfs_describe_type\` pour obtenir la liste des propriétés disponibles.`);
   }
   return property;
 }
