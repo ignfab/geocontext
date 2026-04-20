@@ -4,6 +4,7 @@ import AssietteSupTool from "../../src/tools/AssietteSupTool";
 import CadastreTool from "../../src/tools/CadastreTool";
 import GeocodeTool from "../../src/tools/GeocodeTool";
 import GpfWfsDescribeTypeTool from "../../src/tools/GpfWfsDescribeTypeTool";
+import GpfWfsGetFeatureByIdTool from "../../src/tools/GpfWfsGetFeatureByIdTool";
 import GpfWfsGetFeaturesTool from "../../src/tools/GpfWfsGetFeaturesTool";
 import GpfWfsSearchTypesTool from "../../src/tools/GpfWfsSearchTypesTool";
 import UrbanismeTool from "../../src/tools/UrbanismeTool";
@@ -38,6 +39,14 @@ const strictInputCases = [
     label: "GpfWfsDescribeTypeTool",
     tool: new GpfWfsDescribeTypeTool(),
     validArguments: { typename: "BDTOPO_V3:batiment" },
+  },
+  {
+    label: "GpfWfsGetFeatureByIdTool",
+    tool: new GpfWfsGetFeatureByIdTool(),
+    validArguments: {
+      typename: "BDTOPO_V3:batiment",
+      feature_id: "batiment.1",
+    },
   },
   {
     label: "GpfWfsGetFeaturesTool",

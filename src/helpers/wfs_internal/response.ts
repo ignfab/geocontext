@@ -43,3 +43,36 @@ export function transformFeatureCollectionResponse(featureCollection: GenericFea
   const { crs: _crs, ...restCollection } = featureCollection;
   return { ...restCollection, features: transformedFeatures };
 }
+
+/**
+ * Transforms a FeatureCollection and injects the exact queried typename into each `feature_ref`.
+ *
+ * @param featureCollection Raw FeatureCollection returned by the WFS endpoint.
+ * @param typename Typename of the queried layer.
+ * @returns A transformed FeatureCollection whose `feature_ref` objects carry the exact typename.
+ */
+export function attachFeatureRefs(featureCollection: GenericFeatureCollection, typename: string) {
+  const transformed = transformFeatureCollectionResponse(featureCollection) as Record<string, unknown>;
+  if (!Array.isArray(transformed.features)) {
+    return transformed;
+  }
+
+  transformed.features = transformed.features.map((feature) => {
+    if (typeof feature !== "object" || feature === null || !("feature_ref" in feature)) {
+      return feature;
+    }
+    const featureRef = feature.feature_ref;
+    if (typeof featureRef !== "object" || featureRef === null) {
+      return feature;
+    }
+    return {
+      ...feature,
+      feature_ref: {
+        ...featureRef,
+        typename,
+      },
+    };
+  });
+
+  return transformed;
+}

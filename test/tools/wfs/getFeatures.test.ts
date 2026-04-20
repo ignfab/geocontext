@@ -424,6 +424,7 @@ describe("Test GpfWfsGetFeaturesTool",() => {
 
     it("should resolve intersects_feature from MultiPoint references", async () => {
         const tool = new TestableGpfWfsGetFeaturesTool();
+        tool.featureTypes[polygonFeatureType.id] = polygonFeatureType;
         tool.featureTypes[multipointFeatureType.id] = multipointFeatureType;
         tool.nextResponse = {
             type: "FeatureCollection",
@@ -442,7 +443,7 @@ describe("Test GpfWfsGetFeaturesTool",() => {
             params: {
                 name: "gpf_wfs_get_features",
                 arguments: {
-                    typename: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:localisant",
+                    typename: "ADMINEXPRESS-COG.LATEST:commune",
                     spatial_operator: "intersects_feature",
                     intersects_feature_typename: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:localisant",
                     intersects_feature_id: "localisant.1",
@@ -464,6 +465,7 @@ describe("Test GpfWfsGetFeaturesTool",() => {
     it("should report missing reference features clearly for intersects_feature", async () => {
         const tool = new TestableGpfWfsGetFeaturesTool();
         tool.featureTypes[polygonFeatureType.id] = polygonFeatureType;
+        tool.featureTypes[multipointFeatureType.id] = multipointFeatureType;
         tool.nextResponse = {
             type: "FeatureCollection",
             features: [],
@@ -476,8 +478,8 @@ describe("Test GpfWfsGetFeaturesTool",() => {
                 arguments: {
                     typename: "ADMINEXPRESS-COG.LATEST:commune",
                     spatial_operator: "intersects_feature",
-                    intersects_feature_typename: "ADMINEXPRESS-COG.LATEST:commune",
-                    intersects_feature_id: "commune.404",
+                    intersects_feature_typename: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:localisant",
+                    intersects_feature_id: "localisant.404",
                 },
             },
         });
@@ -488,6 +490,31 @@ describe("Test GpfWfsGetFeaturesTool",() => {
             throw new Error("expected text content");
         }
         expect(textContent.text).toContain("est introuvable");
-        expect(textContent.text).toContain("commune.404");
+        expect(textContent.text).toContain("localisant.404");
+    });
+
+    it("should reject intersects_feature on the same typename and guide to by-id tool", async () => {
+        const tool = new TestableGpfWfsGetFeaturesTool();
+
+        const response = await tool.toolCall({
+            params: {
+                name: "gpf_wfs_get_features",
+                arguments: {
+                    typename: "ADMINEXPRESS-COG.LATEST:commune",
+                    spatial_operator: "intersects_feature",
+                    intersects_feature_typename: "ADMINEXPRESS-COG.LATEST:commune",
+                    intersects_feature_id: "commune.1",
+                },
+            },
+        });
+
+        expect(response.isError).toBe(true);
+        const textContent = response.content[0];
+        if (textContent.type !== "text") {
+            throw new Error("expected text content");
+        }
+        expect(textContent.text).toContain("gpf_wfs_get_feature_by_id");
+        expect(textContent.text).toContain("intersects_feature");
+        expect(tool.requests).toHaveLength(0);
     });
 });
