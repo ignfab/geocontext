@@ -143,6 +143,7 @@ Remarque :
 
 - Les outils `gpf_wfs_search_types` et `gpf_wfs_describe_type` s'appuient sur un catalogue de schémas embarqué fourni par `@ignfab/gpf-schema-store`.
 - L'outil `gpf_wfs_get_features` interroge toujours le service WFS de la Géoplateforme en direct.
+- L'outil `gpf_wfs_get_feature_by_id` interroge aussi le service WFS de la Géoplateforme en direct.
 - Le catalogue embarqué améliore la description des featureTypes mais il peut être légèrement décalé par rapport à l'état courant du WFS.
 
 ## Fonctionnalités
@@ -177,7 +178,7 @@ L'idée est ici de répondre à des précises en traitant côté serveur les app
 
 * [assiette_sup(lon,lat)](src/tools/AssietteSupTool.ts) permet de **récupérer les Servitude d'Utilité Publiques (SUP)**
 
-Les tools WFS orientés "objet" (`adminexpress`, `cadastre`, `urbanisme`, `assiette_sup`) exposent un `feature_ref { typename, feature_id }` quand l'objet source est réutilisable tel quel dans un appel ultérieur à `gpf_wfs_get_features`, notamment avec `spatial_operator="intersects_feature"`.
+Les tools WFS orientés "objet" (`adminexpress`, `cadastre`, `urbanisme`, `assiette_sup`) exposent un `feature_ref { typename, feature_id }` quand l'objet source est réutilisable tel quel dans un appel ultérieur à `gpf_wfs_get_feature_by_id` (exact match) ou `gpf_wfs_get_features` (par exemple avec `spatial_operator="intersects_feature"`).
 
 ### Explorer les données vecteurs
 
@@ -197,6 +198,18 @@ Les tools WFS orientés "objet" (`adminexpress`, `cadastre`, `urbanisme`, `assie
 > - Compare le modèle des communes entre ADMINEXPRESS-COG:2024 et ADMINEXPRESS-COG.LATEST
 
 #### Explorer les données des tables
+
+* [gpf_wfs_get_feature_by_id(typename,feature_id,...)](src/tools/GpfWfsGetFeatureByIdTool.ts) pour **récupérer exactement un objet WFS identifié par son `feature_id`**.
+
+Le tool accepte un contrat structuré :
+
+- `select` pour choisir les propriétés à renvoyer
+- `result_type="request"` pour récupérer la requête compilée en `POST` avec `get_url`
+- `result_type="results"` pour renvoyer une FeatureCollection normalisée contenant exactement un seul objet
+
+Exemple :
+
+- `typename="ADMINEXPRESS-COG.LATEST:commune", feature_id="commune.8952"`
 
 * [gpf_wfs_get_features(typename,...)](src/tools/GpfWfsGetFeaturesTool.ts) pour **récupérer les données d'une table** depuis le service WFS de la Géoplateforme sans écrire de CQL à la main.
 

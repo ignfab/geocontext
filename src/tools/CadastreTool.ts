@@ -37,6 +37,7 @@ class CadastreTool extends MCPTool<CadastreInput> {
     "Les résultats sont retournés au plus une fois par type lorsqu'ils sont disponibles et incluent un `feature_ref` WFS réutilisable.",
     "Le `feature_ref` est directement réutilisable dans `gpf_wfs_get_features` avec `spatial_operator=\"intersects_feature\"`.",
     "La distance de recherche est fixée à 10 mètres.  Si aucun objet n'est trouvé dans les 10 mètres, le résultat est vide.",
+    "Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gpf_wfs_get_feature_by_id`.",
     `(source : ${PARCELLAIRE_EXPRESS_SOURCE}).`
   ].join("\n");
   protected outputSchemaShape = cadastreOutputSchema;

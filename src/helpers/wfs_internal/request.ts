@@ -108,3 +108,39 @@ export function buildReferenceGeometryRequest(typename: string, featureId: strin
     get_url: buildGetUrl(GPF_WFS_URL, query),
   };
 }
+
+/**
+ * Builds a GetFeature request targeting exactly one feature by its WFS `featureID`.
+ *
+ * @param typename Typename of the target layer.
+ * @param featureId Identifier of the target feature.
+ * @param propertyName Optional comma-separated property list.
+ * @returns A POST request split into base URL, query-string parameters, empty body, and optional GET variant.
+ */
+export function buildGetFeatureByIdRequest(
+  typename: string,
+  featureId: string,
+  propertyName?: string,
+): CompiledRequest {
+  const query: Record<string, string> = {
+    service: "WFS",
+    version: "2.0.0",
+    request: "GetFeature",
+    typeNames: typename,
+    outputFormat: "application/json",
+    featureID: featureId,
+    count: "2",
+  };
+
+  if (propertyName) {
+    query.propertyName = propertyName;
+  }
+
+  return {
+    method: "POST",
+    url: GPF_WFS_URL,
+    query,
+    body: "",
+    get_url: buildGetUrl(GPF_WFS_URL, query),
+  };
+}

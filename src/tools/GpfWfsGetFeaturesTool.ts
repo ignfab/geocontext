@@ -7,7 +7,7 @@ import logger from "../logger.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import { compileQueryParts, geometryToEwkt, getGeometryProperty, getSpatialFilter } from "../helpers/wfs_internal/compile.js";
 import { buildMainRequest, buildReferenceGeometryRequest, type CompiledRequest } from "../helpers/wfs_internal/request.js";
-import { transformFeatureCollectionResponse } from "../helpers/wfs_internal/response.js";
+import { attachFeatureRefs } from "../helpers/wfs_internal/response.js";
 import {
   gpfWfsGetFeaturesHitsOutputSchema,
   gpfWfsGetFeaturesInputSchema,
@@ -27,6 +27,7 @@ class GpfWfsGetFeaturesTool extends MCPTool<GpfWfsGetFeaturesInput> {
     "Exemple bbox : `spatial_operator=\"bbox\"` avec `bbox_west`, `bbox_south`, `bbox_east`, `bbox_north` en `lon/lat`.",
     "Exemple distance : `spatial_operator=\"dwithin_point\"` avec `dwithin_lon`, `dwithin_lat`, `dwithin_distance_m`.",
     "Exemple réutilisation : `spatial_operator=\"intersects_feature\"` avec `intersects_feature_typename` et `intersects_feature_id` issus d'une `feature_ref`.",
+    "⚠️ Quand `typename` et `intersects_feature_typename` sont identiques, utiliser `gpf_wfs_get_feature_by_id` pour récupérer exactement l'objet ciblé.",
     "**OBLIGATOIRE : toujours appeler `gpf_wfs_describe_type` avant ce tool, sauf si `gpf_wfs_describe_type` a déjà été appelé pour ce même typename dans la conversation en cours.**",
     "Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiques à chaque typename et diffèrent systématiquement des conventions habituelles (ex : pas de nom_officiel, navigabilite sans accent, etc.). Toute tentative sans appel préalable à `gpf_wfs_describe_type` **provoquera une erreur.**"
   ].join("\n");
@@ -124,41 +125,6 @@ class GpfWfsGetFeaturesTool extends MCPTool<GpfWfsGetFeaturesInput> {
   }
 
   /**
-   * Enriches transformed features with a complete `feature_ref`, reusable
-   * in particular by `intersects_feature`.
-   *
-   * @param featureCollection Raw WFS FeatureCollection response.
-   * @param typename Typename of the main queried layer.
-   * @returns The transformed FeatureCollection with fully populated feature references.
-   */
-  protected attachFeatureRefs(featureCollection: Record<string, unknown>, typename: string) {
-    const transformed = transformFeatureCollectionResponse(featureCollection) as Record<string, unknown>;
-
-    if (!Array.isArray(transformed.features)) {
-      return transformed;
-    }
-
-    transformed.features = transformed.features.map((feature) => {
-      if (typeof feature !== "object" || feature === null || !("feature_ref" in feature)) {
-        return feature;
-      }
-      const featureRef = feature.feature_ref;
-      if (typeof featureRef !== "object" || featureRef === null) {
-        return feature;
-      }
-      return {
-        ...feature,
-        feature_ref: {
-          ...featureRef,
-          typename,
-        },
-      };
-    });
-
-    return transformed;
-  }
-
-  /**
    * Resolves the geometry of a reference feature when `intersects_feature` is used,
    * then converts it to EWKT for CQL compilation.
    *
@@ -202,6 +168,17 @@ class GpfWfsGetFeaturesTool extends MCPTool<GpfWfsGetFeaturesInput> {
    * @returns Either a compiled request, a hit count, or a transformed FeatureCollection.
    */
   async execute(input: GpfWfsGetFeaturesInput) {
+    if (
+      input.spatial_operator === "intersects_feature" &&
+      input.intersects_feature_typename !== undefined &&
+      input.typename === input.intersects_feature_typename
+    ) {
+      throw new Error(
+        "Le filtre `intersects_feature` sur le même `typename` retourne potentiellement plusieurs objets. " +
+        "Utiliser `gpf_wfs_get_feature_by_id` avec `{ typename, feature_id: intersects_feature_id }` pour cibler exactement un objet."
+      );
+    }
+
     const featureType: Collection = await this.getFeatureType(input.typename);
     const resolvedGeometryRef = await this.resolveIntersectsFeatureGeometry(input);
     const compiled = compileQueryParts(input, featureType, resolvedGeometryRef);
@@ -237,7 +214,7 @@ class GpfWfsGetFeaturesTool extends MCPTool<GpfWfsGetFeaturesInput> {
       };
     }
 
-    return this.attachFeatureRefs(featureCollection, input.typename);
+    return attachFeatureRefs(featureCollection, input.typename);
   }
 }
 

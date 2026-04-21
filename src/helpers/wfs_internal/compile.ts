@@ -436,7 +436,7 @@ function compileOrderByClause(featureType: Collection, geometryProperty: Collect
  * @param propertyName Raw selected property name.
  * @returns The validated non-geometric property name.
  */
-function compileSelectProperty(featureType: Collection, geometryProperty: CollectionProperty, propertyName: string) {
+export function compileSelectProperty(featureType: Collection, geometryProperty: CollectionProperty, propertyName: string) {
   return ensureNonGeometryProperty(
     featureType,
     geometryProperty,
