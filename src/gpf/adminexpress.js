@@ -8,13 +8,15 @@ import logger from '../logger.js';
  */
 export const ADMINEXPRESS_SOURCE = "Géoplateforme (WFS, ADMINEXPRESS-COG.LATEST)";
 export const ADMINEXPRESS_TYPES = [
-    'commune', 
+    'arrondissement',
+    'arrondissement_municipal',
     'canton',
     'collectivite_territoriale',
-    'epci',
+    'commune',
+    'commune_associee_ou_deleguee',
     'departement',
-    'region', 
-    'arrondissement'
+    'epci',
+    'region'
 ];
 
 /**
