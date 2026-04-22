@@ -7,8 +7,15 @@ const formats = {
     simple: format.simple()
 };
 
+type LogFormat = keyof typeof formats;
+
+function isLogFormat(value: string): value is LogFormat {
+    return Object.keys(formats).includes(value);
+}
+
 const LOG_FORMAT = process.env.LOG_FORMAT ? process.env.LOG_FORMAT : 'simple';
-if ( ! Object.keys(formats).includes(LOG_FORMAT) ){
+
+if (!isLogFormat(LOG_FORMAT)) {
     throw new Error(`LOG_FORMAT=${LOG_FORMAT} not found!`);
 }
 

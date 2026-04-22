@@ -1,27 +1,56 @@
 import fetch from 'node-fetch';
+import type { RequestInit } from "node-fetch";
+
 import { parseXml, XmlElement } from '@rgrove/parse-xml';
 
 import logger from "../logger.js";
 
 import { HttpsProxyAgent } from 'https-proxy-agent';
 
-const fetchOpts = {
-    headers: new Headers({
-        "Accept": "application/json",
-        "User-Agent": "geocontext"
-    })
+type HeadersLike = {
+  get(name: string): string | null;
+};
+
+type ResponseLike = {
+  status: number;
+  statusText: string;
+  ok?: boolean;
+  headers?: HeadersLike;
+  text(): Promise<string>;
+};
+
+type RequestHeaders = Record<string, string>;
+
+const defaultHeaders = new Headers({
+  Accept: "application/json",
+  "User-Agent": "geocontext",
+});
+
+
+const fetchOpts:RequestInit = {
+    headers: defaultHeaders,
 };
 
 if ( process.env.HTTP_PROXY ){
     fetchOpts.agent = new HttpsProxyAgent(process.env.HTTP_PROXY); 
 }
 
-function getChild(element, localName) {
-    return element.children.find((child) => child instanceof XmlElement && child.name.split(":").pop() === localName) || null;
+function getChild(element: XmlElement | null | undefined, localName: string): XmlElement | null {
+    if (!element) {
+        return null;
+    }
+
+    const child = element.children.find(
+    (candidate): candidate is XmlElement =>
+        candidate instanceof XmlElement &&
+        candidate.name.split(":").pop() === localName
+    );
+
+    return child ?? null;
 }
 
 // Tente d'extraire un message d'erreur d'une réponse XML de type OGC WFS
-function extractXmlError(text) {
+function extractXmlError(text: string): Error | null {
     try {
         const root = parseXml(text).children.find((child) => child instanceof XmlElement);
         const rootName = root?.name.split(":").pop();
@@ -43,7 +72,7 @@ function extractXmlError(text) {
     }
 }
 
-function previewBody(text) {
+function previewBody(text: string): string {
     const trimmed = text.trim();
     if (!trimmed) {
         return "";
@@ -52,7 +81,7 @@ function previewBody(text) {
     return trimmed.replace(/\s+/g, " ").slice(0, 200);
 }
 
-export async function parseJsonResponse(res) {
+export async function parseJsonResponse(res: ResponseLike): Promise<any> {
     const contentType = (res.headers?.get?.("content-type") || "").toLowerCase();
     const text = await res.text();
     const looksLikeXml = contentType.includes("xml") || text.trim().startsWith("<");
@@ -119,26 +148,26 @@ export async function parseJsonResponse(res) {
  * @param {string} url 
  * @returns {Promise<any>}
  */
-export async function fetchJSON(url) {
+export async function fetchJSON(url: string): Promise<any> {
     logger.info(`[HTTP] GET ${url} ...`);
     const result = await fetch(url, fetchOpts).then(parseJsonResponse);
     logger.debug(`[HTTP] GET ${url} : ${JSON.stringify(result)}`)
     return result;
 }
 
-function buildFetchOptions(method, body, headers) {
+function buildFetchOptions(method: string, body: string | undefined, headers: RequestHeaders = {}) {
     return {
         ...fetchOpts,
         method,
         headers: new Headers({
-            ...Object.fromEntries(fetchOpts.headers.entries()),
+            ...Object.fromEntries(defaultHeaders.entries()),
             ...(headers || {})
         }),
         ...(body !== undefined ? { body } : {})
     };
 }
 
-export async function fetchJSONPost(url, body = "", headers = {}) {
+export async function fetchJSONPost(url: string, body: string = "", headers: RequestHeaders = {}) {
     logger.info(`[HTTP] POST ${url} ...`);
     const result = await fetch(url, buildFetchOptions("POST", body, headers)).then(parseJsonResponse);
     logger.debug(`[HTTP] POST ${url} : ${JSON.stringify(result)}`);

@@ -1,8 +1,10 @@
 import GeoJSONReader from 'jsts/org/locationtech/jts/io/GeoJSONReader.js'
 import { DistanceOp } from 'jsts/org/locationtech/jts/operation/distance.js'
+import GeometryFactory from 'jsts/org/locationtech/jts/geom/GeometryFactory.js'
 
 import turfDistance from '@turf/distance'
 import {point as turfPoint} from '@turf/helpers'
+import type { Geometry } from "geojson";
 
 /**
  * Compute approximative distance in meters between gA and gB.
@@ -12,8 +14,8 @@ import {point as turfPoint} from '@turf/helpers'
  * @param {object} gA GeoJSON Geometry
  * @param {object} gB GeoJSON Geometry
  */
-export default function distance(gA, gB) {
-    const geojsonReader = new GeoJSONReader()
+export default function distance(gA: Geometry, gB: Geometry): number {
+    const geojsonReader = new GeoJSONReader(new GeometryFactory())
     const a = geojsonReader.read(gA);
     const b = geojsonReader.read(gB);
 
