@@ -1,6 +1,6 @@
 {
   "name": "@ignfab/geocontext",
-  "version": "0.9.6",
+  "version": "0.9.7",
   "description": "An experimental MCP server providing access to the services and data of the french Geoplateform",
   "type": "module",
   "bin": {

@@ -1,6 +1,31 @@
 import { fetchJSON } from './http.js';
-
+import type { Point, BBox, Geometry } from 'geojson';
 const GPF_WFS_BASE_URL = process.env.GPF_WFS_BASE_URL || 'https://data.geopf.fr/wfs';
+
+type JsonFetcher = (url: string) => Promise<any>;
+
+type WfsFeature = {
+  id: string;
+  properties: Record<string, unknown>;
+  geometry: Geometry;
+  bbox?: BBox;
+};
+
+type WfsFeatureCollection = {
+  features?: WfsFeature[];
+};
+
+export type FeatureRef = {
+  typename: string;
+  feature_id: string;
+};
+
+export type FlatWfsFeature = Record<string, unknown> & {
+  type: string;
+  id: string;
+  bbox?: BBox;
+  feature_ref?: FeatureRef;
+};
 
 /**
  * Fetch features from a GPF WFS endpoint.
@@ -9,9 +34,9 @@ const GPF_WFS_BASE_URL = process.env.GPF_WFS_BASE_URL || 'https://data.geopf.fr/
  * @param {string} cqlFilter - CQL_FILTER value
  * @param {string} errorLabel - service label used in the error message
  * @param {(url: string) => Promise<any>} [fetcher]
- * @returns {Promise<any[]>} raw GeoJSON features array
+ * @returns {Promise<WfsFeature[]>} raw GeoJSON features array
  */
-export async function fetchWfsFeatures(typeNames, cqlFilter, errorLabel, fetcher = fetchJSON) {
+export async function fetchWfsFeatures(typeNames: string[], cqlFilter: string, errorLabel: string, fetcher: JsonFetcher = fetchJSON) : Promise<WfsFeature[]> {
     const url = GPF_WFS_BASE_URL + '?' + new URLSearchParams({
         service: 'WFS',
         request: 'GetFeature',
@@ -34,7 +59,7 @@ export async function fetchWfsFeatures(typeNames, cqlFilter, errorLabel, fetcher
  * @param {number} lat
  * @returns {object} GeoJSON Point
  */
-export function toGeoJsonPoint(lon, lat) {
+export function toGeoJsonPoint(lon: number, lat:number): Point {
     return { type: "Point", coordinates: [lon, lat] };
 }
 
@@ -44,9 +69,9 @@ export function toGeoJsonPoint(lon, lat) {
  *
  * @param {object}  feature        - Raw GeoJSON feature from WFS
  * @param {string[]} knownTypeNames - Fully qualified WFS type names used for feature_ref resolution
- * @returns {object} Flat result with type, id, bbox, optional feature_ref, and spread properties
+ * @returns {FlatWfsFeature} Flat result with type, id, bbox, optional feature_ref, and spread properties
  */
-export function mapWfsFeature(feature, knownTypeNames) {
+export function mapWfsFeature(feature: WfsFeature, knownTypeNames: string[]): FlatWfsFeature {
     const type = feature.id.split('.')[0];
     const typename = knownTypeNames.find((t) => t.endsWith(`:${type}`));
     return {

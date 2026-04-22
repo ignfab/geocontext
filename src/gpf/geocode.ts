@@ -3,6 +3,30 @@ import logger from "../logger.js";
 
 export const GEOCODE_SOURCE = "Géoplateforme (service d'autocomplétion)";
 
+type RawGeocodeResult = {
+  x: number;
+  y: number;
+  fulltext: string;
+  kind: string;
+  city: string;
+  zipcode: string;
+};
+
+type GeocodeResult = {
+  lon: number;
+  lat: number;
+  fulltext: string;
+  kind: string;
+  city: string;
+  zipcode: string;
+};
+
+type RawGeocodeResponse = {
+  results?: RawGeocodeResult[];
+};
+
+type JsonFetcher = (url: string) => Promise<any>;
+
 // https://data.geopf.fr/geocodage/completion/openapi does not provide all the necessary information yet
 
 /**
@@ -13,9 +37,9 @@ export const GEOCODE_SOURCE = "Géoplateforme (service d'autocomplétion)";
  * @param {string} text
  * @param {number} [maximumResponses=3]
  * @param {(url: string) => Promise<any>} [fetcher]
- * @returns 
+ * @returns {Promise<GeocodeResult[]>}
  */
-export async function geocode(text, maximumResponses = 3, fetcher = fetchJSON) {
+export async function geocode(text: string, maximumResponses = 3, fetcher: JsonFetcher = fetchJSON): Promise<GeocodeResult[]> {
     const normalizedText = typeof text === "string" ? text.trim() : "";
 
     if (!normalizedText) {
@@ -29,7 +53,7 @@ export async function geocode(text, maximumResponses = 3, fetcher = fetchJSON) {
       maximumResponses: String(maximumResponses)
     }).toString();
 
-    const json = await fetcher(url);
+    const json: RawGeocodeResponse = await fetcher(url);
     const results = Array.isArray(json?.results) ? json.results : [];
     return results.map((item)=>{return {
       lon: item.x,

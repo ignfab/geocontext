@@ -1,6 +1,13 @@
 import distance from "../helpers/distance.js";
 import { fetchWfsFeatures, mapWfsFeature, toGeoJsonPoint } from "../helpers/wfs.js";
 import logger from "../logger.js";
+import type { FlatWfsFeature } from "../helpers/wfs.js";
+
+type JsonFetcher = (url: string) => Promise<any>;
+
+type UrbanismeItem = FlatWfsFeature & {
+  distance: number;
+};
 
 // https://data.geopf.fr/wfs/ows?service=WFS&version=2.0.0&request=GetCapabilities
 export const URBANISME_TYPES = [
@@ -23,8 +30,8 @@ const URBANISME_EXCLUDED_PROPERTIES = new Set([
     'urlfic'
 ]);
 
-function sanitizeUrbanismeItem(item) {
-    const sanitized = {};
+function sanitizeUrbanismeItem(item: UrbanismeItem): Record<string, unknown> {
+    const sanitized: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(item)) {
         if (URBANISME_EXCLUDED_PROPERTIES.has(key)) {
             continue;
@@ -44,9 +51,9 @@ function sanitizeUrbanismeItem(item) {
  * @param {number} lon 
  * @param {number} lat 
  * @param {(url: string) => Promise<any>} [fetcher]
- * @returns 
+ * @returns {Promise<Record<string, unknown>[]>}
  */
-export async function getUrbanisme(lon, lat, fetcher) {
+export async function getUrbanisme(lon: number, lat: number, fetcher?: JsonFetcher): Promise<Record<string, unknown>[]> {
     logger.info(`getUrbanisme(${lon},${lat})...`);
 
     // Using EWKT format with SRID=4326 prefix for standard lon,lat order
@@ -76,9 +83,9 @@ const ASSIETTES_SUP_TYPES = [
  * @param {number} lon 
  * @param {number} lat 
  * @param {(url: string) => Promise<any>} [fetcher]
- * @returns 
+ * @returns {Promise<UrbanismeItem[]>}
  */
-export async function getAssiettesServitudes(lon, lat, fetcher) {
+export async function getAssiettesServitudes(lon: number, lat: number, fetcher?: JsonFetcher): Promise<UrbanismeItem[]> {
     logger.info(`getAssiettesServitudes(${lon},${lat})...`);
 
     // Using EWKT format with SRID=4326 prefix for standard lon,lat order

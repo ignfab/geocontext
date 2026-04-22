@@ -1,5 +1,5 @@
 import distance from "../../src/helpers/distance.js";
-
+import type { Polygon } from "geojson";
 import {paris, marseille, besancon, parisMarseille} from '../samples';
 
 describe("Test distance",() => {
@@ -18,7 +18,7 @@ describe("Test distance",() => {
 
     describe("Test distance(Point,Polygon)", () => {
         it("should return 0m from Paris point to a polygon containing Paris",() => {
-            const polygonContainingParis = {
+            const polygonContainingParis: Polygon = {
                 "type": "Polygon",
                 "coordinates": [
                     [
