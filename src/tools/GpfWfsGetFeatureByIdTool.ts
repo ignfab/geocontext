@@ -2,14 +2,14 @@ import { MCPTool } from "mcp-framework";
 import type { Collection } from "@ignfab/gpf-schema-store";
 import { z } from "zod";
 
-import { wfsClient } from "../gpf/wfs.js";
+import { wfsClient } from "../gpf/wfs-schema-catalog.js";
 import { fetchJSONPost } from "../helpers/http.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import { generatePublishedInputSchema } from "../helpers/jsonSchema.js";
-import { compileSelectProperty, getGeometryProperty } from "../helpers/wfs_internal/compile.js";
-import { buildGetFeatureByIdRequest, type CompiledRequest } from "../helpers/wfs_internal/request.js";
-import { attachFeatureRefs } from "../helpers/wfs_internal/response.js";
-import { gpfWfsGetFeaturesRequestOutputSchema } from "../helpers/wfs_internal/schema.js";
+import { compileSelectProperty, getGeometryProperty } from "../helpers/wfs_engine/compile.js";
+import { buildGetFeatureByIdRequest, type CompiledRequest } from "../helpers/wfs_engine/request.js";
+import { attachFeatureRefs } from "../helpers/wfs_engine/response.js";
+import { gpfWfsGetFeaturesRequestOutputSchema } from "../helpers/wfs_engine/schema.js";
 
 const gpfWfsGetFeatureByIdInputSchema = z.object({
   typename: z

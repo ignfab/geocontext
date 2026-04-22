@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-import { generatePublishedInputSchema } from "../../helpers/jsonSchema.js";
-import { lonSchema, latSchema } from "../../helpers/schemas.js";
+import { generatePublishedInputSchema } from "../jsonSchema.js";
+import { lonSchema, latSchema } from "../schemas.js";
 
 export const DEFAULT_LIMIT = 100;
 export const MAX_LIMIT = 5000;

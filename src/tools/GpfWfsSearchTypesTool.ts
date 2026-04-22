@@ -2,7 +2,7 @@ import { MCPTool } from "mcp-framework";
 import { z } from "zod";
 
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
-import { wfsClient } from "../gpf/wfs.js";
+import { wfsClient } from "../gpf/wfs-schema-catalog.js";
 
 const gpfWfsSearchTypesInputSchema = z.object({
   query: z

@@ -1,4 +1,4 @@
-import { GPF_WFS_URL } from "../../gpf/wfs.js";
+import { GPF_WFS_URL } from "../../gpf/wfs-schema-catalog.js";
 import type { GpfWfsGetFeaturesInput } from "./schema.js";
 import { REQUEST_GET_URL_MAX_LENGTH } from "./schema.js";
 
