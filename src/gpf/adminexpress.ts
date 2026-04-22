@@ -1,9 +1,9 @@
 import { fetchWfsFeatures, mapWfsFeature } from '../helpers/wfs.js';
 import logger from '../logger.js';
+import type { JsonFetcher } from '../helpers/http.js';
+import type { WfsFeatureCollection, FlatWfsFeature } from '../helpers/wfs.js';
 
-type JsonFetcher = (url: string) => Promise<any>;
-
-type AdminUnit = Record<string, unknown>;
+type AdminUnit = FlatWfsFeature;
 
 /**
  * ADMINEXPRESS-COG.LATEST:{type}
@@ -28,10 +28,10 @@ export const ADMINEXPRESS_TYPES = [
  *
  * @param {number} lon 
  * @param {number} lat 
- * @param {(url: string) => Promise<any>} [fetcher]
+ * @param {JsonFetcher<WfsFeatureCollection>} [fetcher] - optional custom fetcher function
  * @returns {Promise<AdminUnit[]>}
  */
-export async function getAdminUnits(lon: number, lat: number, fetcher?: JsonFetcher): Promise<AdminUnit[]>{
+export async function getAdminUnits(lon: number, lat: number, fetcher?: JsonFetcher<WfsFeatureCollection>): Promise<AdminUnit[]>{
     logger.info(`[adminexpress] getAdminUnits(${lon},${lat})...`);
 
     // Using EWKT format with SRID=4326 prefix for standard lon,lat order

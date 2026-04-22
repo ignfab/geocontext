@@ -1,9 +1,7 @@
 import { fetchJSON } from "../helpers/http.js";
 import logger from "../logger.js";
-
+import type { JsonFetcher } from "../helpers/http.js";
 export const ALTITUDE_SOURCE = "Géoplateforme (altimétrie)";
-
-type JsonFetcher = (url: string) => Promise<any>;
 
 type RawElevation = {
   lon: number;
@@ -30,10 +28,10 @@ type AltitudeResult = {
  * 
  * @param {number} lon 
  * @param {number} lat 
- * @param {(url: string) => Promise<any>} [fetcher]
+ * @param {JsonFetcher<RawAltitudeResponse>} [fetcher] - optional custom fetcher function
  * @returns {Promise<AltitudeResult>}
  */
-export async function getAltitudeByLocation(lon: number, lat: number, fetcher: JsonFetcher = fetchJSON): Promise<AltitudeResult> {
+export async function getAltitudeByLocation(lon: number, lat: number, fetcher: JsonFetcher<RawAltitudeResponse> = fetchJSON): Promise<AltitudeResult> {
     logger.info(`getAltitudeByLocation(${lon},${lat})...`);
     
     const url = `https://data.geopf.fr/altimetrie/1.0/calcul/alti/rest/elevation.json?lon=${lon}&lat=${lat}&resource=ign_rge_alti_wld`;

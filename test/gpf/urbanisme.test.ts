@@ -1,14 +1,12 @@
 import {getUrbanisme, getAssiettesServitudes} from "../../src/gpf/urbanisme.js";
 import { chamonix, mairieLoray } from "../samples";
+import type { Point } from "geojson";
 
 const urbanismeFeatureCollection: {
     features: Array<{
         id: string;
         bbox: number[];
-        geometry: {
-            type: string;
-            coordinates: number[];
-        };
+        geometry: Point;
         properties: Record<string, string | null>;
     }>;
 } = {
@@ -47,10 +45,7 @@ const assiettesFeatureCollection: {
     features: Array<{
         id: string;
         bbox: number[];
-        geometry: {
-            type: string;
-            coordinates: number[];
-        };
+        geometry: Point;
         properties: Record<string, string>;
     }>;
 } = {
