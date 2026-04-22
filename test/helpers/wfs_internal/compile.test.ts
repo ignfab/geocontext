@@ -1,7 +1,7 @@
 import type { Collection } from "@ignfab/gpf-schema-store";
 
-import { compileQueryParts, geometryToEwkt } from "../../../src/helpers/wfs_internal/compile";
-import type { GpfWfsGetFeaturesInput } from "../../../src/helpers/wfs_internal/schema";
+import { compileQueryParts, geometryToEwkt } from "../../../src/helpers/wfs_engine/compile";
+import type { GpfWfsGetFeaturesInput } from "../../../src/helpers/wfs_engine/schema";
 
 describe("gpfWfsGetFeatures/compile", () => {
   const featureType: Collection = {

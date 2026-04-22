@@ -1,3 +1,11 @@
+/**
+ * Structured WFS response layer used by the MCP WFS tools.
+ *
+ * Unlike the legacy/simple helper layer in `src/helpers/wfs.ts`, this module
+ * keeps the response shape aligned with FeatureCollection/Feature-style outputs
+ * and applies targeted transformations needed by the generic WFS toolchain.
+ */
+
 type GenericFeature = {
   id?: string;
   geometry?: unknown;
