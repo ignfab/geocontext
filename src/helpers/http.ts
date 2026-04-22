@@ -1,11 +1,9 @@
 import fetch from 'node-fetch';
 import type { RequestInit } from "node-fetch";
-
+import { HttpsProxyAgent } from 'https-proxy-agent';
 import { parseXml, XmlElement } from '@rgrove/parse-xml';
 
 import logger from "../logger.js";
-
-import { HttpsProxyAgent } from 'https-proxy-agent';
 
 type HeadersLike = {
   get(name: string): string | null;
@@ -30,6 +28,8 @@ const defaultHeaders = new Headers({
 const fetchOpts:RequestInit = {
     headers: defaultHeaders,
 };
+
+export type JsonFetcher<T> = (url: string) => Promise<T>;
 
 if ( process.env.HTTP_PROXY ){
     fetchOpts.agent = new HttpsProxyAgent(process.env.HTTP_PROXY); 

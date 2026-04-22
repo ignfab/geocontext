@@ -1,7 +1,9 @@
 import {getParcellaireExpress} from "../../src/gpf/parcellaire-express.js";
 import { mairieLoray } from "../samples";
+import type { Point } from "geojson";
+import type { WfsFeatureCollection, WfsFeatureWithGeometry } from "../../src/helpers/wfs.js";
 
-const parcellaireExpressFeatureCollection = {
+const parcellaireExpressFeatureCollection: WfsFeatureCollection<WfsFeatureWithGeometry>  = {
     features: [
         {
             id: "commune.1",

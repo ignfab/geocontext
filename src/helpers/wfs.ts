@@ -1,18 +1,20 @@
 import { fetchJSON } from './http.js';
-import type { Point, BBox, Geometry } from 'geojson';
+import type { Point, Geometry } from 'geojson';
 const GPF_WFS_BASE_URL = process.env.GPF_WFS_BASE_URL || 'https://data.geopf.fr/wfs';
+import type { JsonFetcher } from './http.js';
 
-type JsonFetcher = (url: string) => Promise<any>;
-
-type WfsFeature = {
+export type WfsFeatureBase = {
   id: string;
   properties: Record<string, unknown>;
-  geometry: Geometry;
-  bbox?: BBox;
+  bbox?: number[];
 };
 
-type WfsFeatureCollection = {
-  features?: WfsFeature[];
+export type WfsFeatureWithGeometry = WfsFeatureBase & {
+  geometry: Geometry;
+};
+
+export type WfsFeatureCollection<TFeature extends WfsFeatureBase = WfsFeatureBase> = {
+  features?: TFeature[];
 };
 
 export type FeatureRef = {
@@ -23,7 +25,7 @@ export type FeatureRef = {
 export type FlatWfsFeature = Record<string, unknown> & {
   type: string;
   id: string;
-  bbox?: BBox;
+  bbox?: number[];
   feature_ref?: FeatureRef;
 };
 
@@ -33,10 +35,10 @@ export type FlatWfsFeature = Record<string, unknown> & {
  * @param {string[]} typeNames - fully qualified WFS type names
  * @param {string} cqlFilter - CQL_FILTER value
  * @param {string} errorLabel - service label used in the error message
- * @param {(url: string) => Promise<any>} [fetcher]
+ * @param {JsonFetcher<WfsFeatureCollection>} [fetcher] - optional custom fetcher function
  * @returns {Promise<WfsFeature[]>} raw GeoJSON features array
  */
-export async function fetchWfsFeatures(typeNames: string[], cqlFilter: string, errorLabel: string, fetcher: JsonFetcher = fetchJSON) : Promise<WfsFeature[]> {
+export async function fetchWfsFeatures<TFeature extends WfsFeatureBase = WfsFeatureBase>(typeNames: string[], cqlFilter: string, errorLabel: string, fetcher: JsonFetcher<WfsFeatureCollection<TFeature>> = fetchJSON) : Promise<TFeature[]> {
     const url = GPF_WFS_BASE_URL + '?' + new URLSearchParams({
         service: 'WFS',
         request: 'GetFeature',
@@ -57,7 +59,7 @@ export async function fetchWfsFeatures(typeNames: string[], cqlFilter: string, e
  *
  * @param {number} lon
  * @param {number} lat
- * @returns {object} GeoJSON Point
+ * @returns {Point} GeoJSON Point
  */
 export function toGeoJsonPoint(lon: number, lat:number): Point {
     return { type: "Point", coordinates: [lon, lat] };
@@ -71,7 +73,7 @@ export function toGeoJsonPoint(lon: number, lat:number): Point {
  * @param {string[]} knownTypeNames - Fully qualified WFS type names used for feature_ref resolution
  * @returns {FlatWfsFeature} Flat result with type, id, bbox, optional feature_ref, and spread properties
  */
-export function mapWfsFeature(feature: WfsFeature, knownTypeNames: string[]): FlatWfsFeature {
+export function mapWfsFeature(feature: WfsFeatureBase, knownTypeNames: string[]): FlatWfsFeature {
     const type = feature.id.split('.')[0];
     const typename = knownTypeNames.find((t) => t.endsWith(`:${type}`));
     return {

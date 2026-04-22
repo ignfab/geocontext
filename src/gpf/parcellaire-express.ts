@@ -4,10 +4,10 @@ import distance from '../helpers/distance.js';
 import { fetchWfsFeatures, mapWfsFeature, toGeoJsonPoint } from '../helpers/wfs.js';
 import logger from '../logger.js';
 
-type JsonFetcher = (url: string) => Promise<any>;
+import type { JsonFetcher } from '../helpers/http.js';
+import type { WfsFeatureCollection, FlatWfsFeature, WfsFeatureWithGeometry } from '../helpers/wfs.js';
 
-type ParcellaireExpressItem = Record<string, unknown> & {
-  type: unknown;
+type ParcellaireExpressItem = FlatWfsFeature & {
   distance: number;
   source: string;
 };
@@ -54,10 +54,10 @@ function filterByDistance(items: ParcellaireExpressItem[]): ParcellaireExpressIt
  * 
  * @param {number} lon 
  * @param {number} lat 
- * @param {(url: string) => Promise<any>} [fetcher]
+ * @param {JsonFetcher<WfsFeatureCollection>} [fetcher] - optional custom fetcher function
  * @returns {Promise<ParcellaireExpressItem[]>}
  */
-export async function getParcellaireExpress(lon: number, lat:number, fetcher?: JsonFetcher): Promise<ParcellaireExpressItem[]> {
+export async function getParcellaireExpress(lon: number, lat:number, fetcher?: JsonFetcher<WfsFeatureCollection<WfsFeatureWithGeometry>>): Promise<ParcellaireExpressItem[]> {
     logger.info(`getParcellaireExpress(${lon},${lat}) ...`);
     // Using EWKT format with SRID=4326 prefix for standard lon,lat order
     const cql_filter = `DWITHIN(geom,SRID=4326;POINT(${lon} ${lat}),10,meters)`;
