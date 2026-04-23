@@ -32,8 +32,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "watch": "tsc --watch",
     "start": "node dist/index.js",
-    "test": "node --no-warnings --experimental-vm-modules ./node_modules/jest/bin/jest.js",
-    "coverage": "node --no-warnings --experimental-vm-modules ./node_modules/jest/bin/jest.js --coverage",
+    "test": "vitest run",
+    "coverage": "vitest run --coverage",
     "reset": "rm -rf node_modules package-lock.json dist build .next .turbo coverage",
     "fresh": "npm run reset && npm cache verify && npm install && npm run build && npm test"
   },
@@ -52,16 +52,12 @@
   },
   "devDependencies": {
     "@types/geojson": "^7946.0.16",
-    "@types/jest": "^30.0.0",
     "@types/lodash": "^4.17.21",
     "@types/node": "^24.10.1",
-    "jest": "^30.2.0",
+    "@vitest/coverage-v8": "^3.2.4",
     "supertest": "^7.1.4",
-    "ts-jest": "^29.4.5",
-    "typescript": "^5.9.3"
-  },
-  "overrides": {
-    "babel-plugin-istanbul": "^8.0.0"
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
   },
   "engines": {
     "node": ">=18.19.0"

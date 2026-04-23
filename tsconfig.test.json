@@ -6,7 +6,7 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "types": [
-      "jest",
+      "vitest/globals",
       "node"
     ]
   },
