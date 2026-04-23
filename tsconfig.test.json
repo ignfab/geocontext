@@ -3,6 +3,8 @@
   "compilerOptions": {
     "rootDir": ".",
     "noEmit": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "types": [
       "jest",
       "node"
@@ -10,8 +12,7 @@
   },
   "include": [
     "./src/**/*",
-    "./test/**/*",
-    "./jest.config.ts"
+    "./test/**/*"
   ],
   "exclude": [
     "node_modules",

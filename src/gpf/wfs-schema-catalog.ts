@@ -111,7 +111,7 @@ export class WfsClient {
     ) {
         const searchEngineOptions = createMiniSearchEngineOptions(options.miniSearch);
         this.catalog = getCollectionCatalog({
-            engineFactory: (items) => new MiniSearchCollectionSearchEngine(items, searchEngineOptions),
+            engineFactory: (items: Collection[]) => new MiniSearchCollectionSearchEngine(items, searchEngineOptions),
         });
     }
 

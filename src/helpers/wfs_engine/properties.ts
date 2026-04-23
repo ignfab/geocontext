@@ -19,7 +19,7 @@ import type { GpfWfsGetFeaturesInput } from "./schema.js";
  * @returns A comma-separated list of property names.
  */
 function getPropertyList(featureType: Collection) {
-  return featureType.properties.map((property) => property.name).join(", ");
+  return featureType.properties.map((property: CollectionProperty) => property.name).join(", ");
 }
 
 // --- Geometry Resolution ---
@@ -31,7 +31,7 @@ function getPropertyList(featureType: Collection) {
  * @returns The list of properties carrying a `defaultCrs`.
  */
 function getGeometryProperties(featureType: Collection) {
-  return featureType.properties.filter((property) => property.defaultCrs);
+  return featureType.properties.filter((property: CollectionProperty) => property.defaultCrs);
 }
 
 /**
@@ -46,7 +46,7 @@ export function getGeometryProperty(featureType: Collection) {
     throw new Error(`Le type '${featureType.id}' n'expose aucune propriété géométrique exploitable dans le catalogue embarqué.`);
   }
   if (geometryProperties.length > 1) {
-    throw new Error(`Le type '${featureType.id}' expose plusieurs propriétés géométriques dans le catalogue embarqué : ${geometryProperties.map((property) => property.name).join(", ")}.`);
+    throw new Error(`Le type '${featureType.id}' expose plusieurs propriétés géométriques dans le catalogue embarqué : ${geometryProperties.map((property: CollectionProperty) => property.name).join(", ")}.`);
   }
   return geometryProperties[0];
 }
@@ -61,7 +61,7 @@ export function getGeometryProperty(featureType: Collection) {
  * @returns The matching property metadata.
  */
 function getPropertyOrThrow(featureType: Collection, propertyName: string) {
-  const property = featureType.properties.find((candidate) => candidate.name === propertyName);
+  const property = featureType.properties.find((candidate: CollectionProperty) => candidate.name === propertyName);
   if (!property) {
     throw new Error(
       `La propriété '${propertyName}' n'existe pas pour '${featureType.id}'. ` +
@@ -150,8 +150,8 @@ export function buildSelectList(
   // non-geometric property from the feature type.
   if (input.result_type === "results") {
     return featureType.properties
-      .filter((property) => !property.defaultCrs)
-      .map((property) => property.name);
+      .filter((property: CollectionProperty) => !property.defaultCrs)
+      .map((property: CollectionProperty) => property.name);
   }
 
   // If `select` is omitted and `result_type` is `hits` or `request`,
