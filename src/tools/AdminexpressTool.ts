@@ -1,3 +1,7 @@
+/**
+ * MCP tool exposing administrative units that cover a given point.
+ */
+
 import { MCPTool } from "mcp-framework";
 import { z } from "zod";
 
@@ -5,10 +9,14 @@ import { getAdminUnits, ADMINEXPRESS_TYPES, ADMINEXPRESS_SOURCE } from "../gpf/a
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import { featureRefSchema, lonSchema, latSchema } from "../helpers/schemas.js";
 
+// --- Schema ---
+
 const adminexpressInputSchema = z.object({
   lon: lonSchema,
   lat: latSchema,
 }).strict();
+
+// --- Types ---
 
 type AdminexpressInput = z.infer<typeof adminexpressInputSchema>;
 
@@ -25,6 +33,8 @@ const adminexpressOutputSchema = z.object({
   results: z.array(adminexpressResultSchema).describe("La liste des unités administratives couvrant le point demandé."),
 });
 
+// --- Tool ---
+
 class AdminexpressTool extends MCPTool<AdminexpressInput> {
   name = "adminexpress";
   title = "Unités administratives";
@@ -40,6 +50,12 @@ class AdminexpressTool extends MCPTool<AdminexpressInput> {
 
   schema = adminexpressInputSchema;
 
+  /**
+   * Looks up the administrative units covering the requested point.
+   *
+   * @param input Normalized tool input.
+   * @returns The matching administrative units enriched with reusable `feature_ref` metadata.
+   */
   async execute(input: AdminexpressInput) {
     return {
       results: await getAdminUnits(input.lon, input.lat),

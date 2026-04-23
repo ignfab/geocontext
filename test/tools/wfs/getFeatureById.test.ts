@@ -44,13 +44,38 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
   it("should expose an MCP definition with `results|request` result_type only", () => {
     const tool = new GpfWfsGetFeatureByIdTool();
     expect(tool.toolDefinition.title).toEqual("Lecture d’un objet WFS par identifiant");
-    expect(tool.toolDefinition.inputSchema.properties?.feature_id).toMatchObject({
-      type: "string",
-      minLength: 1,
-    });
-    expect(tool.toolDefinition.inputSchema.properties?.result_type).toMatchObject({
-      type: "string",
-      enum: ["results", "request"],
+    expect(tool.toolDefinition.inputSchema).toEqual({
+      type: "object",
+      properties: {
+        typename: {
+          type: "string",
+          minLength: 1,
+          description: "Nom exact du type WFS à interroger, par exemple `ADMINEXPRESS-COG.LATEST:commune`.",
+        },
+        feature_id: {
+          type: "string",
+          minLength: 1,
+          description: "Identifiant WFS exact de l'objet à récupérer, par exemple `commune.8952`.",
+        },
+        result_type: {
+          type: "string",
+          enum: ["results", "request"],
+          default: "results",
+          description: "`results` renvoie une FeatureCollection normalisée avec exactement un objet. `request` renvoie la requête WFS compilée (`get_url`) à destination de `create_map` via `geojson_url`, ou pour déboguer.",
+        },
+        select: {
+          type: "array",
+          items: {
+            type: "string",
+            minLength: 1,
+          },
+          minItems: 1,
+          description: "Liste des propriétés non géométriques à renvoyer. Quand `result_type=\"request\"`, la géométrie est automatiquement ajoutée.",
+        },
+      },
+      required: ["typename", "feature_id"],
+      additionalProperties: false,
+      $schema: "http://json-schema.org/draft-07/schema#",
     });
   });
 

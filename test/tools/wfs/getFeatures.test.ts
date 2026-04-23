@@ -7,6 +7,14 @@ const mockFetchJSONPost = jest.fn<(
   body?: string,
   headers?: Record<string, string>,
 ) => Promise<unknown>>();
+const mockIsServiceResponseError = (
+  error: unknown,
+): error is Error & { serviceCode?: string; serviceDetail?: string } =>
+  error instanceof Error && (
+    error.name === "ServiceResponseError" ||
+    "serviceCode" in error ||
+    "serviceDetail" in error
+  );
 
 jest.unstable_mockModule("../../../src/gpf/wfs-schema-catalog.js", () => ({
   GPF_WFS_URL: "https://data.geopf.fr/wfs",
@@ -17,6 +25,7 @@ jest.unstable_mockModule("../../../src/gpf/wfs-schema-catalog.js", () => ({
 
 jest.unstable_mockModule("../../../src/helpers/http.js", () => ({
   fetchJSONPost: mockFetchJSONPost,
+  isServiceResponseError: mockIsServiceResponseError,
 }));
 
 const { default: GpfWfsGetFeaturesTool } = await import(
@@ -305,6 +314,38 @@ describe("Test GpfWfsGetFeaturesTool", () => {
     expect(requests[0].query.propertyName).toEqual("code_insee,population");
     expect(requests[0].query.sortBy).toEqual("population D");
     expect(requests[0].body).toContain("cql_filter=");
+  });
+
+  it("should report live geometry property mismatches with a catalog desync hint", async () => {
+    const tool = new GpfWfsGetFeaturesTool();
+    mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
+    mockFetchJSONPost.mockRejectedValue(
+      Object.assign(
+        new Error("Erreur HTTP du service (400 Bad Request): InvalidParameterValue: Illegal property name: geometrie"),
+        {
+          name: "ServiceResponseError",
+          serviceCode: "InvalidParameterValue",
+          serviceDetail: "Illegal property name: geometrie",
+        },
+      ),
+    );
+
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_wfs_get_features",
+        arguments: {
+          typename: "ADMINEXPRESS-COG.LATEST:commune",
+        },
+      },
+    });
+
+    expect(response.isError).toBe(true);
+    const textContent = response.content[0];
+    if (textContent.type !== "text") {
+      throw new Error("expected text content");
+    }
+    expect(textContent.text).toContain("catalogue embarqué est rejeté");
+    expect(textContent.text).toContain("géométrique 'geometrie'");
   });
 
   it("should keep hits independent from limit and omit propertyName", async () => {

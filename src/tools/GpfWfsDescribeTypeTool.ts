@@ -1,9 +1,15 @@
+/**
+ * MCP tool exposing detailed schema inspection for a single WFS type.
+ */
+
 import { MCPTool } from "mcp-framework";
 import { z } from "zod";
 import type { Collection } from "@ignfab/gpf-schema-store";
 
 import { wfsClient } from "../gpf/wfs-schema-catalog.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
+
+// --- Schema ---
 
 const gpfWfsDescribeTypeInputSchema = z.object({
   typename: z
@@ -12,6 +18,8 @@ const gpfWfsDescribeTypeInputSchema = z.object({
     .min(1, "le nom du type ne doit pas être vide")
     .describe("Le nom du type (ex : BDTOPO_V3:batiment)"),
 }).strict();
+
+// --- Types ---
 
 type GpfWfsDescribeTypeInput = z.infer<typeof gpfWfsDescribeTypeInputSchema>;
 
@@ -35,6 +43,8 @@ const gpfWfsDescribeTypeOutputSchema = z.object({
   }).describe("La description détaillée du type WFS."),
 });
 
+// --- Tool ---
+
 class GpfWfsDescribeTypeTool extends MCPTool<GpfWfsDescribeTypeInput> {
   name = "gpf_wfs_describe_type";
   title = "Description d’un type WFS";
@@ -49,6 +59,12 @@ class GpfWfsDescribeTypeTool extends MCPTool<GpfWfsDescribeTypeInput> {
 
   schema = gpfWfsDescribeTypeInputSchema;
 
+  /**
+   * Loads the detailed schema description for one WFS typename.
+   *
+   * @param input Normalized tool input.
+   * @returns The detailed feature type description from the embedded catalog.
+   */
   async execute(input: GpfWfsDescribeTypeInput) {
     try {
       const featureType: Collection = await wfsClient.getFeatureType(input.typename);

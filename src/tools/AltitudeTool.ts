@@ -1,3 +1,7 @@
+/**
+ * MCP tool exposing altitude lookup for a single geographic position.
+ */
+
 import { MCPTool } from "mcp-framework";
 import { z } from "zod";
 
@@ -5,10 +9,14 @@ import { ALTITUDE_SOURCE, getAltitudeByLocation } from "../gpf/altitude.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import { lonSchema, latSchema } from "../helpers/schemas.js";
 
+// --- Schema ---
+
 const altitudeInputSchema = z.object({
   lon: lonSchema,
   lat: latSchema,
 }).strict();
+
+// --- Types ---
 
 type AltitudeInput = z.infer<typeof altitudeInputSchema>;
 
@@ -23,6 +31,8 @@ const altitudeOutputSchema = z.object({
   result: altitudeResultSchema.describe("Le résultat altimétrique pour la position demandée."),
 });
 
+// --- Tool ---
+
 class AltitudeTool extends MCPTool<AltitudeInput> {
   name = "altitude";
   title = "Altitude d’une position";
@@ -32,6 +42,12 @@ class AltitudeTool extends MCPTool<AltitudeInput> {
 
   schema = altitudeInputSchema;
 
+  /**
+   * Resolves the altitude information for the requested position.
+   *
+   * @param input Normalized tool input.
+   * @returns The altitude payload returned by the upstream service.
+   */
   async execute(input: AltitudeInput) {
     return {
       result: await getAltitudeByLocation(input.lon, input.lat),

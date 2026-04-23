@@ -43,6 +43,21 @@ describe("Test HTTP helpers", () => {
         );
     });
 
+    it("should expose structured details for extracted OGC XML errors", async () => {
+        const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<ows:ExceptionReport xmlns:ows="http://www.opengis.net/ows/1.1">
+  <ows:Exception exceptionCode="InvalidParameterValue">
+    <ows:ExceptionText>Illegal property name: geom</ows:ExceptionText>
+  </ows:Exception>
+</ows:ExceptionReport>`;
+
+        await expect(parseJsonResponse(createResponse(xml, "application/xml"))).rejects.toMatchObject({
+            name: "ServiceResponseError",
+            serviceCode: "InvalidParameterValue",
+            serviceDetail: "Illegal property name: geom",
+        });
+    });
+
     it("should fail explicitly on empty responses", async () => {
         await expect(parseJsonResponse(createResponse(""))).rejects.toThrow(
             "Réponse vide du service (200 OK)"
@@ -104,5 +119,43 @@ describe("Test HTTP helpers", () => {
         ).rejects.toThrow(
             "Erreur HTTP du service (400 Bad Request): InvalidParameterValue: Illegal property name: geom"
         );
+    });
+
+    it("should keep structured XML error details on HTTP failures", async () => {
+        const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<ows:ExceptionReport xmlns:ows="http://www.opengis.net/ows/1.1">
+  <ows:Exception exceptionCode="InvalidParameterValue">
+    <ows:ExceptionText>Illegal property name: geom</ows:ExceptionText>
+  </ows:Exception>
+</ows:ExceptionReport>`;
+
+        await expect(
+            parseJsonResponse(
+                createResponse(xml, "application/xml", {
+                    status: 400,
+                    statusText: "Bad Request",
+                })
+            )
+        ).rejects.toMatchObject({
+            name: "ServiceResponseError",
+            serviceCode: "InvalidParameterValue",
+            serviceDetail: "Illegal property name: geom",
+            responseLabel: "400 Bad Request",
+        });
+    });
+
+    it("should expose structured details for non-2xx JSON responses", async () => {
+        await expect(
+            parseJsonResponse(
+                createResponse('{"message":"bad filter"}', "application/json", {
+                    status: 400,
+                    statusText: "Bad Request",
+                })
+            )
+        ).rejects.toMatchObject({
+            name: "ServiceResponseError",
+            serviceDetail: "bad filter",
+            responseLabel: "400 Bad Request",
+        });
     });
 });

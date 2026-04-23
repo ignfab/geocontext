@@ -1,3 +1,7 @@
+/**
+ * MCP tool exposing nearby servitudes d'utilité publique for a given point.
+ */
+
 import { MCPTool } from "mcp-framework";
 import { z } from "zod";
 
@@ -5,10 +9,14 @@ import { getAssiettesServitudes, URBANISME_SOURCE } from "../gpf/urbanisme.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import { featureRefSchema, lonSchema, latSchema } from "../helpers/schemas.js";
 
+// --- Schema ---
+
 const assietteSupInputSchema = z.object({
   lon: lonSchema,
   lat: latSchema,
 }).strict();
+
+// --- Types ---
 
 type AssietteSupInput = z.infer<typeof assietteSupInputSchema>;
 
@@ -26,6 +34,8 @@ const assietteSupOutputSchema = z.object({
   results: z.array(assietteSupResultSchema).describe("La liste des assiettes de servitudes d'utilité publique pertinentes pour le point demandé."),
 });
 
+// --- Tool ---
+
 class AssietteSupTool extends MCPTool<AssietteSupInput> {
   name = "assiette_sup";
   title = "Servitudes d’utilité publique";
@@ -41,6 +51,12 @@ class AssietteSupTool extends MCPTool<AssietteSupInput> {
 
   schema = assietteSupInputSchema;
 
+  /**
+   * Looks up nearby SUP footprints relevant to the requested point.
+   *
+   * @param input Normalized tool input.
+   * @returns The list of nearby assiettes with optional reusable `feature_ref` metadata.
+   */
   async execute(input: AssietteSupInput) {
     return {
       results: await getAssiettesServitudes(input.lon, input.lat),

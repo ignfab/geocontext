@@ -1,3 +1,7 @@
+/**
+ * MCP tool exposing nearby cadastral objects for a given point.
+ */
+
 import { MCPTool } from "mcp-framework";
 import { z } from "zod";
 
@@ -5,10 +9,14 @@ import { getParcellaireExpress, PARCELLAIRE_EXPRESS_TYPES, PARCELLAIRE_EXPRESS_S
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import { featureRefSchema, lonSchema, latSchema } from "../helpers/schemas.js";
 
+// --- Schema ---
+
 const cadastreInputSchema = z.object({
   lon: lonSchema,
   lat: latSchema,
 }).strict();
+
+// --- Types ---
 
 type CadastreInput = z.infer<typeof cadastreInputSchema>;
 
@@ -27,6 +35,7 @@ const cadastreOutputSchema = z.object({
   results: z.array(cadastreResultSchema).describe("La liste des objets cadastraux les plus proches du point demandé."),
 });
 
+// --- Tool ---
 
 class CadastreTool extends MCPTool<CadastreInput> {
   name = "cadastre";
@@ -44,6 +53,12 @@ class CadastreTool extends MCPTool<CadastreInput> {
 
   schema = cadastreInputSchema;
 
+  /**
+   * Returns the nearest cadastral objects around the requested point.
+   *
+   * @param input Normalized tool input.
+   * @returns The nearest cadastral objects, at most one per cadastral type.
+   */
   async execute(input: CadastreInput) {
     return {
       results: await getParcellaireExpress(input.lon, input.lat),

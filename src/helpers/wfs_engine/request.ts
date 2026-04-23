@@ -1,14 +1,54 @@
+/**
+ * WFS request builders used by the structured WFS engine.
+ *
+ * This module centralizes:
+ * - the transport shape shared by compiled requests
+ * - GET/POST request assembly helpers
+ * - the compact request payload exposed by MCP `result_type="request"`
+ */
+
 import { GPF_WFS_URL } from "../../gpf/wfs-schema-catalog.js";
 import type { GpfWfsGetFeaturesInput } from "./schema.js";
 import { REQUEST_GET_URL_MAX_LENGTH } from "./schema.js";
 
-export type CompiledRequest = {
+// --- Transport Types ---
+
+type WfsRequestTransport = {
   method: "POST";
   url: string;
   query: Record<string, string>;
   body: string;
+};
+
+export type CompiledRequest = WfsRequestTransport & {
   get_url?: string | null;
 };
+
+export type WfsRequestPayload = WfsRequestTransport & {
+  result_type: "request";
+  get_url: string | null;
+};
+
+// --- Request Payload Mapping ---
+
+/**
+ * Maps a compiled WFS request to the compact MCP request payload.
+ *
+ * @param request Compiled request ready to be executed against the WFS service.
+ * @returns A normalized request payload exposed by MCP tools.
+ */
+export function toWfsRequestPayload(request: CompiledRequest): WfsRequestPayload {
+  return {
+    result_type: "request",
+    method: request.method,
+    url: request.url,
+    query: request.query,
+    body: request.body,
+    get_url: request.get_url ?? null,
+  };
+}
+
+// --- Request Assembly Helpers ---
 
 /**
  * Encodes the optional CQL filter as an `application/x-www-form-urlencoded` POST body.
@@ -25,6 +65,9 @@ function buildBody(cqlFilter?: string) {
 
 /**
  * Builds a portable GET URL variant of the request when it stays below the configured limit.
+ *
+ * This helper is mainly used to populate `get_url` in request payloads
+ * returned by `result_type="request"`.
  *
  * @param url Base WFS endpoint URL.
  * @param query Query-string parameters sent with the request.
@@ -43,6 +86,8 @@ export function buildGetUrl(url: string, query: Record<string, string>, cqlFilte
   return getUrl;
 }
 
+// --- Public Builders ---
+
 /**
  * Builds the main WFS GetFeature request from normalized tool input and compiled query parts.
  *
@@ -52,7 +97,7 @@ export function buildGetUrl(url: string, query: Record<string, string>, cqlFilte
  */
 export function buildMainRequest(
   input: GpfWfsGetFeaturesInput,
-  compiled: { cqlFilter?: string; propertyName?: string; sortBy?: string }
+  compiled: { cqlFilter?: string; propertyName?: string; sortBy?: string },
 ): CompiledRequest {
   const query: Record<string, string> = {
     service: "WFS",
