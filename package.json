@@ -29,6 +29,7 @@
   "scripts": {
     "clean:dist": "node scripts/dist-clean.js",
     "build": "npm run clean:dist && npx mcp-build",
+    "docs:mcp": "node --no-warnings --loader ts-node/esm scripts/generate-mcp-docs.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "watch": "tsc --watch",
     "start": "node dist/index.js",
