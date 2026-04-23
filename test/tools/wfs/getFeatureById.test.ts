@@ -1,27 +1,27 @@
 import type { Collection } from "@ignfab/gpf-schema-store";
+import { jest } from "@jest/globals";
 
-import GpfWfsGetFeatureByIdTool from "../../../src/tools/GpfWfsGetFeatureByIdTool";
+const mockGetFeatureType = jest.fn<(typename: string) => Promise<Collection>>();
+const mockFetchJSONPost = jest.fn<(
+  url: string,
+  body?: string,
+  headers?: Record<string, string>,
+) => Promise<unknown>>();
+
+jest.unstable_mockModule("../../../src/gpf/wfs-schema-catalog.js", () => ({
+  GPF_WFS_URL: "https://data.geopf.fr/wfs",
+  wfsClient: {
+    getFeatureType: mockGetFeatureType,
+  },
+}));
+
+jest.unstable_mockModule("../../../src/helpers/http.js", () => ({
+  fetchJSONPost: mockFetchJSONPost,
+}));
+
+const { default: GpfWfsGetFeatureByIdTool } = await import("../../../src/tools/GpfWfsGetFeatureByIdTool");
 
 describe("Test GpfWfsGetFeatureByIdTool", () => {
-  class TestableGpfWfsGetFeatureByIdTool extends GpfWfsGetFeatureByIdTool {
-    public featureTypes: Record<string, Collection> = {};
-    public requests: Array<{ url: string; query: Record<string, string>; body: string }> = [];
-    public nextResponse: unknown = null;
-
-    protected async getFeatureType(typename: string) {
-      const featureType = this.featureTypes[typename];
-      if (!featureType) {
-        throw new Error(`unexpected typename ${typename}`);
-      }
-      return featureType;
-    }
-
-    protected async fetchFeatureCollection(request: { url: string; query: Record<string, string>; body: string }) {
-      this.requests.push(request);
-      return this.nextResponse;
-    }
-  }
-
   const polygonFeatureType: Collection = {
     id: "ADMINEXPRESS-COG.LATEST:commune",
     namespace: "ADMINEXPRESS-COG.LATEST",
@@ -34,6 +34,12 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
       { name: "geometrie", type: "multipolygon", defaultCrs: "EPSG:4326" },
     ],
   };
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+    mockGetFeatureType.mockReset();
+    mockFetchJSONPost.mockReset();
+  });
 
   it("should expose an MCP definition with `results|request` result_type only", () => {
     const tool = new GpfWfsGetFeatureByIdTool();
@@ -49,8 +55,8 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
   });
 
   it("should return text content and structuredContent for request", async () => {
-    const tool = new TestableGpfWfsGetFeatureByIdTool();
-    tool.featureTypes[polygonFeatureType.id] = polygonFeatureType;
+    const tool = new GpfWfsGetFeatureByIdTool();
+    mockGetFeatureType.mockResolvedValue(polygonFeatureType);
 
     const response = await tool.toolCall({
       params: {
@@ -82,9 +88,17 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
   });
 
   it("should return exactly one transformed feature for results", async () => {
-    const tool = new TestableGpfWfsGetFeatureByIdTool();
-    tool.featureTypes[polygonFeatureType.id] = polygonFeatureType;
-    tool.nextResponse = {
+    const tool = new GpfWfsGetFeatureByIdTool();
+    const requests: Array<{ url: string; query: Record<string, string>; body: string }> = [];
+    mockGetFeatureType.mockResolvedValue(polygonFeatureType);
+    mockFetchJSONPost.mockImplementation(async (url, body) => {
+      const [baseUrl, queryString = ""] = url.split("?");
+      requests.push({
+        url: baseUrl,
+        query: Object.fromEntries(new URLSearchParams(queryString).entries()),
+        body,
+      });
+      return {
       type: "FeatureCollection",
       totalFeatures: 1,
       features: [
@@ -99,7 +113,8 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
           },
         },
       ],
-    };
+      };
+    });
 
     const response = await tool.toolCall({
       params: {
@@ -112,7 +127,7 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
     });
 
     expect(response.isError).toBeUndefined();
-    expect(tool.requests).toHaveLength(1);
+    expect(requests).toHaveLength(1);
     const textContent = response.content[0];
     if (textContent.type !== "text") {
       throw new Error("expected text content");
@@ -130,9 +145,9 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
   });
 
   it("should fail clearly when the feature is missing", async () => {
-    const tool = new TestableGpfWfsGetFeatureByIdTool();
-    tool.featureTypes[polygonFeatureType.id] = polygonFeatureType;
-    tool.nextResponse = { type: "FeatureCollection", features: [], totalFeatures: 0 };
+    const tool = new GpfWfsGetFeatureByIdTool();
+    mockGetFeatureType.mockResolvedValue(polygonFeatureType);
+    mockFetchJSONPost.mockResolvedValue({ type: "FeatureCollection", features: [], totalFeatures: 0 });
 
     const response = await tool.toolCall({
       params: {
@@ -154,16 +169,16 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
   });
 
   it("should fail clearly when multiple features are returned", async () => {
-    const tool = new TestableGpfWfsGetFeatureByIdTool();
-    tool.featureTypes[polygonFeatureType.id] = polygonFeatureType;
-    tool.nextResponse = {
+    const tool = new GpfWfsGetFeatureByIdTool();
+    mockGetFeatureType.mockResolvedValue(polygonFeatureType);
+    mockFetchJSONPost.mockResolvedValue({
       type: "FeatureCollection",
       features: [
         { type: "Feature", id: "commune.1", geometry: null, properties: {} },
         { type: "Feature", id: "commune.2", geometry: null, properties: {} },
       ],
       totalFeatures: 2,
-    };
+    });
 
     const response = await tool.toolCall({
       params: {
@@ -184,15 +199,15 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
   });
 
   it("should fail clearly when the returned feature id mismatches", async () => {
-    const tool = new TestableGpfWfsGetFeatureByIdTool();
-    tool.featureTypes[polygonFeatureType.id] = polygonFeatureType;
-    tool.nextResponse = {
+    const tool = new GpfWfsGetFeatureByIdTool();
+    mockGetFeatureType.mockResolvedValue(polygonFeatureType);
+    mockFetchJSONPost.mockResolvedValue({
       type: "FeatureCollection",
       features: [
         { type: "Feature", id: "commune.2", geometry: null, properties: {} },
       ],
       totalFeatures: 1,
-    };
+    });
 
     const response = await tool.toolCall({
       params: {

@@ -1,15 +1,23 @@
+/**
+ * MCP tool exposing exact WFS feature lookup by `feature_id`.
+ *
+ * The tool keeps MCP-facing concerns such as schema exposure, compact response
+ * formatting, and request-preview output. The `results` execution flow itself
+ * is delegated to the structured WFS engine.
+ */
+
 import { MCPTool } from "mcp-framework";
 import type { Collection } from "@ignfab/gpf-schema-store";
 import { z } from "zod";
 
 import { wfsClient } from "../gpf/wfs-schema-catalog.js";
-import { fetchJSONPost } from "../helpers/http.js";
-import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import { generatePublishedInputSchema } from "../helpers/jsonSchema.js";
-import { compileSelectProperty, getGeometryProperty } from "../helpers/wfs_engine/compile.js";
-import { buildGetFeatureByIdRequest, type CompiledRequest } from "../helpers/wfs_engine/request.js";
-import { attachFeatureRefs } from "../helpers/wfs_engine/response.js";
+import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
+import { buildPropertyName, executeGetFeatureById } from "../helpers/wfs_engine/byId.js";
+import { buildGetFeatureByIdRequest } from "../helpers/wfs_engine/request.js";
 import { gpfWfsGetFeaturesRequestOutputSchema } from "../helpers/wfs_engine/schema.js";
+
+// --- Schema ---
 
 const gpfWfsGetFeatureByIdInputSchema = z.object({
   typename: z
@@ -33,6 +41,8 @@ const gpfWfsGetFeatureByIdInputSchema = z.object({
     .describe("Liste des propriétés non géométriques à renvoyer. Quand `result_type=\"request\"`, la géométrie est automatiquement ajoutée."),
 }).strict();
 
+// --- Types ---
+
 type GpfWfsGetFeatureByIdInput = z.infer<typeof gpfWfsGetFeatureByIdInputSchema>;
 
 type PublishedInputSchema = {
@@ -42,6 +52,8 @@ type PublishedInputSchema = {
 };
 
 const gpfWfsGetFeatureByIdPublishedInputSchema = generatePublishedInputSchema(gpfWfsGetFeatureByIdInputSchema) as PublishedInputSchema;
+
+// --- Tool ---
 
 class GpfWfsGetFeatureByIdTool extends MCPTool<GpfWfsGetFeatureByIdInput> {
   name = "gpf_wfs_get_feature_by_id";
@@ -88,52 +100,6 @@ class GpfWfsGetFeatureByIdTool extends MCPTool<GpfWfsGetFeatureByIdInput> {
   }
 
   /**
-   * Loads a WFS feature type description from the embedded catalog.
-   *
-   * @param typename Exact WFS typename to load from the embedded schema store.
-   * @returns The matching feature type description.
-   */
-  protected async getFeatureType(typename: string) {
-    return wfsClient.getFeatureType(typename);
-  }
-
-  /**
-   * Executes a compiled WFS request as POST and returns the JSON FeatureCollection.
-   *
-   * @param request Compiled request split into query-string parameters and POST body.
-   * @returns The parsed JSON response returned by the WFS endpoint.
-   */
-  protected async fetchFeatureCollection(request: CompiledRequest) {
-    const url = `${request.url}?${new URLSearchParams(request.query).toString()}`;
-    return fetchJSONPost(url, request.body, {
-      "Content-Type": "application/x-www-form-urlencoded",
-      "Accept": "application/json",
-    });
-  }
-
-  /**
-   * Builds the optional `propertyName` request parameter from `select`.
-   *
-   * @param featureType Feature type definition loaded from the embedded catalog.
-   * @param input Normalized tool input.
-   * @returns A comma-separated property list, or `undefined` when all properties should be returned.
-   */
-  protected buildPropertyName(featureType: Collection, input: GpfWfsGetFeatureByIdInput) {
-    if (!input.select || input.select.length === 0) {
-      return undefined;
-    }
-
-    const geometryProperty = getGeometryProperty(featureType);
-    const selectedProperties = input.select.map((propertyName) => compileSelectProperty(featureType, geometryProperty, propertyName));
-
-    if (input.result_type === "request") {
-      return [...selectedProperties, geometryProperty.name].join(",");
-    }
-
-    return selectedProperties.join(",");
-  }
-
-  /**
    * Orchestrates the by-id execution flow:
    * schema lookup -> request compilation -> optional request output -> WFS execution -> cardinality validation.
    *
@@ -141,11 +107,16 @@ class GpfWfsGetFeatureByIdTool extends MCPTool<GpfWfsGetFeatureByIdInput> {
    * @returns Either a compiled request or a transformed FeatureCollection containing one feature.
    */
   async execute(input: GpfWfsGetFeatureByIdInput) {
-    const featureType: Collection = await this.getFeatureType(input.typename);
-    const propertyName = this.buildPropertyName(featureType, input);
-    const request = buildGetFeatureByIdRequest(input.typename, input.feature_id, propertyName);
-
     if (input.result_type === "request") {
+      // Keep request preview assembly local to the tool: this branch exposes
+      // MCP-facing debug output rather than executing the by-id results flow.
+      const featureType: Collection = await wfsClient.getFeatureType(input.typename);
+      const propertyName = buildPropertyName(featureType, {
+        result_type: input.result_type,
+        select: input.select,
+      });
+      const request = buildGetFeatureByIdRequest(input.typename, input.feature_id, propertyName);
+
       return {
         result_type: "request" as const,
         method: request.method,
@@ -156,33 +127,11 @@ class GpfWfsGetFeatureByIdTool extends MCPTool<GpfWfsGetFeatureByIdInput> {
       };
     }
 
-    const featureCollection = await this.fetchFeatureCollection(request);
-    if (!Array.isArray(featureCollection?.features)) {
-      throw new Error("Le service WFS n'a pas retourné de collection d'objets exploitable.");
-    }
-
-    if (featureCollection.features.length === 0) {
-      throw new Error(`Le feature '${input.feature_id}' est introuvable dans '${input.typename}'.`);
-    }
-
-    if (featureCollection.features.length > 1) {
-      throw new Error(`Le feature '${input.feature_id}' dans '${input.typename}' devrait être unique, mais ${featureCollection.features.length} objets ont été retournés.`);
-    }
-
-    const [firstFeature] = featureCollection.features;
-    if (firstFeature?.id !== input.feature_id) {
-      throw new Error(`Le service WFS a retourné l'identifiant '${String(firstFeature?.id)}' au lieu de '${input.feature_id}'.`);
-    }
-
-    const singleFeatureCollection = {
-      ...featureCollection,
-      features: [firstFeature],
-      totalFeatures: 1,
-      numberReturned: 1,
-      numberMatched: 1,
-    };
-
-    return attachFeatureRefs(singleFeatureCollection, input.typename);
+    return executeGetFeatureById({
+      typename: input.typename,
+      feature_id: input.feature_id,
+      select: input.select,
+    });
   }
 }
 
