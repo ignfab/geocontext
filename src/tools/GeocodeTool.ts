@@ -1,8 +1,14 @@
+/**
+ * MCP tool exposing free-text geocoding and autocomplete.
+ */
+
 import { MCPTool } from "mcp-framework";
 import { z } from "zod";
 
 import { geocode, GEOCODE_SOURCE } from "../gpf/geocode.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
+
+// --- Schema ---
 
 const geocodeInputSchema = z.object({
   text: z
@@ -19,6 +25,8 @@ const geocodeInputSchema = z.object({
     .describe("Le nombre maximum de résultats à retourner (entre 1 et 10). Défaut : 3."),
 }).strict();
 
+// --- Types ---
+
 type GeocodeInput = z.infer<typeof geocodeInputSchema>;
 
 const geocodeResultSchema = z.object({
@@ -34,6 +42,8 @@ const geocodeOutputSchema = z.object({
   results: z.array(geocodeResultSchema).describe("La liste ordonnée des résultats géocodés."),
 });
 
+// --- Tool ---
+
 class GeocodeTool extends MCPTool<GeocodeInput> {
   name = "geocode";
   title = "Géocodage de lieux et d’adresses";
@@ -47,6 +57,12 @@ class GeocodeTool extends MCPTool<GeocodeInput> {
 
   schema = geocodeInputSchema;
 
+  /**
+   * Geocodes a free-text query and returns the ordered candidate list.
+   *
+   * @param input Normalized tool input.
+   * @returns The ordered list of geocoded candidates.
+   */
   async execute(input: GeocodeInput) {
     return {
       results: await geocode(input.text, input.maximumResponses),

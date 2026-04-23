@@ -1,11 +1,22 @@
+/**
+ * Query preparation helpers for the structured WFS engine.
+ *
+ * This module centralizes:
+ * - compilation of attribute clauses into CQL fragments
+ * - compilation of spatial filters into CQL fragments
+ * - assembly of query parts used by WFS request builders
+ * - a small façade over lower-level helpers reused elsewhere in the engine
+ */
+
 import type { Collection, CollectionProperty } from "@ignfab/gpf-schema-store";
 
 import {
-  compileSelectProperty,
-  ensureNonGeometryProperty,
+  validateSelectProperty,
+  buildSelectList,
+  resolveNonGeometryProperty,
   getGeometryProperty,
 } from "./properties.js";
-import { getSpatialFilter } from "./spatial.js";
+import { getSpatialFilter } from "./spatialFilter.js";
 
 import type {
   GpfWfsGetFeaturesInput,
@@ -18,7 +29,7 @@ import {
   normalizeWhereClause,
   SCALAR_COMPARISON_OPERATORS,
   NUMERIC_COMPARISON_OPERATORS,
-} from "./where.js";
+} from "./attributeFilter.js";
 
 import {
   compileBboxSpatialFilter,
@@ -27,18 +38,28 @@ import {
   compileIntersectsPointSpatialFilter,
 } from "./spatialCql.js";
 
+// --- Re-exports ---
+
 export { geometryToEwkt } from "./geometry.js";
-export { compileSelectProperty, getGeometryProperty } from "./properties.js";
-export { getSpatialFilter } from "./spatial.js";
+export { validateSelectProperty, getGeometryProperty } from "./properties.js";
+export { getSpatialFilter } from "./spatialFilter.js";
+
+// --- Internal Constants ---
 
 const ORDER_DIRECTION_TO_WFS = {
   asc: "A",
   desc: "D",
 } as const;
 
+// --- Internal Clause Types ---
+
+type ScalarComparisonClause = Extract<ReturnType<typeof normalizeWhereClause>, { operator: "eq" | "ne" }>;
+type OrderedComparisonClause = Extract<ReturnType<typeof normalizeWhereClause>, { operator: "lt" | "lte" | "gt" | "gte" }>;
+type InClause = Extract<ReturnType<typeof normalizeWhereClause>, { operator: "in" }>;
+
+// --- Public Types ---
+
 export type ResolvedFeatureGeometryRef = {
-  typename: string;
-  feature_id: string;
   geometry_ewkt: string;
 };
 
@@ -52,6 +73,55 @@ export type CompiledQuery = {
 // --- Attribute Compilation ---
 
 /**
+ * Compiles a normalized scalar comparison (`eq` / `ne`) into a CQL fragment.
+ *
+ * @param property Non-geometric property targeted by the clause.
+ * @param clause Normalized scalar comparison clause.
+ * @returns A CQL predicate fragment.
+ */
+function compileScalarComparisonClause(
+  property: CollectionProperty,
+  clause: ScalarComparisonClause,
+) {
+  return `${property.name} ${SCALAR_COMPARISON_OPERATORS[clause.operator]} ${formatScalarValue(clause.value)}`;
+}
+
+/**
+ * Compiles a normalized ordered comparison (`lt` / `lte` / `gt` / `gte`) into a CQL fragment.
+ *
+ * @param property Non-geometric property targeted by the clause.
+ * @param clause Normalized ordered comparison clause.
+ * @returns A CQL predicate fragment.
+ */
+function compileOrderedComparisonClause(
+  property: CollectionProperty,
+  clause: OrderedComparisonClause,
+) {
+  return `${property.name} ${NUMERIC_COMPARISON_OPERATORS[clause.operator]} ${formatScalarValue(clause.value)}`;
+}
+
+/**
+ * Compiles a normalized `in` clause into a CQL fragment.
+ *
+ * @param property Non-geometric property targeted by the clause.
+ * @param clause Normalized `in` clause.
+ * @returns A CQL predicate fragment.
+ */
+function compileInClause(property: CollectionProperty, clause: InClause) {
+  return `${property.name} IN (${clause.values.map(formatScalarValue).join(", ")})`;
+}
+
+/**
+ * Compiles a normalized `is_null` clause into a CQL fragment.
+ *
+ * @param property Non-geometric property targeted by the clause.
+ * @returns A CQL predicate fragment.
+ */
+function compileIsNullClause(property: CollectionProperty) {
+  return `${property.name} IS NULL`;
+}
+
+/**
  * Compiles a structured where clause into a CQL fragment.
  *
  * @param featureType Feature type definition loaded from the embedded catalog.
@@ -60,7 +130,7 @@ export type CompiledQuery = {
  * @returns A CQL predicate fragment.
  */
 function compileWhereClause(featureType: Collection, geometryProperty: CollectionProperty, clause: WhereClause) {
-  const property = ensureNonGeometryProperty(
+  const property = resolveNonGeometryProperty(
     featureType,
     geometryProperty,
     clause.property,
@@ -71,16 +141,16 @@ function compileWhereClause(featureType: Collection, geometryProperty: Collectio
   switch (normalized.operator) {
     case "eq":
     case "ne":
-      return `${property.name} ${SCALAR_COMPARISON_OPERATORS[normalized.operator]} ${formatScalarValue(normalized.value)}`;
+      return compileScalarComparisonClause(property, normalized);
     case "lt":
     case "lte":
     case "gt":
     case "gte":
-      return `${property.name} ${NUMERIC_COMPARISON_OPERATORS[normalized.operator]} ${formatScalarValue(normalized.value)}`;
+      return compileOrderedComparisonClause(property, normalized);
     case "in":
-      return `${property.name} IN (${normalized.values.map(formatScalarValue).join(", ")})`;
+      return compileInClause(property, normalized);
     case "is_null":
-      return `${property.name} IS NULL`;
+      return compileIsNullClause(property);
   }
 }
 
@@ -93,50 +163,13 @@ function compileWhereClause(featureType: Collection, geometryProperty: Collectio
  * @returns A WFS `sortBy` fragment.
  */
 function compileOrderByClause(featureType: Collection, geometryProperty: CollectionProperty, clause: OrderByClause) {
-  const property = ensureNonGeometryProperty(
+  const property = resolveNonGeometryProperty(
     featureType,
     geometryProperty,
     clause.property,
     "La propriété '{property}' est géométrique. Utiliser une propriété non géométrique pour `order_by`."
   );
   return `${property.name} ${ORDER_DIRECTION_TO_WFS[clause.direction]}`;
-}
-
-/**
- * Build the list of property names to return in the WFS response according to the `select` and `result_type` input parameters.
- *
- * Note that :
- * - When `select` is omitted and `result_type` is `results`, all non-geometric properties are returned.
- * - When `select` is provided, the specified properties are validated according to the featureType from the Catalog.
- * - When `result_type` is `request` and `select` is provided, the geometry column is automatically appended.
- *  
- * @param featureType Feature type definition loaded from the embedded catalog.
- * @param geometryProperty Geometry property already resolved for the feature type.
- * @param input Normalized tool input.
- * @returns The list of non-geometric property names to include in the WFS `propertyName` parameter, or an empty list to include all properties.
-*
- */
-function buildSelectList(featureType: Collection, geometryProperty: CollectionProperty, input: GpfWfsGetFeaturesInput) {
-  // if `select` is specified, we only return the requested properties (after validation)
-  if (input.select && input.select.length > 0) {
-    const selectedProperties = input.select.map((propertyName) => compileSelectProperty(featureType, geometryProperty, propertyName));
-    if (input.result_type === "request") {
-      return [...selectedProperties, geometryProperty.name];
-    }
-    return selectedProperties;
-  }
-
-  // if `select` is omitted and result_type is `results`,
-  // we return every non-geometric property 
-  if (input.result_type === "results") {
-    return featureType.properties
-      .filter((property) => !property.defaultCrs)
-      .map((property) => property.name);
-  }
-
-  // if `select` is omitted and result_type is `hits` or `request`
-  // we don't specify any propertyName
-  return [];
 }
 
 // --- Query Compilation ---
@@ -152,7 +185,7 @@ function buildSelectList(featureType: Collection, geometryProperty: CollectionPr
 export function compileQueryParts(
   input: GpfWfsGetFeaturesInput,
   featureType: Collection,
-  resolvedGeometryRef?: ResolvedFeatureGeometryRef
+  resolvedGeometryRef?: ResolvedFeatureGeometryRef,
 ): CompiledQuery {
   const geometryProperty = getGeometryProperty(featureType);
   const spatialFilter = getSpatialFilter(input);

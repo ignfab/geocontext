@@ -1,9 +1,9 @@
 import type { Collection } from "@ignfab/gpf-schema-store";
 
-import { compileQueryParts, geometryToEwkt } from "../../../src/helpers/wfs_engine/compile";
+import { compileQueryParts, geometryToEwkt } from "../../../src/helpers/wfs_engine/queryPreparation";
 import type { GpfWfsGetFeaturesInput } from "../../../src/helpers/wfs_engine/schema";
 
-describe("gpfWfsGetFeatures/compile", () => {
+describe("gpfWfsGetFeatures/queryPreparation", () => {
   const featureType: Collection = {
     id: "ADMINEXPRESS-COG.LATEST:commune",
     namespace: "ADMINEXPRESS-COG.LATEST",
@@ -80,8 +80,6 @@ describe("gpfWfsGetFeatures/compile", () => {
       intersects_feature_typename: "ADMINEXPRESS-COG.LATEST:commune",
       intersects_feature_id: "commune.1",
     }, featureType, {
-      typename: "ADMINEXPRESS-COG.LATEST:commune",
-      feature_id: "commune.1",
       geometry_ewkt: "SRID=4326;MULTIPOLYGON(((2 48,2.2 48,2.2 48.2,2 48,2 48)))",
     });
 

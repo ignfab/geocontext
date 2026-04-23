@@ -5,6 +5,7 @@ import {
   executeGetFeatures,
   prepareGetFeaturesRequest,
 } from "../helpers/wfs_engine/features.js";
+import { toWfsRequestPayload } from "../helpers/wfs_engine/request.js";
 import {
   gpfWfsGetFeaturesHitsOutputSchema,
   gpfWfsGetFeaturesInputSchema,
@@ -31,6 +32,7 @@ class GpfWfsGetFeaturesTool extends MCPTool<GpfWfsGetFeaturesInput> {
     "Utiliser `select` pour choisir les propriétés, `where` pour filtrer, `order_by` pour trier et `spatial_operator` avec ses paramètres dédiés pour le spatial. Avec `result_type=\"request\"`, la géométrie est automatiquement ajoutée aux propriétés sélectionnées pour garantir une requête cartographiable.",
     "Exemple attributaire : `where=[{ property: \"code_insee\", operator: \"eq\", value: \"75056\" }]`.",
     "Exemple bbox : `spatial_operator=\"bbox\"` avec `bbox_west`, `bbox_south`, `bbox_east`, `bbox_north` en `lon/lat`.",
+    "Exemple point dans géométrie : `spatial_operator=\"intersects_point\"` avec `intersects_lon` et `intersects_lat`.",
     "Exemple distance : `spatial_operator=\"dwithin_point\"` avec `dwithin_lon`, `dwithin_lat`, `dwithin_distance_m`.",
     "Exemple réutilisation : `spatial_operator=\"intersects_feature\"` avec `intersects_feature_typename` et `intersects_feature_id` issus d'une `feature_ref`.",
     "⚠️ Quand `typename` et `intersects_feature_typename` sont identiques, utiliser `gpf_wfs_get_feature_by_id` pour récupérer exactement l'objet ciblé.",
@@ -38,6 +40,8 @@ class GpfWfsGetFeaturesTool extends MCPTool<GpfWfsGetFeaturesInput> {
     "Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiques à chaque typename et diffèrent systématiquement des conventions habituelles (ex : pas de nom_officiel, navigabilite sans accent, etc.). Toute tentative sans appel préalable à `gpf_wfs_describe_type` **provoquera une erreur.**",
   ].join("\n");
 
+  // `schema` remains the runtime validation source, while `inputSchema`
+  // publishes the MCP-facing variant expected by clients.
   schema = gpfWfsGetFeaturesInputSchema;
 
   /**
@@ -87,25 +91,6 @@ class GpfWfsGetFeaturesTool extends MCPTool<GpfWfsGetFeaturesInput> {
   }
 
   /**
-   * Formats the request-preview response returned by `result_type="request"`.
-   *
-   * @param input Normalized tool input.
-   * @returns An MCP-compatible request preview payload.
-   */
-  protected async buildRequestPreview(input: GpfWfsGetFeaturesInput) {
-    const { request } = await prepareGetFeaturesRequest(input);
-
-    return {
-      result_type: "request" as const,
-      method: request.method,
-      url: request.url,
-      query: request.query,
-      body: request.body,
-      get_url: request.get_url ?? null,
-    };
-  }
-
-  /**
    * Orchestrates the MCP-facing execution flow.
    *
    * Request previews stay in the tool because they are a tool-specific output
@@ -116,7 +101,8 @@ class GpfWfsGetFeaturesTool extends MCPTool<GpfWfsGetFeaturesInput> {
    */
   async execute(input: GpfWfsGetFeaturesInput) {
     if (input.result_type === "request") {
-      return this.buildRequestPreview(input);
+      const { request } = await prepareGetFeaturesRequest(input);
+      return toWfsRequestPayload(request);
     }
 
     return executeGetFeatures(input);

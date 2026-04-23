@@ -7,51 +7,20 @@
  */
 
 import { MCPTool } from "mcp-framework";
-import type { Collection } from "@ignfab/gpf-schema-store";
-import { z } from "zod";
 
-import { wfsClient } from "../gpf/wfs-schema-catalog.js";
-import { generatePublishedInputSchema } from "../helpers/jsonSchema.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import { buildPropertyName, executeGetFeatureById } from "../helpers/wfs_engine/byId.js";
-import { buildGetFeatureByIdRequest } from "../helpers/wfs_engine/request.js";
-import { gpfWfsGetFeaturesRequestOutputSchema } from "../helpers/wfs_engine/schema.js";
-
-// --- Schema ---
-
-const gpfWfsGetFeatureByIdInputSchema = z.object({
-  typename: z
-    .string()
-    .trim()
-    .min(1, "le nom du type ne doit pas être vide")
-    .describe("Nom exact du type WFS à interroger, par exemple `ADMINEXPRESS-COG.LATEST:commune`."),
-  feature_id: z
-    .string()
-    .trim()
-    .min(1, "le feature_id ne doit pas être vide")
-    .describe("Identifiant WFS exact de l'objet à récupérer, par exemple `commune.8952`."),
-  result_type: z
-    .enum(["results", "request"])
-    .default("results")
-    .describe("`results` renvoie une FeatureCollection normalisée avec exactement un objet. `request` renvoie la requête WFS compilée (`get_url`) à destination de `create_map` via `geojson_url`, ou pour déboguer."),
-  select: z
-    .array(z.string().trim().min(1))
-    .min(1)
-    .optional()
-    .describe("Liste des propriétés non géométriques à renvoyer. Quand `result_type=\"request\"`, la géométrie est automatiquement ajoutée."),
-}).strict();
-
-// --- Types ---
-
-type GpfWfsGetFeatureByIdInput = z.infer<typeof gpfWfsGetFeatureByIdInputSchema>;
-
-type PublishedInputSchema = {
-  type: "object";
-  properties?: Record<string, object>;
-  required?: string[];
-};
-
-const gpfWfsGetFeatureByIdPublishedInputSchema = generatePublishedInputSchema(gpfWfsGetFeatureByIdInputSchema) as PublishedInputSchema;
+import { getFeatureType } from "../helpers/wfs_engine/execution.js";
+import {
+  buildGetFeatureByIdRequest,
+  toWfsRequestPayload,
+} from "../helpers/wfs_engine/request.js";
+import {
+  gpfWfsGetFeatureByIdInputSchema,
+  type GpfWfsGetFeatureByIdInput,
+  gpfWfsGetFeatureByIdPublishedInputSchema,
+  gpfWfsGetFeatureByIdRequestOutputSchema,
+} from "../helpers/wfs_engine/schema.js";
 
 // --- Tool ---
 
@@ -66,6 +35,8 @@ class GpfWfsGetFeatureByIdTool extends MCPTool<GpfWfsGetFeatureByIdInput> {
     "Utiliser `result_type=\"request\"` pour récupérer la requête WFS compilée (avec `get_url`) et l'utiliser ou la visualiser ailleurs."
   ].join("\n");
 
+  // `schema` remains the runtime validation source, while `inputSchema`
+  // publishes the MCP-facing variant expected by clients.
   schema = gpfWfsGetFeatureByIdInputSchema;
 
   /**
@@ -80,6 +51,11 @@ class GpfWfsGetFeatureByIdTool extends MCPTool<GpfWfsGetFeatureByIdInput> {
   /**
    * Formats compact responses (`request`) into `structuredContent`.
    *
+   * We intentionally do not expose a single `outputSchemaShape` for the tool as
+   * a whole: the `results` path returns a generic FeatureCollection whose
+   * feature properties depend on the queried WFS layer, while `request` has a
+   * compact, closed shape that is worth validating explicitly.
+   *
    * @param data Raw execution result returned by the tool implementation.
    * @returns An MCP success response, optionally enriched with structured content.
    */
@@ -92,7 +68,7 @@ class GpfWfsGetFeatureByIdTool extends MCPTool<GpfWfsGetFeatureByIdInput> {
     ) {
       return {
         content: [{ type: "text" as const, text: JSON.stringify(data) }],
-        structuredContent: gpfWfsGetFeaturesRequestOutputSchema.parse(data),
+        structuredContent: gpfWfsGetFeatureByIdRequestOutputSchema.parse(data),
       };
     }
 
@@ -108,23 +84,15 @@ class GpfWfsGetFeatureByIdTool extends MCPTool<GpfWfsGetFeatureByIdInput> {
    */
   async execute(input: GpfWfsGetFeatureByIdInput) {
     if (input.result_type === "request") {
-      // Keep request preview assembly local to the tool: this branch exposes
-      // MCP-facing debug output rather than executing the by-id results flow.
-      const featureType: Collection = await wfsClient.getFeatureType(input.typename);
+      // The `request` mode is handled here because it returns a preview payload,
+      // not the actual by-id WFS result.
+      const featureType = await getFeatureType(input.typename);
       const propertyName = buildPropertyName(featureType, {
-        result_type: input.result_type,
+        includeGeometry: true,
         select: input.select,
       });
       const request = buildGetFeatureByIdRequest(input.typename, input.feature_id, propertyName);
-
-      return {
-        result_type: "request" as const,
-        method: request.method,
-        url: request.url,
-        query: request.query,
-        body: request.body,
-        get_url: request.get_url ?? null,
-      };
+      return toWfsRequestPayload(request);
     }
 
     return executeGetFeatureById({

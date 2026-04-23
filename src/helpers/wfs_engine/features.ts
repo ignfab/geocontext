@@ -1,27 +1,3 @@
-import type { Collection } from "@ignfab/gpf-schema-store";
-
-import logger from "../../logger.js";
-import {
-  compileQueryParts,
-  geometryToEwkt,
-  getGeometryProperty,
-  getSpatialFilter,
-  type CompiledQuery,
-  type ResolvedFeatureGeometryRef,
-} from "./compile.js";
-import {
-  fetchFeatureCollection,
-  getFeatureType,
-  getMatchedFeatureCount,
-} from "./execution.js";
-import {
-  buildMainRequest,
-  buildReferenceGeometryRequest,
-  type CompiledRequest,
-} from "./request.js";
-import { attachFeatureRefs } from "./response.js";
-import type { GpfWfsGetFeaturesInput } from "./schema.js";
-
 /**
  * Shared execution helpers for structured WFS feature search.
  *
@@ -30,11 +6,46 @@ import type { GpfWfsGetFeaturesInput } from "./schema.js";
  * hit counting, and FeatureCollection post-processing.
  */
 
+import type { Collection } from "@ignfab/gpf-schema-store";
+
+import { isServiceResponseError } from "../http.js";
+import logger from "../../logger.js";
+import { fetchFeatureById, requireSingleFeatureById } from "./byId.js";
+import {
+  compileQueryParts,
+  geometryToEwkt,
+  getGeometryProperty,
+  getSpatialFilter,
+  type CompiledQuery,
+  type ResolvedFeatureGeometryRef,
+} from "./queryPreparation.js";
+import {
+  fetchFeatureCollection,
+  getFeatureType,
+  getMatchedFeatureCount,
+  type WfsFeatureCollectionResponse,
+} from "./execution.js";
+import {
+  buildMainRequest,
+  type CompiledRequest,
+} from "./request.js";
+import { attachFeatureRefs } from "./response.js";
+import type { GpfWfsGetFeaturesInput } from "./schema.js";
+
 // --- Types ---
 
+/**
+ * Prepared request context returned once the `get_features` input has been
+ * validated, compiled, and assembled into a live WFS request.
+ */
 export type PreparedGetFeaturesRequest = {
   compiled: CompiledQuery;
   request: CompiledRequest;
+};
+
+type GeometryLike = {
+  type: string;
+  coordinates: unknown;
 };
 
 // --- Validation ---
@@ -62,16 +73,28 @@ export function ensureIntersectsFeatureTargetsOtherTypename(
   }
 }
 
+/**
+ * Checks whether a raw value exposes the minimal geometry shape required by
+ * `geometryToEwkt`.
+ *
+ * @param value Unknown feature geometry value.
+ * @returns `true` when the value looks like a GeoJSON geometry object.
+ */
+function isGeometryLike(value: unknown): value is GeometryLike {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "type" in value &&
+    typeof value.type === "string" &&
+    "coordinates" in value
+  );
+}
+
 // --- Reference Geometry ---
 
 /**
  * Resolves the geometry of a reference feature when `intersects_feature` is used,
  * then converts it to EWKT for CQL compilation.
- *
- * This helper currently reads the first feature returned by the reference
- * lookup. It ensures that a feature exists and exposes a usable geometry, but
- * does not enforce strict uniqueness or exact `id` matching beyond what the WFS
- * request itself guarantees.
  *
  * @param input Normalized tool input.
  * @returns The resolved reference geometry, or `undefined` when no reference feature is needed.
@@ -86,30 +109,23 @@ export async function resolveIntersectsFeatureGeometry(
 
   const referenceFeatureType = await getFeatureType(spatialFilter.typename);
   const referenceGeometryProperty = getGeometryProperty(referenceFeatureType);
-  const request = buildReferenceGeometryRequest(
-    spatialFilter.typename,
-    spatialFilter.feature_id,
-    referenceGeometryProperty.name,
-  );
-  const featureCollection = await fetchFeatureCollection(request);
-  const referenceFeature = Array.isArray(featureCollection?.features)
-    ? featureCollection.features[0]
-    : undefined;
+  const featureCollection = await fetchFeatureById({
+    typename: spatialFilter.typename,
+    feature_id: spatialFilter.feature_id,
+    propertyName: referenceGeometryProperty.name,
+  });
+  const referenceFeature = requireSingleFeatureById(featureCollection, {
+    typename: spatialFilter.typename,
+    feature_id: spatialFilter.feature_id,
+  });
 
-  if (!referenceFeature) {
-    throw new Error(
-      `Le feature de référence '${spatialFilter.feature_id}' est introuvable dans '${spatialFilter.typename}'.`,
-    );
-  }
-  if (!referenceFeature?.geometry) {
+  if (!isGeometryLike(referenceFeature?.geometry)) {
     throw new Error(
       `Le feature de référence '${spatialFilter.feature_id}' n'a pas de géométrie exploitable.`,
     );
   }
 
   return {
-    typename: spatialFilter.typename,
-    feature_id: spatialFilter.feature_id,
     geometry_ewkt: geometryToEwkt(referenceFeature.geometry),
   };
 }
@@ -129,11 +145,18 @@ export async function resolveIntersectsFeatureGeometry(
 export async function prepareGetFeaturesRequest(
   input: GpfWfsGetFeaturesInput,
 ): Promise<PreparedGetFeaturesRequest> {
+  // TODO: Assess if this guard does not prevent legitimate use cases.
   ensureIntersectsFeatureTargetsOtherTypename(input);
-
+  // Get the feature type definition from the embedded catalog to access
+  // property definitions and the geometry column name.
   const featureType: Collection = await getFeatureType(input.typename);
+  // Resolve the reference geometry for `intersects_feature`, when needed by
+  // the selected spatial filter.
   const resolvedGeometryRef = await resolveIntersectsFeatureGeometry(input);
+  // Compile query fragments from the normalized input, feature type, and
+  // optional resolved reference geometry.
   const compiled = compileQueryParts(input, featureType, resolvedGeometryRef);
+  // Assemble the final WFS request from the compiled fragments.
   const request = buildMainRequest(input, compiled);
 
   return { compiled, request };
@@ -154,17 +177,21 @@ export async function prepareGetFeaturesRequest(
 export async function executeGetFeatures(input: GpfWfsGetFeaturesInput) {
   const { compiled, request } = await prepareGetFeaturesRequest(input);
 
-  let featureCollection: any;
+  let featureCollection: WfsFeatureCollectionResponse;
+
   try {
     logger.info(
       `[gpf_wfs_get_features] POST ${request.url}?${new URLSearchParams(request.query).toString()}`,
     );
     featureCollection = await fetchFeatureCollection(request);
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-    if (message.includes(`Illegal property name: ${compiled.geometryProperty.name}`)) {
+    if (
+      isServiceResponseError(error) &&
+      error.serviceCode === "InvalidParameterValue" &&
+      error.serviceDetail === `Illegal property name: ${compiled.geometryProperty.name}`
+    ) {
       throw new Error(
-        `Le champ géométrique '${compiled.geometryProperty.name}' issu du catalogue embarqué est rejeté par le WFS live pour '${input.typename}'. Le catalogue embarqué est probablement désynchronisé. Détail : ${message}`,
+        `Le champ géométrique '${compiled.geometryProperty.name}' issu du catalogue embarqué est rejeté par le WFS live pour '${input.typename}'. Le catalogue embarqué est probablement désynchronisé. Détail : ${error.message}`,
       );
     }
     throw error;

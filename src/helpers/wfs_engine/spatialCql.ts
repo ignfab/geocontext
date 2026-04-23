@@ -9,6 +9,8 @@ import type { CollectionProperty } from "@ignfab/gpf-schema-store";
 
 import type { SpatialFilter } from "./schema.js";
 
+// --- Spatial Predicate Compilation ---
+
 /**
  * Compiles a bbox spatial filter into a CQL predicate.
  *

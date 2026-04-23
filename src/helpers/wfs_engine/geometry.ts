@@ -5,6 +5,8 @@
  * in spatial CQL predicates such as `intersects_feature`.
  */
 
+// --- Coordinate Serialization ---
+
 /**
  * Serializes a single coordinate pair into a WKT position.
  *
@@ -14,6 +16,8 @@
 function positionToWkt(position: [number, number]) {
   return `${position[0]} ${position[1]}`;
 }
+
+// --- Geometry Serialization ---
 
 /**
  * Serializes a GeoJSON-like geometry object into EWKT for CQL spatial predicates.

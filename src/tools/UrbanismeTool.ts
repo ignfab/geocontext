@@ -1,3 +1,7 @@
+/**
+ * MCP tool exposing urban planning information around a given point.
+ */
+
 import { MCPTool } from "mcp-framework";
 import { z } from "zod";
 
@@ -5,10 +9,14 @@ import { getUrbanisme, URBANISME_SOURCE } from "../gpf/urbanisme.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import { featureRefSchema, lonSchema, latSchema } from "../helpers/schemas.js";
 
+// --- Schema ---
+
 const urbanismeInputSchema = z.object({
   lon: lonSchema,
   lat: latSchema,
 }).strict();
+
+// --- Types ---
 
 type UrbanismeInput = z.infer<typeof urbanismeInputSchema>;
 
@@ -38,6 +46,7 @@ const URBANISME_TOOL_DESCRIPTION = [
   "- fichier: https://www.geoportail-urbanisme.gouv.fr/api/document/{gpu_doc_id}/files/{nomfic}",
 ].join("\n");
 
+// --- Tool ---
 
 class UrbanismeTool extends MCPTool<UrbanismeInput> {
   name = "urbanisme";
@@ -48,6 +57,12 @@ class UrbanismeTool extends MCPTool<UrbanismeInput> {
 
   schema = urbanismeInputSchema;
 
+  /**
+   * Returns the urban planning objects relevant to the requested point.
+   *
+   * @param input Normalized tool input.
+   * @returns The relevant urban planning objects, including reusable `feature_ref` metadata when available.
+   */
   async execute(input: UrbanismeInput) {
     return {
       results: await getUrbanisme(input.lon, input.lat),

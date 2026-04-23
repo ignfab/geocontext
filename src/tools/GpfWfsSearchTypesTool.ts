@@ -1,8 +1,14 @@
+/**
+ * MCP tool exposing keyword-based search over the embedded WFS type catalog.
+ */
+
 import { MCPTool } from "mcp-framework";
 import { z } from "zod";
 
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import { wfsClient } from "../gpf/wfs-schema-catalog.js";
+
+// --- Schema ---
 
 const gpfWfsSearchTypesInputSchema = z.object({
   query: z
@@ -19,6 +25,8 @@ const gpfWfsSearchTypesInputSchema = z.object({
     .describe("Le nombre maximum de résultats à retourner (entre 1 et 50). Défaut : 10."),
 }).strict();
 
+// --- Types ---
+
 type GpfWfsSearchTypesInput = z.infer<typeof gpfWfsSearchTypesInputSchema>;
 
 const gpfWfsSearchTypeResultSchema = z.object({
@@ -31,6 +39,8 @@ const gpfWfsSearchTypeResultSchema = z.object({
 const gpfWfsSearchTypesOutputSchema = z.object({
   results: z.array(gpfWfsSearchTypeResultSchema).describe("La liste ordonnée des types WFS trouvés."),
 });
+
+// --- Tool ---
 
 class GpfWfsSearchTypesTool extends MCPTool<GpfWfsSearchTypesInput> {
   name = "gpf_wfs_search_types";
@@ -47,6 +57,12 @@ class GpfWfsSearchTypesTool extends MCPTool<GpfWfsSearchTypesInput> {
 
   schema = gpfWfsSearchTypesInputSchema;
 
+  /**
+   * Searches the embedded WFS type catalog from a free-text query.
+   *
+   * @param input Normalized tool input.
+   * @returns The ordered search results, optionally enriched with relevance scores.
+   */
   async execute(input: GpfWfsSearchTypesInput) {
     const maxResults = input.max_results || 10;
     const featureTypes = await wfsClient.searchFeatureTypesWithScores(input.query, maxResults);

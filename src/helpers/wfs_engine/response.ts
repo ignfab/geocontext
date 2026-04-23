@@ -6,6 +6,8 @@
  * and applies targeted transformations needed by the generic WFS toolchain.
  */
 
+// --- Response Types ---
+
 type GenericFeature = {
   id?: string;
   geometry?: unknown;
@@ -17,6 +19,8 @@ type GenericFeatureCollection = {
   features?: GenericFeature[];
   [key: string]: unknown;
 };
+
+// --- Response Transformation ---
 
 /**
  * Removes raw geometry payloads from a FeatureCollection, keeps GeoJSON validity by forcing
@@ -51,6 +55,8 @@ export function transformFeatureCollectionResponse(featureCollection: GenericFea
   const { crs: _crs, ...restCollection } = featureCollection;
   return { ...restCollection, features: transformedFeatures };
 }
+
+// --- Feature References ---
 
 /**
  * Transforms a FeatureCollection and injects the exact queried typename into each `feature_ref`.

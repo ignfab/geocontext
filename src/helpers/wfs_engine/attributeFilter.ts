@@ -9,6 +9,8 @@ import type { CollectionProperty } from "@ignfab/gpf-schema-store";
 
 import type { WhereClause } from "./schema.js";
 
+// --- Normalized Clause Types ---
+
 type ScalarValue = string | number | boolean;
 
 type NormalizedWhereClause =
@@ -16,6 +18,8 @@ type NormalizedWhereClause =
   | { property: string; operator: "lt" | "lte" | "gt" | "gte"; value: number | string }
   | { property: string; operator: "in"; values: ScalarValue[] }
   | { property: string; operator: "is_null" };
+
+// --- CQL Operator Mappings ---
 
 export const SCALAR_COMPARISON_OPERATORS = {
   eq: "=",
@@ -28,6 +32,8 @@ export const NUMERIC_COMPARISON_OPERATORS = {
   gt: ">",
   gte: ">=",
 } as const;
+
+// --- Scalar Formatting ---
 
 /**
  * Escapes a string literal so it can be embedded safely in a CQL string value.
@@ -55,7 +61,9 @@ export function formatScalarValue(value: ScalarValue) {
   return String(value);
 }
 
-//TODO : this is not really robust
+// --- Property-Type Detection ---
+
+// TODO: Replace these heuristics with a more reliable mapping if catalog typing evolves.
 /**
  * Checks whether a property should be treated as boolean for value coercion.
  *
@@ -96,6 +104,8 @@ function isDateProperty(property: CollectionProperty) {
   const type = property.type.toLowerCase();
   return ["date", "datetime", "timestamp", "timestamptz"].includes(type) || property.name.startsWith("date_");
 }
+
+// --- Scalar Parsing ---
 
 /**
  * Parses a serialized numeric value and rejects non-finite numbers.
@@ -158,6 +168,8 @@ function parseBooleanString(value: string, message: string) {
   throw new Error(message);
 }
 
+// --- Clause Validation ---
+
 /**
  * Extracts the single serialized value required by operators such as `eq` or `gt`.
  *
@@ -184,6 +196,8 @@ function ensureNumericProperty(property: CollectionProperty, operator: keyof typ
     throw new Error(`L'opérateur '${operator}' n'est supporté que pour une propriété numérique ou de date. '${property.name}' est de type '${property.type}'.`);
   }
 }
+
+// --- Value Coercion ---
 
 /**
  * Coerces a serialized scalar value according to the target property metadata.
@@ -240,21 +254,33 @@ function coerceOrderedValueForProperty(property: CollectionProperty, value: stri
 export function normalizeWhereClause(property: CollectionProperty, clause: WhereClause): NormalizedWhereClause {
   switch (clause.operator) {
     case "eq":
-    case "ne":
+    case "ne": {
+      const value = getSingleStringValue(
+        clause,
+        `L'opérateur '${clause.operator}' exige exactement une propriété \`value\`.`,
+      );
+
       return {
         property: clause.property,
         operator: clause.operator,
-        value: coerceScalarValueForProperty(property, getSingleStringValue(clause, `L'opérateur '${clause.operator}' exige exactement une propriété \`value\`.`)),
+        value: coerceScalarValueForProperty(property, value),
       };
+    }
     case "lt":
     case "lte":
     case "gt":
-    case "gte":
+    case "gte": {
+      const value = getSingleStringValue(
+        clause,
+        `L'opérateur '${clause.operator}' exige exactement une propriété \`value\`.`,
+      );
+
       return {
         property: clause.property,
         operator: clause.operator,
-        value: coerceOrderedValueForProperty(property, getSingleStringValue(clause, `L'opérateur '${clause.operator}' exige exactement une propriété \`value\`.`), clause.operator),
+        value: coerceOrderedValueForProperty(property, value, clause.operator),
       };
+    }
     case "in":
       if (clause.value !== undefined || !Array.isArray(clause.values) || clause.values.length === 0 || !clause.values.every((value): value is string => typeof value === "string")) {
         throw new Error("L'opérateur 'in' exige une propriété `values` non vide.");
