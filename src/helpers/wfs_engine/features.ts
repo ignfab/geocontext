@@ -68,6 +68,11 @@ export function ensureIntersectsFeatureTargetsOtherTypename(
  * Resolves the geometry of a reference feature when `intersects_feature` is used,
  * then converts it to EWKT for CQL compilation.
  *
+ * This helper currently reads the first feature returned by the reference
+ * lookup. It ensures that a feature exists and exposes a usable geometry, but
+ * does not enforce strict uniqueness or exact `id` matching beyond what the WFS
+ * request itself guarantees.
+ *
  * @param input Normalized tool input.
  * @returns The resolved reference geometry, or `undefined` when no reference feature is needed.
  */
@@ -114,8 +119,9 @@ export async function resolveIntersectsFeatureGeometry(
 /**
  * Prepares the main WFS request for `gpf_wfs_get_features`.
  *
- * This includes feature type lookup, optional reference-geometry resolution,
- * query compilation, and request assembly.
+ * This includes upfront validation of unsupported same-typename
+ * `intersects_feature` requests, feature type lookup, optional
+ * reference-geometry resolution, query compilation, and request assembly.
  *
  * @param input Normalized tool input.
  * @returns The compiled query fragments and final WFS request.

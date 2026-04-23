@@ -13,10 +13,9 @@ import { buildGetFeatureByIdRequest } from "./request.js";
 import { attachFeatureRefs } from "./response.js";
 
 export type GetFeatureByIdExecutionInput = {
-    typename: string;
-    feature_id: string;
-    result_type: "results" | "request";
-    select?: string[];
+  typename: string;
+  feature_id: string;
+  select?: string[];
 };
 
 type BuildPropertyNameInput = {
@@ -64,15 +63,20 @@ export function buildPropertyName(
  * Tool-specific concerns such as MCP schema exposure and request-preview
  * formatting remain outside this helper.
  *
- * @param input Normalized by-id execution input.
- * @param deps Optional injectable dependencies used for catalog lookup and WFS request execution.
+ * This helper is intentionally scoped to the `results` path only. MCP-specific
+ * request preview assembly remains in the tool layer.
+ *
+ * @param input Normalized by-id execution input for the `results` flow.
  * @returns A transformed FeatureCollection containing exactly one feature.
  */
 export async function executeGetFeatureById(
   input: GetFeatureByIdExecutionInput,
 ) {
   const featureType: Collection = await getFeatureType(input.typename);
-  const propertyName = buildPropertyName(featureType, input);
+  const propertyName = buildPropertyName(featureType, {
+    result_type: "results",
+    select: input.select,
+  });
   const request = buildGetFeatureByIdRequest(
     input.typename,
     input.feature_id,

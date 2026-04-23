@@ -130,7 +130,6 @@ class GpfWfsGetFeatureByIdTool extends MCPTool<GpfWfsGetFeatureByIdInput> {
     return executeGetFeatureById({
       typename: input.typename,
       feature_id: input.feature_id,
-      result_type: input.result_type,
       select: input.select,
     });
   }
