@@ -1,8 +1,8 @@
 import type { Collection } from "@ignfab/gpf-schema-store";
-import { jest } from "@jest/globals";
+import { vi } from "vitest";
 
-const mockGetFeatureType = jest.fn<(typename: string) => Promise<Collection>>();
-const mockFetchJSONPost = jest.fn<(
+const mockGetFeatureType = vi.fn<(typename: string) => Promise<Collection>>();
+const mockFetchJSONPost = vi.fn<(
   url: string,
   body?: string,
   headers?: Record<string, string>,
@@ -16,14 +16,14 @@ const mockIsServiceResponseError = (
     "serviceDetail" in error
   );
 
-jest.unstable_mockModule("../../../src/gpf/wfs-schema-catalog.js", () => ({
+vi.doMock("../../../src/gpf/wfs-schema-catalog.js", () => ({
   GPF_WFS_URL: "https://data.geopf.fr/wfs",
   wfsClient: {
     getFeatureType: mockGetFeatureType,
   },
 }));
 
-jest.unstable_mockModule("../../../src/helpers/http.js", () => ({
+vi.doMock("../../../src/helpers/http.js", () => ({
   fetchJSONPost: mockFetchJSONPost,
   isServiceResponseError: mockIsServiceResponseError,
 }));
@@ -135,7 +135,7 @@ describe("Test GpfWfsGetFeaturesTool", () => {
   }
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
     mockGetFeatureType.mockReset();
     mockFetchJSONPost.mockReset();
   });
