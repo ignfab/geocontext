@@ -1,29 +1,28 @@
 # geocontext
 
-Un serveur MCP expérimental fournissant du contexte spatial pour les LLM.
+Serveur MCP expérimental fournissant du contexte spatial pour les LLM sur la base des [services de la Géoplateforme](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/) de l'IGN.
 
 ## Motivation
 
-Les LLM renforcent l'idée que la magie est possible avec l'informatique. Il n'en est rien. Pour qu'un assistant soit en mesure de connaître la date et l'heure, il faut par exemple l'interfacer avec un [MCP time](https://mcpservers.org/servers/modelcontextprotocol/time). De même, pour qu'il soit en mesure de lire une page, il faut par exemple l'interfacer un [MCP fetch](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch#readme).
+Les LLM peuvent donner l'impression de disposer nativement de certaines capacités, mais ils dépendent, en pratique, des outils qui leur sont connectés. Par exemple, pour accéder à la date et à l'heure, un assistant doit être interfacé avec un serveur comme [MCP time](https://mcpservers.org/servers/modelcontextprotocol/time). De la même manière, pour lire une page web, il doit être relié à un outil tel que [MCP fetch](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch#readme).
 
-En matière de données géographique, si un utilisateur pose une question impliquant que l'assistant soit en mesure de [connaître la position d'une adresse, il y a de bonne chance que la réponse soit plausible mais fausse](https://github.com/mborne/llm-experimentations/tree/main/chatgpt-geocodage-limites#readme).
-
-S'il est techniquement possible de brancher des API REST/GeoJSON telle APICARTO, la conception de ces dernières n'est pas adaptée (5000 résultat par défaut, grosse géométrie dans les réponses, géométries complexes à fournir,...).
+S'il est techniquement possible de brancher des API REST/GeoJSON telle [APICARTO](https://github.com/IGNF/apicarto) à un LLM, la conception de ces dernières n'est pas adaptée (5000 résultat par défaut, grosse géométrie dans les réponses, géométries complexes à fournir,...).
 
 L'idée est ici d'**expérimenter la conception d'un MCP rendant les données et les services de la Géoplateforme accessibles par un LLM**.
 
 ## Mises en garde
 
-- Ce développement est un POC en incubation au sein d'ignfab (archivage en cours de [mborne/geocontext](https://github.com/mborne/geocontext))
-- S'il s'avère utile de l'industrialiser, le dépôt sera migré sous responsabilité IGN et l'outil sera renommé (ex : `IGNF/mcp-gpf-server`)
-- Plusieurs problèmes et améliorations possibles ont été identifiés et sont en cours de mitigation/résolution (c.f. [issues](https://github.com/ignfab/geocontext/issues?q=is%3Aissue%20state%3Aopen%20label%3Ametadata)).
-- Cet outil n'est pas magique (voir [Fonctionnalités](#fonctionnalités) pour avoir une idée de ses capacités)
+- Ce développement est un POC en incubation au sein d'[IGNfab](https://www.ign.fr/ignfab) sur la base d'un premier [prototype désormais archivé](https://github.com/mborne/geocontext)
+- S'il s'avère utile de l'industrialiser, ce dépôt sera migré dans l'[organisation IGN principale](https://github.com/ignf) et l'outil sera renommé (ex : `IGNF/mcp-gpf-server`)
+- Les [issues](https://github.com/ignfab/geocontext/issues) sont régulièrement mises à jour et traitées
+- Une [roadmap](https://github.com/ignfab/geocontext/wiki) est également régulièrement alimentée
+- 🪄 Cet outil ne relève pas de la magie : ses capacités sont définies et documentées dans [Fonctionnalités](#fonctionnalités).
 
 ## Principes de conception
 
-- **Ne pas copier les données de la Géoplateforme** (but : identifier les améliorations possibles sur le services plutôt que les doublonner)
-- **Limiter au maximum la taille des réponses** (but : optimiser le nombre de jeton / éviter les hallucinations / pouvoir utiliser des modèles locaux)
-- ...
+- **Ne pas répliquer les données de la Géoplateforme** (objectif : concentrer les efforts sur l'amélioration des services existants plutôt que sur leur duplication)
+- **Prototyper les capacités manquantes pour l'usage des LLM avec la Géoplateforme** (objectif : combler les briques techniques nécessaires à une intégration robuste). Le projet s'appuie notamment sur [gpf-schema-store](https://github.com/ignfab/gpf-schema-store/) pour l'indexation et la description des schémas.
+- **Maîtriser la volumétrie des réponses** (objectif : réduire le coût en jetons, limiter les hallucinations et permettre l'utilisation de modèles locaux). Cela se traduit en pratique par l'utilisation de références légères (`feature_ref`) aux objets géométriques dans les réponses et outils du MCP.
 
 ## Utilisation
 
@@ -48,11 +47,6 @@ Par exemple, avec "Cursor Settings / MCP / Add server" :
 docker compose build
 docker compose up -d
 ```
-
-Remarque :
-
-- le `docker-compose.yaml` fournit `HTTP_HOST=0.0.0.0` pour rendre le serveur HTTP joignable depuis l'hôte ;
-- sans ce paramètre, `mcp-framework` écoute par défaut sur `127.0.0.1` en mode HTTP, ce qui n'est pas adapté à une exécution en conteneur.
 
 Ensuite :
 
@@ -92,28 +86,9 @@ npm run build
 }
 ```
 
-#### Avec Codex CLI / VS Code
-
-Avec Codex CLI ou l'extension Codex pour VS Code, la configuration se fait dans `~/.codex/config.toml` :
-
-```toml
-[mcp_servers.geocontext]
-command = "node"
-args = ["/chemin/absolu/vers/geocontext/dist/index.js"]
-
-# Définition d'un corporate proxy si nécessaire
-[mcp_servers.geocontext.env]
-HTTPS_PROXY = "http://proxy.domain.fr:3128"
-HTTP_PROXY = "http://proxy.domain.fr:3128"
-NO_PROXY = "localhost,127.0.0.1"
-http_proxy = "http://proxy.domain.fr:3128"
-https_proxy = "http://proxy.domain.fr:3128"
-no_proxy = "localhost,127.0.0.1"
-```
-
-Après mise à jour de `~/.codex/config.toml`, relancer la session Codex CLI ou recharger VS Code si l'extension Codex est déjà ouverte.
-
 ### Debug de la version locale
+
+Cette commande lance **MCP Inspector**, l’outil de développement de MCP pour tester et déboguer un serveur local. 
 
 ```bash
 npx -y @modelcontextprotocol/inspector node dist/index.js
@@ -142,15 +117,15 @@ Si `GPF_WFS_MINISEARCH_OPTIONS` est absent ou vide, les options par défaut rest
 Remarque :
 
 - Les outils `gpf_wfs_search_types` et `gpf_wfs_describe_type` s'appuient sur un catalogue de schémas embarqué fourni par `@ignfab/gpf-schema-store`.
-- L'outil `gpf_wfs_get_features` interroge toujours le service WFS de la Géoplateforme en direct.
-- L'outil `gpf_wfs_get_feature_by_id` interroge aussi le service WFS de la Géoplateforme en direct.
+- Les outils `gpf_wfs_get_features` et `gpf_wfs_get_feature_by_id` interrogent toujours le service WFS de la Géoplateforme en direct.
 - Le catalogue embarqué améliore la description des featureTypes mais il peut être légèrement décalé par rapport à l'état courant du WFS.
 
 ## Fonctionnalités
 
-### Utiliser des services spatiaux
+Une description avancée des tools équivalente au niveau de détail de la méthode `tools/list` est disponible [ici](docs/mcp-tools.md).  
+On décrit ci-dessous succinctement les différents `tools` MCP proposés par `geocontext`.
 
-Quelques services de la Géoplateforme :
+### Utiliser des services spatiaux
 
 * [geocode(text)](src/tools/GeocodeTool.ts) s'appuie sur le [service d’autocomplétion de la Géoplateforme](https://geoservices.ign.fr/documentation/services/services-geoplateforme/autocompletion) pour **convertir un nom de lieu en position (lon,lat)**.
 
@@ -162,7 +137,7 @@ Quelques services de la Géoplateforme :
 
 ### Recherche d'informations pour un lieu
 
-L'idée est ici de répondre à des précises en traitant côté serveur les appels aux services WFS de la Géoplateforme :
+L'idée est ici de répondre à des questions précises en traitant côté serveur les appels aux [services WFS de la Géoplateforme](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/diffusion/wfs/) :
 
 * [adminexpress(lon,lat)](src/tools/AdminexpressTool.ts) permet de **récupérer les informations administratives (commune, département, région,...)** pour un lieu donné par sa position.
 
@@ -178,7 +153,9 @@ L'idée est ici de répondre à des précises en traitant côté serveur les app
 
 * [assiette_sup(lon,lat)](src/tools/AssietteSupTool.ts) permet de **récupérer les Servitude d'Utilité Publiques (SUP)**
 
-Les tools WFS orientés "objet" (`adminexpress`, `cadastre`, `urbanisme`, `assiette_sup`) exposent un `feature_ref { typename, feature_id }` quand l'objet source est réutilisable tel quel dans un appel ultérieur à `gpf_wfs_get_feature_by_id` (exact match) ou `gpf_wfs_get_features` (par exemple avec `spatial_operator="intersects_feature"`).
+> Ex: Quelles assiettes de SUP sont présentes autour de la mairie de Vincennes ?
+
+Les tools WFS orientés "objet" (`adminexpress`, `cadastre`, `urbanisme`, `assiette_sup`) exposent un `feature_ref { typename, feature_id }` quand l'objet source est réutilisable tel quel dans un appel ultérieur à `gpf_wfs_get_feature_by_id` ou `gpf_wfs_get_features` (ex : `spatial_operator="intersects_feature"`).
 
 ### Explorer les données vecteurs
 
@@ -204,8 +181,8 @@ Les tools WFS orientés "objet" (`adminexpress`, `cadastre`, `urbanisme`, `assie
 Le tool accepte un contrat structuré :
 
 - `select` pour choisir les propriétés à renvoyer
-- `result_type="request"` pour récupérer la requête compilée en `POST` avec `get_url`
-- `result_type="results"` pour renvoyer une FeatureCollection normalisée contenant exactement un seul objet
+- `result_type="request"` pour récupérer la requête compilée (`POST` + `get_url` éventuelle) pour utilisation par un autre tool (ex: affichage cartographique)
+- `result_type="results"` pour renvoyer une `FeatureCollection` normalisée contenant exactement un seul objet
 
 Exemple :
 
@@ -218,7 +195,7 @@ Le tool accepte un contrat structuré :
 - `select` pour choisir les propriétés à renvoyer
 - `where` pour filtrer les objets
 - `order_by` pour trier les résultats
-- `spatial_operator` et ses paramètres dédiés pour le spatial en `lon/lat`
+- `spatial_operator` et ses paramètres dédiés pour le spatial
 - `result_type="request"` pour récupérer la requête compilée en `POST`, ainsi qu'une `get_url` dérivée quand elle reste raisonnablement portable en GET
 
 Exemples :
@@ -237,8 +214,8 @@ Exemples :
 
 N'hésitez pas à [créer une issue](https://github.com/ignfab/geocontext/issues) si vous rencontrez un problème! Merci de fournir :
 
-- L'assistant et le modèle utilisé
-- La demande que vous faite à l'assistant (ex : "Combien y a-t'il de pont franchissant la seine?")
+- L'assistant (ex: Github Copilot) et le modèle utilisé (ex: Claude Sonnet 4.5)
+- La demande que vous faite à l'assistant (ex : "Combien y a-t'il de pont franchissant la Seine?")
 
 ### Proposer une nouvelle fonctionnalité
 
@@ -249,17 +226,9 @@ N'hésitez pas :
 - Tester de votre côté
 - Faire une pull-request
 
-
-
 ## Crédits
 
-* [mcp-framework](https://mcp-framework.com) fournit le **cadre de développement du MCP** :
-
-```bash
-# Par exemple, pour exposer la liste des couches WMTS
-mcp add tool gpf_wmts_layers
-```
-
+* [mcp-framework](https://mcp-framework.com) fournit le **cadre de développement du MCP** 
 * [@ignfab/gpf-schema-store](https://www.npmjs.com/package/@ignfab/gpf-schema-store) pour le **catalogue de schémas embarqué** utilisé par les outils d'exploration WFS.
 * [MiniSearch](https://github.com/lucaong/minisearch) pour la **recherche par mot clé** utilisée dans `@ignfab/gpf-schema-store`.
 * [jsts](https://bjornharrtell.github.io/jsts/) pour les **traitements géométriques** (ex : tri des réponses par distance au point recherché).
@@ -268,5 +237,3 @@ mcp add tool gpf_wmts_layers
 ## Licence
 
 [MIT](LICENSE)
-
-
