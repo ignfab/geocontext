@@ -1,6 +1,12 @@
-# geocontext
+<p align="center">
+  <img src="docs/imgs/hexagon-geoctx.svg" alt="logo du projet geocontext" width="300">
+</p>
 
-Serveur MCP expérimental fournissant du contexte spatial pour les LLM sur la base des [services de la Géoplateforme](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/) de l'IGN.
+<h1 align="center">geocontext</h1>
+
+<p align="center">
+Serveur MCP expérimental fournissant du contexte spatial pour les LLM sur la base des <a href="https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/">services de la Géoplateforme</a> de l'IGN.
+</p>
 
 ## Motivation
 

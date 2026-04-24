@@ -1,0 +1,64 @@
+<svg width="720" height="220" viewBox="0 0 720 220" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">GeoContext logo</title>
+  <desc id="desc">Logo vectoriel pour GeoContext : une tuile cartographique connectée à une bulle de contexte spatial, avec texte lisible sur fond clair ou foncé.</desc>
+  <defs>
+    <linearGradient id="gc-tile" x1="40" y1="28" x2="184" y2="188" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#18B6A7"/>
+      <stop offset="0.52" stop-color="#2F80ED"/>
+      <stop offset="1" stop-color="#102A43"/>
+    </linearGradient>
+    <linearGradient id="gc-node" x1="125" y1="108" x2="164" y2="166" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D7FF68"/>
+      <stop offset="1" stop-color="#7AC943"/>
+    </linearGradient>
+    <clipPath id="gc-clip">
+      <path d="M112 24L188.21 68V156L112 200L35.79 156V68L112 24Z"/>
+    </clipPath>
+  </defs>
+
+  <!-- Icon -->
+  <g>
+    <path d="M112 24L188.21 68V156L112 200L35.79 156V68L112 24Z" fill="url(#gc-tile)"/>
+    <g clip-path="url(#gc-clip)" opacity="0.34">
+      <path d="M24 86C61 64 93 61 126 78C158 95 181 95 205 76" stroke="white" stroke-width="7" stroke-linecap="round"/>
+      <path d="M20 146C54 119 88 116 120 132C155 150 181 148 208 126" stroke="white" stroke-width="7" stroke-linecap="round"/>
+      <path d="M72 34L72 190" stroke="white" stroke-width="2.5" stroke-dasharray="7 10"/>
+      <path d="M151 42L151 181" stroke="white" stroke-width="2.5" stroke-dasharray="7 10"/>
+      <path d="M32 112H197" stroke="white" stroke-width="2.5" stroke-dasharray="7 10"/>
+    </g>
+    <path d="M112 24L188.21 68V156L112 200L35.79 156V68L112 24Z" stroke="#FFFFFF" stroke-opacity="0.72" stroke-width="4"/>
+
+    <!-- MCP links, kept behind foreground symbols -->
+    <path d="M71 71L53 142M71 71L174 88M174 88L143 131M53 142L143 131" stroke="#D7FF68" stroke-width="4" stroke-linecap="round" opacity="0.78"/>
+
+    <!-- Context bubble -->
+    <path d="M72 80C72 66.745 82.745 56 96 56H132C145.255 56 156 66.745 156 80V111C156 124.255 145.255 135 132 135H114.5L91 153V135H96C82.745 135 72 124.255 72 111V80Z" fill="#FFFFFF" fill-opacity="0.96"/>
+    <path d="M93 94H135" stroke="#102A43" stroke-width="8" stroke-linecap="round"/>
+    <path d="M93 115H121" stroke="#102A43" stroke-width="8" stroke-linecap="round" opacity="0.72"/>
+
+    <!-- Spatial pin: corrected shape, no white notch -->
+    <path d="M143 169C143 169 120 143.2 120 129C120 116.3 130.3 106 143 106C155.7 106 166 116.3 166 129C166 143.2 143 169 143 169Z" fill="#FFFFFF" fill-opacity="0.96"/>
+    <path d="M143 164C143 164 125 142.8 125 130C125 120.1 133.1 112 143 112C152.9 112 161 120.1 161 130C161 142.8 143 164 143 164Z" fill="url(#gc-node)" stroke="#102A43" stroke-opacity="0.18" stroke-width="1.5"/>
+    <circle cx="143" cy="130" r="6.5" fill="#102A43"/>
+
+    <!-- MCP nodes -->
+    <circle cx="71" cy="71" r="7" fill="#D7FF68"/>
+    <circle cx="53" cy="142" r="6" fill="#D7FF68"/>
+    <circle cx="174" cy="88" r="6" fill="#D7FF68"/>
+  </g>
+
+  <!-- Wordmark: IGN design-system-inspired colors + white contrast halo for dark backgrounds -->
+  <g transform="translate(238 71)">
+    <!-- Halo layer: keeps the wordmark readable on black without adding a background rectangle -->
+    <text x="0" y="49" font-family="Fira Sans, Open Sans, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="54" font-weight="800" letter-spacing="-1.8" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round">geo</text>
+    <text x="91" y="49" font-family="Fira Sans, Open Sans, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="54" font-weight="800" letter-spacing="-1.8" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round">context</text>
+    <path d="M3 72H324" stroke="#FFFFFF" stroke-width="11" stroke-linecap="round" stroke-opacity="0.96"/>
+    <text x="3" y="101" font-family="Fira Sans, Open Sans, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="18" font-weight="700" letter-spacing="2.7" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linejoin="round">SPATIAL CONTEXT FOR LLMs</text>
+
+    <!-- Color layer -->
+    <text x="0" y="49" font-family="Fira Sans, Open Sans, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="54" font-weight="800" letter-spacing="-1.8" fill="#091625">geo</text>
+    <text x="91" y="49" font-family="Fira Sans, Open Sans, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="54" font-weight="800" letter-spacing="-1.8" fill="#307CCD">context</text>
+    <path d="M3 72H324" stroke="#2DC398" stroke-width="5" stroke-linecap="round"/>
+    <text x="3" y="101" font-family="Fira Sans, Open Sans, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="18" font-weight="700" letter-spacing="2.7" fill="#3F4A55">SPATIAL CONTEXT FOR LLMs</text>
+  </g>
+</svg>
