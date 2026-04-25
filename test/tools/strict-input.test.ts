@@ -85,7 +85,16 @@ describe("Strict tool input schemas", () => {
     if (textContent.type !== "text") {
       throw new Error("expected text content");
     }
-    expect(textContent.text).toMatch(/unrecognized/i);
-    expect(textContent.text).toContain("unexpected");
+    expect(textContent.text).toContain("Paramètres invalides");
+    expect(response.structuredContent).toMatchObject({
+      type: "urn:geocontext:problem:invalid-tool-params",
+      errors: expect.arrayContaining([
+        expect.objectContaining({
+          code: "unknown_parameter",
+          name: "unexpected",
+          detail: expect.stringContaining("unexpected"),
+        }),
+      ]),
+    });
   });
 });

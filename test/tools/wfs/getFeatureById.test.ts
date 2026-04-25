@@ -1,5 +1,6 @@
 import type { Collection } from "@ignfab/gpf-schema-store";
 import { vi } from "vitest";
+import { ServiceResponseError } from "../../../src/helpers/http.js";
 
 const mockGetFeatureType = vi.fn<(typename: string) => Promise<Collection>>();
 const mockFetchJSONPost = vi.fn<(
@@ -17,6 +18,7 @@ vi.doMock("../../../src/gpf/wfs-schema-catalog.js", () => ({
 
 vi.doMock("../../../src/helpers/http.js", () => ({
   fetchJSONPost: mockFetchJSONPost,
+  ServiceResponseError,
 }));
 
 const { default: GpfWfsGetFeatureByIdTool } = await import("../../../src/tools/GpfWfsGetFeatureByIdTool");
@@ -104,6 +106,7 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
     expect(request.method).toEqual("POST");
     expect(request.query.featureID).toEqual("commune.1");
     expect(request.query.typeNames).toEqual("ADMINEXPRESS-COG.LATEST:commune");
+    expect(request.query.exceptions).toEqual("application/json");
     expect(request.query.propertyName).toEqual("code_insee,geometrie");
     expect(request.query.count).toEqual("2");
     expect(response.structuredContent).toMatchObject({
@@ -153,6 +156,7 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
 
     expect(response.isError).toBeUndefined();
     expect(requests).toHaveLength(1);
+    expect(requests[0].query.exceptions).toEqual("application/json");
     const textContent = response.content[0];
     if (textContent.type !== "text") {
       throw new Error("expected text content");
@@ -191,6 +195,9 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
     }
     expect(textContent.text).toContain("est introuvable");
     expect(textContent.text).toContain("commune.404");
+    expect(response.structuredContent).toMatchObject({
+      type: "urn:geocontext:problem:execution-error",
+    });
   });
 
   it("should fail clearly when multiple features are returned", async () => {
@@ -221,6 +228,9 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
       throw new Error("expected text content");
     }
     expect(textContent.text).toContain("devrait être unique");
+    expect(response.structuredContent).toMatchObject({
+      type: "urn:geocontext:problem:execution-error",
+    });
   });
 
   it("should fail clearly when the returned feature id mismatches", async () => {
@@ -250,6 +260,9 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
       throw new Error("expected text content");
     }
     expect(textContent.text).toContain("au lieu de");
+    expect(response.structuredContent).toMatchObject({
+      type: "urn:geocontext:problem:execution-error",
+    });
   });
 
   it("should reject invalid result_type values such as hits", async () => {
@@ -270,7 +283,16 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
     if (textContent.type !== "text") {
       throw new Error("expected text content");
     }
-    expect(textContent.text).toContain("results");
-    expect(textContent.text).toContain("request");
+    expect(textContent.text).toContain("Paramètres invalides");
+    expect(response.structuredContent).toMatchObject({
+      type: "urn:geocontext:problem:invalid-tool-params",
+      errors: expect.arrayContaining([
+        expect.objectContaining({
+          name: "result_type",
+          code: "invalid_enum_value",
+          detail: expect.stringContaining("results"),
+        }),
+      ]),
+    });
   });
 });

@@ -1,4 +1,4 @@
-import { fetchJSON } from "../helpers/http.js";
+import { fetchJSONGet } from "../helpers/http.js";
 import logger from "../logger.js";
 import type { JsonFetcher } from "../helpers/http.js";
 export const GEOCODE_SOURCE = "Géoplateforme (service d'autocomplétion)";
@@ -37,7 +37,7 @@ type RawGeocodeResponse = {
  * @param {JsonFetcher<RawGeocodeResponse>} [fetcher] - optional custom fetcher function
  * @returns {Promise<GeocodeResult[]>}
  */
-export async function geocode(text: string, maximumResponses = 3, fetcher: JsonFetcher<RawGeocodeResponse> = fetchJSON): Promise<GeocodeResult[]> {
+export async function geocode(text: string, maximumResponses = 3, fetcher: JsonFetcher<RawGeocodeResponse> = fetchJSONGet): Promise<GeocodeResult[]> {
     const normalizedText = typeof text === "string" ? text.trim() : "";
 
     if (!normalizedText) {

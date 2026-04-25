@@ -7,13 +7,12 @@ function createResponse(
         status = 200,
         statusText = "OK",
         ok,
-        includeOk = true,
-    }: { status?: number; statusText?: string; ok?: boolean; includeOk?: boolean } = {}
+    }: { status?: number; statusText?: string; ok?: boolean } = {}
 ) {
     return {
         status,
         statusText,
-        ...(includeOk ? { ok: ok ?? (status >= 200 && status < 300) } : {}),
+        ok: ok ?? (status >= 200 && status < 300),
         headers: {
             get(name: string) {
                 return name.toLowerCase() === "content-type" ? contentType : null;
@@ -89,16 +88,54 @@ describe("Test HTTP helpers", () => {
         ).rejects.toThrow("Erreur HTTP du service (400 Bad Request): bad filter");
     });
 
-    it("should reject responses with invalid status when ok is absent", async () => {
+    it("should extract code and text from GeoServer JSON exceptions payloads", async () => {
+        const geoserverJson = JSON.stringify({
+            version: null,
+            exceptions: [
+                {
+                    code: "InvalidParameterValue",
+                    locator: "GetFeature",
+                    text: "Requested property: toto=toto is not available for BDTOPO_V3:batiment.",
+                },
+            ],
+        });
+
+        await expect(
+            parseJsonResponse(
+                createResponse(geoserverJson, "application/json", {
+                    status: 400,
+                    statusText: "Bad Request",
+                })
+            )
+        ).rejects.toThrow(
+            "Erreur HTTP du service (400 Bad Request): Requested property: toto=toto is not available for BDTOPO_V3:batiment."
+        );
+
+        await expect(
+            parseJsonResponse(
+                createResponse(geoserverJson, "application/json", {
+                    status: 400,
+                    statusText: "Bad Request",
+                })
+            )
+        ).rejects.toMatchObject({
+            name: "ServiceResponseError",
+            serviceCode: "InvalidParameterValue",
+            serviceDetail: "Requested property: toto=toto is not available for BDTOPO_V3:batiment.",
+            httpStatusText: "400 Bad Request",
+        });
+    });
+
+    it("should trust explicit ok=false even with a 2xx status", async () => {
         await expect(
             parseJsonResponse(
                 createResponse('{"message":"bad filter"}', "application/json", {
-                    status: Number.NaN,
-                    statusText: "Bad Request",
-                    includeOk: false,
+                    status: 200,
+                    statusText: "OK",
+                    ok: false,
                 })
             )
-        ).rejects.toThrow("Erreur HTTP du service (Bad Request): bad filter");
+        ).rejects.toThrow("Erreur HTTP du service (200 OK): bad filter");
     });
 
     it("should reject non-2xx XML responses with extracted OGC errors", async () => {
@@ -140,7 +177,7 @@ describe("Test HTTP helpers", () => {
             name: "ServiceResponseError",
             serviceCode: "InvalidParameterValue",
             serviceDetail: "Illegal property name: geom",
-            responseLabel: "400 Bad Request",
+            httpStatusText: "400 Bad Request",
         });
     });
 
@@ -155,7 +192,120 @@ describe("Test HTTP helpers", () => {
         ).rejects.toMatchObject({
             name: "ServiceResponseError",
             serviceDetail: "bad filter",
-            responseLabel: "400 Bad Request",
+            httpStatusText: "400 Bad Request",
         });
     });
+
+    it("should extract code and description from altimetry error payloads", async () => {
+        const payload = JSON.stringify({
+            error: {
+                code: "BAD_PARAMETER",
+                description: "The parameter [lat] is missing.",
+            },
+        });
+
+        await expect(
+            parseJsonResponse(
+                createResponse(payload, "application/json", {
+                    status: 400,
+                    statusText: "Bad Request",
+                })
+            )
+        ).rejects.toThrow("Erreur HTTP du service (400 Bad Request): The parameter [lat] is missing.");
+
+        await expect(
+            parseJsonResponse(
+                createResponse(payload, "application/json", {
+                    status: 400,
+                    statusText: "Bad Request",
+                })
+            )
+        ).rejects.toMatchObject({
+            name: "ServiceResponseError",
+            serviceCode: "BAD_PARAMETER",
+            serviceDetail: "The parameter [lat] is missing.",
+            httpStatusText: "400 Bad Request",
+        });
+    });
+
+    it("should extract detailed messages from autocomplete error payloads", async () => {
+        const payload = JSON.stringify({
+            code: 400,
+            message: "Failed parsing query",
+            detail: [
+                "text: required param",
+            ],
+        });
+
+        await expect(
+            parseJsonResponse(
+                createResponse(payload, "application/json", {
+                    status: 400,
+                    statusText: "Bad Request",
+                })
+            )
+        ).rejects.toThrow("Erreur HTTP du service (400 Bad Request): text: required param");
+
+        await expect(
+            parseJsonResponse(
+                createResponse(payload, "application/json", {
+                    status: 400,
+                    statusText: "Bad Request",
+                })
+            )
+        ).rejects.toMatchObject({
+            name: "ServiceResponseError",
+            serviceCode: "400",
+            serviceDetail: "text: required param",
+            httpStatusText: "400 Bad Request",
+        });
+    });
+
+    it("should normalize non-2xx HTML responses as upstream service errors", async () => {
+        const html = "<!DOCTYPE html><html><body><h1>Bad Request</h1><p>Missing lat parameter</p></body></html>";
+
+        await expect(
+            parseJsonResponse(
+                createResponse(html, "text/html", {
+                    status: 400,
+                    statusText: "Bad Request",
+                })
+            )
+        ).rejects.toThrow("Erreur HTTP du service (400 Bad Request):");
+
+        await expect(
+            parseJsonResponse(
+                createResponse(html, "text/html", {
+                    status: 400,
+                    statusText: "Bad Request",
+                })
+            )
+        ).rejects.toMatchObject({
+            name: "ServiceResponseError",
+            serviceDetail: "<!DOCTYPE html><html><body><h1>Bad Request</h1><p>Missing lat parameter</p></body></html>",
+            httpStatusText: "400 Bad Request",
+        });
+    });
+
+    it("should not infer non-explicit JSON keys as known error detail fields", async () => {
+        const payload = JSON.stringify({
+            title: "This key is not part of known JSON error payloads",
+            msg: "Neither is this one",
+            errorMessage: "Nor this one",
+        });
+
+        await expect(
+            parseJsonResponse(
+                createResponse(payload, "application/json", {
+                    status: 400,
+                    statusText: "Bad Request",
+                })
+            )
+        ).rejects.toMatchObject({
+            name: "ServiceResponseError",
+            serviceDetail: "{\"title\":\"This key is not part of known JSON error payloads\",\"msg\":\"Neither is this one\",\"errorMessage\":\"Nor this one\"}",
+            httpStatusText: "400 Bad Request",
+        });
+    });
+
 });

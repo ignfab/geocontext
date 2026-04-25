@@ -1,4 +1,4 @@
-import { MCPTool } from "mcp-framework";
+import BaseTool from "./BaseTool.js";
 
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import {
@@ -23,7 +23,7 @@ import {
 
 // --- Tool ---
 
-class GpfWfsGetFeaturesTool extends MCPTool<GpfWfsGetFeaturesInput> {
+class GpfWfsGetFeaturesTool extends BaseTool<GpfWfsGetFeaturesInput> {
   name = "gpf_wfs_get_features";
   title = "Lecture d’objets WFS";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;

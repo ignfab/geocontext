@@ -2,7 +2,7 @@
  * MCP tool exposing altitude lookup for a single geographic position.
  */
 
-import { MCPTool } from "mcp-framework";
+import BaseTool from "./BaseTool.js";
 import { z } from "zod";
 
 import { ALTITUDE_SOURCE, getAltitudeByLocation } from "../gpf/altitude.js";
@@ -33,7 +33,7 @@ const altitudeOutputSchema = z.object({
 
 // --- Tool ---
 
-class AltitudeTool extends MCPTool<AltitudeInput> {
+class AltitudeTool extends BaseTool<AltitudeInput> {
   name = "altitude";
   title = "Altitude d’une position";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;

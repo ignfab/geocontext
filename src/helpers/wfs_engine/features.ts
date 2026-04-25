@@ -8,7 +8,7 @@
 
 import type { Collection } from "@ignfab/gpf-schema-store";
 
-import { isServiceResponseError } from "../http.js";
+import { ServiceResponseError } from "../http.js";
 import logger from "../../logger.js";
 import { fetchFeatureById, requireSingleFeatureById } from "./byId.js";
 import {
@@ -186,7 +186,7 @@ export async function executeGetFeatures(input: GpfWfsGetFeaturesInput) {
     featureCollection = await fetchFeatureCollection(request);
   } catch (error: unknown) {
     if (
-      isServiceResponseError(error) &&
+      error instanceof ServiceResponseError &&
       error.serviceCode === "InvalidParameterValue" &&
       error.serviceDetail === `Illegal property name: ${compiled.geometryProperty.name}`
     ) {

@@ -1,5 +1,6 @@
 import type { Collection } from "@ignfab/gpf-schema-store";
 import { vi } from "vitest";
+import { ServiceResponseError } from "../../../src/helpers/http.js";
 
 const mockGetFeatureType = vi.fn<(typename: string) => Promise<Collection>>();
 const mockFetchJSONPost = vi.fn<(
@@ -7,14 +8,6 @@ const mockFetchJSONPost = vi.fn<(
   body?: string,
   headers?: Record<string, string>,
 ) => Promise<unknown>>();
-const mockIsServiceResponseError = (
-  error: unknown,
-): error is Error & { serviceCode?: string; serviceDetail?: string } =>
-  error instanceof Error && (
-    error.name === "ServiceResponseError" ||
-    "serviceCode" in error ||
-    "serviceDetail" in error
-  );
 
 vi.doMock("../../../src/gpf/wfs-schema-catalog.js", () => ({
   GPF_WFS_URL: "https://data.geopf.fr/wfs",
@@ -25,7 +18,7 @@ vi.doMock("../../../src/gpf/wfs-schema-catalog.js", () => ({
 
 vi.doMock("../../../src/helpers/http.js", () => ({
   fetchJSONPost: mockFetchJSONPost,
-  isServiceResponseError: mockIsServiceResponseError,
+  ServiceResponseError,
 }));
 
 const { default: GpfWfsGetFeaturesTool } = await import(
@@ -239,6 +232,7 @@ describe("Test GpfWfsGetFeaturesTool", () => {
     expect(request.method).toEqual("POST");
     expect(request.url).toContain("https://data.geopf.fr/wfs");
     expect(request.query.service).toEqual("WFS");
+    expect(request.query.exceptions).toEqual("application/json");
     expect(request.query.propertyName).toEqual("code_insee,geometrie");
     expect(request.body).toContain("cql_filter=");
     expect(response.structuredContent).toMatchObject({
@@ -266,7 +260,17 @@ describe("Test GpfWfsGetFeaturesTool", () => {
     if (textContent.type !== "text") {
       throw new Error("expected text content");
     }
-    expect(textContent.text).toContain("le nom du type ne doit pas être vide");
+    expect(textContent.text).toContain("Paramètres invalides");
+    expect(response.structuredContent).toMatchObject({
+      type: "urn:geocontext:problem:invalid-tool-params",
+      errors: expect.arrayContaining([
+        expect.objectContaining({
+          name: "typename",
+          code: "too_small",
+          detail: "le nom du type ne doit pas être vide",
+        }),
+      ]),
+    });
   });
 
   it("should reject legacy inputs removed from the public schema", async () => {
@@ -286,8 +290,17 @@ describe("Test GpfWfsGetFeaturesTool", () => {
     if (textContent.type !== "text") {
       throw new Error("expected text content");
     }
-    expect(textContent.text).toMatch(/unrecognized/i);
-    expect(textContent.text).toContain("cql_filter");
+    expect(textContent.text).toContain("Paramètres invalides");
+    expect(response.structuredContent).toMatchObject({
+      type: "urn:geocontext:problem:invalid-tool-params",
+      errors: expect.arrayContaining([
+        expect.objectContaining({
+          code: "unknown_parameter",
+          name: "cql_filter",
+          detail: expect.stringContaining("cql_filter"),
+        }),
+      ]),
+    });
   });
 
   it("should build a POST request with query params and encoded body", async () => {
@@ -310,6 +323,7 @@ describe("Test GpfWfsGetFeaturesTool", () => {
 
     expect(response.isError).toBeUndefined();
     expect(requests).toHaveLength(1);
+    expect(requests[0].query.exceptions).toEqual("application/json");
     expect(requests[0].query.count).toEqual("7");
     expect(requests[0].query.propertyName).toEqual("code_insee,population");
     expect(requests[0].query.sortBy).toEqual("population D");
@@ -320,12 +334,17 @@ describe("Test GpfWfsGetFeaturesTool", () => {
     const tool = new GpfWfsGetFeaturesTool();
     mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
     mockFetchJSONPost.mockRejectedValue(
-      Object.assign(
-        new Error("Erreur HTTP du service (400 Bad Request): InvalidParameterValue: Illegal property name: geometrie"),
+      new ServiceResponseError(
+        "Erreur HTTP du service (400 Bad Request): InvalidParameterValue: Illegal property name: geometrie",
         {
-          name: "ServiceResponseError",
-          serviceCode: "InvalidParameterValue",
-          serviceDetail: "Illegal property name: geometrie",
+          http: {
+            status: 400,
+            statusText: "400 Bad Request",
+          },
+          service: {
+            code: "InvalidParameterValue",
+            detail: "Illegal property name: geometrie",
+          },
         },
       ),
     );
@@ -346,6 +365,9 @@ describe("Test GpfWfsGetFeaturesTool", () => {
     }
     expect(textContent.text).toContain("catalogue embarqué est rejeté");
     expect(textContent.text).toContain("géométrique 'geometrie'");
+    expect(response.structuredContent).toMatchObject({
+      type: "urn:geocontext:problem:execution-error",
+    });
   });
 
   it("should keep hits independent from limit and omit propertyName", async () => {
@@ -366,6 +388,7 @@ describe("Test GpfWfsGetFeaturesTool", () => {
     });
 
     expect(response.isError).toBeUndefined();
+    expect(requests[0].query.exceptions).toEqual("application/json");
     expect(requests[0].query.count).toEqual("1");
     expect(requests[0].query.propertyName).toBeUndefined();
     const textContent = response.content[0];
@@ -419,6 +442,9 @@ describe("Test GpfWfsGetFeaturesTool", () => {
       throw new Error("expected text content");
     }
     expect(textContent.text).toContain('numberMatched="unknown"');
+    expect(response.structuredContent).toMatchObject({
+      type: "urn:geocontext:problem:execution-error",
+    });
   });
 
   it("should return feature_ref for non point layers with geometry set to null", async () => {
@@ -577,6 +603,9 @@ describe("Test GpfWfsGetFeaturesTool", () => {
     }
     expect(textContent.text).toContain("est introuvable");
     expect(textContent.text).toContain("localisant.404");
+    expect(response.structuredContent).toMatchObject({
+      type: "urn:geocontext:problem:execution-error",
+    });
   });
 
   it("should reject intersects_feature on the same typename and guide to by-id tool", async () => {
@@ -602,6 +631,9 @@ describe("Test GpfWfsGetFeaturesTool", () => {
     }
     expect(textContent.text).toContain("gpf_wfs_get_feature_by_id");
     expect(textContent.text).toContain("intersects_feature");
+    expect(response.structuredContent).toMatchObject({
+      type: "urn:geocontext:problem:execution-error",
+    });
     expect(requests).toHaveLength(0);
   });
 });

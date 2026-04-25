@@ -2,7 +2,7 @@
  * MCP tool exposing urban planning information around a given point.
  */
 
-import { MCPTool } from "mcp-framework";
+import BaseTool from "./BaseTool.js";
 import { z } from "zod";
 
 import { getUrbanisme, URBANISME_SOURCE } from "../gpf/urbanisme.js";
@@ -48,7 +48,7 @@ const URBANISME_TOOL_DESCRIPTION = [
 
 // --- Tool ---
 
-class UrbanismeTool extends MCPTool<UrbanismeInput> {
+class UrbanismeTool extends BaseTool<UrbanismeInput> {
   name = "urbanisme";
   title = "Informations d’urbanisme";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;

@@ -105,6 +105,7 @@ export function buildMainRequest(
     request: "GetFeature",
     typeNames: input.typename,
     outputFormat: "application/json",
+    exceptions: "application/json",
     count: input.result_type === "hits" ? "1" : String(input.limit),
   };
 
@@ -140,6 +141,7 @@ export function buildReferenceGeometryRequest(typename: string, featureId: strin
     request: "GetFeature",
     typeNames: typename,
     outputFormat: "application/json",
+    exceptions: "application/json",
     featureID: featureId,
     propertyName: geometryPropertyName,
     count: "1",
@@ -173,6 +175,7 @@ export function buildGetFeatureByIdRequest(
     request: "GetFeature",
     typeNames: typename,
     outputFormat: "application/json",
+    exceptions: "application/json",
     featureID: featureId,
     count: "2",
   };
