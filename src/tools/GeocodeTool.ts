@@ -2,7 +2,7 @@
  * MCP tool exposing free-text geocoding and autocomplete.
  */
 
-import { MCPTool } from "mcp-framework";
+import BaseTool from "./BaseTool.js";
 import { z } from "zod";
 
 import { geocode, GEOCODE_SOURCE } from "../gpf/geocode.js";
@@ -44,7 +44,7 @@ const geocodeOutputSchema = z.object({
 
 // --- Tool ---
 
-class GeocodeTool extends MCPTool<GeocodeInput> {
+class GeocodeTool extends BaseTool<GeocodeInput> {
   name = "geocode";
   title = "Géocodage de lieux et d’adresses";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;

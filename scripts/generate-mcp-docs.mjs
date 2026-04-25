@@ -33,6 +33,10 @@ const miniSearchOptionsEnv = "GPF_WFS_MINISEARCH_OPTIONS";
  * @property {JsonSchema=} outputSchema
  */
 
+/**
+ * @typedef {ToolDefinition & {source: string, _instance: import("mcp-framework").MCPTool}} LoadedTool
+ */
+
 function formatInline(value) {
   return typeof value === "string" ? value : JSON.stringify(value);
 }
@@ -247,12 +251,14 @@ async function loadToolDefinitions() {
 
   const filenames = (await readdir(compiledToolsDir))
     .filter((filename) => filename.endsWith("Tool.js"))
+    .filter((filename) => filename !== "BaseTool.js")
     .sort((left, right) => left.localeCompare(right));
 
   if (filenames.length === 0) {
     throw new Error(`No tool modules found in ${compiledToolsDir}. Run \`npm run build\` first.`);
   }
 
+  /** @type {LoadedTool[]} */
   const definitions = [];
 
   for (const filename of filenames) {
@@ -268,6 +274,7 @@ async function loadToolDefinitions() {
     assertToolDefinition(instance.toolDefinition, filename);
     definitions.push({
       source: sourcePathForCompiledTool(filename),
+      _instance: instance,
       ...instance.toolDefinition,
     });
   }
@@ -285,11 +292,86 @@ async function loadToolDefinitions() {
   return definitions.sort((left, right) => left.name.localeCompare(right.name));
 }
 
-function buildDocumentLines(pkg, tools) {
+function normalizeErrorResponse(response) {
+  if (!response || typeof response !== "object") {
+    return undefined;
+  }
+
+  const source = /** @type {Record<string, unknown>} */ (response);
+  if (source.isError !== true || !Array.isArray(source.content)) {
+    return undefined;
+  }
+
+  return {
+    isError: true,
+    content: source.content,
+    ...(source.structuredContent !== undefined ? { structuredContent: source.structuredContent } : {}),
+  };
+}
+
+async function buildErrorExample(tools) {
+  for (const tool of tools) {
+    try {
+      const response = await tool._instance.toolCall({
+        params: {
+          name: tool.name,
+          arguments: {},
+        },
+      });
+
+      if (response?.isError !== true) {
+        continue;
+      }
+
+      const normalized = normalizeErrorResponse(response);
+      if (normalized) {
+        return {
+          toolName: tool.name,
+          response: normalized,
+        };
+      }
+    } catch {
+      // Try next tool if this one does not produce a clean validation error sample.
+    }
+  }
+
+  return undefined;
+}
+
+async function buildErrorContractSection(tools) {
+  const errorExample = await buildErrorExample(tools);
+  if (!errorExample) {
+    return [];
+  }
+
+  const errorExampleWithJsonRpcEnvelope = {
+    jsonrpc: "2.0",
+    id: `${errorExample.toolName}:invalid-input-example`,
+    result: errorExample.response,
+  };
+
+  return [
+    "## Contrat d’erreur MCP",
+    "",
+    "- En cas d'échec, chaque tool renvoie `isError: true`.",
+    "- `content.text` contient le message de détail en français (aligné avec `structuredContent.detail`).",
+    "- `structuredContent` contient l'objet canonique exploitable par un client.",
+    "",
+    "Exemple complet généré automatiquement à partir d'un appel de tool invalide (contrainte de validation) :",
+    "",
+    "```json",
+    JSON.stringify(errorExampleWithJsonRpcEnvelope, null, 2),
+    "```",
+  ];
+}
+
+async function buildDocumentLines(pkg, tools) {
+  const errorContractSection = await buildErrorContractSection(tools);
   const lines = [
     "# MCP Tool Reference",
     "",
     `Generated from runtime \`toolDefinition\` metadata for \`${pkg.name}\` v${pkg.version}.`,
+    ...(errorContractSection.length > 0 ? ["", ...errorContractSection] : []),
     "",
     "## Index",
     "",
@@ -330,7 +412,7 @@ function buildDocumentLines(pkg, tools) {
 export async function main() {
   const pkg = await loadPackageMetadata();
   const tools = await loadToolDefinitions();
-  const content = `${buildDocumentLines(pkg, tools).join("\n")}\n`;
+  const content = `${(await buildDocumentLines(pkg, tools)).join("\n")}\n`;
 
   await mkdir(dirname(outputPath), { recursive: true });
 

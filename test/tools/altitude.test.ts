@@ -87,6 +87,15 @@ describe("Test AltitudeTool",() => {
         if (textContent.type !== "text") {
             throw new Error("expected text content");
         }
-        expect(textContent.text).toContain("Number must be less than or equal to 180");
+        expect(textContent.text).toContain("Paramètres invalides");
+        expect(response.structuredContent).toMatchObject({
+            type: "urn:geocontext:problem:invalid-tool-params",
+            errors: expect.arrayContaining([
+                expect.objectContaining({
+                    name: "lon",
+                    code: "too_big",
+                }),
+            ]),
+        });
     });
 });

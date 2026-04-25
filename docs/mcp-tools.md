@@ -2,6 +2,47 @@
 
 Generated from runtime `toolDefinition` metadata for `@ignfab/geocontext` v0.9.7.
 
+## Contrat d’erreur MCP
+
+- En cas d'échec, chaque tool renvoie `isError: true`.
+- `content.text` contient le message de détail en français (aligné avec `structuredContent.detail`).
+- `structuredContent` contient l'objet canonique exploitable par un client.
+
+Exemple complet généré automatiquement à partir d'un appel de tool invalide (contrainte de validation) :
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "adminexpress:invalid-input-example",
+  "result": {
+    "isError": true,
+    "content": [
+      {
+        "type": "text",
+        "text": "Paramètres invalides : Le paramètre 'lon' est requis. Le paramètre 'lat' est requis."
+      }
+    ],
+    "structuredContent": {
+      "type": "urn:geocontext:problem:invalid-tool-params",
+      "title": "Paramètres d’outil invalides",
+      "detail": "Paramètres invalides : Le paramètre 'lon' est requis. Le paramètre 'lat' est requis.",
+      "errors": [
+        {
+          "code": "invalid_type",
+          "detail": "Le paramètre 'lon' est requis.",
+          "name": "lon"
+        },
+        {
+          "code": "invalid_type",
+          "detail": "Le paramètre 'lat' est requis.",
+          "name": "lat"
+        }
+      ]
+    }
+  }
+}
+```
+
 ## Index
 
 - [`adminexpress`](#adminexpress)

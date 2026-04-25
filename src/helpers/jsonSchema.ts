@@ -10,7 +10,7 @@ export type PublishedInputSchema = {
 };
 
 /**
- * Converts a Zod input schema into an MCP-compatible JSON Schema for publication.
+ * Converts a Zod v3 input schema into an MCP-compatible JSON Schema for publication.
  *
  * Uses strict union emission and, for `z.pipe(...)`, publishes the pre-transform
  * argument shape (the value callers must send), not the transformed output shape.

@@ -10,7 +10,7 @@
  * not preserve full FeatureCollection semantics in its public outputs.
  */
 
-import { fetchJSON } from "./http.js";
+import { fetchJSONGet } from "./http.js";
 import type { JsonFetcher } from "./http.js";
 import type { Geometry, Point } from "geojson";
 
@@ -58,13 +58,14 @@ export async function fetchWfsFeatures<TFeature extends WfsFeatureBase = WfsFeat
   typeNames: string[],
   cqlFilter: string,
   errorLabel: string,
-  fetcher: JsonFetcher<WfsFeatureCollection<TFeature>> = fetchJSON,
+  fetcher: JsonFetcher<WfsFeatureCollection<TFeature>> = fetchJSONGet,
 ): Promise<TFeature[]> {
   const url = GPF_WFS_BASE_URL + "?" + new URLSearchParams({
     service: "WFS",
     request: "GetFeature",
     typeName: typeNames.join(","),
     outputFormat: "application/json",
+    exceptions: "application/json",
     cql_filter: cqlFilter,
   }).toString();
 

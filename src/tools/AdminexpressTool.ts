@@ -2,7 +2,7 @@
  * MCP tool exposing administrative units that cover a given point.
  */
 
-import { MCPTool } from "mcp-framework";
+import BaseTool from "./BaseTool.js";
 import { z } from "zod";
 
 import { getAdminUnits, ADMINEXPRESS_TYPES, ADMINEXPRESS_SOURCE } from "../gpf/adminexpress.js";
@@ -35,7 +35,7 @@ const adminexpressOutputSchema = z.object({
 
 // --- Tool ---
 
-class AdminexpressTool extends MCPTool<AdminexpressInput> {
+class AdminexpressTool extends BaseTool<AdminexpressInput> {
   name = "adminexpress";
   title = "Unités administratives";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;

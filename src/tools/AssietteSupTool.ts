@@ -2,7 +2,7 @@
  * MCP tool exposing nearby servitudes d'utilité publique for a given point.
  */
 
-import { MCPTool } from "mcp-framework";
+import BaseTool from "./BaseTool.js";
 import { z } from "zod";
 
 import { getAssiettesServitudes, URBANISME_SOURCE } from "../gpf/urbanisme.js";
@@ -36,7 +36,7 @@ const assietteSupOutputSchema = z.object({
 
 // --- Tool ---
 
-class AssietteSupTool extends MCPTool<AssietteSupInput> {
+class AssietteSupTool extends BaseTool<AssietteSupInput> {
   name = "assiette_sup";
   title = "Servitudes d’utilité publique";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;

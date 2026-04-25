@@ -6,7 +6,7 @@
  * is delegated to the structured WFS engine.
  */
 
-import { MCPTool } from "mcp-framework";
+import BaseTool from "./BaseTool.js";
 
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import { buildPropertyName, executeGetFeatureById } from "../helpers/wfs_engine/byId.js";
@@ -24,7 +24,7 @@ import {
 
 // --- Tool ---
 
-class GpfWfsGetFeatureByIdTool extends MCPTool<GpfWfsGetFeatureByIdInput> {
+class GpfWfsGetFeatureByIdTool extends BaseTool<GpfWfsGetFeatureByIdInput> {
   name = "gpf_wfs_get_feature_by_id";
   title = "Lecture d’un objet WFS par identifiant";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;

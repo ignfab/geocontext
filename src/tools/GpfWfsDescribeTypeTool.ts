@@ -2,7 +2,7 @@
  * MCP tool exposing detailed schema inspection for a single WFS type.
  */
 
-import { MCPTool } from "mcp-framework";
+import BaseTool from "./BaseTool.js";
 import { z } from "zod";
 import type { Collection } from "@ignfab/gpf-schema-store";
 
@@ -45,7 +45,7 @@ const gpfWfsDescribeTypeOutputSchema = z.object({
 
 // --- Tool ---
 
-class GpfWfsDescribeTypeTool extends MCPTool<GpfWfsDescribeTypeInput> {
+class GpfWfsDescribeTypeTool extends BaseTool<GpfWfsDescribeTypeInput> {
   name = "gpf_wfs_describe_type";
   title = "Description d’un type WFS";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;

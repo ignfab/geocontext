@@ -89,6 +89,16 @@ describe("Test GeocodeTool",() => {
         if (textContent.type !== "text") {
             throw new Error("expected text content");
         }
-        expect(textContent.text).toContain("le texte ne doit pas être vide");
+        expect(textContent.text).toContain("Paramètres invalides");
+        expect(response.structuredContent).toMatchObject({
+            type: "urn:geocontext:problem:invalid-tool-params",
+            errors: expect.arrayContaining([
+                expect.objectContaining({
+                    name: "text",
+                    code: "too_small",
+                    detail: "le texte ne doit pas être vide",
+                }),
+            ]),
+        });
     });
 });

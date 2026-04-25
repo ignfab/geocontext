@@ -2,7 +2,7 @@
  * MCP tool exposing keyword-based search over the embedded WFS type catalog.
  */
 
-import { MCPTool } from "mcp-framework";
+import BaseTool from "./BaseTool.js";
 import { z } from "zod";
 
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
@@ -42,7 +42,7 @@ const gpfWfsSearchTypesOutputSchema = z.object({
 
 // --- Tool ---
 
-class GpfWfsSearchTypesTool extends MCPTool<GpfWfsSearchTypesInput> {
+class GpfWfsSearchTypesTool extends BaseTool<GpfWfsSearchTypesInput> {
   name = "gpf_wfs_search_types";
   title = "Recherche de types WFS";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;

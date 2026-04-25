@@ -2,7 +2,7 @@
  * MCP tool exposing nearby cadastral objects for a given point.
  */
 
-import { MCPTool } from "mcp-framework";
+import BaseTool from "./BaseTool.js";
 import { z } from "zod";
 
 import { getParcellaireExpress, PARCELLAIRE_EXPRESS_TYPES, PARCELLAIRE_EXPRESS_SOURCE } from "../gpf/parcellaire-express.js";
@@ -37,7 +37,7 @@ const cadastreOutputSchema = z.object({
 
 // --- Tool ---
 
-class CadastreTool extends MCPTool<CadastreInput> {
+class CadastreTool extends BaseTool<CadastreInput> {
   name = "cadastre";
   title = "Informations cadastrales";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
