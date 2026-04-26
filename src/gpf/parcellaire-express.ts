@@ -72,23 +72,25 @@ function filterByDistance(items: ParcellaireExpressItem[]): ParcellaireExpressIt
 export async function getParcellaireExpress(lon: number, lat: number): Promise<ParcellaireExpressItem[]> {
     logger.info(`getParcellaireExpress(${lon},${lat}) ...`);
 
-    // Resolve the geometry property name from the embedded catalog
-    const featureType = await getFeatureType(PARCELLAIRE_EXPRESS_TYPENAMES[0]);
-    const geometryProperty = getGeometryProperty(featureType);
-
-    // Compile the spatial filter using the engine
     const spatialFilter: SpatialFilter = {
         operator: "dwithin_point",
         lon,
         lat,
         distance_m: 10,
     };
-    const cqlFilter = compileDwithinSpatialFilter(geometryProperty, spatialFilter);
+
+    // Resolve and compile one spatial filter per typename to avoid relying on
+    // cross-layer geometry property homogeneity.
+    const cqlFilters = await Promise.all(PARCELLAIRE_EXPRESS_TYPENAMES.map(async (typename) => {
+        const featureType = await getFeatureType(typename);
+        const geometryProperty = getGeometryProperty(featureType);
+        return compileDwithinSpatialFilter(geometryProperty, spatialFilter);
+    }));
 
     // Execute the multi-typename WFS query
     const featureCollection: WfsFeatureCollectionResponse = await fetchWfsMultiTypename({
         typenames: PARCELLAIRE_EXPRESS_TYPENAMES,
-        cqlFilter,
+        cqlFilters,
         errorLabel: 'PARCELLAIRE_EXPRESS',
     });
 

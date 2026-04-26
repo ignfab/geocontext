@@ -65,23 +65,25 @@ function sanitizeUrbanismeItem(item: UrbanismeItem): Record<string, unknown> {
 export async function getUrbanisme(lon: number, lat: number): Promise<Record<string, unknown>[]> {
     logger.info(`getUrbanisme(${lon},${lat})...`);
 
-    // Resolve the geometry property name from the embedded catalog
-    const featureType = await getFeatureType(URBANISME_TYPES[0]);
-    const geometryProperty = getGeometryProperty(featureType);
-
-    // Compile the spatial filter using the engine
     const spatialFilter: SpatialFilter = {
         operator: "dwithin_point",
         lon,
         lat,
         distance_m: 30,
     };
-    const cqlFilter = compileDwithinSpatialFilter(geometryProperty, spatialFilter);
+
+    // Resolve and compile one spatial filter per typename to avoid relying on
+    // cross-layer geometry property homogeneity.
+    const cqlFilters = await Promise.all(URBANISME_TYPES.map(async (typename) => {
+        const featureType = await getFeatureType(typename);
+        const geometryProperty = getGeometryProperty(featureType);
+        return compileDwithinSpatialFilter(geometryProperty, spatialFilter);
+    }));
 
     // Execute the multi-typename WFS query
     const featureCollection: WfsFeatureCollectionResponse = await fetchWfsMultiTypename({
         typenames: URBANISME_TYPES,
-        cqlFilter,
+        cqlFilters,
         errorLabel: 'Urbanisme',
     });
 
@@ -115,23 +117,25 @@ const ASSIETTES_SUP_TYPES = [
 export async function getAssiettesServitudes(lon: number, lat: number): Promise<UrbanismeItem[]> {
     logger.info(`getAssiettesServitudes(${lon},${lat})...`);
 
-    // Resolve the geometry property name from the embedded catalog
-    const featureType = await getFeatureType(ASSIETTES_SUP_TYPES[0]);
-    const geometryProperty = getGeometryProperty(featureType);
-
-    // Compile the spatial filter using the engine
     const spatialFilter: SpatialFilter = {
         operator: "dwithin_point",
         lon,
         lat,
         distance_m: 30,
     };
-    const cqlFilter = compileDwithinSpatialFilter(geometryProperty, spatialFilter);
+
+    // Resolve and compile one spatial filter per typename to avoid relying on
+    // cross-layer geometry property homogeneity.
+    const cqlFilters = await Promise.all(ASSIETTES_SUP_TYPES.map(async (typename) => {
+        const featureType = await getFeatureType(typename);
+        const geometryProperty = getGeometryProperty(featureType);
+        return compileDwithinSpatialFilter(geometryProperty, spatialFilter);
+    }));
 
     // Execute the multi-typename WFS query
     const featureCollection: WfsFeatureCollectionResponse = await fetchWfsMultiTypename({
         typenames: ASSIETTES_SUP_TYPES,
-        cqlFilter,
+        cqlFilters,
         errorLabel: 'Urbanisme',
     });
 

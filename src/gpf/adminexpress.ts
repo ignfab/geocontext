@@ -48,19 +48,20 @@ const ADMINEXPRESS_TYPENAMES = ADMINEXPRESS_TYPES.map((type) => `ADMINEXPRESS-CO
 export async function getAdminUnits(lon: number, lat: number): Promise<AdminUnit[]> {
     logger.info(`[adminexpress] getAdminUnits(${lon},${lat})...`);
 
-    // Resolve the geometry property name from the embedded catalog
-    // (all ADMINEXPRESS types share the same schema, querying the first is sufficient)
-    const featureType = await getFeatureType(ADMINEXPRESS_TYPENAMES[0]);
-    const geometryProperty = getGeometryProperty(featureType);
-
-    // Compile the spatial filter using the engine
     const spatialFilter: SpatialFilter = { operator: "intersects_point", lon, lat };
-    const cqlFilter = compileIntersectsPointSpatialFilter(geometryProperty, spatialFilter);
+
+    // Resolve and compile one spatial filter per typename to avoid relying on
+    // cross-layer geometry property homogeneity.
+    const cqlFilters = await Promise.all(ADMINEXPRESS_TYPENAMES.map(async (typename) => {
+        const featureType = await getFeatureType(typename);
+        const geometryProperty = getGeometryProperty(featureType);
+        return compileIntersectsPointSpatialFilter(geometryProperty, spatialFilter);
+    }));
 
     // Execute the multi-typename WFS query
     const featureCollection: WfsFeatureCollectionResponse = await fetchWfsMultiTypename({
         typenames: ADMINEXPRESS_TYPENAMES,
-        cqlFilter,
+        cqlFilters,
         errorLabel: 'ADMINEXPRESS',
     });
 
