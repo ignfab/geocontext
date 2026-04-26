@@ -1,12 +1,21 @@
-import {getUrbanisme, getAssiettesServitudes} from "../../src/gpf/urbanisme.js";
+import { vi } from "vitest";
 import { chamonix, mairieLoray } from "../samples";
-import type { Point } from "geojson";
+
+const mockGetFeatureType = vi.fn<(typename: string) => Promise<any>>();
+const mockFetchWfsMultiTypename = vi.fn<(input: any) => Promise<any>>();
+
+vi.doMock("../../src/helpers/wfs_engine/execution.js", () => ({
+    getFeatureType: mockGetFeatureType,
+    fetchWfsMultiTypename: mockFetchWfsMultiTypename,
+}));
+
+const { getUrbanisme, getAssiettesServitudes } = await import("../../src/gpf/urbanisme.js");
 
 const urbanismeFeatureCollection: {
     features: Array<{
         id: string;
         bbox: number[];
-        geometry: Point;
+        geometry: { type: string; coordinates: number[] };
         properties: Record<string, string | null>;
     }>;
 } = {
@@ -45,7 +54,7 @@ const assiettesFeatureCollection: {
     features: Array<{
         id: string;
         bbox: number[];
-        geometry: Point;
+        geometry: { type: string; coordinates: number[] };
         properties: Record<string, string>;
     }>;
 } = {
@@ -75,17 +84,31 @@ const assiettesFeatureCollection: {
     ],
 };
 
-describe("Test getUrbanisme",() => {
+describe("Test getUrbanisme", () => {
+    beforeEach(() => {
+        mockGetFeatureType.mockResolvedValue({
+            id: "wfs_scot:scot",
+            properties: [
+                { name: "geometrie", type: "multipolygon", defaultCrs: "EPSG:4326" },
+            ],
+        });
+        mockFetchWfsMultiTypename.mockResolvedValue(urbanismeFeatureCollection);
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
     it("should return the expected urbanisme objects for Chamonix", async () => {
         const c = chamonix.coordinates;
-        const items : any[] = await getUrbanisme(c[0],c[1], async () => urbanismeFeatureCollection);
+        const items: any[] = await getUrbanisme(c[0], c[1]);
 
         const itemsTypes = items.map((item) => item.type);
         expect(itemsTypes).toContain('document');
 
         // check item of type document
         {
-            const document = items.filter((item)=>item.type === 'document')[0];
+            const document = items.filter((item) => item.type === 'document')[0];
             expect(document).not.toBeUndefined();
             expect(document.feature_ref).toEqual({
                 typename: "wfs_du:document",
@@ -99,7 +122,7 @@ describe("Test getUrbanisme",() => {
 
     it("should filter non relevant urbanisme properties", async () => {
         const c = chamonix.coordinates;
-        const items : any[] = await getUrbanisme(c[0],c[1], async () => urbanismeFeatureCollection);
+        const items: any[] = await getUrbanisme(c[0], c[1]);
 
         expect(items.length).toBeGreaterThan(0);
 
@@ -112,15 +135,29 @@ describe("Test getUrbanisme",() => {
     });
 });
 
-describe("Test getAssiettesServitudes",() => {
+describe("Test getAssiettesServitudes", () => {
+    beforeEach(() => {
+        mockGetFeatureType.mockResolvedValue({
+            id: "wfs_sup:assiette_sup_p",
+            properties: [
+                { name: "geometrie", type: "multipolygon", defaultCrs: "EPSG:4326" },
+            ],
+        });
+        mockFetchWfsMultiTypename.mockResolvedValue(assiettesFeatureCollection);
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
     it("should return the expected assiettes for Loray", async () => {
         const c = mairieLoray.coordinates;
-        const items : any[] = await getAssiettesServitudes(c[0],c[1], async () => assiettesFeatureCollection);
+        const items: any[] = await getAssiettesServitudes(c[0], c[1]);
 
         const itemsTypes = items.map((item) => item.type);
         expect(itemsTypes).toContain('assiette_sup_s');
 
-        const names = items.map((item)=>item.nomsuplitt);
+        const names = items.map((item) => item.nomsuplitt);
         expect(names).toContain("Croix de l'ancien cimetière");
         expect(names).toContain('Fontaine-lavoir');
         expect(items[0].feature_ref).toEqual({

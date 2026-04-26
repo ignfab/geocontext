@@ -1,15 +1,24 @@
-import _ from 'lodash';
+/**
+ * Cadastral objects lookup via the Géoplateforme WFS service.
+ *
+ * This module uses the structured WFS engine for request execution and
+ * response mapping, resolving geometry property names dynamically from
+ * the embedded catalog.
+ */
 
-import distance from '../helpers/distance.js';
-import { fetchWfsFeatures, mapWfsFeature, toGeoJsonPoint } from '../helpers/wfs.js';
 import logger from '../logger.js';
+import distance from '../helpers/distance.js';
+import type { Point } from 'geojson';
 
-import type { JsonFetcher } from '../helpers/http.js';
-import type { WfsFeatureCollection, FlatWfsFeature, WfsFeatureWithGeometry } from '../helpers/wfs.js';
+import { getFeatureType, fetchWfsMultiTypename, type WfsFeatureCollectionResponse } from '../helpers/wfs_engine/execution.js';
+import { getGeometryProperty } from '../helpers/wfs_engine/properties.js';
+import { compileDwithinSpatialFilter } from '../helpers/wfs_engine/spatialCql.js';
+import { mapToFlatItemsWithGeometry, type FlatItem } from '../helpers/wfs_engine/response.js';
+import type { SpatialFilter } from '../helpers/wfs_engine/schema.js';
 
-type ParcellaireExpressItem = FlatWfsFeature & {
-  distance: number;
-  source: string;
+type ParcellaireExpressItem = FlatItem & {
+    distance: number;
+    source: string;
 };
 
 // CADASTRALPARCELS.PARCELLAIRE_EXPRESS:
@@ -17,7 +26,7 @@ type ParcellaireExpressItem = FlatWfsFeature & {
 
 export const PARCELLAIRE_EXPRESS_SOURCE = "Géoplateforme (WFS, CADASTRALPARCELS.PARCELLAIRE_EXPRESS)";
 export const PARCELLAIRE_EXPRESS_TYPES = [
-    'arrondissement', 
+    'arrondissement',
     'commune',
     'feuille',
     'parcelle',
@@ -25,19 +34,26 @@ export const PARCELLAIRE_EXPRESS_TYPES = [
     'localisant'
 ];
 
+const PARCELLAIRE_EXPRESS_TYPENAMES = PARCELLAIRE_EXPRESS_TYPES.map(
+    (type) => `CADASTRALPARCELS.PARCELLAIRE_EXPRESS:${type}`
+);
+
 /**
  * Filter items by distance keeping the nearest for each type.
  *
- * @param {array<object>} items 
- * @returns {array<ParcellaireExpressItem>}
+ * @param items Items sorted by type then distance.
+ * @returns One item per type (the nearest).
  */
 function filterByDistance(items: ParcellaireExpressItem[]): ParcellaireExpressItem[] {
-    const sortedItems = _.orderBy(items, ['type', 'distance'], ['asc', 'asc']);
+    const sorted = [...items].sort((a, b) => {
+        if (a.type !== b.type) return a.type.localeCompare(b.type);
+        return a.distance - b.distance;
+    });
 
-    const result = [];
-    let lastType = null;
-    for ( const item of sortedItems ){
-        if ( lastType === item.type ){
+    const result: ParcellaireExpressItem[] = [];
+    let lastType: string | null = null;
+    for (const item of sorted) {
+        if (lastType === item.type) {
             continue;
         }
         result.push(item);
@@ -46,31 +62,49 @@ function filterByDistance(items: ParcellaireExpressItem[]): ParcellaireExpressIt
     return result;
 }
 
-
 /**
- * Get items from CADASTRALPARCELS.PARCELLAIRE_EXPRESS near of a given location.
+ * Get items from CADASTRALPARCELS.PARCELLAIRE_EXPRESS near a given location.
  *
- * @see https://data.geopf.fr/wfs/ows?service=WFS&version=2.0.0&request=GetCapabilities
- * 
- * @param {number} lon 
- * @param {number} lat 
- * @param {JsonFetcher<WfsFeatureCollection>} [fetcher] - optional custom fetcher function
- * @returns {Promise<ParcellaireExpressItem[]>}
+ * @param lon Longitude of the query point.
+ * @param lat Latitude of the query point.
+ * @returns The nearest cadastral objects, at most one per cadastral type.
  */
-export async function getParcellaireExpress(lon: number, lat:number, fetcher?: JsonFetcher<WfsFeatureCollection<WfsFeatureWithGeometry>>): Promise<ParcellaireExpressItem[]> {
+export async function getParcellaireExpress(lon: number, lat: number): Promise<ParcellaireExpressItem[]> {
     logger.info(`getParcellaireExpress(${lon},${lat}) ...`);
-    // Using EWKT format with SRID=4326 prefix for standard lon,lat order
-    const cql_filter = `DWITHIN(geom,SRID=4326;POINT(${lon} ${lat}),10,meters)`;
-    const typeNames = PARCELLAIRE_EXPRESS_TYPES.map((type) => `CADASTRALPARCELS.PARCELLAIRE_EXPRESS:${type}`);
 
-    const sourceGeom = toGeoJsonPoint(lon, lat);
+    // Resolve the geometry property name from the embedded catalog
+    const featureType = await getFeatureType(PARCELLAIRE_EXPRESS_TYPENAMES[0]);
+    const geometryProperty = getGeometryProperty(featureType);
 
-    const features = await fetchWfsFeatures(typeNames, cql_filter, 'PARCELLAIRE_EXPRESS', fetcher);
-    return filterByDistance(features.map((feature) => ({
-        ...mapWfsFeature(feature, typeNames),
-        distance: distance(sourceGeom, feature.geometry),
-        source: PARCELLAIRE_EXPRESS_SOURCE,
-    })));
+    // Compile the spatial filter using the engine
+    const spatialFilter: SpatialFilter = {
+        operator: "dwithin_point",
+        lon,
+        lat,
+        distance_m: 10,
+    };
+    const cqlFilter = compileDwithinSpatialFilter(geometryProperty, spatialFilter);
+
+    // Execute the multi-typename WFS query
+    const featureCollection: WfsFeatureCollectionResponse = await fetchWfsMultiTypename({
+        typenames: PARCELLAIRE_EXPRESS_TYPENAMES,
+        cqlFilter,
+        errorLabel: 'PARCELLAIRE_EXPRESS',
+    });
+
+    // Map to flat items preserving geometry for distance calculation
+    const sourceGeom: Point = { type: "Point", coordinates: [lon, lat] };
+    const items = mapToFlatItemsWithGeometry(featureCollection, PARCELLAIRE_EXPRESS_TYPENAMES);
+
+    // Calculate distances, strip temporary geometry, and filter
+    const enrichedItems: ParcellaireExpressItem[] = items.map((item) => {
+        const { _rawGeometry: _, ...rest } = item;
+        return {
+            ...rest,
+            distance: distance(sourceGeom, (item as Record<string, unknown>)._rawGeometry as any),
+            source: PARCELLAIRE_EXPRESS_SOURCE,
+        };
+    });
+
+    return filterByDistance(enrichedItems);
 }
-
-

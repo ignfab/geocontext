@@ -1,9 +1,9 @@
 /**
- * Structured WFS response layer used by the MCP WFS tools.
+ * Structured WFS response layer used by the MCP WFS tools and domain-oriented modules.
  *
- * Unlike the legacy/simple helper layer in `src/helpers/wfs.ts`, this module
- * keeps the response shape aligned with FeatureCollection/Feature-style outputs
- * and applies targeted transformations needed by the generic WFS toolchain.
+ * This module provides:
+ * - FeatureCollection-preserving transformations for the MCP WFS tools
+ * - Flat item mapping for domain-oriented modules (`src/gpf/*`)
  */
 
 // --- Response Types ---
@@ -18,6 +18,19 @@ type GenericFeature = {
 type GenericFeatureCollection = {
   features?: GenericFeature[];
   [key: string]: unknown;
+};
+
+/**
+ * A flattened WFS feature with properties spread at the top level.
+ *
+ * This is the output format used by domain-oriented modules (`src/gpf/*`)
+ * as opposed to the FeatureCollection-preserving format used by the MCP WFS tools.
+ */
+export type FlatItem = Record<string, unknown> & {
+  type: string;
+  id: string;
+  bbox?: number[];
+  feature_ref?: { typename: string; feature_id: string };
 };
 
 // --- Response Transformation ---
@@ -89,4 +102,86 @@ export function attachFeatureRefs(featureCollection: GenericFeatureCollection, t
   });
 
   return transformed;
+}
+
+// --- Flat Item Mapping ---
+
+/**
+ * Resolves the fully qualified typename from a feature id prefix and a list of known typenames.
+ *
+ * @param featureId Feature id (e.g. `"commune.8952"`).
+ * @param knownTypeNames Fully qualified typenames to match against.
+ * @returns The matching typename, or `undefined`.
+ */
+function resolveTypename(featureId: string, knownTypeNames: string[]): string | undefined {
+  const featureType = featureId.split(".")[0];
+  return knownTypeNames.find((candidate) => candidate.endsWith(`:${featureType}`));
+}
+
+/**
+ * Maps a single WFS feature to a flat item with spread properties and optional `feature_ref`.
+ *
+ * @param feature Raw WFS feature from the response.
+ * @param knownTypeNames Fully qualified typenames used for `feature_ref` resolution.
+ * @returns A flat item with type, id, bbox, optional feature_ref, and spread properties.
+ */
+function mapFeatureToFlatItem(feature: GenericFeature, knownTypeNames: string[]): FlatItem {
+  const { properties, id, bbox, geometry: _geometry, geometry_name: _geometryName, ...rest } = feature;
+
+  const featureId = typeof id === "string" ? id : "unknown";
+  const typename = resolveTypename(featureId, knownTypeNames);
+
+  return {
+    ...(properties as Record<string, unknown> ?? {}),
+    ...rest,
+    type: featureId.split(".")[0],
+    id: featureId,
+    ...(bbox ? { bbox: bbox as number[] } : {}),
+    ...(typename ? { feature_ref: { typename, feature_id: featureId } } : {}),
+  };
+}
+
+/**
+ * Maps a FeatureCollection to an array of flat items without preserving geometry.
+ *
+ * @param featureCollection Raw FeatureCollection returned by the WFS endpoint.
+ * @param knownTypeNames Fully qualified typenames used for `feature_ref` resolution.
+ * @returns An array of flat items with spread properties and `feature_ref`.
+ */
+export function mapToFlatItems(
+  featureCollection: GenericFeatureCollection,
+  knownTypeNames: string[],
+): FlatItem[] {
+  if (!Array.isArray(featureCollection.features)) {
+    return [];
+  }
+  return featureCollection.features.map((feature) =>
+    mapFeatureToFlatItem(feature, knownTypeNames),
+  );
+}
+
+/**
+ * Maps a FeatureCollection to an array of flat items preserving raw geometry
+ * in a temporary `_rawGeometry` field for downstream distance calculations.
+ *
+ * Callers should strip `_rawGeometry` from the final output.
+ *
+ * @param featureCollection Raw FeatureCollection returned by the WFS endpoint.
+ * @param knownTypeNames Fully qualified typenames used for `feature_ref` resolution.
+ * @returns An array of flat items with `_rawGeometry` preserved.
+ */
+export function mapToFlatItemsWithGeometry(
+  featureCollection: GenericFeatureCollection,
+  knownTypeNames: string[],
+): FlatItem[] {
+  if (!Array.isArray(featureCollection.features)) {
+    return [];
+  }
+  return featureCollection.features.map((feature) => {
+    const flatItem = mapFeatureToFlatItem(feature, knownTypeNames);
+    return {
+      ...flatItem,
+      _rawGeometry: feature.geometry ?? null,
+    };
+  });
 }

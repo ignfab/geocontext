@@ -1,11 +1,23 @@
-import distance from "../helpers/distance.js";
-import { fetchWfsFeatures, mapWfsFeature, toGeoJsonPoint } from "../helpers/wfs.js";
-import logger from "../logger.js";
-import type { FlatWfsFeature, WfsFeatureCollection, WfsFeatureWithGeometry } from "../helpers/wfs.js";
-import type { JsonFetcher } from '../helpers/http.js';
+/**
+ * Urban planning and SUP (servitudes d'utilité publique) lookup via the Géoplateforme WFS service.
+ *
+ * This module uses the structured WFS engine for request execution and
+ * response mapping, resolving geometry property names dynamically from
+ * the embedded catalog.
+ */
 
-type UrbanismeItem = FlatWfsFeature & {
-  distance: number;
+import logger from '../logger.js';
+import distance from '../helpers/distance.js';
+import type { Point } from 'geojson';
+
+import { getFeatureType, fetchWfsMultiTypename, type WfsFeatureCollectionResponse } from '../helpers/wfs_engine/execution.js';
+import { getGeometryProperty } from '../helpers/wfs_engine/properties.js';
+import { compileDwithinSpatialFilter } from '../helpers/wfs_engine/spatialCql.js';
+import { mapToFlatItemsWithGeometry, type FlatItem } from '../helpers/wfs_engine/response.js';
+import type { SpatialFilter } from '../helpers/wfs_engine/schema.js';
+
+type UrbanismeItem = FlatItem & {
+    distance: number;
 };
 
 // https://data.geopf.fr/wfs/ows?service=WFS&version=2.0.0&request=GetCapabilities
@@ -43,30 +55,47 @@ function sanitizeUrbanismeItem(item: UrbanismeItem): Record<string, unknown> {
     return sanitized;
 }
 
-
 /**
- * Get urbanism infos for a given location
+ * Get urbanism infos for a given location.
  *
- * @param {number} lon 
- * @param {number} lat 
- * @param {JsonFetcher<WfsFeatureCollection>} [fetcher] - optional custom fetcher function
- * @returns {Promise<Record<string, unknown>[]>}
+ * @param lon Longitude of the query point.
+ * @param lat Latitude of the query point.
+ * @returns Urban planning objects relevant to the requested point.
  */
-export async function getUrbanisme(lon: number, lat: number, fetcher?: JsonFetcher<WfsFeatureCollection<WfsFeatureWithGeometry>>): Promise<Record<string, unknown>[]> {
+export async function getUrbanisme(lon: number, lat: number): Promise<Record<string, unknown>[]> {
     logger.info(`getUrbanisme(${lon},${lat})...`);
 
-    // Using EWKT format with SRID=4326 prefix for standard lon,lat order
-    const cql_filter = `DWITHIN(the_geom,SRID=4326;POINT(${lon} ${lat}),30,meters)`;
+    // Resolve the geometry property name from the embedded catalog
+    const featureType = await getFeatureType(URBANISME_TYPES[0]);
+    const geometryProperty = getGeometryProperty(featureType);
 
-    const sourceGeom = toGeoJsonPoint(lon, lat);
+    // Compile the spatial filter using the engine
+    const spatialFilter: SpatialFilter = {
+        operator: "dwithin_point",
+        lon,
+        lat,
+        distance_m: 30,
+    };
+    const cqlFilter = compileDwithinSpatialFilter(geometryProperty, spatialFilter);
 
-    const features = await fetchWfsFeatures(URBANISME_TYPES, cql_filter, 'Urbanisme', fetcher);
-    return features.map((feature) => {
-        const item = {
-            ...mapWfsFeature(feature, URBANISME_TYPES),
-            distance: distance(sourceGeom, feature.geometry),
+    // Execute the multi-typename WFS query
+    const featureCollection: WfsFeatureCollectionResponse = await fetchWfsMultiTypename({
+        typenames: URBANISME_TYPES,
+        cqlFilter,
+        errorLabel: 'Urbanisme',
+    });
+
+    // Map to flat items preserving geometry for distance calculation
+    const sourceGeom: Point = { type: "Point", coordinates: [lon, lat] };
+    const items = mapToFlatItemsWithGeometry(featureCollection, URBANISME_TYPES);
+
+    return items.map((item) => {
+        const { _rawGeometry: _, ...rest } = item;
+        const urbanismeItem: UrbanismeItem = {
+            ...rest,
+            distance: distance(sourceGeom, (item as Record<string, unknown>)._rawGeometry as any),
         };
-        return sanitizeUrbanismeItem(item);
+        return sanitizeUrbanismeItem(urbanismeItem);
     });
 }
 
@@ -77,24 +106,44 @@ const ASSIETTES_SUP_TYPES = [
 ];
 
 /**
- * Get SUP infos for a given location
+ * Get SUP infos for a given location.
  *
- * @param {number} lon 
- * @param {number} lat 
- * @param {JsonFetcher<WfsFeatureCollection>} [fetcher] - optional custom fetcher function
- * @returns {Promise<UrbanismeItem[]>}
+ * @param lon Longitude of the query point.
+ * @param lat Latitude of the query point.
+ * @returns SUP footprints relevant to the requested point.
  */
-export async function getAssiettesServitudes(lon: number, lat: number, fetcher?: JsonFetcher<WfsFeatureCollection<WfsFeatureWithGeometry>>): Promise<UrbanismeItem[]> {
+export async function getAssiettesServitudes(lon: number, lat: number): Promise<UrbanismeItem[]> {
     logger.info(`getAssiettesServitudes(${lon},${lat})...`);
 
-    // Using EWKT format with SRID=4326 prefix for standard lon,lat order
-    const cql_filter = `DWITHIN(the_geom,SRID=4326;POINT(${lon} ${lat}),30,meters)`;
+    // Resolve the geometry property name from the embedded catalog
+    const featureType = await getFeatureType(ASSIETTES_SUP_TYPES[0]);
+    const geometryProperty = getGeometryProperty(featureType);
 
-    const sourceGeom = toGeoJsonPoint(lon, lat);
+    // Compile the spatial filter using the engine
+    const spatialFilter: SpatialFilter = {
+        operator: "dwithin_point",
+        lon,
+        lat,
+        distance_m: 30,
+    };
+    const cqlFilter = compileDwithinSpatialFilter(geometryProperty, spatialFilter);
 
-    const features = await fetchWfsFeatures(ASSIETTES_SUP_TYPES, cql_filter, 'Urbanisme', fetcher);
-    return features.map((feature) => ({
-        ...mapWfsFeature(feature, ASSIETTES_SUP_TYPES),
-        distance: distance(sourceGeom, feature.geometry),
-    }));
+    // Execute the multi-typename WFS query
+    const featureCollection: WfsFeatureCollectionResponse = await fetchWfsMultiTypename({
+        typenames: ASSIETTES_SUP_TYPES,
+        cqlFilter,
+        errorLabel: 'Urbanisme',
+    });
+
+    // Map to flat items preserving geometry for distance calculation
+    const sourceGeom: Point = { type: "Point", coordinates: [lon, lat] };
+    const items = mapToFlatItemsWithGeometry(featureCollection, ASSIETTES_SUP_TYPES);
+
+    return items.map((item) => {
+        const { _rawGeometry: _, ...rest } = item;
+        return {
+            ...rest,
+            distance: distance(sourceGeom, (item as Record<string, unknown>)._rawGeometry as any),
+        };
+    });
 }
