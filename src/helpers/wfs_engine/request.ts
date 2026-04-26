@@ -192,3 +192,50 @@ export function buildGetFeatureByIdRequest(
     get_url: buildGetUrl(GPF_WFS_URL, query),
   };
 }
+
+// --- Multi-typename Request ---
+
+/**
+ * Input parameters for building a multi-typename WFS request.
+ */
+export type MultiTypenameRequestInput = {
+  /** Fully qualified WFS type names to query. */
+  typenames: string[];
+  /** Pre-compiled CQL filter string, when the request needs one. */
+  cqlFilter?: string;
+};
+
+/**
+ * Builds a WFS GetFeature request targeting multiple typenames.
+ *
+ * Unlike `buildMainRequest()`, this builder accepts a raw CQL filter
+ * and a list of typenames, making it suitable for domain-oriented modules
+ * that query several layers at once.
+ *
+ * @param input Multi-typename request parameters.
+ * @returns A POST request split into base URL, query-string parameters, encoded body, and optional GET variant.
+ */
+export function buildMultiTypenameRequest(
+  input: MultiTypenameRequestInput,
+): CompiledRequest {
+  const query: Record<string, string> = {
+    service: "WFS",
+    version: "2.0.0",
+    request: "GetFeature",
+    typeNames: input.typenames.join(","),
+    outputFormat: "application/json",
+    exceptions: "application/json",
+  };
+
+  const body = input.cqlFilter
+    ? new URLSearchParams({ cql_filter: input.cqlFilter }).toString()
+    : "";
+
+  return {
+    method: "POST",
+    url: GPF_WFS_URL,
+    query,
+    body,
+    get_url: buildGetUrl(GPF_WFS_URL, query, input.cqlFilter),
+  };
+}

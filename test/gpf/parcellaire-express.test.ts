@@ -1,9 +1,17 @@
-import {getParcellaireExpress} from "../../src/gpf/parcellaire-express.js";
+import { vi } from "vitest";
 import { mairieLoray } from "../samples";
-import type { Point } from "geojson";
-import type { WfsFeatureCollection, WfsFeatureWithGeometry } from "../../src/helpers/wfs.js";
 
-const parcellaireExpressFeatureCollection: WfsFeatureCollection<WfsFeatureWithGeometry>  = {
+const mockGetFeatureType = vi.fn<(typename: string) => Promise<any>>();
+const mockFetchWfsMultiTypename = vi.fn<(input: any) => Promise<any>>();
+
+vi.doMock("../../src/helpers/wfs_engine/execution.js", () => ({
+    getFeatureType: mockGetFeatureType,
+    fetchWfsMultiTypename: mockFetchWfsMultiTypename,
+}));
+
+const { getParcellaireExpress } = await import("../../src/gpf/parcellaire-express.js");
+
+const parcellaireExpressFeatureCollection = {
     features: [
         {
             id: "commune.1",
@@ -50,10 +58,24 @@ const parcellaireExpressFeatureCollection: WfsFeatureCollection<WfsFeatureWithGe
     ],
 };
 
-describe("Test getParcellaireExpress",() => {
+describe("Test getParcellaireExpress", () => {
+    beforeEach(() => {
+        mockGetFeatureType.mockResolvedValue({
+            id: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:arrondissement",
+            properties: [
+                { name: "geometrie", type: "multipolygon", defaultCrs: "EPSG:4326" },
+            ],
+        });
+        mockFetchWfsMultiTypename.mockResolvedValue(parcellaireExpressFeatureCollection);
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
     it("should return the expected cadastral objects for Mairie de Loray", async () => {
         const c = mairieLoray.coordinates;
-        const items : any[] = await getParcellaireExpress(c[0],c[1], async () => parcellaireExpressFeatureCollection);
+        const items: any[] = await getParcellaireExpress(c[0], c[1]);
 
         const itemsTypes = items.map((item) => item.type);
         expect(itemsTypes).toEqual([
@@ -64,7 +86,7 @@ describe("Test getParcellaireExpress",() => {
 
         // check item of type parcelle
         {
-            const parcelle = items.filter((item)=>item.type === 'parcelle')[0];
+            const parcelle = items.filter((item) => item.type === 'parcelle')[0];
             expect(parcelle).not.toBeUndefined();
             expect(parcelle.feature_ref).toEqual({
                 typename: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:parcelle",

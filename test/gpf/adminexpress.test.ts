@@ -1,5 +1,15 @@
-import {getAdminUnits} from "../../src/gpf/adminexpress.js";
+import { vi } from "vitest";
 import { mairieLoray } from "../samples";
+
+const mockGetFeatureType = vi.fn<(typename: string) => Promise<any>>();
+const mockFetchWfsMultiTypename = vi.fn<(input: any) => Promise<any>>();
+
+vi.doMock("../../src/helpers/wfs_engine/execution.js", () => ({
+    getFeatureType: mockGetFeatureType,
+    fetchWfsMultiTypename: mockFetchWfsMultiTypename,
+}));
+
+const { getAdminUnits } = await import("../../src/gpf/adminexpress.js");
 
 const adminexpressFeatureCollection = {
     features: [
@@ -53,10 +63,24 @@ const adminexpressFeatureCollection = {
     ],
 };
 
-describe("Test getAdminUnits",() => {
+describe("Test getAdminUnits", () => {
+    beforeEach(() => {
+        mockGetFeatureType.mockResolvedValue({
+            id: "ADMINEXPRESS-COG.LATEST:arrondissement",
+            properties: [
+                { name: "geometrie", type: "multipolygon", defaultCrs: "EPSG:4326" },
+            ],
+        });
+        mockFetchWfsMultiTypename.mockResolvedValue(adminexpressFeatureCollection);
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
     it("should return the expected administrative units for Mairie de Loray", async () => {
         const c = mairieLoray.coordinates;
-        const items : any[] = await getAdminUnits(c[0],c[1], async () => adminexpressFeatureCollection);
+        const items: any[] = await getAdminUnits(c[0], c[1]);
 
         const itemsTypes = items.map((item) => item.type);
         expect(itemsTypes).toEqual([
@@ -71,7 +95,7 @@ describe("Test getAdminUnits",() => {
 
         // check item of type departement
         {
-            const departement = items.filter((item)=>item.type === 'departement')[0];
+            const departement = items.filter((item) => item.type === 'departement')[0];
             expect(departement).not.toBeUndefined();
             expect(departement.feature_ref).toEqual({
                 typename: "ADMINEXPRESS-COG.LATEST:departement",
@@ -86,7 +110,7 @@ describe("Test getAdminUnits",() => {
 
         // check item of type commune
         {
-            const commune = items.filter((item)=>item.type === 'commune')[0];
+            const commune = items.filter((item) => item.type === 'commune')[0];
             expect(commune).not.toBeUndefined();
             expect(commune.feature_ref).toEqual({
                 typename: "ADMINEXPRESS-COG.LATEST:commune",

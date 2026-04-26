@@ -8,8 +8,9 @@
  */
 
 import type { CompiledRequest } from "./request.js";
+import { buildMultiTypenameRequest } from "./request.js";
 import { wfsClient } from "../../gpf/wfs-schema-catalog.js";
-import { fetchJSONPost } from "../http.js";
+import { fetchJSONGet, fetchJSONPost } from "../http.js";
 
 // --- Response Types ---
 
@@ -77,4 +78,59 @@ export function getMatchedFeatureCount(featureCollection: WfsFeatureCollectionRe
     return featureCollection.totalFeatures;
   }
   throw new Error("Le service WFS n'a pas retourné de comptage exploitable");
+}
+
+// --- Multi-typename Execution ---
+
+/**
+ * Input parameters for multi-typename WFS execution.
+ */
+export type MultiTypenameExecutionInput = {
+  /** Fully qualified WFS type names to query. */
+  typenames: string[];
+  /** Pre-compiled CQL filter string, when the request needs one. */
+  cqlFilter?: string;
+  /** Service label used in error messages. */
+  errorLabel: string;
+};
+
+/**
+ * Executes a WFS GetFeature request targeting multiple typenames.
+ *
+ * Uses GET instead of POST because the GPF GeoServer rejects CQL filters
+ * with geometry column references when multiple typenames are queried via POST
+ * ("Extracted invalid join sub-filter ... it users more than one feature type").
+ *
+ * This helper is used by domain-oriented modules (`src/gpf/*`) that
+ * query several WFS layers at once with a pre-compiled CQL filter.
+ *
+ * @param input Multi-typename execution parameters.
+ * @returns The parsed JSON FeatureCollection returned by the WFS endpoint.
+ */
+export async function fetchWfsMultiTypename(
+  input: MultiTypenameExecutionInput,
+): Promise<WfsFeatureCollectionResponse> {
+  const request = buildMultiTypenameRequest({
+    typenames: input.typenames,
+    cqlFilter: input.cqlFilter,
+  });
+
+  const params = new URLSearchParams(request.query);
+  if (request.body) {
+    const bodyParams = new URLSearchParams(request.body);
+    for (const [key, value] of bodyParams.entries()) {
+      params.set(key, value);
+    }
+  }
+
+  const url = `${request.url}?${params.toString()}`;
+  const featureCollection = await fetchJSONGet(url) as WfsFeatureCollectionResponse;
+
+  if (!Array.isArray(featureCollection?.features)) {
+    throw new Error(
+      `Le service ${input.errorLabel} n'a pas retourné de collection d'objets exploitable`,
+    );
+  }
+
+  return featureCollection;
 }
