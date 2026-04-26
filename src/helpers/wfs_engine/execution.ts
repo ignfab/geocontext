@@ -10,7 +10,7 @@
 import type { CompiledRequest } from "./request.js";
 import { buildMultiTypenameRequest } from "./request.js";
 import { wfsClient } from "../../gpf/wfs-schema-catalog.js";
-import { fetchJSONGet, fetchJSONPost } from "../http.js";
+import { fetchJSONPost } from "../http.js";
 
 // --- Response Types ---
 
@@ -88,8 +88,10 @@ export function getMatchedFeatureCount(featureCollection: WfsFeatureCollectionRe
 export type MultiTypenameExecutionInput = {
   /** Fully qualified WFS type names to query. */
   typenames: string[];
-  /** Pre-compiled CQL filter string, when the request needs one. */
+  /** Pre-compiled CQL filter string, when one shared filter is intentionally reused for all typenames. */
   cqlFilter?: string;
+  /** Pre-compiled CQL filters aligned with `typenames` (same length, same order). */
+  cqlFilters?: string[];
   /** Service label used in error messages. */
   errorLabel: string;
 };
@@ -97,9 +99,9 @@ export type MultiTypenameExecutionInput = {
 /**
  * Executes a WFS GetFeature request targeting multiple typenames.
  *
- * Uses GET instead of POST because the GPF GeoServer rejects CQL filters
- * with geometry column references when multiple typenames are queried via POST
- * ("Extracted invalid join sub-filter ... it users more than one feature type").
+ * Uses the WFS 2.0.0 multi-typename format expected by GeoServer:
+ * - `typeNames=(type1)(type2)...`
+ * - `cql_filter=filter1;filter2;...` (one filter per typename, same order)
  *
  * This helper is used by domain-oriented modules (`src/gpf/*`) that
  * query several WFS layers at once with a pre-compiled CQL filter.
@@ -113,18 +115,14 @@ export async function fetchWfsMultiTypename(
   const request = buildMultiTypenameRequest({
     typenames: input.typenames,
     cqlFilter: input.cqlFilter,
+    cqlFilters: input.cqlFilters,
   });
 
-  const params = new URLSearchParams(request.query);
-  if (request.body) {
-    const bodyParams = new URLSearchParams(request.body);
-    for (const [key, value] of bodyParams.entries()) {
-      params.set(key, value);
-    }
-  }
-
-  const url = `${request.url}?${params.toString()}`;
-  const featureCollection = await fetchJSONGet(url) as WfsFeatureCollectionResponse;
+  const url = `${request.url}?${new URLSearchParams(request.query).toString()}`;
+  const featureCollection = await fetchJSONPost(url, request.body, {
+    "Content-Type": "application/x-www-form-urlencoded",
+    "Accept": "application/json",
+  }) as WfsFeatureCollectionResponse;
 
   if (!Array.isArray(featureCollection?.features)) {
     throw new Error(

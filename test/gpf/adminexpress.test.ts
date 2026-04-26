@@ -82,6 +82,15 @@ describe("Test getAdminUnits", () => {
         const c = mairieLoray.coordinates;
         const items: any[] = await getAdminUnits(c[0], c[1]);
 
+        expect(mockGetFeatureType).toHaveBeenCalledTimes(9);
+        expect(mockFetchWfsMultiTypename).toHaveBeenCalledWith(expect.objectContaining({
+            typenames: expect.any(Array),
+            cqlFilters: expect.any(Array),
+        }));
+        const fetchInput = mockFetchWfsMultiTypename.mock.calls[0]?.[0];
+        expect(fetchInput?.cqlFilters).toHaveLength(9);
+        expect(fetchInput?.cqlFilter).toBeUndefined();
+
         const itemsTypes = items.map((item) => item.type);
         expect(itemsTypes).toEqual([
             "commune",

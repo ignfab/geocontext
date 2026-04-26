@@ -201,8 +201,10 @@ export function buildGetFeatureByIdRequest(
 export type MultiTypenameRequestInput = {
   /** Fully qualified WFS type names to query. */
   typenames: string[];
-  /** Pre-compiled CQL filter string, when the request needs one. */
+  /** Pre-compiled CQL filter string, when one shared filter is intentionally reused for all typenames. */
   cqlFilter?: string;
+  /** Pre-compiled CQL filters aligned with `typenames` (same length, same order). */
+  cqlFilters?: string[];
 };
 
 /**
@@ -218,17 +220,35 @@ export type MultiTypenameRequestInput = {
 export function buildMultiTypenameRequest(
   input: MultiTypenameRequestInput,
 ): CompiledRequest {
+  if (input.cqlFilter && input.cqlFilters) {
+    throw new Error("`cqlFilter` et `cqlFilters` ne peuvent pas être utilisés ensemble.");
+  }
+  if (input.cqlFilters && input.cqlFilters.length !== input.typenames.length) {
+    throw new Error(
+      `Le nombre de filtres CQL (${input.cqlFilters.length}) doit correspondre au nombre de typenames (${input.typenames.length}).`,
+    );
+  }
+
+  const encodedTypeNames = input.typenames.map((typename) => `(${typename})`).join("");
+
+  const expandedCqlFilter = input.cqlFilters
+    ? input.cqlFilters.join(";")
+    : input.cqlFilter
+      ? input.typenames.map(() => input.cqlFilter).join(";")
+      : undefined;
+
   const query: Record<string, string> = {
     service: "WFS",
     version: "2.0.0",
     request: "GetFeature",
-    typeNames: input.typenames.join(","),
+    typeNames: encodedTypeNames,
     outputFormat: "application/json",
     exceptions: "application/json",
+    srsName: "EPSG:4326",
   };
 
-  const body = input.cqlFilter
-    ? new URLSearchParams({ cql_filter: input.cqlFilter }).toString()
+  const body = expandedCqlFilter
+    ? new URLSearchParams({ cql_filter: expandedCqlFilter }).toString()
     : "";
 
   return {
@@ -236,6 +256,6 @@ export function buildMultiTypenameRequest(
     url: GPF_WFS_URL,
     query,
     body,
-    get_url: buildGetUrl(GPF_WFS_URL, query, input.cqlFilter),
+    get_url: buildGetUrl(GPF_WFS_URL, query, expandedCqlFilter),
   };
 }

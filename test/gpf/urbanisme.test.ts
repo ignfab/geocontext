@@ -103,6 +103,15 @@ describe("Test getUrbanisme", () => {
         const c = chamonix.coordinates;
         const items: any[] = await getUrbanisme(c[0], c[1]);
 
+        expect(mockGetFeatureType).toHaveBeenCalledTimes(10);
+        expect(mockFetchWfsMultiTypename).toHaveBeenCalledWith(expect.objectContaining({
+            typenames: expect.any(Array),
+            cqlFilters: expect.any(Array),
+        }));
+        const fetchInput = mockFetchWfsMultiTypename.mock.calls[0]?.[0];
+        expect(fetchInput?.cqlFilters).toHaveLength(10);
+        expect(fetchInput?.cqlFilter).toBeUndefined();
+
         const itemsTypes = items.map((item) => item.type);
         expect(itemsTypes).toContain('document');
 
@@ -123,6 +132,10 @@ describe("Test getUrbanisme", () => {
     it("should filter non relevant urbanisme properties", async () => {
         const c = chamonix.coordinates;
         const items: any[] = await getUrbanisme(c[0], c[1]);
+
+        expect(mockGetFeatureType).toHaveBeenCalledTimes(10);
+        const fetchInput = mockFetchWfsMultiTypename.mock.calls[0]?.[0];
+        expect(fetchInput?.cqlFilters).toHaveLength(10);
 
         expect(items.length).toBeGreaterThan(0);
 
@@ -153,6 +166,11 @@ describe("Test getAssiettesServitudes", () => {
     it("should return the expected assiettes for Loray", async () => {
         const c = mairieLoray.coordinates;
         const items: any[] = await getAssiettesServitudes(c[0], c[1]);
+
+        expect(mockGetFeatureType).toHaveBeenCalledTimes(3);
+        const fetchInput = mockFetchWfsMultiTypename.mock.calls[0]?.[0];
+        expect(fetchInput?.cqlFilters).toHaveLength(3);
+        expect(fetchInput?.cqlFilter).toBeUndefined();
 
         const itemsTypes = items.map((item) => item.type);
         expect(itemsTypes).toContain('assiette_sup_s');
