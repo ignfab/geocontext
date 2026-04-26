@@ -1,17 +1,32 @@
 {
     "compilerOptions": {
-        "outDir": "./dist/",
+        // Dossier racine du code source
         "rootDir": "./src",
-        "noImplicitAny": true,
-        "moduleResolution": "NodeNext",
-        "sourceMap": true,
-        "declaration": true,
-        "module": "NodeNext",
+        // Dossier de sortie du JavaScript compilé
+        "outDir": "./dist/",
+        // Génère du JS moderne, avec les dernières syntaxes ECMAScript.
         "target": "ESNext",
-        "lib": [ "es2015" ],
-        "allowSyntheticDefaultImports": true,
-        "skipLibCheck": true,
+        // Inclut les types et fonctionnalités de ES2015, comme les Promises, Map, etc.
+        "lib": [ "ESNext" ],
+        // Inclut les types de Node.js pour pouvoir utiliser les APIs de Node.
+        "types": [ "node" ],
+        // Utilise le système de modules moderne de Node.js.
+        "module": "NodeNext",
+        // Dit à TypeScript de résoudre les imports comme Node.js moderne.
+        "moduleResolution": "NodeNext",
+        // Génère des fichiers .map pour debugger le TypeScript original.
+        "sourceMap": true,
+        // Génère des fichiers .d.ts, utiles pour une librairie.
+        "declaration": true,
+        //Interdit les variables/paramètres que TypeScript devrait typer en any par défaut.
+        "noImplicitAny": true,
+        // Ne compile pas les fichiers .js, seulement TypeScript.
         "allowJs": false,
+        // Ne vérifie pas complètement les fichiers de types des dépendances.
+        "skipLibCheck": true,
+        // Autorise des imports par défaut même quand le module n’en expose pas vraiment un.
+        "allowSyntheticDefaultImports": true,
+        // Rend les imports CommonJS/ESM plus compatibles.
         "esModuleInterop": true
     },
     "include": [
