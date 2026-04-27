@@ -1,6 +1,6 @@
 # Exemple d'utilisation avec Claude Desktop
 
-## Configuration avec MCG Geocontext et MCP Datagouv
+## Configuration avec MCP Geocontext et MCP Datagouv
 
 ```json
 {
