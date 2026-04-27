@@ -6,11 +6,43 @@
 
 Serveur MCP expérimental fournissant du contexte spatial pour les LLM sur la base des [services de la Géoplateforme de l'IGN](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme).
 
+<details>
+<summary>📋 Table des matières</summary>
+
+- [Motivation](#motivation)
+- [Mises en garde](#mises-en-garde)
+- [Principes de conception](#principes-de-conception)
+- [Utilisation](#utilisation)
+  - [Utilisation de la version publiée](#utilisation-de-la-version-publiée)
+  - [Autres exemples d'utilisation](#autres-exemples-dutilisation)
+- [Développement](#développement)
+  - [Construction de la version locale](#construction-de-la-version-locale)
+  - [Utilisation de la version locale](#utilisation-de-la-version-locale)
+    - [Avec un client MCP compatible JSON](#avec-un-client-mcp-compatible-json)
+    - [Avec Docker en local](#avec-docker-en-local)
+  - [Debug de la version locale](#debug-de-la-version-locale)
+- [Paramétrage](#paramétrage)
+- [Fonctionnalités (Tools)](#fonctionnalités-tools)
+  - [Utiliser des services spatiaux](#utiliser-des-services-spatiaux)
+  - [Recherche d'informations pour un lieu](#recherche-dinformations-pour-un-lieu)
+  - [Explorer les données vecteurs](#explorer-les-données-vecteurs)
+    - [Explorer les tables](#explorer-les-tables)
+    - [Explorer la structure des tables](#explorer-la-structure-des-tables)
+    - [Explorer les données des tables](#explorer-les-données-des-tables)
+- [Voir également](#voir-également)
+- [Contribution](#contribution)
+  - [Problèmes et demandes d'évolutions](#problèmes-et-demandes-dévolutions)
+  - [Proposer une nouvelle fonctionnalité](#proposer-une-nouvelle-fonctionnalité)
+- [Crédits](#crédits)
+- [Licence](#licence)
+
+</details>
+
 ## Motivation
 
 Les LLM peuvent donner l'impression de disposer nativement de certaines capacités, mais ils dépendent, en pratique, des outils qui leur sont connectés. Par exemple, pour accéder à la date et à l'heure, un assistant doit être interfacé avec un serveur comme [MCP time](https://mcpservers.org/servers/modelcontextprotocol/time). De la même manière, pour lire une page web, il doit être relié à un outil tel que [MCP fetch](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch#readme).
 
-S'il est techniquement possible de brancher des API REST/GeoJSON telle [APICARTO](https://github.com/IGNF/apicarto) à un LLM, la conception de ces dernières n'est pas adaptée (5000 résultat par défaut, grosse géométrie dans les réponses, géométries complexes à fournir,...).
+S'il est techniquement possible de brancher des API REST/GeoJSON telle [APICARTO](https://github.com/IGNF/apicarto) à un LLM, la conception de ces dernières n'est pas adaptée (5000 résultats par défaut, grosse géométrie dans les réponses, géométries complexes à fournir,...).
 
 L'idée est ici d'**expérimenter la conception d'un MCP rendant les données et les services de la Géoplateforme accessibles par un LLM**.
 
@@ -45,24 +77,10 @@ Par exemple, avec "Cursor Settings / MCP / Add server" :
 }
 ```
 
-### Utilisation avec Docker
+### Autres exemples d'utilisation
 
-```bash
-docker compose build
-docker compose up -d
-```
-
-Ensuite :
-
-```json
-{
-  "mcpServers": {
-    "geocontext": {
-      "url": "http://localhost:3000/mcp"
-    }
-  }
-}
-```
+- [Exemple d'utilisation avec Claude Desktop](docs/usage/claude-desktop.md)
+- [Exemple d'utilisation avec MCPJam](docs/usage/mcpjam.md)
 
 ## Développement
 
@@ -85,6 +103,25 @@ npm run build
     "geocontext": {
       "command": "node",
       "args":["/chemin/absolu/vers/geocontext/dist/index.js"]
+    }
+  }
+}
+```
+
+#### Avec Docker en local
+
+```bash
+docker compose build
+docker compose up -d
+```
+
+Ensuite :
+
+```json
+{
+  "mcpServers": {
+    "geocontext": {
+      "url": "http://localhost:3000/mcp"
     }
   }
 }
@@ -124,9 +161,9 @@ Remarque :
 - Les outils `gpf_wfs_get_features` et `gpf_wfs_get_feature_by_id` interrogent toujours le service WFS de la Géoplateforme en direct.
 - Le catalogue embarqué améliore la description des featureTypes mais il peut être légèrement décalé par rapport à l'état courant du WFS.
 
-## Fonctionnalités
+## Fonctionnalités (Tools)
 
-Une description avancée des tools équivalente au niveau de détail de la méthode `tools/list` est disponible [ici](docs/mcp-tools.md).  
+👉 Une description avancée des tools équivalente au niveau de détail de la méthode `tools/list` est disponible [ici](docs/mcp-tools.md).  
 On décrit ci-dessous succinctement les différents `tools` MCP proposés par `geocontext`.
 
 ### Utiliser des services spatiaux
@@ -145,7 +182,7 @@ L'idée est ici de répondre à des questions précises en traitant côté serve
 
 * [adminexpress(lon,lat)](src/tools/AdminexpressTool.ts) permet de **récupérer les informations administratives (commune, département, région,...)** pour un lieu donné par sa position.
 
-> Ex : Quelles sont les informations administrative pour la mairie de Vincennes?
+> Ex : Quelles sont les informations administratives pour la mairie de Vincennes?
 
 * [cadastre(lon,lat)](src/tools/CadastreTool.ts) permet de **récupérer les informations cadastrales (parcelle, feuille,...)**.
 
@@ -155,7 +192,7 @@ L'idée est ici de répondre à des questions précises en traitant côté serve
 
 > Ex : Quel est le document PLU en vigueur pour le port de Marseille?
 
-* [assiette_sup(lon,lat)](src/tools/AssietteSupTool.ts) permet de **récupérer les Servitude d'Utilité Publiques (SUP)**
+* [assiette_sup(lon,lat)](src/tools/AssietteSupTool.ts) permet de **récupérer les Servitudes d'Utilité Publique (SUP)**
 
 > Ex: Quelles assiettes de SUP sont présentes autour de la mairie de Vincennes ?
 
@@ -210,7 +247,15 @@ Exemples :
 - `spatial_operator="intersects_feature"` avec `intersects_feature_typename` et `intersects_feature_id` issus d'une `feature_ref`
 
 > - Quelles sont les 5 communes les plus peuplées du Doubs (25)?
-> - Combien y-a-t'il de bâtiments à moins de 5 km de la tour Eiffel?
+> - Combien y a-t-il de bâtiments à moins de 5 km de la tour Eiffel?
+
+
+## Voir également
+
+- https://github.com/datagouv/datagouv-mcp : MCP data.gouv.fr
+- https://github.com/mapbox/mcp-server : MCP Mapbox
+- https://git.tricoteuses.fr/logiciels/tricoteuses-api-parlement :  MCP parlement français non officiel
+- https://github.com/datagouv/datagouv-skill : Skills data.gouv.fr
 
 ## Contribution
 
@@ -219,7 +264,7 @@ Exemples :
 N'hésitez pas à [créer une issue](https://github.com/ignfab/geocontext/issues) si vous rencontrez un problème! Merci de fournir :
 
 - L'assistant (ex: Github Copilot) et le modèle utilisé (ex: Claude Sonnet 4.5)
-- La demande que vous faite à l'assistant (ex : "Combien y a-t'il de pont franchissant la Seine?")
+- La demande que vous faites à l'assistant (ex : "Combien y a-t-il de pont franchissant la Seine?")
 
 ### Proposer une nouvelle fonctionnalité
 
