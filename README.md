@@ -2,9 +2,41 @@
   <img src="docs/imgs/hexagon-geoctx.svg" alt="logo du projet geocontext" width="300">
 </p>
 
+
+
 # Geocontext
 
 Serveur MCP expérimental fournissant du contexte spatial pour les LLM sur la base des [services de la Géoplateforme de l'IGN](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme).
+
+<details>
+<summary>📋 Table des matières</summary>
+
+- [Motivation](#motivation)
+- [Mises en garde](#mises-en-garde)
+- [Principes de conception](#principes-de-conception)
+- [Utilisation](#utilisation)
+  - [Utilisation de la version publiée](#utilisation-de-la-version-publiée)
+  - [Utilisation avec Docker](#utilisation-avec-docker)
+- [Développement](#développement)
+  - [Construction de la version locale](#construction-de-la-version-locale)
+  - [Utilisation de la version locale](#utilisation-de-la-version-locale)
+  - [Debug de la version locale](#debug-de-la-version-locale)
+- [Paramétrage](#paramétrage)
+- [Fonctionnalités (Tools)](#fonctionnalités-tools)
+  - [Utiliser des services spatiaux](#utiliser-des-services-spatiaux)
+  - [Recherche d'informations pour un lieu](#recherche-dinformations-pour-un-lieu)
+  - [Explorer les données vecteurs](#explorer-les-données-vecteurs)
+    - [Explorer les tables](#explorer-les-tables)
+    - [Explorer la structure des tables](#explorer-la-structure-des-tables)
+    - [Explorer les données des tables](#explorer-les-données-des-tables)
+- [Contribution](#contribution)
+  - [Problèmes et demandes d'évolutions](#problèmes-et-demandes-dévolutions)
+  - [Proposer une nouvelle fonctionnalité](#proposer-une-nouvelle-fonctionnalité)
+- [Voir également](#voir-egalement)
+- [Crédits](#crédits)
+- [Licence](#licence)
+
+</details>
 
 ## Motivation
 
@@ -63,6 +95,11 @@ Ensuite :
   }
 }
 ```
+
+### Autres exemple d'utilisation
+
+- [Exemple d'utilisation avec Claude Desktop](docs/usage/claude-desktop.md)
+- [Exemple d'utilisation avec MCPJam](docs/usage/mcpjam.md)
 
 ## Développement
 
@@ -124,9 +161,9 @@ Remarque :
 - Les outils `gpf_wfs_get_features` et `gpf_wfs_get_feature_by_id` interrogent toujours le service WFS de la Géoplateforme en direct.
 - Le catalogue embarqué améliore la description des featureTypes mais il peut être légèrement décalé par rapport à l'état courant du WFS.
 
-## Fonctionnalités
+## Fonctionnalités (Tools)
 
-Une description avancée des tools équivalente au niveau de détail de la méthode `tools/list` est disponible [ici](docs/mcp-tools.md).  
+👉 Une description avancée des tools équivalente au niveau de détail de la méthode `tools/list` est disponible [ici](docs/mcp-tools.md).  
 On décrit ci-dessous succinctement les différents `tools` MCP proposés par `geocontext`.
 
 ### Utiliser des services spatiaux
@@ -211,6 +248,14 @@ Exemples :
 
 > - Quelles sont les 5 communes les plus peuplées du Doubs (25)?
 > - Combien y-a-t'il de bâtiments à moins de 5 km de la tour Eiffel?
+
+
+## Voir également
+
+- https://github.com/datagouv/datagouv-mcp : MCP data.gouv.fr
+- https://github.com/mapbox/mcp-server : MCP Mapbox
+- https://git.tricoteuses.fr/logiciels/tricoteuses-api-parlement :  MCP parlement français non officiel
+- https://github.com/datagouv/datagouv-skill : Skills data.gouv.fr
 
 ## Contribution
 
