@@ -10,13 +10,19 @@ interface SerializedToolCandidate {
 /**
  * Extracts a human-readable tool name from LangChain serialized metadata.
  *
- * LangChain callbacks may expose either `name` directly, or only an `id` array
- * where the last item corresponds to the runnable/tool name.
+ * LangChain callbacks may expose the runnable name as the callback `runName`,
+ * as `name` on serialized metadata, or only as an `id` array where the last
+ * item corresponds to the runnable/tool class name.
  *
  * @param tool Serialized LangChain runnable metadata.
+ * @param runName Optional callback run name supplied by LangChain.
  * @returns Extracted tool name, or `undefined` when not found.
  */
-export function extractToolName(tool: Serialized): string | undefined {
+export function extractToolName(tool: Serialized, runName?: string): string | undefined {
+  if (typeof runName === "string" && runName.length > 0) {
+    return runName;
+  }
+
   const candidate = tool as unknown as SerializedToolCandidate;
 
   if (typeof candidate.name === "string" && candidate.name.length > 0) {
@@ -112,10 +118,24 @@ export class ToolCallTracker extends BaseCallbackHandler {
    * Records a tool call when LangChain starts a tool.
    *
    * @param tool Serialized tool metadata.
+   * @param _input Serialized tool input.
+   * @param _runId LangChain run identifier.
+   * @param _parentRunId Optional parent run identifier.
+   * @param _tags Callback tags.
+   * @param _metadata Callback metadata.
+   * @param runName Callback run name, usually the concrete tool name.
    * @returns Nothing.
    */
-  handleToolStart(tool: Serialized): void {
-    const toolName = extractToolName(tool);
+  handleToolStart(
+    tool: Serialized,
+    _input?: string,
+    _runId?: string,
+    _parentRunId?: string,
+    _tags?: string[],
+    _metadata?: Record<string, unknown>,
+    runName?: string,
+  ): void {
+    const toolName = extractToolName(tool, runName);
     if (toolName) {
       this.toolCalls.add(toolName);
     }

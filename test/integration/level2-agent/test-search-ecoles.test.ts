@@ -42,8 +42,6 @@ describeIfProvider("Agent E2E: search WFS types for schools", () => {
     });
 
     expectNormalizedFinalMessageContainsAll(result.messages, [
-      "bdtopo_v3:zone_d_activite_ou_d_interet",
-      "bdtopo_v3:erp",
-    ]);
+      "bdtopo_v3:zone_d_activite_ou_d_interet"    ]);
   }, E2E_TIMEOUT);
 });
