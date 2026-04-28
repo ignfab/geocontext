@@ -14,13 +14,10 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "node",
-    include: ["test/**/*.test.ts"],
-    exclude: ["test/integration/**/*"],
-    testTimeout: 60 * MILLISECONDS,
-    coverage: {
-      provider: "v8",
-      reporter: ["text", "lcov"],
-      include: ["src/**/*.{ts,tsx,js,jsx}"],
-    },
+    include: ["test/integration/level2-agent/**/*.test.ts"],
+    testTimeout: 120 * MILLISECONDS,
+    // Run sequentially: each test starts its own MCP server
+    pool: "forks",
+    poolOptions: { forks: { singleFork: true } },
   },
 });

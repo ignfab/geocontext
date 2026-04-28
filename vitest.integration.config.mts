@@ -14,13 +14,10 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "node",
-    include: ["test/**/*.test.ts"],
-    exclude: ["test/integration/**/*"],
+    include: ["test/integration/level1-protocol/**/*.test.ts"],
     testTimeout: 60 * MILLISECONDS,
-    coverage: {
-      provider: "v8",
-      reporter: ["text", "lcov"],
-      include: ["src/**/*.{ts,tsx,js,jsx}"],
-    },
+    // Run sequentially to avoid overloading the GPF APIs
+    pool: "forks",
+    poolOptions: { forks: { singleFork: true } },
   },
 });
