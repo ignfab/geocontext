@@ -47,8 +47,9 @@ function configureModelProxy() {
 }
 
 /** System prompt for the agent */
-export const SYSTEM_PROMPT =
-  "You are a helpful assistant for geospatial data. You can use the tools to answer questions about geospatial data.";
+export const SYSTEM_PROMPT = [
+  "Use the tools to answer question about geospatial data.",
+].join("\n");
 
 /** Timeout for agent E2E tests (2 minutes) */
 export const E2E_TIMEOUT = 120 * MILLISECONDS;
