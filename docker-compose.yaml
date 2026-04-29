@@ -12,7 +12,7 @@ services:
       - HTTP_PROXY
       - HTTPS_PROXY
       - HTTP_HOST=0.0.0.0
-      - HTTP_ENDPOINT=${HTTP_ENDPOINT:-/mcp}
+      - HTTP_MCP_ENDPOINT=${HTTP_MCP_ENDPOINT:-/mcp}
     ports:
     - ${HTTP_PORT:-3000}:3000
     deploy:

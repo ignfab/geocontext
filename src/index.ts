@@ -32,7 +32,7 @@ function buildTransport(transportType: TransportType) : TransportConfig {
   // Handle HTTP transport configuration
 
   const host = process.env.HTTP_HOST?.trim() || '127.0.0.1';
-  const endpoint = process.env.HTTP_ENDPOINT?.trim() || '/mcp';
+  const endpoint = process.env.HTTP_MCP_ENDPOINT?.trim() || '/mcp';
   const port = process.env.HTTP_PORT ? parseInt(process.env.HTTP_PORT, 10) : 3000;
 
   return {
