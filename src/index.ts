@@ -1,29 +1,14 @@
-import { MCPServer } from "mcp-framework";
+import { MCPServer, TransportConfig } from "mcp-framework";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { readFileSync } from "fs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const TRANSPORTS = {
-  stdio: {
-    type: "stdio",
-  },
-  http: {
-    type: "http-stream",
-    options: {
-      port: 3000,
-      cors: {
-        allowOrigin: "*",
-      },
-    },
-  },
-} as const;
-
-type TransportType = keyof typeof TRANSPORTS;
+type TransportType = "stdio" | "http";
 
 function isTransportType(value: string): value is TransportType {
-  return Object.prototype.hasOwnProperty.call(TRANSPORTS, value);
+  return value === "stdio" || value === "http";
 }
 
 function getTransportType(): TransportType {
@@ -36,20 +21,28 @@ function getTransportType(): TransportType {
   return transportType;
 }
 
-function buildTransport(transportType: TransportType) {
-  if (transportType !== "http") {
-    return TRANSPORTS[transportType];
+function buildTransport(transportType: TransportType) : TransportConfig {
+  // Handle stdio transport configuration
+  if (transportType === "stdio") {
+    return {
+      type: "stdio",
+    };
   }
 
-  const host = process.env.HTTP_HOST?.trim();
-  if (!host) {
-    return TRANSPORTS.http;
-  }
+  // Handle HTTP transport configuration
+
+  const host = process.env.HTTP_HOST?.trim() || '127.0.0.1';
+  const endpoint = process.env.HTTP_ENDPOINT?.trim() || '/mcp';
+  const port = process.env.HTTP_PORT ? parseInt(process.env.HTTP_PORT, 10) : 3000;
 
   return {
-    ...TRANSPORTS.http,
+    type: "http-stream",
     options: {
-      ...TRANSPORTS.http.options,
+      port: port,
+      endpoint,
+      cors: {
+        allowOrigin: "*",
+      },
       host,
     },
   };

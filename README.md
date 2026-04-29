@@ -9,32 +9,33 @@ Serveur MCP expérimental fournissant du contexte spatial pour les LLM sur la ba
 <details>
 <summary>📋 Table des matières</summary>
 
-- [Motivation](#motivation)
-- [Mises en garde](#mises-en-garde)
-- [Principes de conception](#principes-de-conception)
-- [Utilisation](#utilisation)
-  - [Utilisation de la version publiée](#utilisation-de-la-version-publiée)
-  - [Autres exemples d'utilisation](#autres-exemples-dutilisation)
-- [Développement](#développement)
-  - [Construction de la version locale](#construction-de-la-version-locale)
-  - [Utilisation de la version locale](#utilisation-de-la-version-locale)
-    - [Avec un client MCP compatible JSON](#avec-un-client-mcp-compatible-json)
-    - [Avec Docker en local](#avec-docker-en-local)
-  - [Debug de la version locale](#debug-de-la-version-locale)
-- [Paramétrage](#paramétrage)
-- [Fonctionnalités (Tools)](#fonctionnalités-tools)
-  - [Utiliser des services spatiaux](#utiliser-des-services-spatiaux)
-  - [Recherche d'informations pour un lieu](#recherche-dinformations-pour-un-lieu)
-  - [Explorer les données vecteurs](#explorer-les-données-vecteurs)
-    - [Explorer les tables](#explorer-les-tables)
-    - [Explorer la structure des tables](#explorer-la-structure-des-tables)
-    - [Explorer les données des tables](#explorer-les-données-des-tables)
-- [Voir également](#voir-également)
-- [Contribution](#contribution)
-  - [Problèmes et demandes d'évolutions](#problèmes-et-demandes-dévolutions)
-  - [Proposer une nouvelle fonctionnalité](#proposer-une-nouvelle-fonctionnalité)
-- [Crédits](#crédits)
-- [Licence](#licence)
+- [Geocontext](#geocontext)
+  - [Motivation](#motivation)
+  - [Mises en garde](#mises-en-garde)
+  - [Principes de conception](#principes-de-conception)
+  - [Utilisation](#utilisation)
+    - [Utilisation de la version publiée](#utilisation-de-la-version-publiée)
+    - [Autres exemples d'utilisation](#autres-exemples-dutilisation)
+  - [Développement](#développement)
+    - [Construction de la version locale](#construction-de-la-version-locale)
+    - [Utilisation de la version locale](#utilisation-de-la-version-locale)
+      - [Avec un client MCP compatible JSON](#avec-un-client-mcp-compatible-json)
+      - [Avec Docker en local](#avec-docker-en-local)
+    - [Debug de la version locale](#debug-de-la-version-locale)
+  - [Paramétrage](#paramétrage)
+  - [Fonctionnalités (Tools)](#fonctionnalités-tools)
+    - [Utiliser des services spatiaux](#utiliser-des-services-spatiaux)
+    - [Recherche d'informations pour un lieu](#recherche-dinformations-pour-un-lieu)
+    - [Explorer les données vecteurs](#explorer-les-données-vecteurs)
+      - [Explorer les tables](#explorer-les-tables)
+      - [Explorer la structure des tables](#explorer-la-structure-des-tables)
+      - [Explorer les données des tables](#explorer-les-données-des-tables)
+  - [Voir également](#voir-également)
+  - [Contribution](#contribution)
+    - [Problèmes et demandes d'évolutions](#problèmes-et-demandes-dévolutions)
+    - [Proposer une nouvelle fonctionnalité](#proposer-une-nouvelle-fonctionnalité)
+  - [Crédits](#crédits)
+  - [Licence](#licence)
 
 </details>
 
@@ -142,7 +143,9 @@ Pour une utilisation avancée :
 | Nom                          | Description                                                                                                                                                                                                                                                            | Valeur par défaut                                |
 | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
 | `TRANSPORT_TYPE`             | [Transport](https://mcp-framework.com/docs/Transports/transports-overview) permet de choisir entre "stdio" et "http"                                                                                                                                                   | "stdio"                                          |
-| `HTTP_HOST`                  | Adresse d'écoute en mode HTTP. Utile avec Docker pour exposer le service via `0.0.0.0`.                                                                                                                                                                                | défaut `mcp-framework` (`127.0.0.1`)             |
+| `HTTP_HOST`                  | Adresse d'écoute en mode HTTP. Utile avec Docker pour exposer le service via `0.0.0.0`.                                                                                                                                                                                | "127.0.0.1"                                      |
+| `HTTP_PORT`                  | Port d'écoute du MCP                                                                                                                                                                                                                                                   | 3000                                             |
+| `HTTP_ENDPOINT`              | Chemin d'exposition du MCP en HTTP                                                                                                                                                                                                                                     | "/mcp"                                           |
 | `GPF_WFS_MINISEARCH_OPTIONS` | Chaîne JSON optionnelle pour ajuster les options MiniSearch utilisées par `gpf_wfs_search_types` (`fields`, `combineWith`, `fuzzy`, `boost.namespace`, `boost.name`, `boost.title`, `boost.description`, `boost.properties`, `boost.enums`, `boost.identifierTokens`). | options par défaut de `@ignfab/gpf-schema-store` |
 | `LOG_FORMAT`                 | Le format d'écriture des logs : "json" ou "simple".                                                                                                                                                                                                                    | "simple"                                         |
 | `LOG_LEVEL`                  | Le niveau d'écriture des logs : ["error", "info", ou "debug"](https://github.com/winstonjs/winston#logging-levels)                                                                                                                                                     | "debug"                                          |
