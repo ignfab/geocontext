@@ -48,7 +48,7 @@ describeIfProvider("Agent E2E: chaining geocode → altitude", () => {
   });
 
   it("should chain geocode and altitude tools to answer the question", async () => {
-    const tools = await client.getTools();
+    const tools = await client!.getTools();
     expect(tools.length).toBeGreaterThan(0);
 
     const tracker = new ToolCallTracker();

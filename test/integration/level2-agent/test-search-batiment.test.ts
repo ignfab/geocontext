@@ -32,7 +32,7 @@ describeIfProvider("Agent E2E: search WFS types for buildings", () => {
   });
 
   it("should mention building-related WFS tables", async () => {
-    const tools = await client.getTools();
+    const tools = await client!.getTools();
     expect(tools.length).toBeGreaterThan(0);
 
     const result = await invokeAgent({
