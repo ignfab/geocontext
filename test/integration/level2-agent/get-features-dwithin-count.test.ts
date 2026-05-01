@@ -6,9 +6,18 @@
  */
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { CONNECT_TIMEOUT, createMcpClient, E2E_TIMEOUT, HAS_MODEL_PROVIDER_API_KEY } from "../config/level2-agent.js";
+import {
+  CONNECT_TIMEOUT,
+  createMcpClient,
+  E2E_TIMEOUT,
+  HAS_MODEL_PROVIDER_API_KEY,
+  SYSTEM_PROMPT,
+} from "../config/level2-agent.js";
 import { invokeAgent } from "../helpers/level2-agent.js";
-import { expectNormalizedFinalMessageContainsAll } from "../helpers/level2-assertions.js";
+import {
+  expectNormalizedFinalMessageContainsAll,
+  ToolCallTracker,
+} from "../helpers/level2-assertions.js";
 import { MultiServerMCPClient } from "@langchain/mcp-adapters";
 
 const USER_INPUT = "Combien de lycées sont situés à 2km du chateau de vincennes";
@@ -27,15 +36,18 @@ describeIfProvider("Agent E2E: count lycées near the chateau de Vincennes (2km)
   });
 
   it("should answer the question about 14 lycées near the chateau de Vincennes", async () => {
-
     const tools = await client!.getTools();
     expect(tools.length).toBeGreaterThan(0);
+    const tracker = new ToolCallTracker();
 
     const result = await invokeAgent({
       userInput: USER_INPUT,
-      tools: tools,
+      tools,
+      systemPrompt: SYSTEM_PROMPT,
+      callbacks: [tracker],
     });
 
+    expect(tracker.hasToolCall("gpf_wfs_get_features")).toBe(true);
     expectNormalizedFinalMessageContainsAll(result.messages, ["14", "lycées", "chateau de Vincennes"]);
   }, E2E_TIMEOUT);
 });
