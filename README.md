@@ -136,6 +136,8 @@ Cette commande lance **MCP Inspector**, l’outil de développement de MCP pour 
 npx -y @modelcontextprotocol/inspector node dist/index.js
 ```
 
+Pour les tests d'intégration et les tests E2E agent, voir [la documentation dédiée](docs/testing/README.md).
+
 ## Paramétrage
 
 Pour une utilisation avancée :

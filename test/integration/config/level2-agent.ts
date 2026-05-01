@@ -12,7 +12,7 @@
 import { initChatModel } from "langchain";
 import { MultiServerMCPClient } from "@langchain/mcp-adapters";
 import { INTEGRATION_CONFIG, MILLISECONDS, PROXY_ENV_KEYS } from "./shared.js";
-import { setGlobalDispatcher, ProxyAgent } from "undici";
+import { setGlobalDispatcher, EnvHttpProxyAgent } from "undici";
 
 let proxyConfigured = false;
 
@@ -35,12 +35,10 @@ function configureModelProxy() {
     return;
   }
 
-  const proxyUrl = PROXY_ENV_KEYS
-    .map((key) => process.env[key])
-    .find((value) => Boolean(value));
+  const hasProxyConfig = PROXY_ENV_KEYS.some((key) => Boolean(process.env[key]));
 
-  if (proxyUrl) {
-    setGlobalDispatcher(new ProxyAgent(proxyUrl));
+  if (hasProxyConfig) {
+    setGlobalDispatcher(new EnvHttpProxyAgent());
   }
 
   proxyConfigured = true;
