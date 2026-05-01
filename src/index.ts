@@ -21,7 +21,28 @@ function getTransportType(): TransportType {
   return transportType;
 }
 
-function buildTransport(transportType: TransportType) : TransportConfig {
+function getHttpPort(): number {
+  const rawPort = process.env.HTTP_PORT?.trim();
+  const invalidHttpPortMessage = `Invalid HTTP_PORT: ${rawPort}. Expected a decimal integer between 1 and 65535.`;
+
+  if (!rawPort) {
+    return 3000;
+  }
+
+  if (!/^\d+$/.test(rawPort)) {
+    throw new Error(invalidHttpPortMessage);
+  }
+
+  const port = Number(rawPort);
+
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error(invalidHttpPortMessage);
+  }
+
+  return port;
+}
+
+function buildTransport(transportType: TransportType): TransportConfig {
   // Handle stdio transport configuration
   if (transportType === "stdio") {
     return {
@@ -33,7 +54,7 @@ function buildTransport(transportType: TransportType) : TransportConfig {
 
   const host = process.env.HTTP_HOST?.trim() || '127.0.0.1';
   const endpoint = process.env.HTTP_MCP_ENDPOINT?.trim() || '/mcp';
-  const port = process.env.HTTP_PORT ? parseInt(process.env.HTTP_PORT, 10) : 3000;
+  const port = getHttpPort();
 
   return {
     type: "http-stream",
