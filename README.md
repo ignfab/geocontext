@@ -84,12 +84,17 @@ Par exemple, avec "Cursor Settings / MCP / Add server" :
 
 ## Développement
 
+Pré-requis :
+
+- Node.js `24.5.0` ou supérieur
+- npm compatible avec la version de Node utilisée
+
 ### Construction de la version locale
 
 ```bash
 git clone https://github.com/ignfab/geocontext
 cd geocontext
-npm install
+npm ci
 npm run build
 ```
 
@@ -132,7 +137,7 @@ Ensuite :
 Cette commande lance **MCP Inspector**, l’outil de développement de MCP pour tester et déboguer un serveur local. 
 
 ```bash
-npx -y @modelcontextprotocol/inspector node dist/index.js
+npm run inspect:mcp
 ```
 
 ## Paramétrage
@@ -154,6 +159,36 @@ export GPF_WFS_MINISEARCH_OPTIONS='{"fields":["title","identifierTokens"],"combi
 ```
 
 Si `GPF_WFS_MINISEARCH_OPTIONS` est absent ou vide, les options par défaut restent celles de `@ignfab/gpf-schema-store`, y compris le comportement par défaut `OR` de MiniSearch pour `combineWith`.
+
+<details>
+<summary>Configuration du proxy réseau</summary>
+
+`geocontext` s'appuie sur la gestion native du proxy par Node.js.
+
+- En exécution locale, le serveur démarre avec `node --use-env-proxy`
+- Les tests (`unit`, `integration`, `e2e`, `coverage`) activent `NODE_USE_ENV_PROXY=1`
+- Les tests d'intégration propagent aussi cette configuration au sous-processus MCP lancé en `stdio`
+
+Il suffit donc de définir les variables d'environnement standard selon votre contexte :
+
+```bash
+export HTTP_PROXY=http://proxy.example:3128
+export HTTPS_PROXY=http://proxy.example:3128
+export NO_PROXY=localhost,127.0.0.1
+```
+
+</details>
+
+### Tests
+
+Les commandes principales sont :
+
+```bash
+npm test
+npm run test:integration
+npm run test:e2e
+npm run verify
+```
 
 Remarque :
 

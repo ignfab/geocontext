@@ -15,7 +15,6 @@
 
 import fetch from "node-fetch";
 import type { RequestInit } from "node-fetch";
-import { HttpsProxyAgent } from "https-proxy-agent";
 import { parseXml, XmlElement } from "@rgrove/parse-xml";
 
 import logger from "../logger.js";
@@ -82,12 +81,6 @@ const defaultHeaders = new Headers({
 const fetchOpts: RequestInit = {
   headers: defaultHeaders,
 };
-
-// Reuse the standard proxy environment variable so every shared HTTP helper
-// transparently follows the same outbound network path when a proxy is required.
-if (process.env.HTTP_PROXY) {
-  fetchOpts.agent = new HttpsProxyAgent(process.env.HTTP_PROXY);
-}
 
 // --- Service Errors ---
 

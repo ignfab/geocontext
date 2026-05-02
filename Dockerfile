@@ -1,4 +1,4 @@
-FROM node:22-alpine AS builder
+FROM node:24.5.0-alpine AS builder
 
 WORKDIR /opt/geocontext
 COPY package.json package-lock.json tsconfig.json ./
@@ -7,7 +7,7 @@ COPY src src/
 COPY scripts scripts/
 RUN npm run build
 
-FROM node:22-alpine
+FROM node:24.5.0-alpine
 
 WORKDIR /opt/geocontext
 COPY package.json package-lock.json ./
@@ -17,4 +17,4 @@ COPY --from=builder /opt/geocontext/dist dist/
 USER node
 EXPOSE 3000
 ENV TRANSPORT_TYPE=http
-CMD ["node", "dist/index.js"]
+CMD ["node", "--use-env-proxy", "dist/index.js"]
