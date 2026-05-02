@@ -1,4 +1,8 @@
+import { vi } from "vitest";
+
 import { parseJsonResponse } from "../../src/helpers/http.js";
+
+const USER_AGENT_ENV = "USER_AGENT";
 
 function createResponse(
     body: string,
@@ -27,6 +31,38 @@ function createResponse(
 describe("Test HTTP helpers", () => {
     it("should parse JSON responses", async () => {
         await expect(parseJsonResponse(createResponse('{"ok":true}'))).resolves.toEqual({ ok: true });
+    });
+
+    it("should use USER_AGENT for outbound requests when configured", async () => {
+        const previousUserAgent = process.env[USER_AGENT_ENV];
+
+        try {
+            process.env[USER_AGENT_ENV] = "geocontext-tests/1.0";
+
+            const fetchMock = vi.fn().mockResolvedValue(createResponse('{"ok":true}'));
+            vi.resetModules();
+            vi.doMock("node-fetch", () => ({
+                default: fetchMock,
+            }));
+
+            const { fetchJSONGet } = await import("../../src/helpers/http.js");
+
+            await fetchJSONGet("https://example.test");
+
+            const requestOptions = fetchMock.mock.calls[0]?.[1];
+            expect(requestOptions?.headers).toBeInstanceOf(Headers);
+            expect((requestOptions?.headers as Headers).get("User-Agent")).toBe("geocontext-tests/1.0");
+            expect((requestOptions?.headers as Headers).get("Accept")).toBe("application/json");
+        } finally {
+            if (previousUserAgent === undefined) {
+                delete process.env[USER_AGENT_ENV];
+            } else {
+                process.env[USER_AGENT_ENV] = previousUserAgent;
+            }
+
+            vi.doUnmock("node-fetch");
+            vi.resetModules();
+        }
     });
 
     it("should extract OGC XML errors", async () => {

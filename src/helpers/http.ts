@@ -73,9 +73,16 @@ type JsonServiceError = {
 
 // --- Shared Fetch State ---
 
+const USER_AGENT_ENV = "USER_AGENT";
+
+function resolveDefaultUserAgent(): string {
+  const configuredUserAgent = process.env[USER_AGENT_ENV]?.trim();
+  return configuredUserAgent || "geocontext";
+}
+
 const defaultHeaders = new Headers({
   Accept: "application/json",
-  "User-Agent": "geocontext",
+  "User-Agent": resolveDefaultUserAgent(),
 });
 
 const fetchOpts: RequestInit = {
@@ -143,7 +150,7 @@ export async function fetchJSONPost(url: string, body: string = "", headers: Req
 
 /**
  * Builds the fetch options used by the shared fetchJSONPost helper.
- * Inherits shared transport settings from `fetchOpts` (including proxy agent),
+ * Inherits shared transport settings from `fetchOpts`,
  * merges `defaultHeaders` with caller-provided headers, and only adds `body`
  * when it is explicitly provided.
  *
