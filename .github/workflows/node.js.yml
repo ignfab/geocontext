@@ -13,7 +13,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [22.x]
+        node-version: [24.5.0]
         # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
 
     steps:
@@ -32,4 +32,3 @@ jobs:
       run: npx @modelcontextprotocol/inspector --cli node dist/index.js --method tools/list
     - name: Call tool geocode
       run: npx @modelcontextprotocol/inspector --cli node dist/index.js --method tools/call --tool-name geocode --tool-arg text=vincennes
-

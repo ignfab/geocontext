@@ -84,12 +84,17 @@ Par exemple, avec "Cursor Settings / MCP / Add server" :
 
 ## Développement
 
+Pré-requis :
+
+- Node.js `24.5.0` ou supérieur recommandé (`22.21.0` minimum supporté)
+- npm compatible avec la version de Node utilisée
+
 ### Construction de la version locale
 
 ```bash
 git clone https://github.com/ignfab/geocontext
 cd geocontext
-npm install
+npm ci
 npm run build
 ```
 
@@ -102,11 +107,13 @@ npm run build
   "mcpServers": {
     "geocontext": {
       "command": "node",
-      "args":["/chemin/absolu/vers/geocontext/dist/index.js"]
+      "args":["--use-env-proxy", "/chemin/absolu/vers/geocontext/dist/index.js"]
     }
   }
 }
 ```
+
+L'option `--use-env-proxy` est facultative : elle active la prise en charge des variables d'environnement de proxy par Node.js. Ajoutez-la uniquement si votre environnement réseau en a besoin. Voir aussi la section [Configuration du proxy réseau](#configuration-du-proxy-reseau).
 
 #### Avec Docker en local
 
@@ -132,7 +139,7 @@ Ensuite :
 Cette commande lance **MCP Inspector**, l’outil de développement de MCP pour tester et déboguer un serveur local. 
 
 ```bash
-npx -y @modelcontextprotocol/inspector node dist/index.js
+npm run inspect:mcp
 ```
 
 ## Paramétrage
@@ -143,6 +150,7 @@ Pour une utilisation avancée :
 | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
 | `TRANSPORT_TYPE`             | [Transport](https://mcp-framework.com/docs/Transports/transports-overview) permet de choisir entre "stdio" et "http"                                                                                                                                                   | "stdio"                                          |
 | `HTTP_HOST`                  | Adresse d'écoute en mode HTTP. Utile avec Docker pour exposer le service via `0.0.0.0`.                                                                                                                                                                                | défaut `mcp-framework` (`127.0.0.1`)             |
+| `USER_AGENT`                 | Valeur du header HTTP `User-Agent` envoyé vers les services amont.                                                                                                                                                                                                     | "geocontext"                                     |
 | `GPF_WFS_MINISEARCH_OPTIONS` | Chaîne JSON optionnelle pour ajuster les options MiniSearch utilisées par `gpf_wfs_search_types` (`fields`, `combineWith`, `fuzzy`, `boost.namespace`, `boost.name`, `boost.title`, `boost.description`, `boost.properties`, `boost.enums`, `boost.identifierTokens`). | options par défaut de `@ignfab/gpf-schema-store` |
 | `LOG_FORMAT`                 | Le format d'écriture des logs : "json" ou "simple".                                                                                                                                                                                                                    | "simple"                                         |
 | `LOG_LEVEL`                  | Le niveau d'écriture des logs : ["error", "info", ou "debug"](https://github.com/winstonjs/winston#logging-levels)                                                                                                                                                     | "debug"                                          |
@@ -154,6 +162,39 @@ export GPF_WFS_MINISEARCH_OPTIONS='{"fields":["title","identifierTokens"],"combi
 ```
 
 Si `GPF_WFS_MINISEARCH_OPTIONS` est absent ou vide, les options par défaut restent celles de `@ignfab/gpf-schema-store`, y compris le comportement par défaut `OR` de MiniSearch pour `combineWith`.
+
+<a id="configuration-du-proxy-reseau"></a>
+<details>
+<summary>Configuration du proxy réseau</summary>
+
+`geocontext` s'appuie sur la gestion native du proxy par Node.js.
+
+- En exécution locale, le serveur démarre avec `node --use-env-proxy`
+- Les tests (`unit`, `integration`, `e2e`, `coverage`) activent `NODE_USE_ENV_PROXY=1`
+- Les tests d'intégration propagent aussi cette configuration au sous-processus MCP lancé en `stdio`
+
+Il suffit donc de définir les variables d'environnement standard selon votre contexte :
+
+```bash
+export HTTP_PROXY=http://proxy.example:3128
+export HTTPS_PROXY=http://proxy.example:3128
+export NO_PROXY=localhost,127.0.0.1
+```
+
+</details>
+
+### Tests
+
+Les commandes principales sont :
+
+```bash
+npm test
+npm run test:integration
+npm run test:e2e
+npm run test:coverage
+npm run verify
+npm run verify:full
+```
 
 Remarque :
 

@@ -15,7 +15,6 @@
 
 import fetch from "node-fetch";
 import type { RequestInit } from "node-fetch";
-import { HttpsProxyAgent } from "https-proxy-agent";
 import { parseXml, XmlElement } from "@rgrove/parse-xml";
 
 import logger from "../logger.js";
@@ -74,20 +73,21 @@ type JsonServiceError = {
 
 // --- Shared Fetch State ---
 
+const USER_AGENT_ENV = "USER_AGENT";
+
+function resolveDefaultUserAgent(): string {
+  const configuredUserAgent = process.env[USER_AGENT_ENV]?.trim();
+  return configuredUserAgent || "geocontext";
+}
+
 const defaultHeaders = new Headers({
   Accept: "application/json",
-  "User-Agent": "geocontext",
+  "User-Agent": resolveDefaultUserAgent(),
 });
 
 const fetchOpts: RequestInit = {
   headers: defaultHeaders,
 };
-
-// Reuse the standard proxy environment variable so every shared HTTP helper
-// transparently follows the same outbound network path when a proxy is required.
-if (process.env.HTTP_PROXY) {
-  fetchOpts.agent = new HttpsProxyAgent(process.env.HTTP_PROXY);
-}
 
 // --- Service Errors ---
 
@@ -150,7 +150,7 @@ export async function fetchJSONPost(url: string, body: string = "", headers: Req
 
 /**
  * Builds the fetch options used by the shared fetchJSONPost helper.
- * Inherits shared transport settings from `fetchOpts` (including proxy agent),
+ * Inherits shared transport settings from `fetchOpts`,
  * merges `defaultHeaders` with caller-provided headers, and only adds `body`
  * when it is explicitly provided.
  *

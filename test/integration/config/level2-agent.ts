@@ -11,10 +11,7 @@
 
 import { initChatModel } from "langchain";
 import { MultiServerMCPClient } from "@langchain/mcp-adapters";
-import { INTEGRATION_CONFIG, MILLISECONDS, PROXY_ENV_KEYS } from "./shared.js";
-import { setGlobalDispatcher, ProxyAgent } from "undici";
-
-let proxyConfigured = false;
+import { INTEGRATION_CONFIG, MILLISECONDS } from "./shared.js";
 
 /** Model name for the LLM */
 export const MODEL_NAME = process.env.MODEL_NAME ?? "anthropic:claude-haiku-4-5";
@@ -28,22 +25,6 @@ function requiredApiKeyEnvFromModelName(modelName: string): string | undefined {
   if (provider === "mistralai" || provider === "mistral") return "MISTRAL_API_KEY";
 
   return undefined;
-}
-
-function configureModelProxy() {
-  if (proxyConfigured) {
-    return;
-  }
-
-  const proxyUrl = PROXY_ENV_KEYS
-    .map((key) => process.env[key])
-    .find((value) => Boolean(value));
-
-  if (proxyUrl) {
-    setGlobalDispatcher(new ProxyAgent(proxyUrl));
-  }
-
-  proxyConfigured = true;
 }
 
 /** System prompt for the agent */
@@ -70,8 +51,6 @@ export async function createModel() {
       `${MODEL_PROVIDER_API_KEY_ENV} is required to run level2-agent integration tests with MODEL_NAME=\"${MODEL_NAME}\".`,
     );
   }
-
-  configureModelProxy();
 
   return initChatModel(MODEL_NAME, {
     temperature: 0,
