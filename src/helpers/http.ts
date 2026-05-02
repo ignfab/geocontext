@@ -117,6 +117,10 @@ const JSON_EXCEPTION_CODE_FIELDS = ["code", "exceptionCode"] as const;
 const JSON_EXCEPTION_DETAIL_FIELDS = ["text", "message", "detail"] as const;
 const JSON_NESTED_ERROR_DETAIL_FIELDS = ["description", "message", "detail"] as const;
 const JSON_ROOT_DETAIL_FIELDS = ["message", "detail"] as const;
+const DEFAULT_HTTP_TIMEOUT_SECONDS = 15;
+const UPSTREAM_TIMEOUT_STATUS = 504;
+const UPSTREAM_TIMEOUT_STATUS_TEXT = "Gateway Timeout";
+const UPSTREAM_TIMEOUT_CODE = "TIMEOUT";
 
 // --- Transport Functions ---
 
@@ -128,7 +132,7 @@ const JSON_ROOT_DETAIL_FIELDS = ["message", "detail"] as const;
  */
 export async function fetchJSONGet(url: string): Promise<any> {
   logger.info(`[HTTP] GET ${url} ...`);
-  const result = await fetch(url, fetchOpts).then(parseJsonResponse);
+  const result = await fetchJSONWithTimeout(url, fetchOpts);
   logger.debug(`[HTTP] GET ${url} : ${JSON.stringify(result)}`);
   return result;
 }
@@ -143,9 +147,50 @@ export async function fetchJSONGet(url: string): Promise<any> {
  */
 export async function fetchJSONPost(url: string, body: string = "", headers: RequestHeaders = {}) {
   logger.info(`[HTTP] POST ${url} ...`);
-  const result = await fetch(url, buildFetchOptions("POST", body, headers)).then(parseJsonResponse);
+  const result = await fetchJSONWithTimeout(url, buildFetchOptions("POST", body, headers));
   logger.debug(`[HTTP] POST ${url} : ${JSON.stringify(result)}`);
   return result;
+}
+
+/**
+ * Executes a fetch request with a bounded timeout so MCP tool calls do not hang
+ * indefinitely when upstream GPF services stop responding.
+ *
+ * @param url Target URL.
+ * @param options Request options.
+ * @returns The parsed JSON payload.
+ */
+async function fetchJSONWithTimeout(url: string, options: RequestInit) {
+  const timeoutMs = getHttpTimeoutMs();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    }).then(parseJsonResponse);
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new ServiceResponseError(
+        `Délai d'attente dépassé pour le service distant (${timeoutMs} ms).`,
+        {
+          http: {
+            status: UPSTREAM_TIMEOUT_STATUS,
+            statusText: UPSTREAM_TIMEOUT_STATUS_TEXT,
+          },
+          service: {
+            code: UPSTREAM_TIMEOUT_CODE,
+            detail: `Le service distant n'a pas répondu dans le délai imparti (${timeoutMs} ms).`,
+          },
+        }
+      );
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 /**
@@ -169,6 +214,28 @@ function buildFetchOptions(method: string, body: string | undefined, headers: Re
     }),
     ...(body !== undefined ? { body } : {}),
   };
+}
+
+/**
+ * Reads and validates the shared upstream timeout configuration.
+ *
+ * @returns Timeout in milliseconds.
+ */
+function getHttpTimeoutMs() {
+  const rawTimeoutSeconds = process.env.HTTP_TIMEOUT?.trim();
+
+  if (!rawTimeoutSeconds) {
+    return DEFAULT_HTTP_TIMEOUT_SECONDS * 1000;
+  }
+
+  const timeoutSeconds = Number(rawTimeoutSeconds);
+  if (!Number.isFinite(timeoutSeconds) || timeoutSeconds <= 0) {
+    throw new Error(
+      `HTTP_TIMEOUT must be a positive number of seconds. Received: ${rawTimeoutSeconds}`
+    );
+  }
+
+  return timeoutSeconds * 1000;
 }
 
 // --- Response Parsing ---
