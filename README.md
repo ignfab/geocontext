@@ -107,11 +107,13 @@ npm run build
   "mcpServers": {
     "geocontext": {
       "command": "node",
-      "args":["/chemin/absolu/vers/geocontext/dist/index.js"]
+      "args":["--use-env-proxy", "/chemin/absolu/vers/geocontext/dist/index.js"]
     }
   }
 }
 ```
+
+L'option `--use-env-proxy` est facultative : elle active la prise en charge des variables d'environnement de proxy par Node.js. Ajoutez-la uniquement si votre environnement réseau en a besoin. Voir aussi la section [Configuration du proxy réseau](#configuration-du-proxy-reseau).
 
 #### Avec Docker en local
 
@@ -160,6 +162,7 @@ export GPF_WFS_MINISEARCH_OPTIONS='{"fields":["title","identifierTokens"],"combi
 
 Si `GPF_WFS_MINISEARCH_OPTIONS` est absent ou vide, les options par défaut restent celles de `@ignfab/gpf-schema-store`, y compris le comportement par défaut `OR` de MiniSearch pour `combineWith`.
 
+<a id="configuration-du-proxy-reseau"></a>
 <details>
 <summary>Configuration du proxy réseau</summary>
 
@@ -187,7 +190,9 @@ Les commandes principales sont :
 npm test
 npm run test:integration
 npm run test:e2e
+npm run test:coverage
 npm run verify
+npm run verify:full
 ```
 
 Remarque :
