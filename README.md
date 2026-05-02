@@ -86,7 +86,7 @@ Par exemple, avec "Cursor Settings / MCP / Add server" :
 
 Pré-requis :
 
-- Node.js `24.5.0` ou supérieur
+- Node.js `24.5.0` ou supérieur recommandé (`22.21.0` minimum supporté)
 - npm compatible avec la version de Node utilisée
 
 ### Construction de la version locale
