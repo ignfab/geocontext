@@ -61,14 +61,15 @@ type GeometryLike = {
 export function ensureIntersectsFeatureTargetsOtherTypename(
   input: GpfWfsGetFeaturesInput,
 ) {
+  const spatialFilter = getSpatialFilter(input);
+
   if (
-    input.spatial_operator === "intersects_feature" &&
-    input.intersects_feature_typename !== undefined &&
-    input.typename === input.intersects_feature_typename
+    spatialFilter?.type === "intersects_feature" &&
+    input.typename === spatialFilter.feature_ref.typename
   ) {
     throw new Error(
       "Le filtre `intersects_feature` sur le même `typename` retourne potentiellement plusieurs objets. " +
-        "Utiliser `gpf_wfs_get_feature_by_id` avec `{ typename, feature_id: intersects_feature_id }` pour cibler exactement un objet.",
+        "Utiliser `gpf_wfs_get_feature_by_id` avec `{ typename, feature_id: spatial_filter.feature_ref.feature_id }` pour cibler exactement un objet.",
     );
   }
 }
@@ -103,25 +104,25 @@ export async function resolveIntersectsFeatureGeometry(
   input: GpfWfsGetFeaturesInput,
 ): Promise<ResolvedFeatureGeometryRef | undefined> {
   const spatialFilter = getSpatialFilter(input);
-  if (!spatialFilter || spatialFilter.operator !== "intersects_feature") {
+  if (!spatialFilter || spatialFilter.type !== "intersects_feature") {
     return undefined;
   }
 
-  const referenceFeatureType = await getFeatureType(spatialFilter.typename);
+  const referenceFeatureType = await getFeatureType(spatialFilter.feature_ref.typename);
   const referenceGeometryProperty = getGeometryProperty(referenceFeatureType);
   const featureCollection = await fetchFeatureById({
-    typename: spatialFilter.typename,
-    feature_id: spatialFilter.feature_id,
+    typename: spatialFilter.feature_ref.typename,
+    feature_id: spatialFilter.feature_ref.feature_id,
     propertyName: referenceGeometryProperty.name,
   });
   const referenceFeature = requireSingleFeatureById(featureCollection, {
-    typename: spatialFilter.typename,
-    feature_id: spatialFilter.feature_id,
+    typename: spatialFilter.feature_ref.typename,
+    feature_id: spatialFilter.feature_ref.feature_id,
   });
 
   if (!isGeometryLike(referenceFeature?.geometry)) {
     throw new Error(
-      `Le feature de référence '${spatialFilter.feature_id}' n'a pas de géométrie exploitable.`,
+      `Le feature de référence '${spatialFilter.feature_ref.feature_id}' n'a pas de géométrie exploitable.`,
     );
   }
 

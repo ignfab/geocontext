@@ -73,9 +73,8 @@ export async function getParcellaireExpress(lon: number, lat: number): Promise<P
     logger.info(`getParcellaireExpress(${lon},${lat}) ...`);
 
     const spatialFilter: SpatialFilter = {
-        operator: "dwithin_point",
-        lon,
-        lat,
+        type: "dwithin_point",
+        point: { lon, lat },
         distance_m: 10,
     };
 

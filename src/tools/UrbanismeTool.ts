@@ -25,7 +25,7 @@ const urbanismeResultSchema = z
     type: z.string().describe("Le type d'objet d'urbanisme renvoyé."),
     id: z.string().describe("L'identifiant de l'objet d'urbanisme."),
     bbox: z.array(z.number()).describe("La boîte englobante de l'objet d'urbanisme.").optional(),
-    feature_ref: featureRefSchema.describe("Référence WFS réutilisable, notamment avec `gpf_wfs_get_features` et `spatial_operator = \"intersects_feature\"`.").optional(),
+    feature_ref: featureRefSchema.describe("Référence WFS réutilisable, notamment avec `gpf_wfs_get_features` et `spatial_filter = { type: \"intersects_feature\", feature_ref: ... }`.").optional(),
     distance: z.number().describe("La distance en mètres entre le point demandé et l'objet d'urbanisme retenu."),
   })
   .catchall(z.unknown());
@@ -37,7 +37,7 @@ const urbanismeOutputSchema = z.object({
 const URBANISME_TOOL_DESCRIPTION = [
   `Renvoie, pour un point donné par sa \`longitude\` et sa \`latitude\`, la liste des objets d'urbanisme pertinents du Géoportail de l'Urbanisme (document, zones, prescriptions, informations, etc.), avec leurs propriétés associées. (source : ${URBANISME_SOURCE}).`,
   "Les résultats peuvent notamment inclure le document d'urbanisme applicable ainsi que des éléments réglementaires associés à proximité du point.",
-  "Quand un objet correspond à une couche WFS réutilisable, il expose aussi un `feature_ref` compatible avec `gpf_wfs_get_features` et `spatial_operator=\"intersects_feature\"`.",
+  "Quand un objet correspond à une couche WFS réutilisable, il expose aussi un `feature_ref` compatible avec `gpf_wfs_get_features` et `spatial_filter={ type: \"intersects_feature\", feature_ref: ... }`.",
   "Le zonage PLU (zone U, AU, A, N...) est inclus dans les zones retournées et constitue souvent l'information principale recherchée.",
   "Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gpf_wfs_get_feature_by_id`.",
   "Modèles d'URL Géoportail de l'Urbanisme :",

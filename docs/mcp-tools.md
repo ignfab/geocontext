@@ -66,7 +66,7 @@ Title: Unités administratives
 
 - Renvoie, pour un point donné par sa `longitude` et sa `latitude`, la liste des unités administratives (arrondissement, arrondissement_municipal, canton, collectivite_territoriale, commune, commune_associee_ou_deleguee, departement, epci, region) qui le couvrent, sous forme d'objets typés contenant leurs propriétés administratives.
 - Les résultats incluent un `feature_ref` WFS réutilisable. Les propriétés incluent notamment le code INSEE.
-- Le `feature_ref` de chaque unité administrative est directement réutilisable dans `gpf_wfs_get_features` avec `spatial_operator="intersects_feature"` pour interroger d'autres données sur cette emprise.
+- Le `feature_ref` de chaque unité administrative est directement réutilisable dans `gpf_wfs_get_features` avec `spatial_filter={ type: "intersects_feature", feature_ref: ... }` pour interroger d'autres données sur cette emprise.
 - Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gpf_wfs_get_feature_by_id`.
 - (source : Géoplateforme (WFS, ADMINEXPRESS-COG.LATEST)).
 
@@ -142,7 +142,7 @@ Title: Unités administratives
           },
           "feature_ref": {
             "type": "object",
-            "description": "Référence WFS réutilisable, notamment avec `gpf_wfs_get_features` et `spatial_operator = \"intersects_feature\"`.",
+            "description": "Référence WFS réutilisable, notamment avec `gpf_wfs_get_features` et `spatial_filter = { type: \"intersects_feature\", feature_ref: ... }`.",
             "properties": {
               "typename": {
                 "type": "string",
@@ -357,7 +357,7 @@ Title: Servitudes d’utilité publique
           },
           "feature_ref": {
             "type": "object",
-            "description": "Référence WFS réutilisable, notamment avec `gpf_wfs_get_features` et `spatial_operator = \"intersects_feature\"`.",
+            "description": "Référence WFS réutilisable, notamment avec `gpf_wfs_get_features` et `spatial_filter = { type: \"intersects_feature\", feature_ref: ... }`.",
             "properties": {
               "typename": {
                 "type": "string",
@@ -404,7 +404,7 @@ Title: Informations cadastrales
 
 - Renvoie, pour un point donné par sa `longitude` et sa `latitude`, la liste des objets cadastraux (arrondissement, commune, feuille, parcelle, subdivision_fiscale, localisant) les plus proches, avec leurs informations associées.
 - Les résultats sont retournés au plus une fois par type lorsqu'ils sont disponibles et incluent un `feature_ref` WFS réutilisable.
-- Le `feature_ref` est directement réutilisable dans `gpf_wfs_get_features` avec `spatial_operator="intersects_feature"`.
+- Le `feature_ref` est directement réutilisable dans `gpf_wfs_get_features` avec `spatial_filter={ type: "intersects_feature", feature_ref: ... }`.
 - La distance de recherche est fixée à 10 mètres.  Si aucun objet n'est trouvé dans les 10 mètres, le résultat est vide.
 - Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gpf_wfs_get_feature_by_id`.
 - (source : Géoplateforme (WFS, CADASTRALPARCELS.PARCELLAIRE_EXPRESS)).
@@ -481,7 +481,7 @@ Title: Informations cadastrales
           },
           "feature_ref": {
             "type": "object",
-            "description": "Référence WFS réutilisable, notamment avec `gpf_wfs_get_features` et `spatial_operator = \"intersects_feature\"`.",
+            "description": "Référence WFS réutilisable, notamment avec `gpf_wfs_get_features` et `spatial_filter = { type: \"intersects_feature\", feature_ref: ... }`.",
             "properties": {
               "typename": {
                 "type": "string",
@@ -848,13 +848,13 @@ Title: Lecture d’objets WFS
 ### Description du tool
 
 - Interroge un type WFS et renvoie des résultats structurés sans demander au modèle d'écrire du CQL ou du WFS.
-- Utiliser `select` pour choisir les propriétés, `where` pour filtrer, `order_by` pour trier et `spatial_operator` avec ses paramètres dédiés pour le spatial. Avec `result_type="request"`, la géométrie est automatiquement ajoutée aux propriétés sélectionnées pour garantir une requête cartographiable.
+- Utiliser `select` pour choisir les propriétés, `where` pour filtrer, `order_by` pour trier et `spatial_filter` pour le spatial. Avec `result_type="request"`, la géométrie est automatiquement ajoutée aux propriétés sélectionnées pour garantir une requête cartographiable.
 - Exemple attributaire : `where=[{ property: "code_insee", operator: "eq", value: "75056" }]`.
-- Exemple bbox : `spatial_operator="bbox"` avec `bbox_west`, `bbox_south`, `bbox_east`, `bbox_north` en `lon/lat`.
-- Exemple point dans géométrie : `spatial_operator="intersects_point"` avec `intersects_lon` et `intersects_lat`.
-- Exemple distance : `spatial_operator="dwithin_point"` avec `dwithin_lon`, `dwithin_lat`, `dwithin_distance_m`.
-- Exemple réutilisation : `spatial_operator="intersects_feature"` avec `intersects_feature_typename` et `intersects_feature_id` issus d'une `feature_ref`.
-- ⚠️ Quand `typename` et `intersects_feature_typename` sont identiques, utiliser `gpf_wfs_get_feature_by_id` pour récupérer exactement l'objet ciblé.
+- Exemple bbox : `spatial_filter={ type: "bbox", bbox: { west: 2.29, south: 48.85, east: 2.3, north: 48.86 } }`.
+- Exemple point dans géométrie : `spatial_filter={ type: "intersects_point", point: { lon: 2.29424, lat: 48.858264 } }`.
+- Exemple distance : `spatial_filter={ type: "dwithin_point", point: { lon: 2.29424, lat: 48.858264 }, distance_m: 50 }`.
+- Exemple réutilisation : `spatial_filter={ type: "intersects_feature", feature_ref: { typename: "ADMINEXPRESS-COG.LATEST:commune", feature_id: "commune.29458" } }`.
+- ⚠️ Quand `typename` et `spatial_filter.feature_ref.typename` sont identiques, utiliser `gpf_wfs_get_feature_by_id` pour récupérer exactement l'objet ciblé.
 - **OBLIGATOIRE : toujours appeler `gpf_wfs_describe_type` avant ce tool, sauf si `gpf_wfs_describe_type` a déjà été appelé pour ce même typename dans la conversation en cours.**
 - Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiques à chaque typename et diffèrent systématiquement des conventions habituelles (ex : pas de nom_officiel, navigabilite sans accent, etc.). Toute tentative sans appel préalable à `gpf_wfs_describe_type` **provoquera une erreur.**
 
@@ -862,22 +862,11 @@ Title: Lecture d’objets WFS
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `bbox_east` | number | no | Longitude est en WGS84 `lon/lat`, utilisée avec `spatial_operator = "bbox"`. |
-| `bbox_north` | number | no | Latitude nord en WGS84 `lon/lat`, utilisée avec `spatial_operator = "bbox"`. |
-| `bbox_south` | number | no | Latitude sud en WGS84 `lon/lat`, utilisée avec `spatial_operator = "bbox"`. |
-| `bbox_west` | number | no | Longitude ouest en WGS84 `lon/lat`, utilisée avec `spatial_operator = "bbox"`. |
-| `dwithin_distance_m` | number | no | Distance en mètres, utilisée avec `spatial_operator = "dwithin_point"`. |
-| `dwithin_lat` | number | no | Latitude du point en WGS84 `lon/lat`, utilisée avec `spatial_operator = "dwithin_point"`. |
-| `dwithin_lon` | number | no | Longitude du point en WGS84 `lon/lat`, utilisée avec `spatial_operator = "dwithin_point"`. |
-| `intersects_feature_id` | string | no | Identifiant du feature de référence, utilisé avec `spatial_operator = "intersects_feature"`. |
-| `intersects_feature_typename` | string | no | Type WFS du feature de référence, utilisé avec `spatial_operator = "intersects_feature"`. |
-| `intersects_lat` | number | no | Latitude du point en WGS84 `lon/lat`, utilisée avec `spatial_operator = "intersects_point"`. |
-| `intersects_lon` | number | no | Longitude du point en WGS84 `lon/lat`, utilisée avec `spatial_operator = "intersects_point"`. |
 | `limit` | integer | no | Nombre maximum d'objets à renvoyer. Valeur par défaut : 100. Maximum : 5000. Default: 100. |
 | `order_by` | array | no | Liste ordonnée des critères de tri. |
 | `result_type` | string | no | `results` renvoie une FeatureCollection avec les propriétés attributaires uniquement — **les géométries ne sont pas incluses**, ce mode ne peut donc pas être utilisé directement pour cartographier. `hits` renvoie uniquement le nombre total d'objets correspondant à la requête. `request` renvoie l'URL WFS compilée (`get_url`) à destination de `create_map` via `geojson_url`, ou pour déboguer la requête générée. **La géométrie est automatiquement ajoutée aux propriétés du `select`** pour garantir l'affichage cartographique. Values: results, hits, request. Default: results. |
 | `select` | array | no | Liste des propriétés non géométriques à renvoyer pour chaque objet. Utiliser `gpf_wfs_describe_type` pour connaître les noms exacts disponibles. Exemple : `["code_insee", "nom_officiel"]`. |
-| `spatial_operator` | string | no | Type optionnel de filtre spatial. Values: bbox, intersects_point, dwithin_point, intersects_feature. |
+| `spatial_filter` | anyOf | no | Filtre spatial optionnel. Variantes supportees : `{ type: "bbox", bbox: { west, south, east, north } }`, `{ type: "intersects_point", point: { lon, lat } }`, `{ type: "dwithin_point", point: { lon, lat }, distance_m }`, `{ type: "intersects_feature", feature_ref: { typename, feature_id } }`. |
 | `typename` | string | yes | Nom exact du type WFS à interroger, par exemple `BDTOPO_V3:batiment`. Utiliser `gpf_wfs_search_types` pour trouver un `typename` valide. |
 | `where` | array | no | Clauses de filtre attributaire, combinées avec `AND`. |
 
@@ -995,78 +984,160 @@ Title: Lecture d’objets WFS
       "minItems": 1,
       "description": "Clauses de filtre attributaire, combinées avec `AND`."
     },
-    "spatial_operator": {
-      "type": "string",
-      "enum": [
-        "bbox",
-        "intersects_point",
-        "dwithin_point",
-        "intersects_feature"
+    "spatial_filter": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "bbox"
+            },
+            "bbox": {
+              "type": "object",
+              "properties": {
+                "west": {
+                  "type": "number",
+                  "minimum": -180,
+                  "maximum": 180,
+                  "description": "Longitude ouest en WGS84 `lon/lat`."
+                },
+                "south": {
+                  "type": "number",
+                  "minimum": -90,
+                  "maximum": 90,
+                  "description": "Latitude sud en WGS84 `lon/lat`."
+                },
+                "east": {
+                  "type": "number",
+                  "minimum": -180,
+                  "maximum": 180,
+                  "description": "Longitude est en WGS84 `lon/lat`."
+                },
+                "north": {
+                  "type": "number",
+                  "minimum": -90,
+                  "maximum": 90,
+                  "description": "Latitude nord en WGS84 `lon/lat`."
+                }
+              },
+              "required": [
+                "west",
+                "south",
+                "east",
+                "north"
+              ],
+              "additionalProperties": false,
+              "description": "Boite englobante en WGS84 `lon/lat`."
+            }
+          },
+          "required": [
+            "type",
+            "bbox"
+          ],
+          "additionalProperties": false,
+          "description": "Filtre spatial par boite englobante."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "intersects_point"
+            },
+            "point": {
+              "type": "object",
+              "properties": {
+                "lon": {
+                  "type": "number",
+                  "minimum": -180,
+                  "maximum": 180,
+                  "description": "Longitude du point en WGS84 `lon/lat`."
+                },
+                "lat": {
+                  "type": "number",
+                  "minimum": -90,
+                  "maximum": 90,
+                  "description": "Latitude du point en WGS84 `lon/lat`."
+                }
+              },
+              "required": [
+                "lon",
+                "lat"
+              ],
+              "additionalProperties": false,
+              "description": "Point en WGS84 `lon/lat`."
+            }
+          },
+          "required": [
+            "type",
+            "point"
+          ],
+          "additionalProperties": false,
+          "description": "Filtre spatial par intersection avec un point."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "dwithin_point"
+            },
+            "point": {
+              "$ref": "#/properties/spatial_filter/anyOf/1/properties/point"
+            },
+            "distance_m": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Distance en metres."
+            }
+          },
+          "required": [
+            "type",
+            "point",
+            "distance_m"
+          ],
+          "additionalProperties": false,
+          "description": "Filtre spatial par distance autour d'un point."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "intersects_feature"
+            },
+            "feature_ref": {
+              "type": "object",
+              "properties": {
+                "typename": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Type WFS du feature de référence."
+                },
+                "feature_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Identifiant du feature de référence."
+                }
+              },
+              "required": [
+                "typename",
+                "feature_id"
+              ],
+              "additionalProperties": false,
+              "description": "Référence légère vers un feature WFS réutilisable."
+            }
+          },
+          "required": [
+            "type",
+            "feature_ref"
+          ],
+          "additionalProperties": false,
+          "description": "Filtre spatial par intersection avec un feature de reference."
+        }
       ],
-      "description": "Type optionnel de filtre spatial."
-    },
-    "bbox_west": {
-      "type": "number",
-      "minimum": -180,
-      "maximum": 180,
-      "description": "Longitude ouest en WGS84 `lon/lat`, utilisée avec `spatial_operator = \"bbox\"`."
-    },
-    "bbox_south": {
-      "type": "number",
-      "minimum": -90,
-      "maximum": 90,
-      "description": "Latitude sud en WGS84 `lon/lat`, utilisée avec `spatial_operator = \"bbox\"`."
-    },
-    "bbox_east": {
-      "type": "number",
-      "minimum": -180,
-      "maximum": 180,
-      "description": "Longitude est en WGS84 `lon/lat`, utilisée avec `spatial_operator = \"bbox\"`."
-    },
-    "bbox_north": {
-      "type": "number",
-      "minimum": -90,
-      "maximum": 90,
-      "description": "Latitude nord en WGS84 `lon/lat`, utilisée avec `spatial_operator = \"bbox\"`."
-    },
-    "intersects_lon": {
-      "type": "number",
-      "minimum": -180,
-      "maximum": 180,
-      "description": "Longitude du point en WGS84 `lon/lat`, utilisée avec `spatial_operator = \"intersects_point\"`."
-    },
-    "intersects_lat": {
-      "type": "number",
-      "minimum": -90,
-      "maximum": 90,
-      "description": "Latitude du point en WGS84 `lon/lat`, utilisée avec `spatial_operator = \"intersects_point\"`."
-    },
-    "dwithin_lon": {
-      "type": "number",
-      "minimum": -180,
-      "maximum": 180,
-      "description": "Longitude du point en WGS84 `lon/lat`, utilisée avec `spatial_operator = \"dwithin_point\"`."
-    },
-    "dwithin_lat": {
-      "type": "number",
-      "minimum": -90,
-      "maximum": 90,
-      "description": "Latitude du point en WGS84 `lon/lat`, utilisée avec `spatial_operator = \"dwithin_point\"`."
-    },
-    "dwithin_distance_m": {
-      "type": "number",
-      "exclusiveMinimum": 0,
-      "description": "Distance en mètres, utilisée avec `spatial_operator = \"dwithin_point\"`."
-    },
-    "intersects_feature_typename": {
-      "type": "string",
-      "minLength": 1,
-      "description": "Type WFS du feature de référence, utilisé avec `spatial_operator = \"intersects_feature\"`."
-    },
-    "intersects_feature_id": {
-      "type": "string",
-      "minLength": 1,
-      "description": "Identifiant du feature de référence, utilisé avec `spatial_operator = \"intersects_feature\"`."
+      "description": "Filtre spatial optionnel. Variantes supportees : `{ type: \"bbox\", bbox: { west, south, east, north } }`, `{ type: \"intersects_point\", point: { lon, lat } }`, `{ type: \"dwithin_point\", point: { lon, lat }, distance_m }`, `{ type: \"intersects_feature\", feature_ref: { typename, feature_id } }`."
     }
   },
   "required": [
@@ -1193,7 +1264,7 @@ Title: Informations d’urbanisme
 
 - Renvoie, pour un point donné par sa `longitude` et sa `latitude`, la liste des objets d'urbanisme pertinents du Géoportail de l'Urbanisme (document, zones, prescriptions, informations, etc.), avec leurs propriétés associées. (source : Géoplateforme - (WFS Géoportail de l'Urbanisme)).
 - Les résultats peuvent notamment inclure le document d'urbanisme applicable ainsi que des éléments réglementaires associés à proximité du point.
-- Quand un objet correspond à une couche WFS réutilisable, il expose aussi un `feature_ref` compatible avec `gpf_wfs_get_features` et `spatial_operator="intersects_feature"`.
+- Quand un objet correspond à une couche WFS réutilisable, il expose aussi un `feature_ref` compatible avec `gpf_wfs_get_features` et `spatial_filter={ type: "intersects_feature", feature_ref: ... }`.
 - Le zonage PLU (zone U, AU, A, N...) est inclus dans les zones retournées et constitue souvent l'information principale recherchée.
 - Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gpf_wfs_get_feature_by_id`.
 - Modèles d'URL Géoportail de l'Urbanisme :
@@ -1273,7 +1344,7 @@ Title: Informations d’urbanisme
           },
           "feature_ref": {
             "type": "object",
-            "description": "Référence WFS réutilisable, notamment avec `gpf_wfs_get_features` et `spatial_operator = \"intersects_feature\"`.",
+            "description": "Référence WFS réutilisable, notamment avec `gpf_wfs_get_features` et `spatial_filter = { type: \"intersects_feature\", feature_ref: ... }`.",
             "properties": {
               "typename": {
                 "type": "string",

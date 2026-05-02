@@ -25,7 +25,7 @@ const cadastreResultSchema = z
     type: z.string().describe(`Le type d'objet cadastral (${PARCELLAIRE_EXPRESS_TYPES.join(", ")}).`),
     id: z.string().describe("L'identifiant de l'objet cadastral."),
     bbox: z.array(z.number()).describe("La boîte englobante de l'objet cadastral.").optional(),
-    feature_ref: featureRefSchema.describe("Référence WFS réutilisable, notamment avec `gpf_wfs_get_features` et `spatial_operator = \"intersects_feature\"`."),
+    feature_ref: featureRefSchema.describe("Référence WFS réutilisable, notamment avec `gpf_wfs_get_features` et `spatial_filter = { type: \"intersects_feature\", feature_ref: ... }`."),
     distance: z.number().describe("La distance en mètres entre le point demandé et l'objet cadastral retenu."),
     source: z.string().describe("La source des données cadastrales."),
   })
@@ -44,7 +44,7 @@ class CadastreTool extends BaseTool<CadastreInput> {
   description = [
     `Renvoie, pour un point donné par sa \`longitude\` et sa \`latitude\`, la liste des objets cadastraux (${PARCELLAIRE_EXPRESS_TYPES.join(", ")}) les plus proches, avec leurs informations associées.`,
     "Les résultats sont retournés au plus une fois par type lorsqu'ils sont disponibles et incluent un `feature_ref` WFS réutilisable.",
-    "Le `feature_ref` est directement réutilisable dans `gpf_wfs_get_features` avec `spatial_operator=\"intersects_feature\"`.",
+    "Le `feature_ref` est directement réutilisable dans `gpf_wfs_get_features` avec `spatial_filter={ type: \"intersects_feature\", feature_ref: ... }`.",
     "La distance de recherche est fixée à 10 mètres.  Si aucun objet n'est trouvé dans les 10 mètres, le résultat est vide.",
     "Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gpf_wfs_get_feature_by_id`.",
     `(source : ${PARCELLAIRE_EXPRESS_SOURCE}).`

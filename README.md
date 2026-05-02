@@ -196,7 +196,7 @@ L'idée est ici de répondre à des questions précises en traitant côté serve
 
 > Ex: Quelles assiettes de SUP sont présentes autour de la mairie de Vincennes ?
 
-Les tools WFS orientés "objet" (`adminexpress`, `cadastre`, `urbanisme`, `assiette_sup`) exposent un `feature_ref { typename, feature_id }` quand l'objet source est réutilisable tel quel dans un appel ultérieur à `gpf_wfs_get_feature_by_id` ou `gpf_wfs_get_features` (ex : `spatial_operator="intersects_feature"`).
+Les tools WFS orientés "objet" (`adminexpress`, `cadastre`, `urbanisme`, `assiette_sup`) exposent un `feature_ref { typename, feature_id }` quand l'objet source est réutilisable tel quel dans un appel ultérieur à `gpf_wfs_get_feature_by_id` ou `gpf_wfs_get_features` (ex : `spatial_filter={ type: "intersects_feature", feature_ref: ... }`).
 
 ### Explorer les données vecteurs
 
@@ -236,15 +236,15 @@ Le tool accepte un contrat structuré :
 - `select` pour choisir les propriétés à renvoyer
 - `where` pour filtrer les objets
 - `order_by` pour trier les résultats
-- `spatial_operator` et ses paramètres dédiés pour le spatial
+- `spatial_filter` pour le spatial
 - `result_type="request"` pour récupérer la requête compilée en `POST`, ainsi qu'une `get_url` dérivée quand elle reste raisonnablement portable en GET
 
 Exemples :
 
 - `where=[{ property: "code_insee", operator: "eq", value: "25000" }]`
-- `spatial_operator="bbox"` avec `bbox_west`, `bbox_south`, `bbox_east`, `bbox_north`
-- `spatial_operator="dwithin_point"` avec `dwithin_lon`, `dwithin_lat`, `dwithin_distance_m`
-- `spatial_operator="intersects_feature"` avec `intersects_feature_typename` et `intersects_feature_id` issus d'une `feature_ref`
+- `spatial_filter={ type: "bbox", bbox: { west, south, east, north } }`
+- `spatial_filter={ type: "dwithin_point", point: { lon, lat }, distance_m }`
+- `spatial_filter={ type: "intersects_feature", feature_ref: { typename, feature_id } }` issu d'une `feature_ref`
 
 > - Quelles sont les 5 communes les plus peuplées du Doubs (25)?
 > - Combien y a-t-il de bâtiments à moins de 5 km de la tour Eiffel?

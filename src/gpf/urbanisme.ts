@@ -66,9 +66,8 @@ export async function getUrbanisme(lon: number, lat: number): Promise<Record<str
     logger.info(`getUrbanisme(${lon},${lat})...`);
 
     const spatialFilter: SpatialFilter = {
-        operator: "dwithin_point",
-        lon,
-        lat,
+        type: "dwithin_point",
+        point: { lon, lat },
         distance_m: 30,
     };
 
@@ -118,9 +117,8 @@ export async function getAssiettesServitudes(lon: number, lat: number): Promise<
     logger.info(`getAssiettesServitudes(${lon},${lat})...`);
 
     const spatialFilter: SpatialFilter = {
-        operator: "dwithin_point",
-        lon,
-        lat,
+        type: "dwithin_point",
+        point: { lon, lat },
         distance_m: 30,
     };
 

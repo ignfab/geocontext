@@ -134,7 +134,7 @@ function compileWhereClause(featureType: Collection, geometryProperty: Collectio
     featureType,
     geometryProperty,
     clause.property,
-    "La propriété '{property}' est géométrique. Utiliser `spatial_operator` et ses paramètres dédiés."
+    "La propriété '{property}' est géométrique. Utiliser `spatial_filter`."
   );
   const normalized = normalizeWhereClause(property, clause);
 
@@ -194,7 +194,7 @@ export function compileQueryParts(
   // Keep the spatial predicate first: the GeoPlateforme GeoServer is sensitive
   // to filter ordering and may reject equivalent filters when attributes come first.
   if (spatialFilter) {
-    switch (spatialFilter.operator) {
+    switch (spatialFilter.type) {
       case "bbox":
         fragments.push(compileBboxSpatialFilter(geometryProperty, spatialFilter));
         break;

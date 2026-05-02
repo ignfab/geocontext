@@ -18,14 +18,14 @@ import type { SpatialFilter } from "./schema.js";
  * @param spatialFilter Normalized bbox filter.
  * @returns A CQL bbox predicate.
  */
-export function compileBboxSpatialFilter(geometryProperty: CollectionProperty, spatialFilter: Extract<SpatialFilter, { operator: "bbox" }>) {
-  if (spatialFilter.west >= spatialFilter.east) {
-    throw new Error("Le bbox est invalide : `bbox_west` doit être strictement inférieur à `bbox_east`.");
+export function compileBboxSpatialFilter(geometryProperty: CollectionProperty, spatialFilter: Extract<SpatialFilter, { type: "bbox" }>) {
+  if (spatialFilter.bbox.west >= spatialFilter.bbox.east) {
+    throw new Error("Le bbox est invalide : `spatial_filter.bbox.west` doit être strictement inférieur à `spatial_filter.bbox.east`.");
   }
-  if (spatialFilter.south >= spatialFilter.north) {
-    throw new Error("Le bbox est invalide : `bbox_south` doit être strictement inférieur à `bbox_north`.");
+  if (spatialFilter.bbox.south >= spatialFilter.bbox.north) {
+    throw new Error("Le bbox est invalide : `spatial_filter.bbox.south` doit être strictement inférieur à `spatial_filter.bbox.north`.");
   }
-  return `BBOX(${geometryProperty.name},${spatialFilter.west},${spatialFilter.south},${spatialFilter.east},${spatialFilter.north},'EPSG:4326')`;
+  return `BBOX(${geometryProperty.name},${spatialFilter.bbox.west},${spatialFilter.bbox.south},${spatialFilter.bbox.east},${spatialFilter.bbox.north},'EPSG:4326')`;
 }
 
 /**
@@ -35,8 +35,8 @@ export function compileBboxSpatialFilter(geometryProperty: CollectionProperty, s
  * @param spatialFilter Normalized point intersection filter.
  * @returns A CQL intersects predicate.
  */
-export function compileIntersectsPointSpatialFilter(geometryProperty: CollectionProperty, spatialFilter: Extract<SpatialFilter, { operator: "intersects_point" }>) {
-  return `INTERSECTS(${geometryProperty.name},SRID=4326;POINT(${spatialFilter.lon} ${spatialFilter.lat}))`;
+export function compileIntersectsPointSpatialFilter(geometryProperty: CollectionProperty, spatialFilter: Extract<SpatialFilter, { type: "intersects_point" }>) {
+  return `INTERSECTS(${geometryProperty.name},SRID=4326;POINT(${spatialFilter.point.lon} ${spatialFilter.point.lat}))`;
 }
 
 /**
@@ -46,8 +46,8 @@ export function compileIntersectsPointSpatialFilter(geometryProperty: Collection
  * @param spatialFilter Normalized distance filter.
  * @returns A CQL dwithin predicate.
  */
-export function compileDwithinSpatialFilter(geometryProperty: CollectionProperty, spatialFilter: Extract<SpatialFilter, { operator: "dwithin_point" }>) {
-  return `DWITHIN(${geometryProperty.name},SRID=4326;POINT(${spatialFilter.lon} ${spatialFilter.lat}),${spatialFilter.distance_m},meters)`;
+export function compileDwithinSpatialFilter(geometryProperty: CollectionProperty, spatialFilter: Extract<SpatialFilter, { type: "dwithin_point" }>) {
+  return `DWITHIN(${geometryProperty.name},SRID=4326;POINT(${spatialFilter.point.lon} ${spatialFilter.point.lat}),${spatialFilter.distance_m},meters)`;
 }
 
 /**
