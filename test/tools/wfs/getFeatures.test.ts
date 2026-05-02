@@ -191,7 +191,10 @@ describe("Test GpfWfsGetFeaturesTool", () => {
     if (textContent.type !== "text") {
       throw new Error("expected text content");
     }
-    expect(Number(JSON.parse(textContent.text))).toBeGreaterThan(0);
+    expect(JSON.parse(textContent.text)).toMatchObject({
+      result_type: "hits",
+      totalFeatures: expect.any(Number),
+    });
     expect(response.structuredContent).toMatchObject({
       result_type: "hits",
       totalFeatures: expect.any(Number),
@@ -395,7 +398,10 @@ describe("Test GpfWfsGetFeaturesTool", () => {
     if (textContent.type !== "text") {
       throw new Error("expected text content");
     }
-    expect(JSON.parse(textContent.text)).toEqual(321);
+    expect(JSON.parse(textContent.text)).toEqual({
+      result_type: "hits",
+      totalFeatures: 321,
+    });
   });
 
   it("should fall back to totalFeatures when numberMatched is absent", async () => {
@@ -418,7 +424,10 @@ describe("Test GpfWfsGetFeaturesTool", () => {
     if (textContent.type !== "text") {
       throw new Error("expected text content");
     }
-    expect(JSON.parse(textContent.text)).toEqual(321);
+    expect(JSON.parse(textContent.text)).toEqual({
+      result_type: "hits",
+      totalFeatures: 321,
+    });
   });
 
   it("should fail clearly when numberMatched is unknown", async () => {
