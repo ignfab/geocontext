@@ -6,6 +6,13 @@ import {
 } from "../../../src/helpers/wfs_engine/response";
 
 describe("wfs_engine/response", () => {
+  function getFeatures(
+    result: ReturnType<typeof transformFeatureCollectionResponse>,
+  ): NonNullable<ReturnType<typeof transformFeatureCollectionResponse>["features"]> {
+    expect(result.features).toBeDefined();
+    return result.features!;
+  }
+
   // --- transformFeatureCollectionResponse ---
 
   describe("transformFeatureCollectionResponse", () => {
@@ -29,8 +36,10 @@ describe("wfs_engine/response", () => {
       });
 
       expect(result).not.toHaveProperty("crs");
-      expect(result.features).toHaveLength(1);
-      expect(result.features[0]).toEqual({
+      const features = getFeatures(result);
+
+      expect(features).toHaveLength(1);
+      expect(features[0]).toEqual({
         id: "commune.1",
         properties: { code_insee: "94080" },
         geometry: null,
@@ -45,8 +54,10 @@ describe("wfs_engine/response", () => {
         ],
       });
 
-      expect(result.features[0]).not.toHaveProperty("feature_ref");
-      expect(result.features[0]).toEqual({
+      const features = getFeatures(result);
+
+      expect(features[0]).not.toHaveProperty("feature_ref");
+      expect(features[0]).toEqual({
         id: 42,
         properties: { name: "test" },
         geometry: null,
@@ -73,7 +84,9 @@ describe("wfs_engine/response", () => {
         "ADMINEXPRESS-COG.LATEST:commune",
       );
 
-      expect(result.features[0].feature_ref).toEqual({
+      const features = getFeatures(result);
+
+      expect(features[0].feature_ref).toEqual({
         typename: "ADMINEXPRESS-COG.LATEST:commune",
         feature_id: "commune.1",
       });
@@ -89,7 +102,9 @@ describe("wfs_engine/response", () => {
         "TEST:type",
       );
 
-      expect(result.features[0]).not.toHaveProperty("feature_ref");
+      const features = getFeatures(result);
+
+      expect(features[0]).not.toHaveProperty("feature_ref");
     });
 
     it("should inject typename into feature_ref for multiple features", () => {
@@ -104,17 +119,19 @@ describe("wfs_engine/response", () => {
         "ADMINEXPRESS-COG.LATEST:commune",
       );
 
-      expect(result.features).toHaveLength(3);
-      expect(result.features[0].feature_ref).toEqual({
+      const features = getFeatures(result);
+
+      expect(features).toHaveLength(3);
+      expect(features[0].feature_ref).toEqual({
         typename: "ADMINEXPRESS-COG.LATEST:commune",
         feature_id: "commune.1",
       });
-      expect(result.features[1].feature_ref).toEqual({
+      expect(features[1].feature_ref).toEqual({
         typename: "ADMINEXPRESS-COG.LATEST:commune",
         feature_id: "commune.2",
       });
       // Non-string id: no feature_ref injected
-      expect(result.features[2]).not.toHaveProperty("feature_ref");
+      expect(features[2]).not.toHaveProperty("feature_ref");
     });
   });
 
@@ -220,4 +237,3 @@ describe("wfs_engine/response", () => {
     expect(mapToFlatItemsWithGeometry({}, ["ADMINEXPRESS-COG.LATEST:commune"])).toEqual([]);
   });
 });
-

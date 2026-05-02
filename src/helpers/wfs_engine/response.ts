@@ -9,15 +9,30 @@
 // --- Response Types ---
 
 type GenericFeature = {
-  id?: string;
+  id?: unknown;
   geometry?: unknown;
   geometry_name?: string;
+  bbox?: unknown;
+  properties?: unknown;
   [key: string]: unknown;
 };
 
 type GenericFeatureCollection = {
   features?: GenericFeature[];
   [key: string]: unknown;
+};
+
+type FeatureRef = {
+  typename: string | null;
+  feature_id: string;
+};
+
+type TransformedFeature = Record<string, unknown> & {
+  feature_ref?: FeatureRef;
+};
+
+type TransformedFeatureCollection = Record<string, unknown> & {
+  features?: TransformedFeature[];
 };
 
 /**
@@ -42,7 +57,9 @@ export type FlatItem = Record<string, unknown> & {
  * @param featureCollection Raw FeatureCollection returned by the WFS endpoint.
  * @returns A transformed FeatureCollection with raw geometry fields removed, `geometry: null`, and optional `feature_ref` metadata.
  */
-export function transformFeatureCollectionResponse(featureCollection: GenericFeatureCollection) {
+export function transformFeatureCollectionResponse(
+  featureCollection: GenericFeatureCollection,
+): TransformedFeatureCollection {
   if (!Array.isArray(featureCollection.features)) {
     return featureCollection;
   }
@@ -79,13 +96,13 @@ export function transformFeatureCollectionResponse(featureCollection: GenericFea
  * @returns A transformed FeatureCollection whose `feature_ref` objects carry the exact typename.
  */
 export function attachFeatureRefs(featureCollection: GenericFeatureCollection, typename: string) {
-  const transformed = transformFeatureCollectionResponse(featureCollection) as Record<string, unknown>;
+  const transformed = transformFeatureCollectionResponse(featureCollection);
   if (!Array.isArray(transformed.features)) {
     return transformed;
   }
 
   transformed.features = transformed.features.map((feature) => {
-    if (typeof feature !== "object" || feature === null || !("feature_ref" in feature)) {
+    if (!("feature_ref" in feature)) {
       return feature;
     }
     const featureRef = feature.feature_ref;
