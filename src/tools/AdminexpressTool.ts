@@ -25,7 +25,7 @@ const adminexpressResultSchema = z
     type: z.string().describe(`Le type d'unité administrative (${ADMINEXPRESS_TYPES.join(", ")}).`),
     id: z.string().describe("L'identifiant de l'unité administrative."),
     bbox: z.array(z.number()).describe("La boîte englobante de l'unité administrative.").optional(),
-    feature_ref: featureRefSchema.describe("Référence WFS réutilisable, notamment avec `gpf_wfs_get_features` et `spatial_operator = \"intersects_feature\"`."),
+    feature_ref: featureRefSchema.describe("Référence WFS réutilisable, notamment avec `gpf_wfs_get_features` et `spatial_filter = { type: \"intersects_feature\", feature_ref: ... }`."),
   })
   .catchall(z.unknown());
 
@@ -42,7 +42,7 @@ class AdminexpressTool extends BaseTool<AdminexpressInput> {
   description = [
     `Renvoie, pour un point donné par sa \`longitude\` et sa \`latitude\`, la liste des unités administratives (${ADMINEXPRESS_TYPES.join(", ")}) qui le couvrent, sous forme d'objets typés contenant leurs propriétés administratives.`,
     "Les résultats incluent un `feature_ref` WFS réutilisable. Les propriétés incluent notamment le code INSEE.",
-    "Le `feature_ref` de chaque unité administrative est directement réutilisable dans `gpf_wfs_get_features` avec `spatial_operator=\"intersects_feature\"` pour interroger d'autres données sur cette emprise.",
+    "Le `feature_ref` de chaque unité administrative est directement réutilisable dans `gpf_wfs_get_features` avec `spatial_filter={ type: \"intersects_feature\", feature_ref: ... }` pour interroger d'autres données sur cette emprise.",
     "Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gpf_wfs_get_feature_by_id`.",
     `(source : ${ADMINEXPRESS_SOURCE}).`
   ].join("\n");

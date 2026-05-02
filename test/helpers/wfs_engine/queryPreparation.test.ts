@@ -43,11 +43,15 @@ describe("gpfWfsGetFeatures/queryPreparation", () => {
   it("should compile bbox in lon lat order", () => {
     const compiled = compileQueryParts({
       ...baseInput,
-      spatial_operator: "bbox",
-      bbox_west: 2.4,
-      bbox_south: 48.7,
-      bbox_east: 2.5,
-      bbox_north: 48.8,
+      spatial_filter: {
+        type: "bbox",
+        bbox: {
+          west: 2.4,
+          south: 48.7,
+          east: 2.5,
+          north: 48.8,
+        },
+      },
     }, featureType);
 
     expect(compiled.cqlFilter).toEqual("BBOX(geometrie,2.4,48.7,2.5,48.8,'EPSG:4326')");
@@ -56,17 +60,25 @@ describe("gpfWfsGetFeatures/queryPreparation", () => {
   it("should compile point spatial filters", () => {
     const intersects = compileQueryParts({
       ...baseInput,
-      spatial_operator: "intersects_point",
-      intersects_lon: 2.3522,
-      intersects_lat: 48.8566,
+      spatial_filter: {
+        type: "intersects_point",
+        point: {
+          lon: 2.3522,
+          lat: 48.8566,
+        },
+      },
     }, featureType);
 
     const dwithin = compileQueryParts({
       ...baseInput,
-      spatial_operator: "dwithin_point",
-      dwithin_lon: 2.3522,
-      dwithin_lat: 48.8566,
-      dwithin_distance_m: 250,
+      spatial_filter: {
+        type: "dwithin_point",
+        point: {
+          lon: 2.3522,
+          lat: 48.8566,
+        },
+        distance_m: 250,
+      },
     }, featureType);
 
     expect(intersects.cqlFilter).toEqual("INTERSECTS(geometrie,SRID=4326;POINT(2.3522 48.8566))");
@@ -76,9 +88,13 @@ describe("gpfWfsGetFeatures/queryPreparation", () => {
   it("should compile intersects_feature with resolved geometry", () => {
     const compiled = compileQueryParts({
       ...baseInput,
-      spatial_operator: "intersects_feature",
-      intersects_feature_typename: "ADMINEXPRESS-COG.LATEST:commune",
-      intersects_feature_id: "commune.1",
+      spatial_filter: {
+        type: "intersects_feature",
+        feature_ref: {
+          typename: "ADMINEXPRESS-COG.LATEST:commune",
+          feature_id: "commune.1",
+        },
+      },
     }, featureType, {
       geometry_ewkt: "SRID=4326;MULTIPOLYGON(((2 48,2.2 48,2.2 48.2,2 48,2 48)))",
     });
@@ -103,11 +119,10 @@ describe("gpfWfsGetFeatures/queryPreparation", () => {
     expect(compiled.propertyName).toEqual("code_insee,population,geometrie");
   });
 
-  it("should reject stray spatial params without operator", () => {
-    expect(() => compileQueryParts({
-      ...baseInput,
-      bbox_west: 2.3,
-    }, featureType)).toThrow("paramètres spatiaux exigent `spatial_operator`");
+  it("should leave cqlFilter undefined when no where and no spatial_filter are provided", () => {
+    const compiled = compileQueryParts(baseInput, featureType);
+
+    expect(compiled.cqlFilter).toBeUndefined();
   });
 
   it("should build sortBy from structured order_by", () => {

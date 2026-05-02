@@ -154,6 +154,9 @@ describe("Test GpfWfsGetFeaturesTool", () => {
     expect(tool.toolDefinition.inputSchema.properties?.where).toMatchObject({
       type: "array",
     });
+    expect(tool.toolDefinition.inputSchema.properties?.spatial_filter).toMatchObject({
+      anyOf: expect.any(Array),
+    });
     expect(tool.toolDefinition.outputSchema).toBeUndefined();
   });
 
@@ -299,6 +302,40 @@ describe("Test GpfWfsGetFeaturesTool", () => {
           name: "cql_filter",
           detail: expect.stringContaining("cql_filter"),
         }),
+      ]),
+    });
+  });
+
+  it("should reject removed flat spatial parameters as unknown inputs", async () => {
+    const tool = new GpfWfsGetFeaturesTool();
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_wfs_get_features",
+        arguments: {
+          typename: "ADMINEXPRESS-COG.LATEST:commune",
+          spatial_operator: "bbox",
+          bbox_west: 2.1,
+          bbox_south: 48.7,
+          bbox_east: 2.5,
+          bbox_north: 48.9,
+        },
+      },
+    });
+
+    expect(response.isError).toBe(true);
+    const textContent = response.content[0];
+    if (textContent.type !== "text") {
+      throw new Error("expected text content");
+    }
+    expect(textContent.text).toContain("Paramètres invalides");
+    expect(response.structuredContent).toMatchObject({
+      type: "urn:geocontext:problem:invalid-tool-params",
+      errors: expect.arrayContaining([
+        expect.objectContaining({ code: "unknown_parameter", name: "spatial_operator" }),
+        expect.objectContaining({ code: "unknown_parameter", name: "bbox_west" }),
+        expect.objectContaining({ code: "unknown_parameter", name: "bbox_south" }),
+        expect.objectContaining({ code: "unknown_parameter", name: "bbox_east" }),
+        expect.objectContaining({ code: "unknown_parameter", name: "bbox_north" }),
       ]),
     });
   });
@@ -554,9 +591,13 @@ describe("Test GpfWfsGetFeaturesTool", () => {
         name: "gpf_wfs_get_features",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
-          spatial_operator: "intersects_feature",
-          intersects_feature_typename: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:localisant",
-          intersects_feature_id: "localisant.1",
+          spatial_filter: {
+            type: "intersects_feature",
+            feature_ref: {
+              typename: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:localisant",
+              feature_id: "localisant.1",
+            },
+          },
           result_type: "request",
         },
       },
@@ -589,9 +630,13 @@ describe("Test GpfWfsGetFeaturesTool", () => {
         name: "gpf_wfs_get_features",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
-          spatial_operator: "intersects_feature",
-          intersects_feature_typename: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:localisant",
-          intersects_feature_id: "localisant.404",
+          spatial_filter: {
+            type: "intersects_feature",
+            feature_ref: {
+              typename: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:localisant",
+              feature_id: "localisant.404",
+            },
+          },
         },
       },
     });
@@ -617,9 +662,13 @@ describe("Test GpfWfsGetFeaturesTool", () => {
         name: "gpf_wfs_get_features",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
-          spatial_operator: "intersects_feature",
-          intersects_feature_typename: "ADMINEXPRESS-COG.LATEST:commune",
-          intersects_feature_id: "commune.1",
+          spatial_filter: {
+            type: "intersects_feature",
+            feature_ref: {
+              typename: "ADMINEXPRESS-COG.LATEST:commune",
+              feature_id: "commune.1",
+            },
+          },
         },
       },
     });

@@ -18,7 +18,7 @@ export const DEFAULT_LIMIT = 100;
 export const MAX_LIMIT = 5000;
 export const REQUEST_GET_URL_MAX_LENGTH = 6000;
 export const WHERE_OPERATORS = ["eq", "ne", "lt", "lte", "gt", "gte", "in", "is_null"] as const;
-export const SPATIAL_OPERATORS = ["bbox", "intersects_point", "dwithin_point", "intersects_feature"] as const;
+export const SPATIAL_FILTER_TYPES = ["bbox", "intersects_point", "dwithin_point", "intersects_feature"] as const;
 export const ORDER_DIRECTIONS = ["asc", "desc"] as const;
 
 // --- Shared Clauses ---
@@ -35,13 +35,67 @@ const orderBySchema = z.object({
   direction: z.enum(ORDER_DIRECTIONS).default("asc").describe("Direction de tri : `asc` ou `desc`."),
 }).strict().describe("Critère de tri structuré. Exemple : `{ property: \"population\", direction: \"desc\" }`.");
 
+const spatialPointSchema = z.object({
+  lon: lonSchema.describe("Longitude du point en WGS84 `lon/lat`."),
+  lat: latSchema.describe("Latitude du point en WGS84 `lon/lat`."),
+}).strict().describe("Point en WGS84 `lon/lat`.");
+
+const spatialBboxSchema = z.object({
+  west: lonSchema.describe("Longitude ouest en WGS84 `lon/lat`."),
+  south: latSchema.describe("Latitude sud en WGS84 `lon/lat`."),
+  east: lonSchema.describe("Longitude est en WGS84 `lon/lat`."),
+  north: latSchema.describe("Latitude nord en WGS84 `lon/lat`."),
+}).strict().describe("Boite englobante en WGS84 `lon/lat`.");
+
+const spatialFeatureRefSchema = z.object({
+  typename: z.string().trim().min(1).describe("Type WFS du feature de référence."),
+  feature_id: z.string().trim().min(1).describe("Identifiant du feature de référence."),
+}).strict().describe("Référence légère vers un feature WFS réutilisable.");
+
+export const spatialFilterSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("bbox"),
+    bbox: spatialBboxSchema,
+  }).strict().describe("Filtre spatial par boite englobante."),
+  z.object({
+    type: z.literal("intersects_point"),
+    point: spatialPointSchema,
+  }).strict().describe("Filtre spatial par intersection avec un point."),
+  z.object({
+    type: z.literal("dwithin_point"),
+    point: spatialPointSchema,
+    distance_m: z.number().finite().positive().describe("Distance en metres."),
+  }).strict().describe("Filtre spatial par distance autour d'un point."),
+  z.object({
+    type: z.literal("intersects_feature"),
+    feature_ref: spatialFeatureRefSchema,
+  }).strict().describe("Filtre spatial par intersection avec un feature de reference."),
+]);
+
 // --- Shared Types ---
 
+export type SpatialPoint = {
+  lon: number;
+  lat: number;
+};
+
+export type SpatialBbox = {
+  west: number;
+  south: number;
+  east: number;
+  north: number;
+};
+
+export type SpatialFeatureRef = {
+  typename: string;
+  feature_id: string;
+};
+
 export type SpatialFilter =
-  | { operator: "bbox"; west: number; south: number; east: number; north: number }
-  | { operator: "intersects_point"; lon: number; lat: number }
-  | { operator: "dwithin_point"; lon: number; lat: number; distance_m: number }
-  | { operator: "intersects_feature"; typename: string; feature_id: string };
+  | { type: "bbox"; bbox: SpatialBbox }
+  | { type: "intersects_point"; point: SpatialPoint }
+  | { type: "dwithin_point"; point: SpatialPoint; distance_m: number }
+  | { type: "intersects_feature"; feature_ref: SpatialFeatureRef };
 
 // --- Shared Compact Outputs ---
 
@@ -91,26 +145,16 @@ export const gpfWfsGetFeaturesInputSchema = z.object({
     .min(1)
     .optional()
     .describe("Clauses de filtre attributaire, combinées avec `AND`."),
-  spatial_operator: z
-    .enum(SPATIAL_OPERATORS)
+  spatial_filter: spatialFilterSchema
     .optional()
-    .describe("Type optionnel de filtre spatial."),
-  bbox_west: lonSchema.describe("Longitude ouest en WGS84 `lon/lat`, utilisée avec `spatial_operator = \"bbox\"`.").optional(),
-  bbox_south: latSchema.describe("Latitude sud en WGS84 `lon/lat`, utilisée avec `spatial_operator = \"bbox\"`.").optional(),
-  bbox_east: lonSchema.describe("Longitude est en WGS84 `lon/lat`, utilisée avec `spatial_operator = \"bbox\"`.").optional(),
-  bbox_north: latSchema.describe("Latitude nord en WGS84 `lon/lat`, utilisée avec `spatial_operator = \"bbox\"`.").optional(),
-  intersects_lon: lonSchema.describe("Longitude du point en WGS84 `lon/lat`, utilisée avec `spatial_operator = \"intersects_point\"`.").optional(),
-  intersects_lat: latSchema.describe("Latitude du point en WGS84 `lon/lat`, utilisée avec `spatial_operator = \"intersects_point\"`.").optional(),
-  dwithin_lon: lonSchema.describe("Longitude du point en WGS84 `lon/lat`, utilisée avec `spatial_operator = \"dwithin_point\"`.").optional(),
-  dwithin_lat: latSchema.describe("Latitude du point en WGS84 `lon/lat`, utilisée avec `spatial_operator = \"dwithin_point\"`.").optional(),
-  dwithin_distance_m: z.number().finite().positive().describe("Distance en mètres, utilisée avec `spatial_operator = \"dwithin_point\"`.").optional(),
-  intersects_feature_typename: z.string().trim().min(1).optional().describe("Type WFS du feature de référence, utilisé avec `spatial_operator = \"intersects_feature\"`."),
-  intersects_feature_id: z.string().trim().min(1).optional().describe("Identifiant du feature de référence, utilisé avec `spatial_operator = \"intersects_feature\"`."),
+    .describe("Filtre spatial optionnel. Variantes supportees : `{ type: \"bbox\", bbox: { west, south, east, north } }`, `{ type: \"intersects_point\", point: { lon, lat } }`, `{ type: \"dwithin_point\", point: { lon, lat }, distance_m }`, `{ type: \"intersects_feature\", feature_ref: { typename, feature_id } }`."),
 }).strict();
 
 // --- `gpf_wfs_get_features` Types ---
 
-export type GpfWfsGetFeaturesInput = z.infer<typeof gpfWfsGetFeaturesInputSchema>;
+export type GpfWfsGetFeaturesInput = Omit<z.infer<typeof gpfWfsGetFeaturesInputSchema>, "spatial_filter"> & {
+  spatial_filter?: SpatialFilter;
+};
 export type WhereClause = NonNullable<GpfWfsGetFeaturesInput["where"]>[number];
 export type OrderByClause = NonNullable<GpfWfsGetFeaturesInput["order_by"]>[number];
 

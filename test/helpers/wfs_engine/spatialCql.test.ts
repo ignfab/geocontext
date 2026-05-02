@@ -20,7 +20,10 @@ const geometryProperty: CollectionProperty = {
 
 describe("compileBboxSpatialFilter", () => {
   it("should compile a valid bbox filter to a CQL BBOX predicate", () => {
-    const filter = extractSpatialFilter({ operator: "bbox", west: 2.1, south: 48.7, east: 2.5, north: 48.9 });
+    const filter = extractSpatialFilter({
+      type: "bbox",
+      bbox: { west: 2.1, south: 48.7, east: 2.5, north: 48.9 },
+    });
 
     const result = compileBboxSpatialFilter(geometryProperty, filter);
 
@@ -28,39 +31,54 @@ describe("compileBboxSpatialFilter", () => {
   });
 
   it("should reject west >= east", () => {
-    const filter = extractSpatialFilter({ operator: "bbox", west: 3.0, south: 48.0, east: 2.0, north: 49.0 });
+    const filter = extractSpatialFilter({
+      type: "bbox",
+      bbox: { west: 3.0, south: 48.0, east: 2.0, north: 49.0 },
+    });
 
     expect(() => compileBboxSpatialFilter(geometryProperty, filter)).toThrow(
-      "Le bbox est invalide : `bbox_west` doit être strictement inférieur à `bbox_east`."
+      "Le bbox est invalide : `spatial_filter.bbox.west` doit être strictement inférieur à `spatial_filter.bbox.east`."
     );
   });
 
   it("should reject equal west and east", () => {
-    const filter = extractSpatialFilter({ operator: "bbox", west: 2.5, south: 48.0, east: 2.5, north: 49.0 });
+    const filter = extractSpatialFilter({
+      type: "bbox",
+      bbox: { west: 2.5, south: 48.0, east: 2.5, north: 49.0 },
+    });
 
     expect(() => compileBboxSpatialFilter(geometryProperty, filter)).toThrow(
-      "Le bbox est invalide : `bbox_west` doit être strictement inférieur à `bbox_east`."
+      "Le bbox est invalide : `spatial_filter.bbox.west` doit être strictement inférieur à `spatial_filter.bbox.east`."
     );
   });
 
   it("should reject south >= north", () => {
-    const filter = extractSpatialFilter({ operator: "bbox", west: 2.0, south: 49.0, east: 3.0, north: 48.0 });
+    const filter = extractSpatialFilter({
+      type: "bbox",
+      bbox: { west: 2.0, south: 49.0, east: 3.0, north: 48.0 },
+    });
 
     expect(() => compileBboxSpatialFilter(geometryProperty, filter)).toThrow(
-      "Le bbox est invalide : `bbox_south` doit être strictement inférieur à `bbox_north`."
+      "Le bbox est invalide : `spatial_filter.bbox.south` doit être strictement inférieur à `spatial_filter.bbox.north`."
     );
   });
 
   it("should reject equal south and north", () => {
-    const filter = extractSpatialFilter({ operator: "bbox", west: 2.0, south: 48.5, east: 3.0, north: 48.5 });
+    const filter = extractSpatialFilter({
+      type: "bbox",
+      bbox: { west: 2.0, south: 48.5, east: 3.0, north: 48.5 },
+    });
 
     expect(() => compileBboxSpatialFilter(geometryProperty, filter)).toThrow(
-      "Le bbox est invalide : `bbox_south` doit être strictement inférieur à `bbox_north`."
+      "Le bbox est invalide : `spatial_filter.bbox.south` doit être strictement inférieur à `spatial_filter.bbox.north`."
     );
   });
 
   it("should handle negative coordinates", () => {
-    const filter = extractSpatialFilter({ operator: "bbox", west: -5.0, south: -10.0, east: -1.0, north: -2.0 });
+    const filter = extractSpatialFilter({
+      type: "bbox",
+      bbox: { west: -5.0, south: -10.0, east: -1.0, north: -2.0 },
+    });
 
     const result = compileBboxSpatialFilter(geometryProperty, filter);
 
@@ -68,7 +86,10 @@ describe("compileBboxSpatialFilter", () => {
   });
 
   it("should handle coordinates crossing the equator", () => {
-    const filter = extractSpatialFilter({ operator: "bbox", west: 10.0, south: -5.0, east: 20.0, north: 5.0 });
+    const filter = extractSpatialFilter({
+      type: "bbox",
+      bbox: { west: 10.0, south: -5.0, east: 20.0, north: 5.0 },
+    });
 
     const result = compileBboxSpatialFilter(geometryProperty, filter);
 
@@ -80,7 +101,10 @@ describe("compileBboxSpatialFilter", () => {
 
 describe("compileIntersectsPointSpatialFilter", () => {
   it("should compile an intersects_point filter to a CQL INTERSECTS predicate", () => {
-    const filter = extractSpatialFilter({ operator: "intersects_point", lon: 2.3522, lat: 48.8566 });
+    const filter = extractSpatialFilter({
+      type: "intersects_point",
+      point: { lon: 2.3522, lat: 48.8566 },
+    });
 
     const result = compileIntersectsPointSpatialFilter(geometryProperty, filter);
 
@@ -88,7 +112,10 @@ describe("compileIntersectsPointSpatialFilter", () => {
   });
 
   it("should handle negative coordinates", () => {
-    const filter = extractSpatialFilter({ operator: "intersects_point", lon: -73.9857, lat: 40.7484 });
+    const filter = extractSpatialFilter({
+      type: "intersects_point",
+      point: { lon: -73.9857, lat: 40.7484 },
+    });
 
     const result = compileIntersectsPointSpatialFilter(geometryProperty, filter);
 
@@ -100,7 +127,11 @@ describe("compileIntersectsPointSpatialFilter", () => {
 
 describe("compileDwithinSpatialFilter", () => {
   it("should compile a dwithin_point filter to a CQL DWITHIN predicate", () => {
-    const filter = extractSpatialFilter({ operator: "dwithin_point", lon: 2.3522, lat: 48.8566, distance_m: 500 });
+    const filter = extractSpatialFilter({
+      type: "dwithin_point",
+      point: { lon: 2.3522, lat: 48.8566 },
+      distance_m: 500,
+    });
 
     const result = compileDwithinSpatialFilter(geometryProperty, filter);
 
@@ -108,7 +139,11 @@ describe("compileDwithinSpatialFilter", () => {
   });
 
   it("should handle a large distance", () => {
-    const filter = extractSpatialFilter({ operator: "dwithin_point", lon: 0, lat: 0, distance_m: 50000 });
+    const filter = extractSpatialFilter({
+      type: "dwithin_point",
+      point: { lon: 0, lat: 0 },
+      distance_m: 50000,
+    });
 
     const result = compileDwithinSpatialFilter(geometryProperty, filter);
 
@@ -116,7 +151,11 @@ describe("compileDwithinSpatialFilter", () => {
   });
 
   it("should handle a small fractional distance", () => {
-    const filter = extractSpatialFilter({ operator: "dwithin_point", lon: 5.0, lat: 43.0, distance_m: 0.5 });
+    const filter = extractSpatialFilter({
+      type: "dwithin_point",
+      point: { lon: 5.0, lat: 43.0 },
+      distance_m: 0.5,
+    });
 
     const result = compileDwithinSpatialFilter(geometryProperty, filter);
 
@@ -146,19 +185,13 @@ describe("compileIntersectsFeatureSpatialFilter", () => {
 
 // --- Helpers ---
 
-const VALID_OPERATORS: readonly string[] = ["bbox", "intersects_point", "dwithin_point", "intersects_feature"];
+const VALID_TYPES: readonly string[] = ["bbox", "intersects_point", "dwithin_point", "intersects_feature"];
 
-/**
- * Type-safe helper to build a specific spatial filter variant with a runtime guard.
- *
- * Validates the operator at runtime so a mistyped fixture fails fast instead of
- * silently passing due to a bare cast.
- */
-function extractSpatialFilter<T extends SpatialFilter["operator"]>(
-  input: SpatialFilter & { operator: T },
-): Extract<SpatialFilter, { operator: T }> {
-  if (!VALID_OPERATORS.includes(input.operator)) {
-    throw new Error(`Test fixture error: unexpected operator '${String(input.operator)}'`);
+function extractSpatialFilter<T extends SpatialFilter["type"]>(
+  input: SpatialFilter & { type: T },
+): Extract<SpatialFilter, { type: T }> {
+  if (!VALID_TYPES.includes(input.type)) {
+    throw new Error(`Test fixture error: unexpected type '${String(input.type)}'`);
   }
-  return input as Extract<SpatialFilter, { operator: T }>;
+  return input as Extract<SpatialFilter, { type: T }>;
 }

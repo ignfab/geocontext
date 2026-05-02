@@ -25,7 +25,7 @@ const assietteSupResultSchema = z
     type: z.string().describe("Le type d'assiette de servitude d'utilité publique renvoyé."),
     id: z.string().describe("L'identifiant de l'assiette."),
     bbox: z.array(z.number()).describe("La boîte englobante de l'assiette.").optional(),
-    feature_ref: featureRefSchema.describe("Référence WFS réutilisable, notamment avec `gpf_wfs_get_features` et `spatial_operator = \"intersects_feature\"`.").optional(),
+    feature_ref: featureRefSchema.describe("Référence WFS réutilisable, notamment avec `gpf_wfs_get_features` et `spatial_filter = { type: \"intersects_feature\", feature_ref: ... }`.").optional(),
     distance: z.number().describe("La distance en mètres entre le point demandé et l'assiette retenue."),
   })
   .catchall(z.unknown());
