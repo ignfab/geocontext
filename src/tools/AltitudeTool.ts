@@ -27,9 +27,7 @@ const altitudeResultSchema = z.object({
   accuracy: z.string().describe("L'information de précision associée à l'altitude."),
 });
 
-const altitudeOutputSchema = z.object({
-  result: altitudeResultSchema.describe("Le résultat altimétrique pour la position demandée."),
-});
+const altitudeOutputSchema = altitudeResultSchema;
 
 // --- Tool ---
 
@@ -49,9 +47,7 @@ class AltitudeTool extends BaseTool<AltitudeInput> {
    * @returns The altitude payload returned by the upstream service.
    */
   async execute(input: AltitudeInput) {
-    return {
-      result: await getAltitudeByLocation(input.lon, input.lat),
-    };
+    return await getAltitudeByLocation(input.lon, input.lat);
   }
 }
 

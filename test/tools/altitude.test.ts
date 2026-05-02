@@ -5,12 +5,10 @@ describe("Test AltitudeTool",() => {
     class TestableAltitudeTool extends AltitudeTool {
         async execute() {
             return {
-                result: {
-                    lon: paris.coordinates[0],
-                    lat: paris.coordinates[1],
-                    altitude: 34.78,
-                    accuracy: "Variable suivant la source de mesure",
-                },
+                lon: paris.coordinates[0],
+                lat: paris.coordinates[1],
+                altitude: 34.78,
+                accuracy: "Variable suivant la source de mesure",
             };
         }
     }
@@ -53,17 +51,13 @@ describe("Test AltitudeTool",() => {
             throw new Error("expected text content");
         }
         expect(JSON.parse(textContent.text)).toMatchObject({
-            result: {
-                lon: c[0],
-                lat: c[1],
-            },
+            lon: c[0],
+            lat: c[1],
         });
         expect(response.structuredContent).toBeDefined();
         expect(response.structuredContent).toMatchObject({
-            result: {
-                lon: c[0],
-                lat: c[1],
-            },
+            lon: c[0],
+            lat: c[1],
         });
     });
 
