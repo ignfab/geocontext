@@ -12,7 +12,7 @@
 import { initChatModel } from "langchain";
 import { MultiServerMCPClient } from "@langchain/mcp-adapters";
 import { INTEGRATION_CONFIG, MILLISECONDS, PROXY_ENV_KEYS } from "./shared.js";
-import { setGlobalDispatcher, ProxyAgent } from "undici";
+import { setGlobalDispatcher, EnvHttpProxyAgent } from "undici";
 
 let proxyConfigured = false;
 
@@ -35,20 +35,19 @@ function configureModelProxy() {
     return;
   }
 
-  const proxyUrl = PROXY_ENV_KEYS
-    .map((key) => process.env[key])
-    .find((value) => Boolean(value));
+  const hasProxyConfig = PROXY_ENV_KEYS.some((key) => Boolean(process.env[key]));
 
-  if (proxyUrl) {
-    setGlobalDispatcher(new ProxyAgent(proxyUrl));
+  if (hasProxyConfig) {
+    setGlobalDispatcher(new EnvHttpProxyAgent());
   }
 
   proxyConfigured = true;
 }
 
 /** System prompt for the agent */
-export const SYSTEM_PROMPT =
-  "You are a helpful assistant for geospatial data. You can use the tools to answer questions about geospatial data.";
+export const SYSTEM_PROMPT = [
+  "Use the tools to answer question about geospatial data.",
+].join("\n");
 
 /** Timeout for agent E2E tests (2 minutes) */
 export const E2E_TIMEOUT = 120 * MILLISECONDS;
