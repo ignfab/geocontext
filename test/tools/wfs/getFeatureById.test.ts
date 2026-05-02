@@ -162,8 +162,10 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
       throw new Error("expected text content");
     }
     const results = JSON.parse(textContent.text);
+    expect(response.structuredContent).toEqual(results);
     expect(results.totalFeatures).toEqual(1);
     expect(results.numberMatched).toEqual(1);
+    expect(results.numberReturned).toEqual(1);
     expect(results.features).toHaveLength(1);
     expect(results.features[0].geometry).toBeNull();
     expect(results.features[0].feature_ref).toEqual({
