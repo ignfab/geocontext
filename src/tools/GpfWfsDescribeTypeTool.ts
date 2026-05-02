@@ -33,14 +33,12 @@ const gpfWfsPropertySchema = z.object({
 });
 
 const gpfWfsDescribeTypeOutputSchema = z.object({
-  result: z.object({
-    id: z.string().describe("L'identifiant complet du type WFS."),
-    namespace: z.string().describe("L'espace de nommage du type WFS."),
-    name: z.string().describe("Le nom court du type WFS."),
-    title: z.string().describe("Le titre lisible du type WFS."),
-    description: z.string().describe("La description du type WFS."),
-    properties: z.array(gpfWfsPropertySchema).describe("La liste des propriétés du type WFS."),
-  }).describe("La description détaillée du type WFS."),
+  id: z.string().describe("L'identifiant complet du type WFS."),
+  namespace: z.string().describe("L'espace de nommage du type WFS."),
+  name: z.string().describe("Le nom court du type WFS."),
+  title: z.string().describe("Le titre lisible du type WFS."),
+  description: z.string().describe("La description du type WFS."),
+  properties: z.array(gpfWfsPropertySchema).describe("La liste des propriétés du type WFS."),
 });
 
 // --- Tool ---
@@ -68,9 +66,7 @@ class GpfWfsDescribeTypeTool extends BaseTool<GpfWfsDescribeTypeInput> {
   async execute(input: GpfWfsDescribeTypeInput) {
     try {
       const featureType: Collection = await wfsClient.getFeatureType(input.typename);
-      return {
-        result: featureType,
-      };
+      return featureType;
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : String(e);
       throw new Error(`${message}. Utiliser gpf_wfs_search_types pour trouver un type valide.`);

@@ -225,7 +225,10 @@ Renvoie l'altitude (en mètres) et la précision de la mesure (accuracy) d'un po
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `result` | object | yes | Le résultat altimétrique pour la position demandée. |
+| `accuracy` | string | yes | L'information de précision associée à l'altitude. |
+| `altitude` | number | yes | L'altitude du point. |
+| `lat` | number | yes | La latitude du point. |
+| `lon` | number | yes | La longitude du point. |
 
 <details>
 <summary>Raw output schema</summary>
@@ -234,37 +237,28 @@ Renvoie l'altitude (en mètres) et la précision de la mesure (accuracy) d'un po
 {
   "type": "object",
   "properties": {
-    "result": {
-      "type": "object",
-      "description": "Le résultat altimétrique pour la position demandée.",
-      "properties": {
-        "lon": {
-          "type": "number",
-          "description": "La longitude du point."
-        },
-        "lat": {
-          "type": "number",
-          "description": "La latitude du point."
-        },
-        "altitude": {
-          "type": "number",
-          "description": "L'altitude du point."
-        },
-        "accuracy": {
-          "type": "string",
-          "description": "L'information de précision associée à l'altitude."
-        }
-      },
-      "required": [
-        "lon",
-        "lat",
-        "altitude",
-        "accuracy"
-      ]
+    "lon": {
+      "type": "number",
+      "description": "La longitude du point."
+    },
+    "lat": {
+      "type": "number",
+      "description": "La latitude du point."
+    },
+    "altitude": {
+      "type": "number",
+      "description": "L'altitude du point."
+    },
+    "accuracy": {
+      "type": "string",
+      "description": "L'information de précision associée à l'altitude."
     }
   },
   "required": [
-    "result"
+    "lon",
+    "lat",
+    "altitude",
+    "accuracy"
   ]
 }
 ```
@@ -674,7 +668,12 @@ Title: Description d’un type WFS
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `result` | object | yes | La description détaillée du type WFS. |
+| `description` | string | yes | La description du type WFS. |
+| `id` | string | yes | L'identifiant complet du type WFS. |
+| `name` | string | yes | Le nom court du type WFS. |
+| `namespace` | string | yes | L'espace de nommage du type WFS. |
+| `properties` | array | yes | La liste des propriétés du type WFS. |
+| `title` | string | yes | Le titre lisible du type WFS. |
 
 <details>
 <summary>Raw output schema</summary>
@@ -683,83 +682,74 @@ Title: Description d’un type WFS
 {
   "type": "object",
   "properties": {
-    "result": {
-      "type": "object",
-      "description": "La description détaillée du type WFS.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "L'identifiant complet du type WFS."
-        },
-        "namespace": {
-          "type": "string",
-          "description": "L'espace de nommage du type WFS."
-        },
-        "name": {
-          "type": "string",
-          "description": "Le nom court du type WFS."
-        },
-        "title": {
-          "type": "string",
-          "description": "Le titre lisible du type WFS."
-        },
-        "description": {
-          "type": "string",
-          "description": "La description du type WFS."
-        },
+    "id": {
+      "type": "string",
+      "description": "L'identifiant complet du type WFS."
+    },
+    "namespace": {
+      "type": "string",
+      "description": "L'espace de nommage du type WFS."
+    },
+    "name": {
+      "type": "string",
+      "description": "Le nom court du type WFS."
+    },
+    "title": {
+      "type": "string",
+      "description": "Le titre lisible du type WFS."
+    },
+    "description": {
+      "type": "string",
+      "description": "La description du type WFS."
+    },
+    "properties": {
+      "type": "array",
+      "description": "La liste des propriétés du type WFS.",
+      "items": {
+        "type": "object",
         "properties": {
-          "type": "array",
-          "description": "La liste des propriétés du type WFS.",
-          "items": {
-            "type": "object",
-            "properties": {
-              "name": {
-                "type": "string",
-                "description": "Le nom de la propriété."
-              },
-              "type": {
-                "type": "string",
-                "description": "Le type de la propriété."
-              },
-              "title": {
-                "type": "string",
-                "description": "Le titre lisible de la propriété."
-              },
-              "description": {
-                "type": "string",
-                "description": "La description de la propriété."
-              },
-              "enum": {
-                "type": "array",
-                "description": "Les valeurs possibles de la propriété.",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "defaultCrs": {
-                "type": "string",
-                "description": "Le système de coordonnées par défaut si la propriété est géométrique."
-              }
-            },
-            "required": [
-              "name",
-              "type"
-            ]
+          "name": {
+            "type": "string",
+            "description": "Le nom de la propriété."
+          },
+          "type": {
+            "type": "string",
+            "description": "Le type de la propriété."
+          },
+          "title": {
+            "type": "string",
+            "description": "Le titre lisible de la propriété."
+          },
+          "description": {
+            "type": "string",
+            "description": "La description de la propriété."
+          },
+          "enum": {
+            "type": "array",
+            "description": "Les valeurs possibles de la propriété.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "defaultCrs": {
+            "type": "string",
+            "description": "Le système de coordonnées par défaut si la propriété est géométrique."
           }
-        }
-      },
-      "required": [
-        "id",
-        "namespace",
-        "name",
-        "title",
-        "description",
-        "properties"
-      ]
+        },
+        "required": [
+          "name",
+          "type"
+        ]
+      }
     }
   },
   "required": [
-    "result"
+    "id",
+    "namespace",
+    "name",
+    "title",
+    "description",
+    "properties"
   ]
 }
 ```
