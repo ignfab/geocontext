@@ -31,6 +31,7 @@
     "build": "npm run clean:dist && npx mcp-build",
     "docs:mcp": "npm run build && node --no-warnings scripts/generate-mcp-docs.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck:test": "tsc -p tsconfig.test.json --noEmit",
     "watch": "tsc --watch",
     "start": "node dist/index.js",
     "test": "vitest run",
