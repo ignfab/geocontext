@@ -89,6 +89,13 @@ Pré-requis :
 - Node.js `24.5.0` ou supérieur recommandé (`22.21.0` minimum supporté)
 - npm compatible avec la version de Node utilisée
 
+Le dépôt fournit `.nvmrc` et `.node-version`. Si vous utilisez `nvm`, vous pouvez donc faire :
+
+```bash
+nvm install
+nvm use
+```
+
 ### Construction de la version locale
 
 ```bash
@@ -170,8 +177,8 @@ Si `GPF_WFS_MINISEARCH_OPTIONS` est absent ou vide, les options par défaut rest
 `geocontext` s'appuie sur la gestion native du proxy par Node.js.
 
 - En exécution locale, le serveur démarre avec `node --use-env-proxy`
-- Les tests (`unit`, `integration`, `e2e`, `coverage`) activent `NODE_USE_ENV_PROXY=1`
-- Les tests d'intégration propagent aussi cette configuration au sous-processus MCP lancé en `stdio`
+- Les tests d'intégration propagent `NODE_USE_ENV_PROXY=1` au sous-processus MCP lancé en `stdio`
+- Les tests E2E démarrent les workers Vitest avec `--use-env-proxy`
 
 Il suffit donc de définir les variables d'environnement standard selon votre contexte :
 
