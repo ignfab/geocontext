@@ -1,4 +1,4 @@
-FROM node:24.5.0-alpine AS builder
+FROM node:24-alpine AS builder
 
 WORKDIR /opt/geocontext
 COPY package.json package-lock.json tsconfig.json ./
@@ -7,7 +7,7 @@ COPY src src/
 COPY scripts scripts/
 RUN npm run build
 
-FROM node:24.5.0-alpine
+FROM node:24-alpine
 
 WORKDIR /opt/geocontext
 COPY package.json package-lock.json ./
