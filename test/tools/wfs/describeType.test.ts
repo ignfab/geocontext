@@ -19,9 +19,7 @@ describe("Test GpfWfsDescribeTypeTool",() => {
 
     class TestableGpfWfsDescribeTypeTool extends GpfWfsDescribeTypeTool {
         async execute() {
-            return {
-                result: mockCollection,
-            };
+            return mockCollection;
         }
     }
 
@@ -61,15 +59,11 @@ describe("Test GpfWfsDescribeTypeTool",() => {
             throw new Error("expected text content");
         }
         expect(JSON.parse(textContent.text)).toMatchObject({
-            result: {
-                id: "BDTOPO_V3:batiment",
-            },
+            id: "BDTOPO_V3:batiment",
         });
         expect(response.structuredContent).toBeDefined();
         expect(response.structuredContent).toMatchObject({
-            result: {
-                id: "BDTOPO_V3:batiment",
-            },
+            id: "BDTOPO_V3:batiment",
         });
     });
 

@@ -6,6 +6,7 @@ import { createModel } from "../config/level2-agent.js";
 type AgentTools = Parameters<typeof createAgent>[0]["tools"];
 type AgentInstance = ReturnType<typeof createAgent>;
 type AgentInvokeResult = Awaited<ReturnType<AgentInstance["invoke"]>>;
+type AgentInvokeInput = Parameters<AgentInstance["invoke"]>[0];
 
 /**
  * Defines options for invoking a LangChain agent in integration E2E tests.
@@ -38,9 +39,11 @@ export async function invokeAgent(options: InvokeAgentOptions): Promise<AgentInv
     systemPrompt: options.systemPrompt,
   });
 
+  // LangChain's current createAgent typing rejects the message object literal
+  // shape at the call site, even though the runtime API accepts it.
   const input = {
     messages: [new HumanMessage(options.userInput)],
-  };
+  } as AgentInvokeInput;
 
   if (options.callbacks) {
     return agent.invoke(input, { callbacks: options.callbacks });

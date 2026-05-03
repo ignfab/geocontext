@@ -1,6 +1,18 @@
-import { vi } from "vitest";
+import { afterEach, beforeEach, vi } from "vitest";
+import fetch from "node-fetch";
 
-import { parseJsonResponse } from "../../src/helpers/http.js";
+vi.mock("node-fetch", async () => {
+    const actual = await vi.importActual<typeof import("node-fetch")>("node-fetch");
+
+    return {
+        ...actual,
+        default: vi.fn(),
+    };
+});
+
+import { fetchJSONGet, fetchJSONPost, parseJsonResponse } from "../../src/helpers/http.js";
+
+const fetchMock = vi.mocked(fetch);
 
 const USER_AGENT_ENV = "USER_AGENT";
 
@@ -29,6 +41,15 @@ function createResponse(
 }
 
 describe("Test HTTP helpers", () => {
+    beforeEach(() => {
+        fetchMock.mockReset();
+        delete process.env.HTTP_TIMEOUT;
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
     it("should parse JSON responses", async () => {
         await expect(parseJsonResponse(createResponse('{"ok":true}'))).resolves.toEqual({ ok: true });
     });
@@ -342,6 +363,62 @@ describe("Test HTTP helpers", () => {
             serviceDetail: "{\"title\":\"This key is not part of known JSON error payloads\",\"msg\":\"Neither is this one\",\"errorMessage\":\"Nor this one\"}",
             httpStatusText: "400 Bad Request",
         });
+    });
+
+    it("should abort GET requests that exceed the configured timeout", async () => {
+        vi.useFakeTimers();
+        process.env.HTTP_TIMEOUT = "1";
+        fetchMock.mockImplementation((_url, options) => {
+            return new Promise((_, reject) => {
+                options?.signal?.addEventListener("abort", () => {
+                    const error = new Error("The operation was aborted.");
+                    error.name = "AbortError";
+                    reject(error);
+                });
+            }) as ReturnType<typeof fetch>;
+        });
+
+        const pendingRequest = expect(
+            fetchJSONGet("https://example.test/slow")
+        ).rejects.toMatchObject({
+            name: "ServiceResponseError",
+            httpStatus: 504,
+            httpStatusText: "Gateway Timeout",
+            serviceCode: "TIMEOUT",
+            serviceDetail: "Le service distant n'a pas répondu dans le délai imparti (1000 ms).",
+        });
+        await vi.advanceTimersByTimeAsync(1000);
+        await pendingRequest;
+    });
+
+    it("should abort POST requests that exceed the configured timeout", async () => {
+        vi.useFakeTimers();
+        process.env.HTTP_TIMEOUT = "2";
+        fetchMock.mockImplementation((_url, options) => {
+            return new Promise((_, reject) => {
+                options?.signal?.addEventListener("abort", () => {
+                    const error = new Error("The operation was aborted.");
+                    error.name = "AbortError";
+                    reject(error);
+                });
+            }) as ReturnType<typeof fetch>;
+        });
+
+        const pendingRequest = expect(
+            fetchJSONPost(
+                "https://example.test/slow",
+                JSON.stringify({ hello: "world" }),
+                { "Content-Type": "application/json" }
+            )
+        ).rejects.toMatchObject({
+            name: "ServiceResponseError",
+            httpStatus: 504,
+            httpStatusText: "Gateway Timeout",
+            serviceCode: "TIMEOUT",
+            serviceDetail: "Le service distant n'a pas répondu dans le délai imparti (2000 ms).",
+        });
+        await vi.advanceTimersByTimeAsync(2000);
+        await pendingRequest;
     });
 
 });

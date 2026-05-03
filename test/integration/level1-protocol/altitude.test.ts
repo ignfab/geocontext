@@ -10,12 +10,10 @@ import { INTEGRATION_CONFIG } from "../config/shared.js";
 import { paris, chamonix } from "../samples.js";
 
 interface AltitudeResult {
-  result: {
-    lon: number;
-    lat: number;
-    altitude: number;
-    accuracy: string;
-  };
+  lon: number;
+  lat: number;
+  altitude: number;
+  accuracy: string;
 }
 
 describe("Altitude Tool (integration)", () => {
@@ -27,13 +25,12 @@ describe("Altitude Tool (integration)", () => {
       lat: paris.lat,
     });
 
-    expect(result.result).toBeDefined();
-    expect(result.result.altitude).toBeDefined();
-    expect(typeof result.result.altitude).toBe("number");
+    expect(result.altitude).toBeDefined();
+    expect(typeof result.altitude).toBe("number");
     // Paris altitude is approximately 35 m, with some tolerance
-    expect(result.result.altitude).toBeGreaterThan(20);
-    expect(result.result.altitude).toBeLessThan(100);
-    expect(result.result.accuracy).toBeDefined();
+    expect(result.altitude).toBeGreaterThan(20);
+    expect(result.altitude).toBeLessThan(100);
+    expect(result.accuracy).toBeDefined();
   }, INTEGRATION_CONFIG.timeout);
 
   it("should return altitude for Chamonix (~1035 m)", async () => {
@@ -42,12 +39,11 @@ describe("Altitude Tool (integration)", () => {
       lat: chamonix.lat,
     });
 
-    expect(result.result).toBeDefined();
-    expect(result.result.altitude).toBeDefined();
-    expect(typeof result.result.altitude).toBe("number");
+    expect(result.altitude).toBeDefined();
+    expect(typeof result.altitude).toBe("number");
     // Chamonix altitude is approximately 1035 m
-    expect(result.result.altitude).toBeGreaterThan(900);
-    expect(result.result.altitude).toBeLessThan(1100);
+    expect(result.altitude).toBeGreaterThan(900);
+    expect(result.altitude).toBeLessThan(1100);
   }, INTEGRATION_CONFIG.timeout);
 
   it("should return an error for out-of-range coordinates", async () => {

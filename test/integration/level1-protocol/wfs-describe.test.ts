@@ -9,21 +9,19 @@ import { expectToolCallToThrow } from "../helpers/level1-assertions.js";
 import { INTEGRATION_CONFIG } from "../config/shared.js";
 
 interface WfsDescribeResult {
-  result: {
-    id: string;
-    namespace: string;
+  id: string;
+  namespace: string;
+  name: string;
+  title: string;
+  description: string;
+  properties: Array<{
     name: string;
-    title: string;
-    description: string;
-    properties: Array<{
-      name: string;
-      type: string;
-      title?: string;
-      description?: string;
-      enum?: string[];
-      defaultCrs?: string;
-    }>;
-  };
+    type: string;
+    title?: string;
+    description?: string;
+    enum?: string[];
+    defaultCrs?: string;
+  }>;
 }
 
 describe("WFS Describe Type (integration)", () => {
@@ -34,14 +32,13 @@ describe("WFS Describe Type (integration)", () => {
       typename: "BDTOPO_V3:batiment",
     });
 
-    expect(result.result).toBeDefined();
-    expect(result.result.id).toBe("BDTOPO_V3:batiment");
-    expect(result.result.name).toBe("batiment");
-    expect(result.result.properties).toBeDefined();
-    expect(result.result.properties.length).toBeGreaterThan(0);
+    expect(result.id).toBe("BDTOPO_V3:batiment");
+    expect(result.name).toBe("batiment");
+    expect(result.properties).toBeDefined();
+    expect(result.properties.length).toBeGreaterThan(0);
 
     // Check that properties have expected fields
-    const firstProp = result.result.properties[0];
+    const firstProp = result.properties[0];
     expect(firstProp.name).toBeDefined();
     expect(firstProp.type).toBeDefined();
   }, INTEGRATION_CONFIG.timeout);
