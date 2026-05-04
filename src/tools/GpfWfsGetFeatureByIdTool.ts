@@ -49,7 +49,7 @@ class GpfWfsGetFeatureByIdTool extends BaseTool<GpfWfsGetFeatureByIdInput> {
   }
 
   /**
-   * Formats compact responses (`request`) into `structuredContent`.
+   * Formats compact responses (`request`, `results`) into `structuredContent`.
    *
    * We intentionally do not expose a single `outputSchemaShape` for the tool as
    * a whole: the `results` path returns a generic FeatureCollection whose
@@ -72,7 +72,21 @@ class GpfWfsGetFeatureByIdTool extends BaseTool<GpfWfsGetFeatureByIdInput> {
       };
     }
 
-    return super.createSuccessResponse(data);
+    if (
+      typeof data === "object" &&
+      data !== null &&
+      "type" in data &&
+      data.type === "FeatureCollection"
+    ) {
+      return {
+        content: [{ type: "text" as const, text: JSON.stringify(data) }],
+        structuredContent: data as Record<string, unknown>,
+      };
+    }
+
+    throw new Error(
+      "Réponse interne inattendue pour gpf_wfs_get_feature_by_id : le résultat devrait être une requête WFS ou une FeatureCollection.",
+    );
   }
 
   /**
