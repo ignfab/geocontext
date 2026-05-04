@@ -404,7 +404,7 @@ describe("Test GpfWfsGetFeaturesTool", () => {
     });
   });
 
-  it("should fall back to totalFeatures when numberMatched is absent", async () => {
+  it("should fail clearly when numberMatched is absent", async () => {
     const tool = new GpfWfsGetFeaturesTool();
     mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
     captureRequests({ totalFeatures: 321 });
@@ -419,14 +419,14 @@ describe("Test GpfWfsGetFeaturesTool", () => {
       },
     });
 
-    expect(response.isError).toBeUndefined();
+    expect(response.isError).toBe(true);
     const textContent = response.content[0];
     if (textContent.type !== "text") {
       throw new Error("expected text content");
     }
-    expect(JSON.parse(textContent.text)).toEqual({
-      result_type: "hits",
-      totalFeatures: 321,
+    expect(textContent.text).toContain("n'a pas retourné de comptage exploitable dans `numberMatched`");
+    expect(response.structuredContent).toMatchObject({
+      type: "urn:geocontext:problem:execution-error",
     });
   });
 
