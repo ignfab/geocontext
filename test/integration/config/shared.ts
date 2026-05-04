@@ -39,6 +39,7 @@ export const INTEGRATION_CONFIG = {
   serverEnv(): Record<string, string> {
     const env: Record<string, string> = {
       LOG_LEVEL: process.env.GEOCONTEXT_LOG_LEVEL ?? "error",
+      NODE_USE_ENV_PROXY: "1",
     };
     for (const key of [...PROXY_ENV_KEYS, ...NO_PROXY_ENV_KEYS]) {
       const value = process.env[key];
