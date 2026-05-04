@@ -19,10 +19,10 @@ const describeIfProvider = HAS_MODEL_PROVIDER_API_KEY ? describe : describe.skip
 
 /**
  * Test if the given text contains a number in the specified range.
- * The function looks for numbers with up to 15 digits, possibly separated by spaces.
+ * The function looks for numbers with up to 11 digits, possibly separated by spaces.
  */
 function containsNumberInRange(text: string, min: number, max: number): boolean {
-  const values = [...text.matchAll(/\b\d[\d ]{0,14}\b/g)]
+  const values = [...text.matchAll(/\b\d[\d ]{0,10}\b/g)]
     .map(([value]) => Number(value.replace(/\s+/g, "")))
     .filter((value) => Number.isFinite(value));
 
