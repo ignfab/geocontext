@@ -18,6 +18,11 @@ export default defineConfig({
     testTimeout: 120 * MILLISECONDS,
     // Run sequentially: each test starts its own MCP server
     pool: "forks",
-    poolOptions: { forks: { singleFork: true } },
+    poolOptions: { 
+      forks: { 
+        singleFork: true, 
+        execArgv: ['--use-env-proxy'] 
+      } 
+    },
   },
 });
