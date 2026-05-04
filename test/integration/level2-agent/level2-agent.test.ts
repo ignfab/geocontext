@@ -49,6 +49,7 @@ const mcpScenarios = [
       "cadastralparcels.parcellaire_express:batiment",
     ],
     toolMode: "mcp",
+    requiredToolCalls: ["gpf_wfs_search_types"],
   },
   {
     testName: "should chain geocode and altitude tools to answer the question",
@@ -60,6 +61,13 @@ const mcpScenarios = [
       expect(hasAltitudeInRange(normalizedFinalMessage, 1000, 1100)).toBe(true);
     },
   },
+  {
+    testName: "should answer the question about 14 lycées near the chateau de Vincennes",
+    userInput: "Combien de lycées sont situés à 2km du chateau de vincennes?",
+    expectedResponseFragments: ["14", "lycées"],
+    toolMode: "mcp",
+    requiredToolCalls: ["geocode", "gpf_wfs_search_types", "gpf_wfs_describe_type", "gpf_wfs_get_features"],
+  }
 ] satisfies Level2AgentScenario[];
 
 describeIfProvider("Agent E2E: basic questions (no tools)", () => {
