@@ -113,17 +113,19 @@ describe("wfs_engine/execution", () => {
     expect(mockFetchJSONPost).not.toHaveBeenCalled();
   });
 
-  it("should extract matched count from numberMatched then fallback to totalFeatures", () => {
+  it("should extract matched count from numberMatched", () => {
     expect(getMatchedFeatureCount({ numberMatched: 42 })).toEqual(42);
-    expect(getMatchedFeatureCount({ totalFeatures: 11 })).toEqual(11);
   });
 
-  it("should reject unknown or missing matched count", () => {
+  it("should reject unknown, legacy-only, or missing matched count", () => {
     expect(() => getMatchedFeatureCount({ numberMatched: "unknown" })).toThrow(
       "numberMatched=\"unknown\"",
     );
+    expect(() => getMatchedFeatureCount({ totalFeatures: 11 })).toThrow(
+      "n'a pas retourné de comptage exploitable dans `numberMatched`",
+    );
     expect(() => getMatchedFeatureCount({})).toThrow(
-      "n'a pas retourné de comptage exploitable",
+      "n'a pas retourné de comptage exploitable dans `numberMatched`",
     );
   });
 });

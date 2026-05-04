@@ -191,7 +191,10 @@ describe("Test GpfWfsGetFeaturesTool", () => {
     if (textContent.type !== "text") {
       throw new Error("expected text content");
     }
-    expect(Number(JSON.parse(textContent.text))).toBeGreaterThan(0);
+    expect(JSON.parse(textContent.text)).toMatchObject({
+      result_type: "hits",
+      totalFeatures: expect.any(Number),
+    });
     expect(response.structuredContent).toMatchObject({
       result_type: "hits",
       totalFeatures: expect.any(Number),
@@ -395,10 +398,13 @@ describe("Test GpfWfsGetFeaturesTool", () => {
     if (textContent.type !== "text") {
       throw new Error("expected text content");
     }
-    expect(JSON.parse(textContent.text)).toEqual(321);
+    expect(JSON.parse(textContent.text)).toEqual({
+      result_type: "hits",
+      totalFeatures: 321,
+    });
   });
 
-  it("should fall back to totalFeatures when numberMatched is absent", async () => {
+  it("should fail clearly when numberMatched is absent", async () => {
     const tool = new GpfWfsGetFeaturesTool();
     mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
     captureRequests({ totalFeatures: 321 });
@@ -413,12 +419,15 @@ describe("Test GpfWfsGetFeaturesTool", () => {
       },
     });
 
-    expect(response.isError).toBeUndefined();
+    expect(response.isError).toBe(true);
     const textContent = response.content[0];
     if (textContent.type !== "text") {
       throw new Error("expected text content");
     }
-    expect(JSON.parse(textContent.text)).toEqual(321);
+    expect(textContent.text).toContain("n'a pas retourné de comptage exploitable dans `numberMatched`");
+    expect(response.structuredContent).toMatchObject({
+      type: "urn:geocontext:problem:execution-error",
+    });
   });
 
   it("should fail clearly when numberMatched is unknown", async () => {

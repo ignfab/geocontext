@@ -69,9 +69,11 @@ class GpfWfsGetFeaturesTool extends BaseTool<GpfWfsGetFeaturesInput> {
       "totalFeatures" in data &&
       typeof data.totalFeatures === "number"
     ) {
+      const payload = gpfWfsGetFeaturesHitsOutputSchema.parse(data);
+
       return {
-        content: [{ type: "text" as const, text: JSON.stringify(data.totalFeatures) }],
-        structuredContent: gpfWfsGetFeaturesHitsOutputSchema.parse(data),
+        content: [{ type: "text" as const, text: JSON.stringify(payload) }],
+        structuredContent: payload,
       };
     }
 

@@ -61,8 +61,8 @@ export async function fetchFeatureCollection(request: CompiledRequest): Promise<
 // --- Response Metadata ---
 
 /**
- * Extracts a result count from a WFS response, preferring `numberMatched`.
- * Explicitly rejects responses that do not provide a usable total.
+ * Extracts a result count from a WFS response using `numberMatched`.
+ * Explicitly rejects responses that do not provide a usable WFS 2 total.
  *
  * @param featureCollection Parsed WFS response object.
  * @returns The total number of matching features.
@@ -74,10 +74,7 @@ export function getMatchedFeatureCount(featureCollection: WfsFeatureCollectionRe
   if (featureCollection.numberMatched === "unknown") {
     throw new Error("Le service WFS a renvoyé un comptage indéterminé (numberMatched=\"unknown\").");
   }
-  if (typeof featureCollection.totalFeatures === "number") {
-    return featureCollection.totalFeatures;
-  }
-  throw new Error("Le service WFS n'a pas retourné de comptage exploitable");
+  throw new Error("Le service WFS n'a pas retourné de comptage exploitable dans `numberMatched`.");
 }
 
 // --- Multi-typename Execution ---
