@@ -24,6 +24,12 @@ vi.doMock("../../../src/helpers/http.js", () => ({
 const { default: GpfWfsGetFeatureByIdTool } = await import("../../../src/tools/GpfWfsGetFeatureByIdTool");
 
 describe("Test GpfWfsGetFeatureByIdTool", () => {
+  class InvalidSuccessPayloadTool extends GpfWfsGetFeatureByIdTool {
+    async execute() {
+      return { unexpected: true } as never;
+    }
+  }
+
   const polygonFeatureType: Collection = {
     id: "ADMINEXPRESS-COG.LATEST:commune",
     namespace: "ADMINEXPRESS-COG.LATEST",
@@ -295,6 +301,32 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
           detail: expect.stringContaining("results"),
         }),
       ]),
+    });
+  });
+
+  it("should fail clearly when execution returns an unexpected success payload", async () => {
+    const tool = new InvalidSuccessPayloadTool();
+
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_wfs_get_feature_by_id",
+        arguments: {
+          typename: "ADMINEXPRESS-COG.LATEST:commune",
+          feature_id: "commune.1",
+        },
+      },
+    });
+
+    expect(response.isError).toBe(true);
+    const textContent = response.content[0];
+    if (textContent.type !== "text") {
+      throw new Error("expected text content");
+    }
+    expect(textContent.text).toContain("Réponse interne inattendue");
+    expect(textContent.text).toContain("FeatureCollection");
+    expect(response.structuredContent).toMatchObject({
+      type: "urn:geocontext:problem:execution-error",
+      detail: expect.stringContaining("gpf_wfs_get_feature_by_id"),
     });
   });
 });

@@ -84,7 +84,9 @@ class GpfWfsGetFeatureByIdTool extends BaseTool<GpfWfsGetFeatureByIdInput> {
       };
     }
 
-    return super.createSuccessResponse(data);
+    throw new Error(
+      "Réponse interne inattendue pour gpf_wfs_get_feature_by_id : le résultat devrait être une requête WFS ou une FeatureCollection.",
+    );
   }
 
   /**
