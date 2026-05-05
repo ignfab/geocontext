@@ -18,7 +18,7 @@ interface RateLimiterOptions {
 
 /**
  * An helper class to limit the number of requests over a configurable period.
- * It is intented to avoid over loading backend services with too many requests 
+ * It is intended to avoid over loading backend services with too many requests 
  * in a short period of time.
  * 
  * When the limit is reached, an Error is thrown with the message "Rate limit exceeded".
