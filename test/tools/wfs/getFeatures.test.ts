@@ -1,5 +1,6 @@
+import { vi, describe, it, expect, afterEach } from "vitest";
+
 import type { Collection } from "@ignfab/gpf-schema-store";
-import { vi } from "vitest";
 import { ServiceResponseError } from "../../../src/helpers/http.js";
 
 const mockGetFeatureType = vi.fn<(typename: string) => Promise<Collection>>();

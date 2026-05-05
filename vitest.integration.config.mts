@@ -12,7 +12,7 @@ export default defineConfig({
     ],
   },
   test: {
-    globals: true,
+    globals: false,
     environment: "node",
     include: ["test/integration/level1-protocol/**/*.test.ts"],
     testTimeout: 60 * MILLISECONDS,

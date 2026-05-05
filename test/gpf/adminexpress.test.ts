@@ -1,4 +1,4 @@
-import { vi } from "vitest";
+import { vi, describe, expect, afterEach, beforeEach, it } from "vitest";
 import { mairieLoray } from "../samples";
 
 const mockGetFeatureType = vi.fn<(typename: string) => Promise<any>>();

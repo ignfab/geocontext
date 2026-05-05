@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest";
 import type { Collection } from "@ignfab/gpf-schema-store";
 
 import { compileQueryParts, geometryToEwkt } from "../../../src/helpers/wfs_engine/queryPreparation";

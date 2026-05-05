@@ -21,7 +21,7 @@ export function expectNonEmptyResults<T>(
   minimum = 1,
 ): asserts value is { results: T[] } {
   expect(value.results).toBeDefined();
-  expect(value.results.length).toBeGreaterThanOrEqual(minimum);
+  expect(value.results!.length).toBeGreaterThanOrEqual(minimum);
 }
 
 /**
@@ -37,7 +37,7 @@ export function expectFeatureCollectionWithFeatures<TFeature>(
 ): asserts value is { type: "FeatureCollection"; features: TFeature[] } {
   expect(value.type).toBe("FeatureCollection");
   expect(value.features).toBeDefined();
-  expect(value.features.length).toBeGreaterThanOrEqual(minimum);
+  expect(value.features!.length).toBeGreaterThanOrEqual(minimum);
 }
 
 /**

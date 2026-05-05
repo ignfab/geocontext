@@ -1,3 +1,5 @@
+import { describe, it, expect } from "vitest";
+
 import { z } from "zod";
 
 import BaseTool from "../../src/tools/BaseTool.js";

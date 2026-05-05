@@ -43,7 +43,7 @@
     "test:integration": "vitest run --config vitest.integration.config.mts",
     "test:e2e": "vitest run --config vitest.e2e.config.mts",
     "test:coverage": "vitest run --coverage",
-    "verify:fast": "npm run typecheck && npm run build && npm run test:unit",
+    "verify:fast": "npm run typecheck && npm run typecheck:test && npm run build && npm run test:unit",
     "verify": "npm run verify:fast && npm run test:integration",
     "verify:full": "npm run verify && npm run test:e2e",
     "fresh": "npm run reset:local && npm ci && npm run verify",

@@ -12,7 +12,8 @@
   },
   "include": [
     "./src/**/*",
-    "./test/**/*"
+    "./test/**/*",
+    "./vitest*.mts"
   ],
   "exclude": [
     "node_modules",
