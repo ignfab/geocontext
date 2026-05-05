@@ -18,6 +18,7 @@ export default defineConfig({
     testTimeout: 120 * MILLISECONDS,
     // Run sequentially: each test starts its own MCP server
     pool: "forks",
-    execArgv: ["--use-env-proxy"]
+    fileParallelism: false,
+    execArgv: ["--use-env-proxy"],
   },
 });
