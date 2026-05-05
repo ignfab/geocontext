@@ -12,7 +12,7 @@ export default defineConfig({
     ],
   },
   test: {
-    globals: true,
+    globals: false,
     environment: "node",
     include: ["test/integration/level2-agent/**/*.test.ts"],
     testTimeout: 120 * MILLISECONDS,

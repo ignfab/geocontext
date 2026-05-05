@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest";
 import {geocode} from "../../src/gpf/geocode.js";
 
 const rawGeocodeServiceResponse = {

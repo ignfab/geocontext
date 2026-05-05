@@ -1,3 +1,5 @@
+import { describe, it, expect } from "vitest";
+
 import AltitudeTool from "../../src/tools/AltitudeTool";
 import { paris } from "../samples";
 

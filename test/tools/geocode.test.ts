@@ -1,3 +1,5 @@
+import { describe, it, expect } from "vitest";
+
 import GeocodeTool from "../../src/tools/GeocodeTool";
 
 describe("Test GeocodeTool",() => {

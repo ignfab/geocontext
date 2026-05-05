@@ -1,3 +1,5 @@
+import { describe, it, expect } from "vitest";
+
 import AssietteSupTool from "../../src/tools/AssietteSupTool";
 import UrbanismeTool from "../../src/tools/UrbanismeTool";
 import { chamonix, mairieLoray } from "../samples";

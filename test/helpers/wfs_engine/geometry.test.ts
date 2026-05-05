@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest";
 import { geometryToEwkt } from "../../../src/helpers/wfs_engine/geometry";
 
 describe("geometryToEwkt", () => {

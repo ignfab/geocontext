@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest";
 import {getAltitudeByLocation} from "../../src/gpf/altitude.js";
 import { paris } from "../samples";
 

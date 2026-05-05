@@ -1,5 +1,5 @@
+import { vi, describe, it, expect } from "vitest";
 import { z } from "zod";
-import { vi } from "vitest";
 
 import { ServiceResponseError } from "../../src/helpers/http.js";
 import { normalizeToolError } from "../../src/helpers/errors/toolError.js";

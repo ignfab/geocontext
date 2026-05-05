@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest";
+
 import distance from "../../src/helpers/distance.js";
 import type { Polygon } from "geojson";
 import {paris, marseille, besancon, parisMarseille} from '../samples';
