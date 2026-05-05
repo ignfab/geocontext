@@ -96,6 +96,7 @@ function buildTransport(transportType: TransportType): TransportConfig {
     options: {
       port: port,
       endpoint,
+      responseMode: "stream",
       cors: {
         allowOrigin: "*",
         allowedOrigins: getCorsAllowedOrigins(),
