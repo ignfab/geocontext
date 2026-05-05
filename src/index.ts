@@ -1,7 +1,8 @@
-import { MCPServer, TransportConfig, logger } from "mcp-framework";
+import { MCPServer, TransportConfig } from "mcp-framework";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { readFileSync } from "fs";
+import logger from "./logger.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
