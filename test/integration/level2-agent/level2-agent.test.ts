@@ -17,8 +17,12 @@ import { runLevel2Scenario } from "../helpers/level2-scenarios.js";
 
 const describeIfProvider = HAS_MODEL_PROVIDER_API_KEY ? describe : describe.skip;
 
-function hasAltitudeInRange(text: string, min: number, max: number): boolean {
-  const values = [...text.matchAll(/\b\d[\d ]{0,5}\b/g)]
+/**
+ * Test if the given text contains a number in the specified range.
+ * The function looks for numbers containing up to 11 characters, including optional spaces.
+ */
+function containsNumberInRange(text: string, min: number, max: number): boolean {
+  const values = [...text.matchAll(/\b\d[\d ]{0,10}\b/g)]
     .map(([value]) => Number(value.replace(/\s+/g, "")))
     .filter((value) => Number.isFinite(value));
 
@@ -58,7 +62,7 @@ const mcpScenarios = [
     toolMode: "mcp",
     requiredToolCalls: ["geocode", "altitude"],
     assertScenarioResult: ({ normalizedFinalMessage }) => {
-      expect(hasAltitudeInRange(normalizedFinalMessage, 1000, 1100)).toBe(true);
+      expect(containsNumberInRange(normalizedFinalMessage, 1000, 1100)).toBe(true);
     },
   },
   {
@@ -67,6 +71,25 @@ const mcpScenarios = [
     expectedResponseFragments: ["14", "lycées"],
     toolMode: "mcp",
     requiredToolCalls: ["geocode", "gpf_wfs_search_types", "gpf_wfs_describe_type", "gpf_wfs_get_features"],
+  },
+  {
+    testName: "should find about 1 741 batiments in the commune of Saint Mandé",
+    userInput: "Combien y a t il de batiments sur la commune de saint mandé?",
+    toolMode: "mcp",
+    requiredToolCalls: ["geocode", "gpf_wfs_search_types", "gpf_wfs_describe_type", "gpf_wfs_get_features"],
+    expectedResponseFragments: ["batiments"],
+    assertScenarioResult: ({ normalizedFinalMessage }) => {
+      expect(containsNumberInRange(normalizedFinalMessage, 1700, 1800)).toBe(true);
+    },
+  },
+  {
+    testName: "should find 19 batiments of more than 30 meters in Angouleme",
+    userInput: "Combien y a t il de batiments de plus de 30 mètres sur la commune d'Angoulême?",
+    toolMode: "mcp",
+    requiredToolCalls: ["geocode", "gpf_wfs_search_types", "gpf_wfs_describe_type", "gpf_wfs_get_features"],
+    // assuming that it won't often change and that the number is correct at the moment of writing
+    // (switch to assertScenarioResult with a range if needed in the future)
+    expectedResponseFragments: ["19", "batiments"] 
   }
 ] satisfies Level2AgentScenario[];
 
