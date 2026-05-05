@@ -55,18 +55,24 @@ function getHttpPort(): number {
  * The variable should be a comma-separated list of origins .
  */
 function getCorsAllowedOrigins(): undefined|string[] {
-  if ( ! process.env.HTTP_CORS_ALLOWED_ORIGINS ) {
+  if (process.env.HTTP_CORS_ALLOWED_ORIGINS === undefined) {
     logger.warn('Security : HTTP_CORS_ALLOWED_ORIGINS is not set. It is recommended to set this variable to prevent DNS rebinding attacks (e.g., HTTP_CORS_ALLOWED_ORIGINS="http://localhost:3000,https://geollm.beta.ign.fr".');
     return undefined;
   }
 
   const rawOrigins = process.env.HTTP_CORS_ALLOWED_ORIGINS?.trim();
+  
+  const allowedOrigins = rawOrigins
+    ?.split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
 
-  if (!rawOrigins) {
+  if (!allowedOrigins || allowedOrigins.length === 0) {
+    logger.warn('Security : HTTP_CORS_ALLOWED_ORIGINS is empty. It is recommended to set this variable to prevent DNS rebinding attacks (e.g., HTTP_CORS_ALLOWED_ORIGINS="http://localhost:3000,https://geollm.beta.ign.fr".');
     return undefined;
   }
 
-  return rawOrigins.split(",").map((origin) => origin.trim());
+  return allowedOrigins;
 }
 
 
