@@ -1,4 +1,4 @@
-import { MCPServer, TransportConfig } from "mcp-framework";
+import { MCPServer, TransportConfig, logger } from "mcp-framework";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { readFileSync } from "fs";
@@ -11,6 +11,10 @@ function isTransportType(value: string): value is TransportType {
   return value === "stdio" || value === "http";
 }
 
+/**
+ * Get the transport type from the environment variable TRANSPORT_TYPE. 
+ * Valid values are "stdio" and "http". If not set, defaults to "stdio".
+ */
 function getTransportType(): TransportType {
   const transportType = process.env.TRANSPORT_TYPE ?? "stdio";
 
@@ -21,6 +25,10 @@ function getTransportType(): TransportType {
   return transportType;
 }
 
+/**
+ * Get the HTTP port from the environment variable HTTP_PORT.
+ * The variable should be a decimal integer between 1 and 65535. If not set, defaults to 3000.
+ */
 function getHttpPort(): number {
   const rawPort = process.env.HTTP_PORT?.trim();
   const invalidHttpPortMessage = `Invalid HTTP_PORT: ${rawPort}. Expected a decimal integer between 1 and 65535.`;
@@ -41,6 +49,26 @@ function getHttpPort(): number {
 
   return port;
 }
+
+/**
+ * Get CORS allowed origins from the environment variable HTTP_CORS_ALLOWED_ORIGINS.
+ * The variable should be a comma-separated list of origins .
+ */
+function getCorsAllowedOrigins(): undefined|string[] {
+  if ( ! process.env.HTTP_CORS_ALLOWED_ORIGINS ) {
+    logger.warn('Security : HTTP_CORS_ALLOWED_ORIGINS is not set. It is recommended to set this variable to prevent DNS rebinding attacks (e.g., HTTP_CORS_ALLOWED_ORIGINS="http://localhost:3000,https://geollm.beta.ign.fr".');
+    return undefined;
+  }
+
+  const rawOrigins = process.env.HTTP_CORS_ALLOWED_ORIGINS?.trim();
+
+  if (!rawOrigins) {
+    return undefined;
+  }
+
+  return rawOrigins.split(",").map((origin) => origin.trim());
+}
+
 
 function buildTransport(transportType: TransportType): TransportConfig {
   // Handle stdio transport configuration
@@ -63,12 +91,16 @@ function buildTransport(transportType: TransportType): TransportConfig {
       endpoint,
       cors: {
         allowOrigin: "*",
+        allowedOrigins: getCorsAllowedOrigins(),
       },
       host,
     },
   };
 }
 
+/**
+ * Get the version from package.json for the MCP server metadata.
+ */
 function getVersion(): string {
   const pkgMetadata = JSON.parse(
     readFileSync(join(__dirname, "../package.json"), "utf-8")
