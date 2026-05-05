@@ -22,7 +22,7 @@ describe("Test RateLimiter", () => {
         await expect(limiter.limit()).resolves.toBeUndefined();
     });
 
-    it("should throw on request N+1 in the same rolling second", async () => {
+    it("should throw on request N+1 in the same limiter window", async () => {
         const limiter = new RateLimiter({
             name: "test",
             maxCalls: 2,
@@ -35,7 +35,7 @@ describe("Test RateLimiter", () => {
         await expect(limiter.limit()).rejects.toThrow("[test] Rate limit exceeded");
     });
 
-    it("should allow a new request after the one-second window slides", async () => {
+    it("should allow a new request after the one-second window resets", async () => {
         const limiter = new RateLimiter({
             name: "test",
             maxCalls: 2,
