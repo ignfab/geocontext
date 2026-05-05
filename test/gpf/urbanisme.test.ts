@@ -96,7 +96,7 @@ describe("Test getUrbanisme", () => {
     });
 
     afterEach(() => {
-        vi.restoreAllMocks();
+        vi.clearAllMocks();
     });
 
     it("should return the expected urbanisme objects for Chamonix", async () => {
@@ -160,7 +160,7 @@ describe("Test getAssiettesServitudes", () => {
     });
 
     afterEach(() => {
-        vi.restoreAllMocks();
+        vi.clearAllMocks();
     });
 
     it("should return the expected assiettes for Loray", async () => {

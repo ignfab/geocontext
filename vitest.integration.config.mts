@@ -17,7 +17,6 @@ export default defineConfig({
     include: ["test/integration/level1-protocol/**/*.test.ts"],
     testTimeout: 60 * MILLISECONDS,
     // Run sequentially to avoid overloading the GPF APIs
-    pool: "forks",
-    poolOptions: { forks: { singleFork: true } },
+    pool: "forks"
   },
 });

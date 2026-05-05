@@ -129,7 +129,7 @@ describe("Test GpfWfsGetFeaturesTool", () => {
   }
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
     mockGetFeatureType.mockReset();
     mockFetchJSONPost.mockReset();
   });

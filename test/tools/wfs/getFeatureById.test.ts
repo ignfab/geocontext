@@ -45,7 +45,7 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
   };
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
     mockGetFeatureType.mockReset();
     mockFetchJSONPost.mockReset();
   });
