@@ -19,7 +19,7 @@ const describeIfProvider = HAS_MODEL_PROVIDER_API_KEY ? describe : describe.skip
 
 /**
  * Test if the given text contains a number in the specified range.
- * The function looks for numbers with up to 11 digits, possibly separated by spaces.
+ * The function looks for numbers containing up to 11 characters, including optional spaces.
  */
 function containsNumberInRange(text: string, min: number, max: number): boolean {
   const values = [...text.matchAll(/\b\d[\d ]{0,10}\b/g)]
@@ -87,7 +87,7 @@ const mcpScenarios = [
     userInput: "Combien y a t il de batiments de plus de 30 mètres sur la commune d'Angoulême?",
     toolMode: "mcp",
     requiredToolCalls: ["geocode", "gpf_wfs_search_types", "gpf_wfs_describe_type", "gpf_wfs_get_features"],
-    // assuming that it want change often and that the number is correct at the moment of writing
+    // assuming that it won't often change and that the number is correct at the moment of writing
     // (switch to assertScenarioResult with a range if needed in the future)
     expectedResponseFragments: ["19", "batiments"] 
   }
