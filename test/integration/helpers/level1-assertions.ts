@@ -20,8 +20,11 @@ export function expectNonEmptyResults<T>(
   value: ResultsContainer<T>,
   minimum = 1,
 ): asserts value is { results: T[] } {
-  expect(value.results).toBeDefined();
-  expect(value.results!.length).toBeGreaterThanOrEqual(minimum);
+  if (!Array.isArray(value.results)) {
+    throw new Error("Expected a results array");
+  }
+
+  expect(value.results.length).toBeGreaterThanOrEqual(minimum);
 }
 
 /**
@@ -36,8 +39,12 @@ export function expectFeatureCollectionWithFeatures<TFeature>(
   minimum = 1,
 ): asserts value is { type: "FeatureCollection"; features: TFeature[] } {
   expect(value.type).toBe("FeatureCollection");
-  expect(value.features).toBeDefined();
-  expect(value.features!.length).toBeGreaterThanOrEqual(minimum);
+
+  if (!Array.isArray(value.features)) {
+    throw new Error("Expected a features array");
+  }
+
+  expect(value.features.length).toBeGreaterThanOrEqual(minimum);
 }
 
 /**
