@@ -70,7 +70,7 @@ describe("Test getParcellaireExpress", () => {
     });
 
     afterEach(() => {
-        vi.restoreAllMocks();
+        vi.clearAllMocks();
     });
 
     it("should return the expected cadastral objects for Mairie de Loray", async () => {

@@ -45,7 +45,7 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
   };
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
     mockGetFeatureType.mockReset();
     mockFetchJSONPost.mockReset();
   });
@@ -124,14 +124,13 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
 
   it("should return exactly one transformed feature for results", async () => {
     const tool = new GpfWfsGetFeatureByIdTool();
-    const requests: Array<{ url: string; query: Record<string, string>; body: string }> = [];
+    const requests: Array<{ url: string; query: Record<string, string> }> = [];
     mockGetFeatureType.mockResolvedValue(polygonFeatureType);
-    mockFetchJSONPost.mockImplementation(async (url, body) => {
+    mockFetchJSONPost.mockImplementation(async (url, _body) => {
       const [baseUrl, queryString = ""] = url.split("?");
       requests.push({
         url: baseUrl,
         query: Object.fromEntries(new URLSearchParams(queryString).entries()),
-        body,
       });
       return {
       type: "FeatureCollection",

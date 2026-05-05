@@ -75,7 +75,7 @@ describe("Test getAdminUnits", () => {
     });
 
     afterEach(() => {
-        vi.restoreAllMocks();
+        vi.clearAllMocks();
     });
 
     it("should return the expected administrative units for Mairie de Loray", async () => {

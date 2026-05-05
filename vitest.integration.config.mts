@@ -18,6 +18,6 @@ export default defineConfig({
     testTimeout: 60 * MILLISECONDS,
     // Run sequentially to avoid overloading the GPF APIs
     pool: "forks",
-    poolOptions: { forks: { singleFork: true } },
+    fileParallelism: false
   },
 });
