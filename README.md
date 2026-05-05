@@ -201,6 +201,8 @@ export NO_PROXY=localhost,127.0.0.1
 Les commandes principales sont :
 
 ```bash
+npm run typecheck
+npm run typecheck:test
 npm test
 npm run test:integration
 npm run test:e2e
@@ -208,6 +210,8 @@ npm run test:coverage
 npm run verify
 npm run verify:full
 ```
+
+`npm run verify:fast` inclut le type-check de l'application et des fichiers de test avant le build et les tests unitaires.
 
 Remarque :
 
