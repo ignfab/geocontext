@@ -23,6 +23,7 @@ Serveur MCP expérimental fournissant du contexte spatial pour les LLM sur la ba
       - [Avec Docker en local](#avec-docker-en-local)
     - [Debug de la version locale](#debug-de-la-version-locale)
   - [Paramétrage](#paramétrage)
+    - [Tests](#tests)
   - [Fonctionnalités (Tools)](#fonctionnalités-tools)
     - [Utiliser des services spatiaux](#utiliser-des-services-spatiaux)
     - [Recherche d'informations pour un lieu](#recherche-dinformations-pour-un-lieu)
@@ -163,6 +164,7 @@ Pour une utilisation avancée :
 | `HTTP_PORT`                  | Port d'écoute du MCP                                                                                                                                                                                                                                                   | 3000                                             |
 | `HTTP_MCP_ENDPOINT`          | Chemin d'exposition du MCP en HTTP                                                                                                                                                                                                                                     | "/mcp"                                           |
 | `HTTP_TIMEOUT`               | Délai maximal, en secondes, pour les appels HTTP sortants vers les services amont IGN. Au-delà, la requête est interrompue et l'outil renvoie une erreur de timeout structurée.                                                                                        | `15`                                             |
+| `GPF_WFS_RATE_LIMIT`         | Nombre maximum de requêtes par seconde sur le WFS de la Géoplateforme                                                                                                                                                                                                  | 30                                               |
 | `GPF_WFS_MINISEARCH_OPTIONS` | Chaîne JSON optionnelle pour ajuster les options MiniSearch utilisées par `gpf_wfs_search_types` (`fields`, `combineWith`, `fuzzy`, `boost.namespace`, `boost.name`, `boost.title`, `boost.description`, `boost.properties`, `boost.enums`, `boost.identifierTokens`). | options par défaut de `@ignfab/gpf-schema-store` |
 | `LOG_FORMAT`                 | Le format d'écriture des logs : "json" ou "simple".                                                                                                                                                                                                                    | "simple"                                         |
 | `LOG_LEVEL`                  | Le niveau d'écriture des logs : ["error", "info", ou "debug"](https://github.com/winstonjs/winston#logging-levels)                                                                                                                                                     | "debug"                                          |

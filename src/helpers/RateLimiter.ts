@@ -68,9 +68,9 @@ export class RateLimiter {
  * Helper function to create a RateLimiter instance with the given parameters.
  * This is just a convenience function to avoid having to import the RateLimiter class.
  * 
- * @param name 
- * @param maxCalls 
- * @param period 
+ * @param name the name of the rate limiter, used for error reporting and debugging purposes
+ * @param maxCalls the maximum number of calls allowed during one period
+ * @param period the period duration in seconds
  * @returns 
  */
 export function createRateLimiter(name: string, maxCalls: number, period: number): RateLimiter {
