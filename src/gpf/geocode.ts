@@ -44,7 +44,7 @@ export async function geocode(text: string, maximumResponses = 3, fetcher: JsonF
       return [];
     }
 
-    logger.info(`geocode(${JSON.stringify(normalizedText)}, ${maximumResponses})...`);
+    logger.debug(`[gpf:geocode] geocode(${JSON.stringify(normalizedText)}, ${maximumResponses})...`);
     
     const url = 'https://data.geopf.fr/geocodage/completion/?' + new URLSearchParams({
       text: normalizedText,

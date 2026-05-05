@@ -21,6 +21,7 @@ import {
   gpfWfsGetFeatureByIdPublishedInputSchema,
   gpfWfsGetFeatureByIdRequestOutputSchema,
 } from "../helpers/wfs_engine/schema.js";
+import logger from "../logger.js";
 
 // --- Tool ---
 
@@ -97,6 +98,10 @@ class GpfWfsGetFeatureByIdTool extends BaseTool<GpfWfsGetFeatureByIdInput> {
    * @returns Either a compiled request or a transformed FeatureCollection containing one feature.
    */
   async execute(input: GpfWfsGetFeatureByIdInput) {
+    logger.info(`[tool] execute ${this.name} ...`, {
+      input: input
+    });
+
     if (input.result_type === "request") {
       // The `request` mode is handled here because it returns a preview payload,
       // not the actual by-id WFS result.

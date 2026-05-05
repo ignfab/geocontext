@@ -32,7 +32,7 @@ type AltitudeResult = {
  * @returns {Promise<AltitudeResult>}
  */
 export async function getAltitudeByLocation(lon: number, lat: number, fetcher: JsonFetcher<RawAltitudeResponse> = fetchJSONGet): Promise<AltitudeResult> {
-    logger.info(`getAltitudeByLocation(${lon},${lat})...`);
+    logger.debug(`[gpf:altitude] getAltitudeByLocation(${lon},${lat})...`);
     
     const url = `https://data.geopf.fr/altimetrie/1.0/calcul/alti/rest/elevation.json?lon=${lon}&lat=${lat}&resource=ign_rge_alti_wld`;
 
