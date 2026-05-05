@@ -8,6 +8,7 @@ import type { Collection } from "@ignfab/gpf-schema-store";
 
 import { wfsClient } from "../gpf/wfs-schema-catalog.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
+import logger from "../logger.js";
 
 // --- Schema ---
 
@@ -64,6 +65,10 @@ class GpfWfsDescribeTypeTool extends BaseTool<GpfWfsDescribeTypeInput> {
    * @returns The detailed feature type description from the embedded catalog.
    */
   async execute(input: GpfWfsDescribeTypeInput) {
+    logger.info(`[tool] execute ${this.name} ...`, {
+      input: input
+    });
+
     try {
       const featureType: Collection = await wfsClient.getFeatureType(input.typename);
       return featureType;

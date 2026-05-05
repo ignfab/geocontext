@@ -7,6 +7,7 @@ import { z } from "zod";
 
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import { wfsClient } from "../gpf/wfs-schema-catalog.js";
+import logger from "../logger.js";
 
 // --- Schema ---
 
@@ -64,6 +65,10 @@ class GpfWfsSearchTypesTool extends BaseTool<GpfWfsSearchTypesInput> {
    * @returns The ordered search results, optionally enriched with relevance scores.
    */
   async execute(input: GpfWfsSearchTypesInput) {
+    logger.info(`[tool] execute ${this.name} ...`, {
+      input: input
+    });
+
     const maxResults = input.max_results || 10;
     const featureTypes = await wfsClient.searchFeatureTypesWithScores(input.query, maxResults);
     return {

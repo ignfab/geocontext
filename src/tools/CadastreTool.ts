@@ -8,6 +8,7 @@ import { z } from "zod";
 import { getParcellaireExpress, PARCELLAIRE_EXPRESS_TYPES, PARCELLAIRE_EXPRESS_SOURCE } from "../gpf/parcellaire-express.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import { featureRefSchema, lonSchema, latSchema } from "../helpers/schemas.js";
+import logger from "../logger.js";
 
 // --- Schema ---
 
@@ -60,6 +61,10 @@ class CadastreTool extends BaseTool<CadastreInput> {
    * @returns The nearest cadastral objects, at most one per cadastral type.
    */
   async execute(input: CadastreInput) {
+    logger.info(`[tool] execute ${this.name} ...`, {
+      input: input
+    });
+
     return {
       results: await getParcellaireExpress(input.lon, input.lat),
     };

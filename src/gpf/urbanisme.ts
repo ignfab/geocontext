@@ -63,7 +63,7 @@ function sanitizeUrbanismeItem(item: UrbanismeItem): Record<string, unknown> {
  * @returns Urban planning objects relevant to the requested point.
  */
 export async function getUrbanisme(lon: number, lat: number): Promise<Record<string, unknown>[]> {
-    logger.info(`getUrbanisme(${lon},${lat})...`);
+    logger.debug(`[gpf:urbanisme] getUrbanisme(${lon},${lat})...`);
 
     const spatialFilter: SpatialFilter = {
         operator: "dwithin_point",
@@ -115,7 +115,7 @@ const ASSIETTES_SUP_TYPES = [
  * @returns SUP footprints relevant to the requested point.
  */
 export async function getAssiettesServitudes(lon: number, lat: number): Promise<UrbanismeItem[]> {
-    logger.info(`getAssiettesServitudes(${lon},${lat})...`);
+    logger.debug(`[gpf:urbanisme] getAssiettesServitudes(${lon},${lat})...`);
 
     const spatialFilter: SpatialFilter = {
         operator: "dwithin_point",

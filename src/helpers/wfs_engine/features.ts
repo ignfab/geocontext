@@ -180,7 +180,7 @@ export async function executeGetFeatures(input: GpfWfsGetFeaturesInput) {
   let featureCollection: WfsFeatureCollectionResponse;
 
   try {
-    logger.info(
+    logger.debug(
       `[gpf_wfs_get_features] POST ${request.url}?${new URLSearchParams(request.query).toString()}`,
     );
     featureCollection = await fetchFeatureCollection(request);

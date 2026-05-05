@@ -70,7 +70,7 @@ function filterByDistance(items: ParcellaireExpressItem[]): ParcellaireExpressIt
  * @returns The nearest cadastral objects, at most one per cadastral type.
  */
 export async function getParcellaireExpress(lon: number, lat: number): Promise<ParcellaireExpressItem[]> {
-    logger.info(`getParcellaireExpress(${lon},${lat}) ...`);
+    logger.debug(`[gpf:parcellaire-express] getParcellaireExpress(${lon},${lat}) ...`);
 
     const spatialFilter: SpatialFilter = {
         operator: "dwithin_point",

@@ -8,6 +8,7 @@ import { z } from "zod";
 import { ALTITUDE_SOURCE, getAltitudeByLocation } from "../gpf/altitude.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import { lonSchema, latSchema } from "../helpers/schemas.js";
+import logger from "../logger.js";
 
 // --- Schema ---
 
@@ -47,6 +48,10 @@ class AltitudeTool extends BaseTool<AltitudeInput> {
    * @returns The altitude payload returned by the upstream service.
    */
   async execute(input: AltitudeInput) {
+    logger.info(`[tool] execute ${this.name} ...`, {
+      input: input
+    });
+
     return await getAltitudeByLocation(input.lon, input.lat);
   }
 }
