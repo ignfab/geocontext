@@ -309,29 +309,116 @@ function normalizeErrorResponse(response) {
   };
 }
 
-async function buildErrorExample(tools) {
-  for (const tool of tools) {
-    try {
-      const response = await tool._instance.toolCall({
-        params: {
-          name: tool.name,
-          arguments: {},
+async function loadNormalizeToolError() {
+  const moduleUrl = pathToFileURL(join(repoRoot, "dist", "helpers", "errors", "toolError.js")).href;
+  const imported = await import(moduleUrl);
+
+  if (typeof imported.normalizeToolError !== "function") {
+    throw new Error("Compiled helper normalizeToolError was not found.");
+  }
+
+  return imported.normalizeToolError;
+}
+
+/**
+ * @param {JsonSchema | undefined} schema
+ * @returns {unknown}
+ */
+export function buildInvalidValue(schema) {
+  const type = schemaType(schema);
+
+  if (type.includes("number") || type.includes("integer")) {
+    return "invalid";
+  }
+  if (type.includes("string") || type === "enum") {
+    return 123;
+  }
+  if (type.includes("boolean")) {
+    return "invalid";
+  }
+  if (type.includes("array")) {
+    return "invalid";
+  }
+  if (type.includes("object") || type.includes("oneOf") || type.includes("anyOf") || type.includes("allOf")) {
+    return "invalid";
+  }
+
+  return null;
+}
+
+/**
+ * @param {ToolDefinition} definition
+ * @returns {Record<string, unknown>[]}
+ */
+export function buildInvalidInputCandidates(definition) {
+  const candidates = [{}];
+  const properties = definition.inputSchema?.properties;
+
+  if (properties && Object.keys(properties).length > 0) {
+    const firstFieldName = Object.keys(properties).sort((left, right) => left.localeCompare(right))[0];
+    candidates.push({
+      [firstFieldName]: buildInvalidValue(properties[firstFieldName]),
+    });
+  }
+
+  candidates.push({
+    __invalid_parameter__: true,
+  });
+
+  return candidates;
+}
+
+/**
+ * @param {LoadedTool} tool
+ * @param {(error: unknown) => Record<string, unknown>} normalizeToolError
+ * @returns {{ toolName: string, response: ReturnType<typeof normalizeErrorResponse> } | undefined}
+ */
+export function buildValidationErrorExampleForTool(tool, normalizeToolError) {
+  const schema = tool._instance?.schema;
+
+  if (!schema || typeof schema.safeParse !== "function") {
+    return undefined;
+  }
+
+  for (const candidate of buildInvalidInputCandidates(tool)) {
+    const result = schema.safeParse(candidate);
+
+    if (result.success) {
+      continue;
+    }
+
+    const payload = normalizeToolError(result.error);
+    const response = normalizeErrorResponse({
+      isError: true,
+      content: [
+        {
+          type: "text",
+          text: String(payload.detail ?? "Erreur de validation."),
         },
-      });
+      ],
+      structuredContent: payload,
+    });
 
-      if (response?.isError !== true) {
-        continue;
-      }
+    if (!response) {
+      return undefined;
+    }
 
-      const normalized = normalizeErrorResponse(response);
-      if (normalized) {
-        return {
-          toolName: tool.name,
-          response: normalized,
-        };
-      }
-    } catch {
-      // Try next tool if this one does not produce a clean validation error sample.
+    return {
+      toolName: tool.name,
+      response,
+    };
+  }
+
+  return undefined;
+}
+
+async function buildErrorExample(tools) {
+  const normalizeToolError = await loadNormalizeToolError();
+
+  for (const tool of tools) {
+    const errorExample = buildValidationErrorExampleForTool(tool, normalizeToolError);
+    if (errorExample) {
+      return errorExample;
     }
   }
 

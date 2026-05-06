@@ -1,10 +1,24 @@
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
+
+import { normalizeToolError } from "../../src/helpers/errors/toolError.js";
 
 type DocsHelpersModule = {
   toAnchorSlug: (value: string) => string;
   schemaType: (schema: unknown) => string;
   renderPropertyTable: (schema: unknown) => string;
   renderDescription: (description: string | undefined) => string;
+  buildValidationErrorExampleForTool: (
+    tool: unknown,
+    normalizeToolError: (error: unknown) => Record<string, unknown>,
+  ) => {
+    toolName: string;
+    response: {
+      isError: true;
+      content: Array<{ type: string; text: string }>;
+      structuredContent: Record<string, unknown>;
+    };
+  } | undefined;
 };
 
 let docsHelpers: DocsHelpersModule;
@@ -70,5 +84,53 @@ describe("generate-mcp-docs helpers", () => {
     const markdown = renderDescription("Line one\nLine two\n\nLine three");
     expect(markdown).toEqual("- Line one\n- Line two\n- Line three");
     expect(renderDescription("Single line")).toEqual("Single line");
+  });
+
+  it("should build a validation example without executing the tool", async () => {
+    const { buildValidationErrorExampleForTool } = await loadDocsHelpers();
+
+    let executeCount = 0;
+    const example = buildValidationErrorExampleForTool(
+      {
+        name: "adminexpress",
+        inputSchema: {
+          type: "object",
+          properties: {
+            lon: { type: "number" },
+            lat: { type: "number" },
+          },
+          required: ["lon", "lat"],
+        },
+        _instance: {
+          schema: z.object({
+            lon: z.number(),
+            lat: z.number(),
+          }).strict(),
+          async toolCall() {
+            executeCount += 1;
+            return undefined;
+          },
+        },
+      },
+      normalizeToolError,
+    );
+
+    expect(executeCount).toEqual(0);
+    expect(example).toMatchObject({
+      toolName: "adminexpress",
+      response: {
+        isError: true,
+        content: [
+          {
+            type: "text",
+            text: expect.stringContaining("Paramètres invalides"),
+          },
+        ],
+        structuredContent: {
+          type: "urn:geocontext:problem:invalid-tool-params",
+          title: "Paramètres d’outil invalides",
+        },
+      },
+    });
   });
 });
