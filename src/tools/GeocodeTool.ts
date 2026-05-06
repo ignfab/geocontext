@@ -7,6 +7,7 @@ import { z } from "zod";
 
 import { geocode, GEOCODE_SOURCE } from "../gpf/geocode.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
+import logger from "../logger.js";
 
 // --- Schema ---
 
@@ -64,6 +65,10 @@ class GeocodeTool extends BaseTool<GeocodeInput> {
    * @returns The ordered list of geocoded candidates.
    */
   async execute(input: GeocodeInput) {
+    logger.info(`[tool] execute ${this.name} ...`, {
+      input: input
+    });
+  
     return {
       results: await geocode(input.text, input.maximumResponses),
     };

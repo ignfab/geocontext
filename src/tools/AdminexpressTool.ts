@@ -8,6 +8,7 @@ import { z } from "zod";
 import { getAdminUnits, ADMINEXPRESS_TYPES, ADMINEXPRESS_SOURCE } from "../gpf/adminexpress.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import { featureRefSchema, lonSchema, latSchema } from "../helpers/schemas.js";
+import logger from "../logger.js";
 
 // --- Schema ---
 
@@ -57,6 +58,10 @@ class AdminexpressTool extends BaseTool<AdminexpressInput> {
    * @returns The matching administrative units enriched with reusable `feature_ref` metadata.
    */
   async execute(input: AdminexpressInput) {
+    logger.info(`[tool] execute ${this.name} ...`, {
+      input: input
+    });
+
     return {
       results: await getAdminUnits(input.lon, input.lat),
     };

@@ -13,6 +13,7 @@ import {
   gpfWfsGetFeaturesPublishedInputSchema,
   gpfWfsGetFeaturesRequestOutputSchema,
 } from "../helpers/wfs_engine/schema.js";
+import logger from "../logger.js";
 
 /**
  * MCP tool exposing structured WFS feature search.
@@ -102,6 +103,10 @@ class GpfWfsGetFeaturesTool extends BaseTool<GpfWfsGetFeaturesInput> {
    * @returns Either a compiled request, a hit count, or a transformed FeatureCollection.
    */
   async execute(input: GpfWfsGetFeaturesInput) {
+    logger.info(`[tool] execute ${this.name} ...`, {
+      input: input
+    });
+
     if (input.result_type === "request") {
       const { request } = await prepareGetFeaturesRequest(input);
       return toWfsRequestPayload(request);

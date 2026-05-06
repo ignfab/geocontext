@@ -8,6 +8,7 @@ import { z } from "zod";
 import { getAssiettesServitudes, URBANISME_SOURCE } from "../gpf/urbanisme.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import { featureRefSchema, lonSchema, latSchema } from "../helpers/schemas.js";
+import logger from "../logger.js";
 
 // --- Schema ---
 
@@ -58,6 +59,10 @@ class AssietteSupTool extends BaseTool<AssietteSupInput> {
    * @returns The list of nearby assiettes with optional reusable `feature_ref` metadata.
    */
   async execute(input: AssietteSupInput) {
+    logger.info(`[tool] execute ${this.name} ...`, {
+      input: input
+    });
+  
     return {
       results: await getAssiettesServitudes(input.lon, input.lat),
     };

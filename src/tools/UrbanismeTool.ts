@@ -8,6 +8,7 @@ import { z } from "zod";
 import { getUrbanisme, URBANISME_SOURCE } from "../gpf/urbanisme.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import { featureRefSchema, lonSchema, latSchema } from "../helpers/schemas.js";
+import logger from "../logger.js";
 
 // --- Schema ---
 
@@ -64,6 +65,10 @@ class UrbanismeTool extends BaseTool<UrbanismeInput> {
    * @returns The relevant urban planning objects, including reusable `feature_ref` metadata when available.
    */
   async execute(input: UrbanismeInput) {
+    logger.info(`[tool] execute ${this.name} ...`, {
+      input: input
+    });
+
     return {
       results: await getUrbanisme(input.lon, input.lat),
     };
