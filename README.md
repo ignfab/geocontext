@@ -118,45 +118,33 @@ Avancés :
 - [Configurer le moteur de recherche](docs/config/minisearch.md)
 
 
-## Voir également
-
-- https://github.com/datagouv/datagouv-mcp : MCP data.gouv.fr
-- https://github.com/mapbox/mcp-server : MCP Mapbox
-- https://git.tricoteuses.fr/logiciels/tricoteuses-api-parlement :  MCP parlement français non officiel
-- https://github.com/datagouv/datagouv-skill : Skills data.gouv.fr
-
 ## Contribution
 
-### Problèmes et demandes d'évolutions
+### Signaler un problème
 
-N'hésitez pas à [créer une issue](https://github.com/ignfab/geocontext/issues) si vous rencontrez un problème! Merci de fournir :
+N'hésitez pas à [créer une issue](https://github.com/ignfab/geocontext/issues) si vous rencontrez un problème! 
 
-- L'assistant (ex: Github Copilot) et le modèle utilisé (ex: Claude Sonnet 4.5)
-- La demande que vous faites à l'assistant (ex : "Combien y a-t-il de pont franchissant la Seine?")
+**Merci de fournir** :
 
-### Proposer une nouvelle fonctionnalité
+- L'**assistant** (ex: Github Copilot) et le modèle utilisé (ex: Claude Sonnet 4.5)
+- La **demande** que vous faites à l'assistant (**ex : "Combien y a-t-il de pont franchissant la Seine?"**)
+- Si possible, un export de la discussion au format Markdown.
 
-N'hésitez pas :
+### Demander une évolution
 
-- Forker le dépôt
-- Créer un nouveau tool
-- Tester de votre côté
-- Faire une pull-request
+N'hésitez pas non plus à [créer une issue](https://github.com/ignfab/geocontext/issues) pour demander une évolution.
+
+Merci de **fournir la question type** pour laquelle vous souhaiteriez que le MCP aide à apporter une réponse. Par exemple :
+
+- "Combien y a-t'il de bâtiments à moins de 5 km à pied de la tour Eiffel?" -> nous verrons comment exploiter les isochrones
+- "Quelles sont les fonds de carte disponibles?" -> nous verrons comment exploiter le service WMTS de la Géoplateforme.
 
 
 ## Mises en garde
 
-- Ce développement est un POC en incubation au sein d'[IGNfab](https://www.ign.fr/ignfab) sur la base d'un premier [prototype désormais archivé](https://github.com/mborne/geocontext)
-- S'il s'avère utile de l'industrialiser, ce dépôt sera migré dans l'[organisation IGN principale](https://github.com/ignf) et l'outil sera renommé (ex : `IGNF/mcp-gpf-server`)
-- Les [issues](https://github.com/ignfab/geocontext/issues) sont régulièrement mises à jour et traitées
-- Une [roadmap](https://github.com/ignfab/geocontext/wiki) est également régulièrement alimentée
+- Ce développement est un prototype en incubation au sein d'[IGNfab](https://www.ign.fr/ignfab) sur la base d'un premier [prototype désormais archivé](https://github.com/mborne/geocontext)
+- S'il s'avère utile de l'industrialiser, le dépôt sera migré dans l'[organisation IGN principale](https://github.com/ignf) et l'outil sera renommé (ex : `IGNF/mcp-gpf-server`)
 - 🪄 Cet outil ne relève pas de la magie : ses capacités sont définies et documentées dans [Fonctionnalités](#fonctionnalités).
-
-## Principes de conception
-
-- **Ne pas répliquer les données de la Géoplateforme** (objectif : concentrer les efforts sur l'amélioration des services existants plutôt que sur leur duplication)
-- **Prototyper les capacités manquantes pour l'usage des LLM avec la Géoplateforme** (objectif : combler les briques techniques nécessaires à une intégration robuste). Le projet s'appuie notamment sur [gpf-schema-store](https://github.com/ignfab/gpf-schema-store/) pour l'indexation et la description des schémas.
-- **Maîtriser la volumétrie des réponses** (objectif : réduire le coût en jetons, limiter les hallucinations et permettre l'utilisation de modèles locaux). Cela se traduit en pratique par l'utilisation de références légères (`feature_ref`) aux objets géométriques dans les réponses et outils du MCP.
 
 ## Crédits
 
@@ -165,6 +153,12 @@ N'hésitez pas :
 * [MiniSearch](https://github.com/lucaong/minisearch) pour la **recherche par mot clé** utilisée dans `@ignfab/gpf-schema-store`.
 * [jsts](https://bjornharrtell.github.io/jsts/) pour les **traitements géométriques** (ex : tri des réponses par distance au point recherché).
 * [turfjs/distance](https://turfjs.org/docs/api/distance) pour les **calculs de distance** avec la [formule de Haversine](https://en.wikipedia.org/wiki/Haversine_formula).
+
+## Voir également
+
+- https://github.com/datagouv/datagouv-mcp : MCP data.gouv.fr
+- https://git.tricoteuses.fr/logiciels/tricoteuses-api-parlement :  MCP parlement français non officiel
+- https://github.com/datagouv/datagouv-skill : Skills data.gouv.fr
 
 ## Licence
 
