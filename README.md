@@ -41,11 +41,11 @@ On décrit ci-dessous succinctement les différents `tools` MCP proposés par `g
 
 ### Utiliser des services spatiaux
 
-* [geocode(text)](src/tools/GeocodeTool.ts) s'appuie sur le [service d’autocomplétion de la Géoplateforme](https://geoservices.ign.fr/documentation/services/services-geoplateforme/autocompletion) pour **convertir un nom de lieu en position (lon,lat)**.
+* [geocode(text)](docs/mcp-tools.md#geocode) s'appuie sur le [service d’autocomplétion de la Géoplateforme](https://geoservices.ign.fr/documentation/services/services-geoplateforme/autocompletion) pour **convertir un nom de lieu en position (lon,lat)**.
 
 > Ex : Quelle est la position (lon,lat) de la mairie de Vincennes?
 
-* [altitude(lon,lat)](src/tools/AltitudeTool.ts) s'appuie sur le [service de calcul altimétrique de la Géoplateforme](https://geoservices.ign.fr/documentation/services/services-geoplateforme/altimetrie) pour **convertir une position en altitude**. 
+* [altitude(lon,lat)](docs/mcp-tools.md#altitude) s'appuie sur le [service de calcul altimétrique de la Géoplateforme](https://geoservices.ign.fr/documentation/services/services-geoplateforme/altimetrie) pour **convertir une position en altitude**. 
 
 > Ex : Quelle est l'altitude de la mairie de Loray (25)?
 
@@ -53,29 +53,27 @@ On décrit ci-dessous succinctement les différents `tools` MCP proposés par `g
 
 L'idée est ici de répondre à des questions précises en traitant côté serveur les appels aux [services WFS de la Géoplateforme](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/diffusion/wfs/) :
 
-* [adminexpress(lon,lat)](src/tools/AdminexpressTool.ts) permet de **récupérer les informations administratives (commune, département, région,...)** pour un lieu donné par sa position.
+* [adminexpress(lon,lat)](docs/mcp-tools.md#adminexpress) permet de **récupérer les informations administratives (commune, département, région,...)** pour un lieu donné par sa position.
 
 > Ex : Quelles sont les informations administratives pour la mairie de Vincennes?
 
-* [cadastre(lon,lat)](src/tools/CadastreTool.ts) permet de **récupérer les informations cadastrales (parcelle, feuille,...)**.
+* [cadastre(lon,lat)](docs/mcp-tools.md#cadastre) permet de **récupérer les informations cadastrales (parcelle, feuille,...)**.
 
 > Ex : Quelles sont les informations du cadastre pour la mairie de Vincennes?
 
-* [urbanisme(lon,lat)](src/tools/UrbanismeTool.ts) permet de **récupérer les informations d'urbanisme (PLU,POS,CC,PSMV)**
+* [urbanisme(lon,lat)](docs/mcp-tools.md#urbanisme) permet de **récupérer les informations d'urbanisme (PLU,POS,CC,PSMV)**
 
 > Ex : Quel est le document PLU en vigueur pour le port de Marseille?
 
-* [assiette_sup(lon,lat)](src/tools/AssietteSupTool.ts) permet de **récupérer les Servitudes d'Utilité Publique (SUP)**
+* [assiette_sup(lon,lat)](docs/mcp-tools.md#assiette_sup) permet de **récupérer les Servitudes d'Utilité Publique (SUP)**
 
 > Ex: Quelles assiettes de SUP sont présentes autour de la mairie de Vincennes ?
-
-Les tools WFS orientés "objet" (`adminexpress`, `cadastre`, `urbanisme`, `assiette_sup`) exposent un `feature_ref { typename, feature_id }` quand l'objet source est réutilisable tel quel dans un appel ultérieur à `gpf_wfs_get_feature_by_id` ou `gpf_wfs_get_features` (ex : `spatial_operator="intersects_feature"`).
 
 ### Explorer les données vecteurs
 
 #### Explorer les tables
 
-* [gpf_wfs_search_types(keywords,max_results=10)](src/tools/GpfWfsSearchTypesTool.ts) pour **rechercher un type WFS pertinent à partir de mots-clés et obtenir un `typename` valide**. La recherche est textuelle et configurable via `GPF_WFS_MINISEARCH_OPTIONS`.
+* [gpf_wfs_search_types(keywords,max_results=10)](docs/mcp-tools.md#gpf_wfs_search_types) pour **rechercher un type WFS pertinent à partir de mots-clés**.
 
 > - Quels sont les millésimes ADMINEXPRESS disponibles sur la Géoplateforme?
 > - Quelle est la table de la BDTOPO correspondant aux bâtiments?
@@ -83,46 +81,23 @@ Les tools WFS orientés "objet" (`adminexpress`, `cadastre`, `urbanisme`, `assie
 
 #### Explorer la structure des tables
 
-* [gpf_wfs_describe_type(typename)](src/tools/GpfWfsDescribeTypeTool.ts) pour récupérer le **schéma détaillé d'un type WFS** depuis le catalogue embarqué (`id`, `namespace`, `name`, `title`, `description`, `properties`), en particulier avant d'appeler `gpf_wfs_get_features`
+* [gpf_wfs_describe_type(typename)](docs/mcp-tools.md#gpf_wfs_describe_type) pour récupérer le **schéma détaillé d'un type WFS** depuis le catalogue embarqué (`id`, `namespace`, `name`, `title`, `description`, `properties`), en particulier avant d'appeler `gpf_wfs_get_features`
 
 > - Quelles sont les informations disponibles pour les communes avec ADMINEXPRESS-COG.LATEST?
 > - Compare le modèle des communes entre ADMINEXPRESS-COG:2024 et ADMINEXPRESS-COG.LATEST
 
 #### Explorer les données des tables
 
-* [gpf_wfs_get_feature_by_id(typename,feature_id,...)](src/tools/GpfWfsGetFeatureByIdTool.ts) pour **récupérer exactement un objet WFS identifié par son `feature_id`**.
-
-Le tool accepte un contrat structuré :
-
-- `select` pour choisir les propriétés à renvoyer
-- `result_type="request"` pour récupérer la requête compilée (`POST` + `get_url` éventuelle) pour utilisation par un autre tool (ex: affichage cartographique)
-- `result_type="results"` pour renvoyer une `FeatureCollection` normalisée contenant exactement un seul objet
-
-Exemple :
-
-- `typename="ADMINEXPRESS-COG.LATEST:commune", feature_id="commune.8952"`
-
-* [gpf_wfs_get_features(typename,...)](src/tools/GpfWfsGetFeaturesTool.ts) pour **récupérer les données d'une table** depuis le service WFS de la Géoplateforme sans écrire de CQL à la main.
-
-Le tool accepte un contrat structuré :
-
-- `select` pour choisir les propriétés à renvoyer
-- `where` pour filtrer les objets
-- `order_by` pour trier les résultats
-- `spatial_operator` et ses paramètres dédiés pour le spatial
-- `result_type="request"` pour récupérer la requête compilée en `POST`, ainsi qu'une `get_url` dérivée quand elle reste raisonnablement portable en GET
-
-Exemples :
-
-- `where=[{ property: "code_insee", operator: "eq", value: "25000" }]`
-- `spatial_operator="bbox"` avec `bbox_west`, `bbox_south`, `bbox_east`, `bbox_north`
-- `spatial_operator="dwithin_point"` avec `dwithin_lon`, `dwithin_lat`, `dwithin_distance_m`
-- `spatial_operator="intersects_feature"` avec `intersects_feature_typename` et `intersects_feature_id` issus d'une `feature_ref`
+* [gpf_wfs_get_features(typename,...)](docs/mcp-tools.md#gpf_wfs_get_features) pour **récupérer les données d'une table** depuis le service WFS de la Géoplateforme.
 
 > - Quelles sont les 5 communes les plus peuplées du Doubs (25)?
 > - Combien y a-t-il de bâtiments à moins de 5 km de la tour Eiffel?
 
+* [gpf_wfs_get_feature_by_id(typename,feature_id,...)](docs/mcp-tools.md#gpf_wfs_get_feature_by_id) pour **récupérer exactement un objet WFS identifié par son `feature_id`**.
+
 ## Paramétrage
+
+Cette section concerne les développeurs du MCP et les utilisateurs avancés du MCP local.
 
 | Nom                          | Description                                                                                                                                                                                                                                                                                       | Valeur par défaut                                |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
