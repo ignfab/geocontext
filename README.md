@@ -4,69 +4,19 @@
 
 # Geocontext
 
-Serveur MCP expérimental fournissant du contexte spatial pour les LLM sur la base des [services de la Géoplateforme de l'IGN](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme).
+Serveur MCP expérimental rendant les [services de la Géoplateforme de l'IGN](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme) accessibles par un LLM.
 
-<details>
-<summary>📋 Table des matières</summary>
+## Démarrage rapide
 
-- [Geocontext](#geocontext)
-  - [Motivation](#motivation)
-  - [Mises en garde](#mises-en-garde)
-  - [Principes de conception](#principes-de-conception)
-  - [Utilisation](#utilisation)
-    - [Utilisation de la version publiée](#utilisation-de-la-version-publiée)
-    - [Autres exemples d'utilisation](#autres-exemples-dutilisation)
-  - [Développement](#développement)
-    - [Construction de la version locale](#construction-de-la-version-locale)
-    - [Utilisation de la version locale](#utilisation-de-la-version-locale)
-      - [Avec un client MCP compatible JSON](#avec-un-client-mcp-compatible-json)
-      - [Avec Docker en local](#avec-docker-en-local)
-    - [Debug de la version locale](#debug-de-la-version-locale)
-  - [Paramétrage](#paramétrage)
-    - [Tests](#tests)
-  - [Fonctionnalités (Tools)](#fonctionnalités-tools)
-    - [Utiliser des services spatiaux](#utiliser-des-services-spatiaux)
-    - [Recherche d'informations pour un lieu](#recherche-dinformations-pour-un-lieu)
-    - [Explorer les données vecteurs](#explorer-les-données-vecteurs)
-      - [Explorer les tables](#explorer-les-tables)
-      - [Explorer la structure des tables](#explorer-la-structure-des-tables)
-      - [Explorer les données des tables](#explorer-les-données-des-tables)
-  - [Voir également](#voir-également)
-  - [Contribution](#contribution)
-    - [Problèmes et demandes d'évolutions](#problèmes-et-demandes-dévolutions)
-    - [Proposer une nouvelle fonctionnalité](#proposer-une-nouvelle-fonctionnalité)
-  - [Crédits](#crédits)
-  - [Licence](#licence)
+### Version HTTP
 
-</details>
+**En approche...**
 
-## Motivation
+### Version locale
 
-Les LLM peuvent donner l'impression de disposer nativement de certaines capacités, mais ils dépendent, en pratique, des outils qui leur sont connectés. Par exemple, pour accéder à la date et à l'heure, un assistant doit être interfacé avec un serveur comme [MCP time](https://mcpservers.org/servers/modelcontextprotocol/time). De la même manière, pour lire une page web, il doit être relié à un outil tel que [MCP fetch](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch#readme).
+Le MCP peut être démarré en tant que MCP local à l'aide de la commande `npx -y @ignfab/geocontext` qui démarrera la dernière version publiées (voir [@ignfab/geocontext](https://www.npmjs.com/package/@ignfab/geocontext)).
 
-S'il est techniquement possible de brancher des API REST/GeoJSON telle [APICARTO](https://github.com/IGNF/apicarto) à un LLM, la conception de ces dernières n'est pas adaptée (5000 résultats par défaut, grosse géométrie dans les réponses, géométries complexes à fournir,...).
-
-L'idée est ici d'**expérimenter la conception d'un MCP rendant les données et les services de la Géoplateforme accessibles par un LLM**.
-
-## Mises en garde
-
-- Ce développement est un POC en incubation au sein d'[IGNfab](https://www.ign.fr/ignfab) sur la base d'un premier [prototype désormais archivé](https://github.com/mborne/geocontext)
-- S'il s'avère utile de l'industrialiser, ce dépôt sera migré dans l'[organisation IGN principale](https://github.com/ignf) et l'outil sera renommé (ex : `IGNF/mcp-gpf-server`)
-- Les [issues](https://github.com/ignfab/geocontext/issues) sont régulièrement mises à jour et traitées
-- Une [roadmap](https://github.com/ignfab/geocontext/wiki) est également régulièrement alimentée
-- 🪄 Cet outil ne relève pas de la magie : ses capacités sont définies et documentées dans [Fonctionnalités](#fonctionnalités).
-
-## Principes de conception
-
-- **Ne pas répliquer les données de la Géoplateforme** (objectif : concentrer les efforts sur l'amélioration des services existants plutôt que sur leur duplication)
-- **Prototyper les capacités manquantes pour l'usage des LLM avec la Géoplateforme** (objectif : combler les briques techniques nécessaires à une intégration robuste). Le projet s'appuie notamment sur [gpf-schema-store](https://github.com/ignfab/gpf-schema-store/) pour l'indexation et la description des schémas.
-- **Maîtriser la volumétrie des réponses** (objectif : réduire le coût en jetons, limiter les hallucinations et permettre l'utilisation de modèles locaux). Cela se traduit en pratique par l'utilisation de références légères (`feature_ref`) aux objets géométriques dans les réponses et outils du MCP.
-
-## Utilisation
-
-### Utilisation de la version publiée
-
-Par exemple, avec "Cursor Settings / MCP / Add server" :
+La méthode varie en fonction des clients. Par exemple, avec "Cursor Settings / MCP / Add server" :
 
 ```json
 {
@@ -83,144 +33,6 @@ Par exemple, avec "Cursor Settings / MCP / Add server" :
 
 - [Exemple d'utilisation avec Claude Desktop](docs/usage/claude-desktop.md)
 - [Exemple d'utilisation avec MCPJam](docs/usage/mcpjam.md)
-
-## Développement
-
-Pré-requis :
-
-- Node.js `24.5.0` ou supérieur recommandé (`22.21.0` minimum supporté)
-- npm compatible avec la version de Node utilisée
-
-Le dépôt fournit `.nvmrc` et `.node-version`. Si vous utilisez `nvm`, vous pouvez donc faire :
-
-```bash
-nvm install
-nvm use
-```
-
-### Construction de la version locale
-
-```bash
-git clone https://github.com/ignfab/geocontext
-cd geocontext
-npm ci
-npm run build
-```
-
-### Utilisation de la version locale
-
-#### Avec un client MCP compatible JSON
-
-```json
-{
-  "mcpServers": {
-    "geocontext": {
-      "command": "node",
-      "args":["--use-env-proxy", "/chemin/absolu/vers/geocontext/dist/index.js"]
-    }
-  }
-}
-```
-
-L'option `--use-env-proxy` est facultative : elle active la prise en charge des variables d'environnement de proxy par Node.js. Ajoutez-la uniquement si votre environnement réseau en a besoin. Voir aussi la section [Configuration du proxy réseau](#configuration-du-proxy-reseau).
-
-#### Avec Docker en local
-
-```bash
-docker compose build
-docker compose up -d
-```
-
-Ensuite :
-
-```json
-{
-  "mcpServers": {
-    "geocontext": {
-      "url": "http://localhost:3000/mcp"
-    }
-  }
-}
-```
-
-### Debug de la version locale
-
-Cette commande lance **MCP Inspector**, l’outil de développement de MCP pour tester et déboguer un serveur local. 
-
-```bash
-npm run inspect:mcp
-```
-
-Pour les tests d'intégration et les tests E2E agent, voir [la documentation dédiée](docs/testing/README.md).
-
-## Paramétrage
-
-Pour une utilisation avancée :
-
-| Nom                          | Description                                                                                                                                                                                                                                                                                       | Valeur par défaut                                |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
-| `TRANSPORT_TYPE`             | [Transport](https://mcp-framework.com/docs/Transports/transports-overview) permet de choisir entre "stdio" et "http"                                                                                                                                                                              | "stdio"                                          |
-| `HTTP_HOST`                  | Adresse d'écoute en mode HTTP. Utile avec Docker pour exposer le service via `0.0.0.0`.                                                                                                                                                                                                           | "127.0.0.1"                                      |
-| `HTTP_PORT`                  | Port d'écoute du MCP                                                                                                                                                                                                                                                                              | 3000                                             |
-| `HTTP_MCP_ENDPOINT`          | Chemin d'exposition du MCP en HTTP                                                                                                                                                                                                                                                                | "/mcp"                                           |
-| `HTTP_CORS_ALLOWED_ORIGINS`  | Permet la [configuration de allowedOrigins pour protection contre les attaques par DNS rebinding](https://www.mcp-framework.com/docs/transports/http-stream#origin-validation-dns-rebinding-protection). Exemple : `HTTP_CORS_ALLOWED_ORIGINS="http://localhost:3000,https://geollm.beta.ign.fr"` | Aucun (warning)                                  |
-| `HTTP_TIMEOUT`               | Délai maximal, en secondes, pour les appels HTTP sortants vers les services amont IGN. Au-delà, la requête est interrompue et l'outil renvoie une erreur de timeout structurée.                                                                                                                   | `15`                                             |
-| `GPF_WFS_RATE_LIMIT`         | Nombre maximum de requêtes par seconde sur le WFS de la Géoplateforme                                                                                                                                                                                                                             | 30                                               |
-| `GPF_WFS_MINISEARCH_OPTIONS` | Chaîne JSON optionnelle pour ajuster les options MiniSearch utilisées par `gpf_wfs_search_types` (`fields`, `combineWith`, `fuzzy`, `boost.namespace`, `boost.name`, `boost.title`, `boost.description`, `boost.properties`, `boost.enums`, `boost.identifierTokens`).                            | options par défaut de `@ignfab/gpf-schema-store` |
-| `LOG_FORMAT`                 | Le format d'écriture des logs : "json" ou "simple".                                                                                                                                                                                                                                               | "simple"                                         |
-| `LOG_LEVEL`                  | Le niveau d'écriture des logs : ["error", "info", ou "debug"](https://github.com/winstonjs/winston#logging-levels)                                                                                                                                                                                | "debug"                                          |
-
-Exemple :
-
-```bash
-export GPF_WFS_MINISEARCH_OPTIONS='{"fields":["title","identifierTokens"],"combineWith":"OR","fuzzy":0.05,"boost":{"title":4,"name":5}}'
-export HTTP_TIMEOUT=15
-```
-
-Si `GPF_WFS_MINISEARCH_OPTIONS` est absent ou vide, les options par défaut restent celles de `@ignfab/gpf-schema-store`, y compris le comportement par défaut `OR` de MiniSearch pour `combineWith`.
-
-<a id="configuration-du-proxy-reseau"></a>
-<details>
-<summary>Configuration du proxy réseau</summary>
-
-`geocontext` s'appuie sur la gestion native du proxy par Node.js.
-
-- En exécution locale, le serveur démarre avec `node --use-env-proxy`
-- Les tests d'intégration propagent `NODE_USE_ENV_PROXY=1` au sous-processus MCP lancé en `stdio`
-- Les tests E2E démarrent les workers Vitest avec `--use-env-proxy`
-
-Il suffit donc de définir les variables d'environnement standard selon votre contexte :
-
-```bash
-export HTTP_PROXY=http://proxy.example:3128
-export HTTPS_PROXY=http://proxy.example:3128
-export NO_PROXY=localhost,127.0.0.1
-```
-
-</details>
-
-### Tests
-
-Les commandes principales sont :
-
-```bash
-npm run typecheck
-npm run typecheck:test
-npm test
-npm run test:integration
-npm run test:e2e
-npm run test:coverage
-npm run verify
-npm run verify:full
-```
-
-`npm run verify:fast` inclut le type-check de l'application et des fichiers de test avant le build et les tests unitaires.
-
-Remarque :
-
-- Les outils `gpf_wfs_search_types` et `gpf_wfs_describe_type` s'appuient sur un catalogue de schémas embarqué fourni par `@ignfab/gpf-schema-store`.
-- Les outils `gpf_wfs_get_features` et `gpf_wfs_get_feature_by_id` interrogent toujours le service WFS de la Géoplateforme en direct.
-- Le catalogue embarqué améliore la description des featureTypes mais il peut être légèrement décalé par rapport à l'état courant du WFS.
 
 ## Fonctionnalités (Tools)
 
@@ -310,6 +122,26 @@ Exemples :
 > - Quelles sont les 5 communes les plus peuplées du Doubs (25)?
 > - Combien y a-t-il de bâtiments à moins de 5 km de la tour Eiffel?
 
+## Paramétrage
+
+| Nom                          | Description                                                                                                                                                                                                                                                                                       | Valeur par défaut                                |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `TRANSPORT_TYPE`             | [Transport](https://mcp-framework.com/docs/Transports/transports-overview) permet de choisir entre "stdio" et "http"                                                                                                                                                                              | "stdio" (version locale) / "http" (docker)       |
+| `HTTP_HOST`                  | Adresse d'écoute en mode HTTP. Utile avec Docker pour exposer le service via `0.0.0.0`.                                                                                                                                                                                                           | "127.0.0.1"                                      |
+| `HTTP_PORT`                  | Port d'écoute du MCP                                                                                                                                                                                                                                                                              | 3000                                             |
+| `HTTP_MCP_ENDPOINT`          | Chemin d'exposition du MCP en HTTP                                                                                                                                                                                                                                                                | "/mcp"                                           |
+| `HTTP_CORS_ALLOWED_ORIGINS`  | Permet la [configuration de allowedOrigins pour protection contre les attaques par DNS rebinding](https://www.mcp-framework.com/docs/transports/http-stream#origin-validation-dns-rebinding-protection). Exemple : `HTTP_CORS_ALLOWED_ORIGINS="http://localhost:3000,https://geollm.beta.ign.fr"` | Aucun (warning)                                  |
+| `HTTP_TIMEOUT`               | Délai maximal, en secondes, pour les appels HTTP sortants vers les services amont IGN. Au-delà, la requête est interrompue et l'outil renvoie une erreur de timeout structurée.                                                                                                                   | `15`                                             |
+| `GPF_WFS_RATE_LIMIT`         | Nombre maximum de requêtes par seconde sur le WFS de la Géoplateforme.                                                                                                                                                                                                                            | 30                                               |
+| `GPF_WFS_MINISEARCH_OPTIONS` | Chaîne JSON optionnelle permettant de  `gpf_wfs_search_types`                                                                                                                                                                                                                                     | options par défaut de `@ignfab/gpf-schema-store` |
+| `LOG_FORMAT`                 | Le format d'écriture des logs : "json" ou "simple".                                                                                                                                                                                                                                               | "simple"                                         |
+| `LOG_LEVEL`                  | Le niveau d'écriture des logs : ["error", "info", ou "debug"](https://github.com/winstonjs/winston#logging-levels)                                                                                                                                                                                | "debug"                                          |
+
+Avancés :
+
+- [Configuration d'un proxy d'entreprise](docs/config/proxy.md)
+- [Configurer le moteur de recherche](docs/config/minisearch.md)
+
 
 ## Voir également
 
@@ -335,6 +167,21 @@ N'hésitez pas :
 - Créer un nouveau tool
 - Tester de votre côté
 - Faire une pull-request
+
+
+## Mises en garde
+
+- Ce développement est un POC en incubation au sein d'[IGNfab](https://www.ign.fr/ignfab) sur la base d'un premier [prototype désormais archivé](https://github.com/mborne/geocontext)
+- S'il s'avère utile de l'industrialiser, ce dépôt sera migré dans l'[organisation IGN principale](https://github.com/ignf) et l'outil sera renommé (ex : `IGNF/mcp-gpf-server`)
+- Les [issues](https://github.com/ignfab/geocontext/issues) sont régulièrement mises à jour et traitées
+- Une [roadmap](https://github.com/ignfab/geocontext/wiki) est également régulièrement alimentée
+- 🪄 Cet outil ne relève pas de la magie : ses capacités sont définies et documentées dans [Fonctionnalités](#fonctionnalités).
+
+## Principes de conception
+
+- **Ne pas répliquer les données de la Géoplateforme** (objectif : concentrer les efforts sur l'amélioration des services existants plutôt que sur leur duplication)
+- **Prototyper les capacités manquantes pour l'usage des LLM avec la Géoplateforme** (objectif : combler les briques techniques nécessaires à une intégration robuste). Le projet s'appuie notamment sur [gpf-schema-store](https://github.com/ignfab/gpf-schema-store/) pour l'indexation et la description des schémas.
+- **Maîtriser la volumétrie des réponses** (objectif : réduire le coût en jetons, limiter les hallucinations et permettre l'utilisation de modèles locaux). Cela se traduit en pratique par l'utilisation de références légères (`feature_ref`) aux objets géométriques dans les réponses et outils du MCP.
 
 ## Crédits
 
