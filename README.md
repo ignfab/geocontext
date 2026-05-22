@@ -6,7 +6,7 @@
 
 [![npm version](https://img.shields.io/npm/v/@ignfab/geocontext)](https://www.npmjs.com/package/@ignfab/geocontext) [![prototype](https://img.shields.io/badge/statut-prototype-orange)](https://github.com/ignfab/geocontext)
 
-**Geocontext** est un serveur MCP qui connecte vos LLM aux données géographiques françaises de référence publiées sur la [Géoplateforme de l'IGN](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme) — sans téléchargement, en langage naturel.
+**Geocontext** est un serveur MCP qui connecte vos LLM aux données géographiques françaises de référence publiées sur la [Géoplateforme de l'IGN](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme).
 
 ## Exemples
 
