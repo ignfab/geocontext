@@ -76,7 +76,9 @@
 
 ## Démarrage rapide
 
-> ☁️ **Version HTTP distante** : en cours de déploiement — disponible prochainement.
+### ☁️ Version HTTP distante
+
+> en cours de déploiement — disponible prochainement.
 
 ### Version locale
 
