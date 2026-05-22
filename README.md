@@ -1,10 +1,18 @@
 <p align="center">
-  <img src="docs/imgs/hexagon-geoctx.svg" alt="logo du projet geocontext" width="300">
+  <img src="docs/imgs/hexagon-geoctx.svg" alt="logo du projet geocontext" height="64">
 </p>
 
 # Geocontext
 
-Serveur MCP expérimental rendant les [services de la Géoplateforme de l'IGN](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme) accessibles par un LLM.
+Ce serveur MCP expérimental a pour objectif de **rendre accessible par un LLM les services et les données publiées sur la [Géoplateforme de l'IGN](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme)** pour faciliter la **découverte et l'utilisation des données disponibles** :
+
+![Bâtiment de plus de 20 mètres à Vincennes](docs/imgs/batiment-30m-vincennes.png)
+
+## Points clés
+
+- **Pas de duplication des données** pour accès aux données géographiques françaises de référence à jour.
+- **Adaptation des services existants pour une utilisation efficace par les LLM** pour réduction des tokens / coûts (réponses légères, filtrage par géométrie -> filtrage par référence,...)
+- **Amélioration la description des données** pour réduire le risque d'hallucination et faciliter la découverte des donnnées (implémentation anticipée de [OGC API Feature - schema](https://docs.ogc.org/is/23-058r2/23-058r2.html))
 
 ## Démarrage rapide
 
@@ -95,28 +103,6 @@ L'idée est ici de répondre à des questions précises en traitant côté serve
 
 * [gpf_wfs_get_feature_by_id(typename,feature_id,...)](docs/mcp-tools.md#gpf_wfs_get_feature_by_id) pour **récupérer exactement un objet WFS identifié par son `feature_id`**.
 
-## Paramétrage
-
-Cette section concerne les développeurs du MCP et les utilisateurs avancés du MCP local.
-
-| Nom                          | Description                                                                                                                                                                                                                                                                                       | Valeur par défaut                                |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
-| `TRANSPORT_TYPE`             | [Transport](https://mcp-framework.com/docs/Transports/transports-overview) permet de choisir entre "stdio" et "http"                                                                                                                                                                              | "stdio" (version locale) / "http" (docker)       |
-| `HTTP_HOST`                  | Adresse d'écoute en mode HTTP. Utile avec Docker pour exposer le service via `0.0.0.0`.                                                                                                                                                                                                           | "127.0.0.1"                                      |
-| `HTTP_PORT`                  | Port d'écoute du MCP                                                                                                                                                                                                                                                                              | 3000                                             |
-| `HTTP_MCP_ENDPOINT`          | Chemin d'exposition du MCP en HTTP                                                                                                                                                                                                                                                                | "/mcp"                                           |
-| `HTTP_CORS_ALLOWED_ORIGINS`  | Permet la [configuration de allowedOrigins pour protection contre les attaques par DNS rebinding](https://www.mcp-framework.com/docs/transports/http-stream#origin-validation-dns-rebinding-protection). Exemple : `HTTP_CORS_ALLOWED_ORIGINS="http://localhost:3000,https://geollm.beta.ign.fr"` | Aucun (warning)                                  |
-| `HTTP_TIMEOUT`               | Délai maximal, en secondes, pour les appels HTTP sortants vers les services amont IGN. Au-delà, la requête est interrompue et l'outil renvoie une erreur de timeout structurée.                                                                                                                   | `15`                                             |
-| `GPF_WFS_RATE_LIMIT`         | Nombre maximum de requêtes par seconde sur le WFS de la Géoplateforme.                                                                                                                                                                                                                            | 30                                               |
-| `GPF_WFS_MINISEARCH_OPTIONS` | Chaîne JSON optionnelle permettant de  `gpf_wfs_search_types`                                                                                                                                                                                                                                     | options par défaut de `@ignfab/gpf-schema-store` |
-| `LOG_FORMAT`                 | Le format d'écriture des logs : "json" ou "simple".                                                                                                                                                                                                                                               | "simple"                                         |
-| `LOG_LEVEL`                  | Le niveau d'écriture des logs : ["error", "info", ou "debug"](https://github.com/winstonjs/winston#logging-levels)                                                                                                                                                                                | "debug"                                          |
-
-Avancés :
-
-- [Configuration d'un proxy d'entreprise](docs/config/proxy.md)
-- [Configurer le moteur de recherche](docs/config/minisearch.md)
-
 
 ## Contribution
 
@@ -146,11 +132,21 @@ Merci de **fournir la question type** pour laquelle vous souhaiteriez que le MCP
 - S'il s'avère utile de l'industrialiser, le dépôt sera migré dans l'[organisation IGN principale](https://github.com/ignf) et l'outil sera renommé (ex : `IGNF/mcp-gpf-server`)
 - 🪄 Cet outil ne relève pas de la magie : ses capacités sont définies et documentées dans [Fonctionnalités](#fonctionnalités).
 
+
+## Paramétrage
+
+Voir [configuration du serveur MCP](docs/config.md) pour les configurations avancées (configuration d'un proxy d'entreprise, choix du mode de transport : stdio/http,...)
+
+## Développement
+
+Voir [Guide développeur](docs/dev.md) pour installation des dépendances, construction de l'application, exécution des tests,...
+
 ## Crédits
 
-* [mcp-framework](https://mcp-framework.com) fournit le **cadre de développement du MCP** 
-* [@ignfab/gpf-schema-store](https://www.npmjs.com/package/@ignfab/gpf-schema-store) pour le **catalogue de schémas embarqué** utilisé par les outils d'exploration WFS.
-* [MiniSearch](https://github.com/lucaong/minisearch) pour la **recherche par mot clé** utilisée dans `@ignfab/gpf-schema-store`.
+* [mcp-framework](https://mcp-framework.com) : **cadre de développement du MCP** 
+* [@ignfab/gpf-schema-store](https://www.npmjs.com/package/@ignfab/gpf-schema-store) : **couche sémantique** / **catalogue de schémas embarqué** (en attendant [OGC API - Features - schema](https://docs.ogc.org/is/23-058r2/23-058r2.html))
+    * [@camptocamp/ogc-client](https://camptocamp.github.io/ogc-client/#/) : **exploration WFS** (ex : parsing [GetCapabilities](https://data.geopf.fr/wfs?request=GetCapabilities&version=2.0.0&service=WFS))
+    * [MiniSearch](https://github.com/lucaong/minisearch) : **recherche par mot clé** (`gpf_wfs_search_types`)
 * [jsts](https://bjornharrtell.github.io/jsts/) pour les **traitements géométriques** (ex : tri des réponses par distance au point recherché).
 * [turfjs/distance](https://turfjs.org/docs/api/distance) pour les **calculs de distance** avec la [formule de Haversine](https://en.wikipedia.org/wiki/Haversine_formula).
 

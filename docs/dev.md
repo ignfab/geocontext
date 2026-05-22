@@ -55,7 +55,9 @@ Avec certains clients MCP, vous serez amené à éditer un fichier JSON. Par exe
 ```
 
 !!!tip
-    L'option `--use-env-proxy` est facultative. Voir la [configuration du proxy réseau](./config/proxy.md).
+    - L'option `--use-env-proxy` est facultative. Voir la [configuration du proxy réseau](./config/proxy.md).
+    - Voir [configuration du serveur MCP](docs/config.md) pour les paramètres disponibles
+
 
 ## Déboguer avec MCP Inspector
 
@@ -65,20 +67,6 @@ Avec certains clients MCP, vous serez amené à éditer un fichier JSON. Par exe
 npm run inspect:mcp       # interface graphique
 npm run inspect:mcp:cli   # mode CLI
 ```
-
-## Générer la documentation des tools MCP
-
-```bash
-npm run docs:mcp
-```
-
-Construit le projet puis génère `docs/mcp-tools.md` à partir des métadonnées des tools.
-
-## Fonctionnement des tools WFS
-
-- Les tools `gpf_wfs_search_types` et `gpf_wfs_describe_type` s'appuient sur un catalogue de schémas embarqué fourni par `@ignfab/gpf-schema-store`.
-- Les tools `gpf_wfs_get_features` et `gpf_wfs_get_feature_by_id` interrogent toujours le service WFS de la Géoplateforme en direct.
-- Le catalogue embarqué améliore la description des featureTypes mais il peut être légèrement décalé par rapport à l'état courant du WFS.
 
 ## Tests
 
@@ -187,3 +175,30 @@ npm run test:e2e
 - Si `test:integration` échoue immédiatement : vérifier que `dist/index.js` existe (`npm run build`).
 - Si `test:e2e` est ignoré : vérifier que la clé API attendue par `MODEL_NAME` est définie.
 - Si un provider local (Ollama, etc.) est utilisé derrière un proxy : ajouter `NO_PROXY=localhost,127.0.0.1`.
+
+## Commandes utiles
+
+### Mettre à jour des dépendances
+
+!!!warning
+    **zod doit rester en version 3**
+
+L'utilisation de [npm-check-updates](https://www.npmjs.com/package/npm-check-updates?activeTab=readme) est recommandée pour gérer les monter de version :
+
+```bash
+# étudier les nouvelles versions disponible
+npx -y npm-check-updates
+
+# mettre à jour les versions mineurs
+npx -y npm-check-updates -t minor -u
+```
+
+
+### Générer la documentation des tools MCP
+
+Pour mettre à jour `docs/mcp-tools.md` à partir des métadonnées des tools :
+
+```bash
+npm run docs:mcp
+```
+
