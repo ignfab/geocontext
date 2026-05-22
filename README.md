@@ -4,21 +4,79 @@
 
 # Geocontext
 
-Ce serveur MCP expérimental a pour objectif de **rendre accessible par un LLM les services et les données publiées sur la [Géoplateforme de l'IGN](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme)** pour faciliter la **découverte et l'utilisation des données disponibles** :
+[![npm version](https://img.shields.io/npm/v/@ignfab/geocontext)](https://www.npmjs.com/package/@ignfab/geocontext) [![prototype](https://img.shields.io/badge/statut-prototype-orange)](https://github.com/ignfab/geocontext)
 
-![Bâtiment de plus de 20 mètres à Vincennes](docs/imgs/batiment-30m-vincennes.png)
+**Geocontext** est un serveur MCP qui connecte vos LLM aux données géographiques françaises de référence publiées sur la [Géoplateforme de l'IGN](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme) — sans téléchargement, en langage naturel.
+
+## Exemples
+
+### Géocodage et altimétrie
+
+<details>
+  <summary><strong>Quelle est l'altitude de la mairie de Vincennes ?</strong></summary>
+
+  <p>
+    <img src="docs/imgs/usage/demo-altitude-mairie-vincennes.png" alt="demo-geocontext - altitude mairie de Vincennes">
+  </p>
+</details>
+
+### ADMINEXPRESS et CADASTRE
+
+<details>
+  <summary><strong>Quelles sont les informations administratives pour la tour Eiffel ?</strong></summary>
+
+  <p>
+    <img src="docs/imgs/usage/claude-administratif-tour-eiffel.png" alt="Claude - info administrative tour Eiffel">
+  </p>
+</details>
+
+### BDTOPO
+
+<details>
+  <summary><strong>Combien y a-t-il de bâtiments de plus de 20 mètres à Vincennes ?</strong></summary>
+
+  <p>
+    <img src="docs/imgs/usage/mistral-batiment-20m-vincennes.png" alt="Mistral - bâtiment de plus de 20 mètres à Vincennes">
+  </p>
+</details>
+
+<details>
+  <summary><strong>Quelles sont les 5 communes les plus peuplées du Doubs ?</strong></summary>
+
+  <p>
+    <img src="docs/imgs/usage/demo-5-communes-doubs.png" alt="demo-geocontext - 5 communes les plus peuplées du Doubs">
+  </p>
+</details>
+
+### Géoportail de l'Urbanisme
+
+<details>
+  <summary><strong>Quel est le document PLU en vigueur pour le port de Marseille ?</strong></summary>
+
+  <p>
+    <img src="docs/imgs/usage/claude-plu-marseille.png" alt="Claude - PLU port de Marseille">
+  </p>
+</details>
+
+<details>
+  <summary><strong>Quelles assiettes de SUP sont présentes autour de la mairie de Vincennes ?</strong></summary>
+
+  <p>
+    <img src="docs/imgs/usage/claude-sup-mairie-vincennes.png" alt="Claude - SUP mairie de Vincennes">
+  </p>
+</details>
+
 
 ## Points clés
 
-- **Pas de duplication des données** pour accès aux données géographiques françaises de référence à jour.
-- **Adaptation des services existants pour une utilisation efficace par les LLM** pour réduction des tokens / coûts (réponses légères, filtrage par géométrie -> filtrage par référence,...)
-- **Amélioration la description des données** pour réduire le risque d'hallucination et faciliter la découverte des donnnées (implémentation anticipée de [OGC API Feature - schema](https://docs.ogc.org/is/23-058r2/23-058r2.html))
+- **Zéro duplication** — accès direct aux données de référence IGN, toujours à jour, sans téléchargement.
+- **Optimisé pour les LLM** — réponses légères, filtrage côté serveur (par géométrie → par référence) pour réduire les tokens et les coûts.
+- **Description enrichie des données** — réduit les hallucinations et facilite la découverte (implémentation anticipée de [OGC API Feature - schema](https://docs.ogc.org/is/23-058r2/23-058r2.html)).
+- **LLM agnostique** — testé avec Claude, Mistral, Gemini et d'autres modèles.
 
 ## Démarrage rapide
 
-### Version HTTP
-
-**En approche...**
+> ☁️ **Version HTTP distante** : en cours de déploiement — disponible prochainement.
 
 ### Version locale
 
@@ -104,6 +162,13 @@ L'idée est ici de répondre à des questions précises en traitant côté serve
 * [gpf_wfs_get_feature_by_id(typename,feature_id,...)](docs/mcp-tools.md#gpf_wfs_get_feature_by_id) pour **récupérer exactement un objet WFS identifié par son `feature_id`**.
 
 
+![Bâtiment de plus de 20 mètres à Vincennes](docs/imgs/batiment-30m-vincennes.png)
+
+## Mises en garde
+
+- 🧪 Ce projet est un **prototype en incubation** au sein d'[IGNfab](https://www.ign.fr/ignfab), basé sur un [prototype antérieur désormais archivé](https://github.com/mborne/geocontext). S'il s'avère pertinent de l'industrialiser, il sera migré vers l'[organisation IGN principale](https://github.com/ignf) (ex : `IGNF/mcp-gpf-server`).
+- 🪄 Cet outil n'est pas magique : ses capacités sont strictement définies et documentées dans la section [Fonctionnalités](#fonctionnalités).
+
 ## Contribution
 
 ### Signaler un problème
@@ -124,13 +189,6 @@ Merci de **fournir la question type** pour laquelle vous souhaiteriez que le MCP
 
 - "Combien y a-t'il de bâtiments à moins de 5 km à pied de la tour Eiffel?" -> nous verrons comment exploiter les isochrones
 - "Quelles sont les fonds de carte disponibles?" -> nous verrons comment exploiter le service WMTS de la Géoplateforme.
-
-
-## Mises en garde
-
-- Ce développement est un prototype en incubation au sein d'[IGNfab](https://www.ign.fr/ignfab) sur la base d'un premier [prototype désormais archivé](https://github.com/mborne/geocontext)
-- S'il s'avère utile de l'industrialiser, le dépôt sera migré dans l'[organisation IGN principale](https://github.com/ignf) et l'outil sera renommé (ex : `IGNF/mcp-gpf-server`)
-- 🪄 Cet outil ne relève pas de la magie : ses capacités sont définies et documentées dans [Fonctionnalités](#fonctionnalités).
 
 
 ## Paramétrage
