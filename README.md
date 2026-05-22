@@ -82,7 +82,9 @@
 
 ### Version locale
 
-Le MCP peut être démarré en tant que MCP local à l'aide de la commande `npx -y @ignfab/geocontext` qui démarrera la dernière version publiées (voir [@ignfab/geocontext](https://www.npmjs.com/package/@ignfab/geocontext)).
+> Pré-requis : Node.js (`>=24.5.0` à contrôler avec `node --version`) avec `npx`.
+
+Le MCP peut être démarré en tant que MCP local à l'aide de la commande `npx -y @ignfab/geocontext` qui démarrera la dernière version publiée (voir [@ignfab/geocontext](https://www.npmjs.com/package/@ignfab/geocontext)).
 
 La méthode varie en fonction des clients. Par exemple, avec "Cursor Settings / MCP / Add server" :
 
@@ -102,18 +104,17 @@ La méthode varie en fonction des clients. Par exemple, avec "Cursor Settings / 
 - [Exemple d'utilisation avec Claude Desktop](docs/usage/claude-desktop.md)
 - [Exemple d'utilisation avec MCPJam](docs/usage/mcpjam.md)
 
-## Fonctionnalités (Tools)
+## Fonctionnalités
 
-👉 Une description avancée des tools équivalente au niveau de détail de la méthode `tools/list` est disponible [ici](docs/mcp-tools.md).  
-On décrit ci-dessous succinctement les différents `tools` MCP proposés par `geocontext`.
+Les fonctionnalités correspondent aux outils du MCP pour lesquels une description technique est disponible [ici](docs/mcp-tools.md). On se concentre ici sur le fonctionnel et les cas d'utilisation associés.
 
 ### Utiliser des services spatiaux
 
-* [geocode(text)](docs/mcp-tools.md#geocode) s'appuie sur le [service d’autocomplétion de la Géoplateforme](https://geoservices.ign.fr/documentation/services/services-geoplateforme/autocompletion) pour **convertir un nom de lieu en position (lon,lat)**.
+- [geocode(text)](docs/mcp-tools.md#geocode) s'appuie sur le [service d’autocomplétion de la Géoplateforme](https://geoservices.ign.fr/documentation/services/services-geoplateforme/autocompletion) pour **convertir un nom de lieu en position (lon,lat)**.
 
 > Ex : Quelle est la position (lon,lat) de la mairie de Vincennes?
 
-* [altitude(lon,lat)](docs/mcp-tools.md#altitude) s'appuie sur le [service de calcul altimétrique de la Géoplateforme](https://geoservices.ign.fr/documentation/services/services-geoplateforme/altimetrie) pour **convertir une position en altitude**. 
+- [altitude(lon,lat)](docs/mcp-tools.md#altitude) s'appuie sur le [service de calcul altimétrique de la Géoplateforme](https://geoservices.ign.fr/documentation/services/services-geoplateforme/altimetrie) pour **convertir une position en altitude**. 
 
 > Ex : Quelle est l'altitude de la mairie de Loray (25)?
 
@@ -121,27 +122,27 @@ On décrit ci-dessous succinctement les différents `tools` MCP proposés par `g
 
 L'idée est ici de répondre à des questions précises en traitant côté serveur les appels aux [services WFS de la Géoplateforme](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/diffusion/wfs/) :
 
-* [adminexpress(lon,lat)](docs/mcp-tools.md#adminexpress) permet de **récupérer les informations administratives (commune, département, région,...)** pour un lieu donné par sa position.
+- [adminexpress(lon,lat)](docs/mcp-tools.md#adminexpress) permet de **récupérer les informations administratives (commune, département, région,...)** pour un lieu donné par sa position.
 
 > Ex : Quelles sont les informations administratives pour la mairie de Vincennes?
 
-* [cadastre(lon,lat)](docs/mcp-tools.md#cadastre) permet de **récupérer les informations cadastrales (parcelle, feuille,...)**.
+- [cadastre(lon,lat)](docs/mcp-tools.md#cadastre) permet de **récupérer les informations cadastrales (parcelle, feuille,...)**.
 
 > Ex : Quelles sont les informations du cadastre pour la mairie de Vincennes?
 
-* [urbanisme(lon,lat)](docs/mcp-tools.md#urbanisme) permet de **récupérer les informations d'urbanisme (PLU,POS,CC,PSMV)**
+- [urbanisme(lon,lat)](docs/mcp-tools.md#urbanisme) permet de **récupérer les informations d'urbanisme (PLU,POS,CC,PSMV)**
 
 > Ex : Quel est le document PLU en vigueur pour le port de Marseille?
 
-* [assiette_sup(lon,lat)](docs/mcp-tools.md#assiette_sup) permet de **récupérer les Servitudes d'Utilité Publique (SUP)**
+- [assiette_sup(lon,lat)](docs/mcp-tools.md#assiette_sup) permet de **récupérer les Servitudes d'Utilité Publique (SUP)**
 
-> Ex: Quelles assiettes de SUP sont présentes autour de la mairie de Vincennes ?
+> Ex : Quelles assiettes de SUP sont présentes autour de la mairie de Vincennes ?
 
 ### Explorer les données vecteurs
 
 #### Explorer les tables
 
-* [gpf_wfs_search_types(keywords,max_results=10)](docs/mcp-tools.md#gpf_wfs_search_types) pour **rechercher un type WFS pertinent à partir de mots-clés**.
+- [gpf_wfs_search_types(keywords,max_results=10)](docs/mcp-tools.md#gpf_wfs_search_types) pour **rechercher un type WFS pertinent à partir de mots-clés**.
 
 > - Quels sont les millésimes ADMINEXPRESS disponibles sur la Géoplateforme?
 > - Quelle est la table de la BDTOPO correspondant aux bâtiments?
@@ -149,22 +150,20 @@ L'idée est ici de répondre à des questions précises en traitant côté serve
 
 #### Explorer la structure des tables
 
-* [gpf_wfs_describe_type(typename)](docs/mcp-tools.md#gpf_wfs_describe_type) pour récupérer le **schéma détaillé d'un type WFS** depuis le catalogue embarqué (`id`, `namespace`, `name`, `title`, `description`, `properties`), en particulier avant d'appeler `gpf_wfs_get_features`
+- [gpf_wfs_describe_type(typename)](docs/mcp-tools.md#gpf_wfs_describe_type) pour récupérer le **schéma détaillé d'un type WFS** depuis le catalogue embarqué (`id`, `namespace`, `name`, `title`, `description`, `properties`), en particulier avant d'appeler `gpf_wfs_get_features`
 
 > - Quelles sont les informations disponibles pour les communes avec ADMINEXPRESS-COG.LATEST?
 > - Compare le modèle des communes entre ADMINEXPRESS-COG:2024 et ADMINEXPRESS-COG.LATEST
 
 #### Explorer les données des tables
 
-* [gpf_wfs_get_features(typename,...)](docs/mcp-tools.md#gpf_wfs_get_features) pour **récupérer les données d'une table** depuis le service WFS de la Géoplateforme.
+- [gpf_wfs_get_features(typename,...)](docs/mcp-tools.md#gpf_wfs_get_features) pour **récupérer les données d'une table** depuis le service WFS de la Géoplateforme.
 
 > - Quelles sont les 5 communes les plus peuplées du Doubs (25)?
 > - Combien y a-t-il de bâtiments à moins de 5 km de la tour Eiffel?
 
-* [gpf_wfs_get_feature_by_id(typename,feature_id,...)](docs/mcp-tools.md#gpf_wfs_get_feature_by_id) pour **récupérer exactement un objet WFS identifié par son `feature_id`**.
+- [gpf_wfs_get_feature_by_id(typename,feature_id,...)](docs/mcp-tools.md#gpf_wfs_get_feature_by_id) pour **récupérer exactement un objet WFS identifié par son `feature_id`**.
 
-
-![Bâtiment de plus de 20 mètres à Vincennes](docs/imgs/batiment-30m-vincennes.png)
 
 ## Mises en garde
 
@@ -179,8 +178,10 @@ N'hésitez pas à [créer une issue](https://github.com/ignfab/geocontext/issues
 
 **Merci de fournir** :
 
-- L'**assistant** (ex: Github Copilot) et le modèle utilisé (ex: Claude Sonnet 4.5)
-- La **demande** que vous faites à l'assistant (**ex : "Combien y a-t-il de pont franchissant la Seine?"**)
+- Le **client MCP** (ex : GitHub Copilot, Cursor, Claude Desktop) et le **mode de transport** (stdio ou http) utilisé.
+- Le **modèle** utilisé (ex : Claude Sonnet 4.5)
+- La **version de Geocontext** (visible sur [npmjs.com/@ignfab/geocontext](https://www.npmjs.com/package/@ignfab/geocontext) ou avec `npx @ignfab/geocontext --version`)
+- La **demande** faite à l'assistant (**ex : "Combien y a-t-il de pont franchissant la Seine ?"**)
 - Si possible, un export de la discussion au format Markdown.
 
 ### Demander une évolution
@@ -189,7 +190,7 @@ N'hésitez pas non plus à [créer une issue](https://github.com/ignfab/geoconte
 
 Merci de **fournir la question type** pour laquelle vous souhaiteriez que le MCP aide à apporter une réponse. Par exemple :
 
-- "Combien y a-t'il de bâtiments à moins de 5 km à pied de la tour Eiffel?" -> nous verrons comment exploiter les isochrones
+- "Combien y a-t-il de bâtiments à moins de 5 km à pied de la tour Eiffel?" -> nous verrons comment exploiter les isochrones
 - "Quelles sont les fonds de carte disponibles?" -> nous verrons comment exploiter le service WMTS de la Géoplateforme.
 
 
@@ -203,16 +204,19 @@ Voir [Guide développeur](docs/dev.md) pour installation des dépendances, const
 
 ## Crédits
 
-* [mcp-framework](https://mcp-framework.com) : **cadre de développement du MCP** 
-* [@ignfab/gpf-schema-store](https://www.npmjs.com/package/@ignfab/gpf-schema-store) : **couche sémantique** / **catalogue de schémas embarqué** (en attendant [OGC API - Features - schema](https://docs.ogc.org/is/23-058r2/23-058r2.html))
-    * [@camptocamp/ogc-client](https://camptocamp.github.io/ogc-client/#/) : **exploration WFS** (ex : parsing [GetCapabilities](https://data.geopf.fr/wfs?request=GetCapabilities&version=2.0.0&service=WFS))
-    * [MiniSearch](https://github.com/lucaong/minisearch) : **recherche par mot clé** (`gpf_wfs_search_types`)
-* [jsts](https://bjornharrtell.github.io/jsts/) pour les **traitements géométriques** (ex : tri des réponses par distance au point recherché).
-* [turfjs/distance](https://turfjs.org/docs/api/distance) pour les **calculs de distance** avec la [formule de Haversine](https://en.wikipedia.org/wiki/Haversine_formula).
+- [mcp-framework](https://mcp-framework.com) : **cadre de développement du MCP** 
+- [@ignfab/gpf-schema-store](https://www.npmjs.com/package/@ignfab/gpf-schema-store) : **couche sémantique** / **catalogue de schémas embarqué** (en attendant [OGC API - Features - schema](https://docs.ogc.org/is/23-058r2/23-058r2.html))
+    - [@camptocamp/ogc-client](https://camptocamp.github.io/ogc-client/#/) : **exploration WFS** (ex : parsing [GetCapabilities](https://data.geopf.fr/wfs?request=GetCapabilities&version=2.0.0&service=WFS))
+    - [MiniSearch](https://github.com/lucaong/minisearch) : **recherche par mot clé** (`gpf_wfs_search_types`)
+- [jsts](https://bjornharrtell.github.io/jsts/) : **traitements géométriques** (ex : tri des réponses par distance au point recherché).
+- [turfjs/distance](https://turfjs.org/docs/api/distance) : **calculs de distance** avec la [formule de Haversine](https://en.wikipedia.org/wiki/Haversine_formula).
 
 ## Voir également
 
 - https://github.com/datagouv/datagouv-mcp : MCP data.gouv.fr
+
+> Ex : Qui est le maire de la commune de Vincennes?
+
 - https://git.tricoteuses.fr/logiciels/tricoteuses-api-parlement :  MCP parlement français non officiel
 - https://github.com/datagouv/datagouv-skill : Skills data.gouv.fr
 
