@@ -5,13 +5,15 @@
 - Node.js (voir `package.json` pour la version recommandée)
 - npm compatible avec la version de Node utilisée
 
-!!!tip "L'utilisation de nvm est possible et recommandée"
-    Le dépôt fournit `.nvmrc` et `.node-version`. Si vous utilisez `nvm`, vous pouvez donc faire :
+Remarque : Le dépôt fournit `.nvmrc` et `.node-version`. Si vous utilisez `nvm`, vous pouvez donc faire :
 
-    ```bash
-    nvm install
-    nvm use
-    ```
+```bash
+nvm install
+nvm use
+```
+
+</details>
+
 
 ## Installation
 
@@ -56,7 +58,7 @@ Avec certains clients MCP, vous serez amené à éditer un fichier JSON. Par exe
 
 !!!tip
     - L'option `--use-env-proxy` est facultative. Voir la [configuration du proxy réseau](./config/proxy.md).
-    - Voir [configuration du serveur MCP](docs/config.md) pour les paramètres disponibles
+    - Voir [configuration du serveur MCP](./config.md) pour les paramètres disponibles
 
 
 ## Déboguer avec MCP Inspector
