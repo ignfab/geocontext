@@ -18,7 +18,7 @@
 - **Données de référence à jour** — les réponses s’appuient sur les référentiels géographiques publiés par l’IGN.
 - **Réponses optimisées pour les LLM** — les traitements et filtrages sont faits côté serveur pour limiter les tokens transmis au modèle.
 - **Moins d’hallucinations** — les descriptions et schémas enrichis aident l’assistant à identifier les bonnes données et les bons champs (implémentation anticipée de [OGC API Feature - schema](https://docs.ogc.org/is/23-058r2/23-058r2.html) dans [ignfab/gpf-schema-store](https://github.com/ignfab/gpf-schema-store)).
-- **Compatible MCP** — utilisable avec plusieurs clients et modèles, dont Claude, Cursor, Mistral, ChatGPT et Gemini.
+- **Compatible MCP** — utilisable avec plusieurs clients compatibles MCP, notamment Claude Desktop, Cursor ou MCPJam, et avec différents modèles selon le client utilisé.
 
 ## Démo en 30 secondes
 
