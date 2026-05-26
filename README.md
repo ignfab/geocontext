@@ -6,7 +6,7 @@
 
 [![npm version](https://img.shields.io/npm/v/@ignfab/geocontext)](https://www.npmjs.com/package/@ignfab/geocontext) [![prototype](https://img.shields.io/badge/statut-prototype-orange)](https://github.com/ignfab/geocontext)
 
-**Geocontext** qui permet aux assistants IA d’interroger les données géographiques françaises de référence publiées sur la [Géoplateforme de l'IGN](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme).
+**Geocontext** est un [serveur MCP](https://modelcontextprotocol.io/docs/getting-started/intro) qui permet aux assistants IA d’interroger les données géographiques françaises de référence publiées sur la [Géoplateforme de l'IGN](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme).
 
 <p align="center">
   <img src="docs/imgs/usage/fiche-mcp-gpt.png" alt="Fiche MCP Geocontext" title="Fiche MCP Geocontext">
@@ -37,28 +37,52 @@
   <summary>Voir la trace complète</summary>
 
 ```text
-Je vais d'abord rechercher les informations nécessaires : les coordonnées de Vincennes et le type WFS pour les bâtiments.
-🔧 Appel outil: geocode({'text': 'Vincennes'})
-🔧 Appel outil: gpf_wfs_search_types({'query': 'bâtiment hauteur'})
+Je vais d'abord rechercher les informations nécessaires :
+les coordonnées de Vincennes et le type WFS pour les bâtiments.
+🔧 Appel outil: geocode({
+  'text': 'Vincennes'
+})
+🔧 Appel outil: gpf_wfs_search_types({
+  'query': 'bâtiment hauteur'
+})
 
-Parfait ! J'ai trouvé le type WFS BDTOPO_V3:batiment. Je vais maintenant récupérer le schéma de ce type pour connaître les propriétés exactes, notamment la hauteur et le code INSEE de Vincennes.
-🔧 Appel outil: gpf_wfs_describe_type({'typename': 'BDTOPO_V3:batiment'})
-🔧 Appel outil: adminexpress({'lon': 2.437785, 'lat': 48.847279})
+Parfait ! J'ai trouvé le type WFS BDTOPO_V3:batiment.
+Je vais maintenant récupérer le schéma de ce type pour connaître
+les propriétés exactes, notamment la hauteur et le code INSEE de Vincennes.
+🔧 Appel outil: gpf_wfs_describe_type({
+  'typename': 'BDTOPO_V3:batiment'
+})
+🔧 Appel outil: adminexpress({
+  'lon': 2.437785,
+  'lat': 48.847279
+})
 
-J'ai toutes les informations nécessaires. La commune de Vincennes a le feature_id commune.33667. Je vais maintenant compter les bâtiments de plus de 20 mètres de hauteur sur cette commune.
-🔧 Appel outil: gpf_wfs_get_features({'typename': 'BDTOPO_V3:batiment', 'result_type': 'hits', 'where': [{'property': 'hauteur', 'operator': 'gt', 'value': '20'}], 'spatial_operator': 'intersects_feature', 'intersects_feature_typename': 'ADMINEXPRESS-COG.LATEST:commune', 'intersects_feature_id': 'commune.33667'})
+J'ai toutes les informations nécessaires.
+La commune de Vincennes a le feature_id commune.33667.
+Je vais maintenant compter les bâtiments de plus de 20 mètres
+de hauteur sur cette commune.
+🔧 Appel outil: gpf_wfs_get_features({
+  'typename': 'BDTOPO_V3:batiment',
+  'result_type': 'hits',
+  'where': [
+    {
+      'property': 'hauteur',
+      'operator': 'gt',
+      'value': '20'
+    }
+  ],
+  'spatial_operator': 'intersects_feature',
+  'intersects_feature_typename': 'ADMINEXPRESS-COG.LATEST:commune',
+  'intersects_feature_id': 'commune.33667'
+})
 
-À Vincennes (`94300`, Val-de-Marne), il y a **509 bâtiments** de plus de **20 mètres de hauteur**, selon les données de la **BD TOPO®** de l'IGN.  
-La hauteur prise en compte est celle mesurée entre le sol et le point haut de la gouttière du bâtiment.
+À Vincennes (`94300`, Val-de-Marne), il y a **509 bâtiments**
+de plus de **20 mètres de hauteur**, selon les données
+de la **BD TOPO®** de l'IGN.
+La hauteur prise en compte est celle mesurée entre le sol
+et le point haut de la gouttière du bâtiment.
 ```
 </details>
-<br/>
-
-**Exemple dans Mistral**
-
-<p align="center">
-  <img src="docs/imgs/usage/mistral-batiment-20m-vincennes.png" alt="Bâtiments de plus de 20m à Vincennes" title="Bâtiments de plus de 20m à Vincennes">
-</p>
 
 ## Démarrage rapide
 
@@ -84,11 +108,6 @@ Par exemple, dans Cursor ("Settings" > "MCP" > "Add server"):
   }
 }
 ```
-
-### Autres exemples d'utilisation
-
-- [Exemple d'utilisation avec Claude Desktop](docs/usage/claude-desktop.md)
-- [Exemple d'utilisation avec MCPJam](docs/usage/mcpjam.md)
 
 ## Exemples de prompts
 
@@ -118,7 +137,7 @@ Par exemple, dans Cursor ("Settings" > "MCP" > "Add server"):
 <details>
     <summary>Cliquez ici pour voir le résultat</summary>
     <p>
-      <img src="docs/imgs/usage/mistral-batiment-20m-vincennes.png" alt="Mistral - bâtiment de plus de 20 mètres à Vincennes">
+      <img src="docs/imgs/usage/batiment-20m-vincennes.png" alt="Claude - bâtiment de plus de 20 mètres à Vincennes">
     </p>
 </details>
 
