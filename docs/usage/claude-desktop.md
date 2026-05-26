@@ -30,4 +30,4 @@
 
 ![claude1](../imgs/usage/claude1.png)
 
-![claude2](../imgs/usage/claude1.png)
+![claude2](../imgs/usage/claude2.png)
