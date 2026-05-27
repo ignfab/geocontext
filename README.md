@@ -9,16 +9,16 @@
 **Geocontext** est un [serveur MCP](https://modelcontextprotocol.io/docs/getting-started/intro) qui permet aux assistants IA d’interroger les données géographiques françaises de référence publiées sur la [Géoplateforme de l'IGN](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme).
 
 <p align="center">
-  <img src="docs/imgs/usage/fiche-mcp-gpt.png" alt="Fiche MCP Geocontext" title="Fiche MCP Geocontext">
+  <img src="docs/imgs/usage/fiche-mcp-gpt.png" alt="Fiche MCP Geocontext" title="Fiche MCP Geocontext" width="720">
 </p>
 
 ## Pourquoi Geocontext ?
 
 - **Pas de téléchargement** — Geocontext interroge directement les services de la Géoplateforme IGN, sans copie locale ni synchronisation à maintenir.
-- **Données de référence à jour** — les réponses s’appuient sur les référentiels géographiques publiés par l’IGN.
+- **Données de référence à jour** — les réponses s’appuient sur les référentiels géographiques publiés en continu par l’IGN.
 - **Réponses optimisées pour les LLM** — les traitements et filtrages sont faits côté serveur pour limiter les tokens transmis au modèle.
 - **Moins d’hallucinations** — les descriptions et schémas enrichis aident l’assistant à identifier les bonnes données et les bons champs (implémentation anticipée de [OGC API Feature - schema](https://docs.ogc.org/is/23-058r2/23-058r2.html) dans [ignfab/gpf-schema-store](https://github.com/ignfab/gpf-schema-store)).
-- **Compatible MCP** — utilisable avec plusieurs clients compatibles MCP, notamment Claude Desktop, Cursor ou MCPJam, et avec différents modèles selon le client utilisé.
+- **Compatible MCP** — utilisable avec des clients compatibles MCP comme Claude Desktop, Cursor ou MCPJam, mais aussi directement dans certaines interfaces de chat en ligne compatibles, comme Claude, Le Chat de Mistral ou ChatGPT, via leurs connecteurs MCP.
 
 ## Démo en 30 secondes
 
@@ -37,30 +37,21 @@
   <summary>Voir la trace complète</summary>
 
 ```text
-Je vais d'abord rechercher les informations nécessaires :
-les coordonnées de Vincennes et le type WFS pour les bâtiments.
-🔧 Appel outil: geocode({
-  'text': 'Vincennes'
-})
-🔧 Appel outil: gpf_wfs_search_types({
-  'query': 'bâtiment hauteur'
-})
+💬 Je vais d'abord rechercher les informations nécessaires :
+   les coordonnées de Vincennes et le type WFS pour les bâtiments.
+🔧 Appel outil: geocode({'text': 'Vincennes'})
+🔧 Appel outil: gpf_wfs_search_types({'query': 'bâtiment hauteur'})
 
-Parfait ! J'ai trouvé le type WFS BDTOPO_V3:batiment.
-Je vais maintenant récupérer le schéma de ce type pour connaître
-les propriétés exactes, notamment la hauteur et le code INSEE de Vincennes.
-🔧 Appel outil: gpf_wfs_describe_type({
-  'typename': 'BDTOPO_V3:batiment'
-})
-🔧 Appel outil: adminexpress({
-  'lon': 2.437785,
-  'lat': 48.847279
-})
+💬 Parfait ! J'ai trouvé le type WFS BDTOPO_V3:batiment.
+   Je vais maintenant récupérer le schéma de ce type pour connaître
+   les propriétés exactes, notamment la hauteur et le code INSEE de Vincennes.
+🔧 Appel outil: gpf_wfs_describe_type({'typename': 'BDTOPO_V3:batiment'})
+🔧 Appel outil: adminexpress({'lon': 2.437785,'lat': 48.847279})
 
-J'ai toutes les informations nécessaires.
-La commune de Vincennes a le feature_id commune.33667.
-Je vais maintenant compter les bâtiments de plus de 20 mètres
-de hauteur sur cette commune.
+💬 J'ai toutes les informations nécessaires.
+   La commune de Vincennes a le feature_id commune.33667.
+   Je vais maintenant compter les bâtiments de plus de 20 mètres
+   de hauteur sur cette commune.
 🔧 Appel outil: gpf_wfs_get_features({
   'typename': 'BDTOPO_V3:batiment',
   'result_type': 'hits',
@@ -74,13 +65,13 @@ de hauteur sur cette commune.
   'spatial_operator': 'intersects_feature',
   'intersects_feature_typename': 'ADMINEXPRESS-COG.LATEST:commune',
   'intersects_feature_id': 'commune.33667'
-})
+   })
 
-À Vincennes (`94300`, Val-de-Marne), il y a **509 bâtiments**
-de plus de **20 mètres de hauteur**, selon les données
-de la **BD TOPO®** de l'IGN.
-La hauteur prise en compte est celle mesurée entre le sol
-et le point haut de la gouttière du bâtiment.
+💬 À Vincennes (`94300`, Val-de-Marne), il y a **509 bâtiments**
+   de plus de **20 mètres de hauteur**, selon les données
+   de la **BD TOPO®** de l'IGN.
+   La hauteur prise en compte est celle mesurée entre le sol
+   et le point haut de la gouttière du bâtiment.
 ```
 </details>
 
@@ -113,19 +104,17 @@ Par exemple, dans Cursor ("Settings" > "MCP" > "Add server"):
 
 ### Géocodage et altimétrie
 
-<div><strong>Quelle est l'altitude de la mairie de Vincennes ?</strong></div>
 <details>
-    <summary>Cliquez ici pour voir le résultat</summary>
+    <summary><strong>Quelle est l'altitude de la mairie de Vincennes ?</strong></summary>
     <p>
       <img src="docs/imgs/usage/demo-altitude-mairie-vincennes.png" alt="demo-geocontext - altitude mairie de Vincennes">
     </p>
 </details>
 
-### ADMINEXPRESS et CADASTRE
+### ADMIN-EXPRESS et CADASTRE
 
-<div><strong>Quelles sont les informations administratives pour la tour Eiffel ?</strong></div>
 <details>
-    <summary>Cliquez ici pour voir le résultat</summary>
+    <summary><strong>Quelles sont les informations administratives pour la tour Eiffel ?</strong></summary>
     <p>
       <img src="docs/imgs/usage/claude-administratif-tour-eiffel.png" alt="Claude - info administrative tour Eiffel">
     </p>
@@ -133,17 +122,15 @@ Par exemple, dans Cursor ("Settings" > "MCP" > "Add server"):
 
 ### BDTOPO
 
-<div><strong>Combien y a-t-il de bâtiments de plus de 20 mètres à Vincennes ?</strong></div>
 <details>
-    <summary>Cliquez ici pour voir le résultat</summary>
+    <summary><strong>Combien y a-t-il de bâtiments de plus de 20 mètres à Vincennes ?</strong></summary>
     <p>
       <img src="docs/imgs/usage/batiment-20m-vincennes.png" alt="Claude - bâtiment de plus de 20 mètres à Vincennes">
     </p>
 </details>
 
-<div><strong>Quelles sont les 5 communes les plus peuplées du Doubs ?</strong></div>
 <details>
-    <summary>Cliquez ici pour voir le résultat</summary>
+    <summary><strong>Quelles sont les 5 communes les plus peuplées du Doubs ?</strong></summary>
     <p>
       <img src="docs/imgs/usage/demo-5-communes-doubs.png" alt="demo-geocontext - 5 communes les plus peuplées du Doubs">
     </p>
@@ -151,17 +138,15 @@ Par exemple, dans Cursor ("Settings" > "MCP" > "Add server"):
 
 ### Géoportail de l'Urbanisme
 
-<div><strong>Quel est le document PLU en vigueur pour le port de Marseille ?</strong></div>
 <details>
-    <summary>Cliquez ici pour voir le résultat</summary>
+    <summary><strong>Quel est le document PLU en vigueur pour le port de Marseille ?</strong></summary>
     <p>
       <img src="docs/imgs/usage/claude-plu-marseille.png" alt="Claude - PLU port de Marseille">
     </p>
 </details>
 
-<div><strong>Quelles assiettes de SUP sont présentes autour de la mairie de Vincennes ?</strong></div>
 <details>
-    <summary>Cliquez ici pour voir le résultat</summary>
+    <summary><strong>Quelles assiettes de SUP sont présentes autour de la mairie de Vincennes ?</strong></summary>
     <p>
       <img src="docs/imgs/usage/claude-sup-mairie-vincennes.png" alt="Claude - SUP mairie de Vincennes">
     </p>
@@ -171,18 +156,18 @@ Par exemple, dans Cursor ("Settings" > "MCP" > "Add server"):
 
 Les fonctionnalités correspondent aux outils MCP documentés dans [`docs/mcp-tools.md`](docs/mcp-tools.md).
 
-| Usage                               | Outil MCP                   | Source utilisée                                                                                                                                                                                                              | Exemple                         |
-| ----------------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
-| Géocoder un lieu                    | `geocode`                   | [Autocomplétion Géoplateforme](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/autocompletion/)                                                                                  | Localiser une mairie            |
-| Obtenir une altitude                | `altitude`                  | [Calcul altimétrique Géoplateforme](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/calcul-altimetrique/)                                                                        | Altitude d'un point             |
-| Récupérer le contexte administratif | `adminexpress`              | [WFS](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/diffusion/wfs/) + [ADMIN-EXPRESS](https://cartes.gouv.fr/rechercher-une-donnee/dataset/IGNF_ADMIN-EXPRESS)                 | Commune, département, région    |
-| Récupérer le cadastre               | `cadastre`                  | [WFS](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/diffusion/wfs/) + [PARCELLAIRE-EXPRESS](https://cartes.gouv.fr/rechercher-une-donnee/dataset/IGNF_PARCELLAIRE-EXPRESS-PCI) | Parcelle cadastrale             |
-| Récupérer les documents d'urbanisme | `urbanisme`                 | [WFS](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/diffusion/wfs/) + données [GPU](https://www.geoportail-urbanisme.gouv.fr/)                                                 | PLU, POS, CC                    |
-| Récupérer les servitudes            | `assiette_sup`              | [WFS](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/diffusion/wfs/) + données [GPU](https://www.geoportail-urbanisme.gouv.fr/)                                                 | SUP autour d'un lieu            |
-| Trouver une couche WFS              | `gpf_wfs_search_types`      | [gpf-schema-store](https://github.com/ignfab/gpf-schema-store)                                                                                                                                                               | Trouver la table des bâtiments  |
-| Décrire une couche WFS              | `gpf_wfs_describe_type`     | [gpf-schema-store](https://github.com/ignfab/gpf-schema-store)                                                                                                                                                               | Lister les champs disponibles   |
-| Interroger une couche WFS           | `gpf_wfs_get_features`      | [WFS](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/diffusion/wfs/)                                                                                                            | Extraire ou compter des objets  |
-| Récupérer un objet par identifiant  | `gpf_wfs_get_feature_by_id` | [WFS](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/diffusion/wfs/)                                                                                                            | Charger une commune précise     |
+| <small>Usage</small>                                 | <small>Outil MCP</small>                    | <small>Source utilisée</small>                                                                                                                                                               | <small>Exemple</small>                           |
+| ---------------------------------------------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| <small>Géocoder un lieu</small>                      | <small>`geocode`</small>                    | <small>[Autocomplétion Géoplateforme](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/autocompletion/)</small>                               | <small>Localiser une mairie</small>              |
+| <small>Obtenir une altitude</small>                  | <small>`altitude`</small>                   | <small>[Calcul altimétrique Géoplateforme](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/calcul-altimetrique/)</small>                     | <small>Altitude d'un point</small>               |
+| <small>Récupérer le contexte administratif</small>   | <small>`adminexpress`</small>               | <small>[WFS](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/diffusion/wfs/) + [ADMIN-EXPRESS](https://cartes.gouv.fr/rechercher-une-donnee/dataset/IGNF_ADMIN-EXPRESS)</small> | <small>Commune, département, région</small>      |
+| <small>Récupérer le cadastre</small>                 | <small>`cadastre`</small>                   | <small>[WFS](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/diffusion/wfs/) + [PARCELLAIRE-EXPRESS](https://cartes.gouv.fr/rechercher-une-donnee/dataset/IGNF_PARCELLAIRE-EXPRESS-PCI)</small> | <small>Parcelle cadastrale</small>               |
+| <small>Récupérer les documents d'urbanisme</small>   | <small>`urbanisme`</small>                  | <small>[WFS](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/diffusion/wfs/) + données [GPU](https://www.geoportail-urbanisme.gouv.fr/)</small> | <small>PLU, POS, CC</small>                      |
+| <small>Récupérer les servitudes</small>              | <small>`assiette_sup`</small>               | <small>[WFS](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/diffusion/wfs/) + données [GPU](https://www.geoportail-urbanisme.gouv.fr/)</small> | <small>SUP autour d'un lieu</small>              |
+| <small>Trouver une couche WFS</small>                | <small>`gpf_wfs_search_types`</small>       | <small>[gpf-schema-store](https://github.com/ignfab/gpf-schema-store)</small>                                                                                                               | <small>Trouver la table des bâtiments</small>    |
+| <small>Décrire une couche WFS</small>                | <small>`gpf_wfs_describe_type`</small>      | <small>[gpf-schema-store](https://github.com/ignfab/gpf-schema-store)</small>                                                                                                               | <small>Lister les champs disponibles</small>     |
+| <small>Interroger une couche WFS</small>             | <small>`gpf_wfs_get_features`</small>       | <small>[WFS](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/diffusion/wfs/)</small>                                                         | <small>Extraire ou compter des objets</small>    |
+| <small>Récupérer un objet par identifiant</small>    | <small>`gpf_wfs_get_feature_by_id`</small>  | <small>[WFS](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/diffusion/wfs/)</small>                                                         | <small>Charger une commune précise</small>       |
 
 ## Architecture en bref
 
@@ -192,17 +177,14 @@ Il n’héberge pas les données : il expose des outils MCP, interroge les servi
 
 ```mermaid
 flowchart TB
-    user["Utilisateur"]
-    assistant["Assistant IA<br/>Claude Desktop, Cursor, etc."]
+    assistant["Assistant IA / client MCP"]
     geocontext["Geocontext<br/>serveur MCP"]
-    geopf["Géoplateforme IGN<br/>géocodage · altimétrie · WFS<br/>urbanisme · cadastre"]
+    geopf["Géoplateforme IGN<br/>géocodage · altimétrie · WFS · urbanisme · cadastre"]
 
-    user -->|"question en langage naturel"| assistant
     assistant -->|"appels d'outils MCP"| geocontext
     geocontext -->|"requêtes aux services IGN"| geopf
     geopf -->|"données de référence"| geocontext
-    geocontext -->|"réponse structurée et filtrée"| assistant
-    assistant -->|"réponse synthétique"| user
+    geocontext -->|"réponses structurées"| assistant
 ```
 
 En pratique, Geocontext permet à l’assistant de passer d’une question en langage naturel à des appels aux données géographiques de référence, sans téléchargement préalable ni copie locale des référentiels.
@@ -231,7 +213,7 @@ La documentation détaillée est répartie par usage :
 
 ## Contribution
 
-### Signaler un problème
+### 🐛 Signaler un problème
 
 N'hésitez pas à [créer une issue](https://github.com/ignfab/geocontext/issues) si vous rencontrez un problème! 
 
@@ -243,7 +225,7 @@ N'hésitez pas à [créer une issue](https://github.com/ignfab/geocontext/issues
 - La **demande** faite à l'assistant (**ex : "Combien y a-t-il de pont franchissant la Seine ?"**)
 - Si possible, un export de la discussion au format Markdown.
 
-### Demander une évolution
+### ✨ Demander une évolution
 
 N'hésitez pas non plus à [créer une issue](https://github.com/ignfab/geocontext/issues) pour demander une évolution.
 
