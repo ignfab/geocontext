@@ -9,6 +9,7 @@ import GpfWfsDescribeTypeTool from "../../src/tools/GpfWfsDescribeTypeTool";
 import GpfWfsGetFeatureByIdTool from "../../src/tools/GpfWfsGetFeatureByIdTool";
 import GpfWfsGetFeaturesTool from "../../src/tools/GpfWfsGetFeaturesTool";
 import GpfWfsSearchTypesTool from "../../src/tools/GpfWfsSearchTypesTool";
+import IsochroneTool from "../../src/tools/IsochroneTool";
 import UrbanismeTool from "../../src/tools/UrbanismeTool";
 
 const strictInputCases = [
@@ -59,6 +60,16 @@ const strictInputCases = [
     label: "GpfWfsSearchTypesTool",
     tool: new GpfWfsSearchTypesTool(),
     validArguments: { query: "batiment" },
+  },
+  {
+    label: "IsochroneTool",
+    tool: new IsochroneTool(),
+    validArguments: {
+      lon: 2.3522,
+      lat: 48.8566,
+      cost_type: "distance",
+      cost_value: 500,
+    },
   },
   {
     label: "UrbanismeTool",
