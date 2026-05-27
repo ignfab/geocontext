@@ -1,6 +1,6 @@
 # MCP Tool Reference
 
-Generated from runtime `toolDefinition` metadata for `@ignfab/geocontext` v0.9.7.
+Generated from runtime `toolDefinition` metadata for `@ignfab/geocontext` v0.9.8.
 
 ## Contrat d’erreur MCP
 
