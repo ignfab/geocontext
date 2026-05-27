@@ -28,7 +28,7 @@
 
 **Réponse**
 
-> À Vincennes (94300,Val-de-Marne), il y a **509 bâtiments** de plus de **20 mètres de hauteur**, selon les données de la **BD TOPO®** de l'IGN.  
+> À Vincennes (94300, Val-de-Marne), il y a **509 bâtiments** de plus de **20 mètres de hauteur**, selon les données de la **BD TOPO®** de l'IGN.  
 > La hauteur prise en compte est celle mesurée entre le sol et le point haut de la gouttière du bâtiment.
 
 **Trace complète**
@@ -79,9 +79,24 @@
 
 ### ☁️ Instance HTTP prête à l'emploi
 
-Le MCP est déployé en HTTP sur https://geollm.beta.ign.fr/geocontext/mcp
+Geocontext est disponible comme serveur MCP distant en HTTP: https://geollm.beta.ign.fr/geocontext/mcp
 
-### 💻 Version locale
+Exemple de configuration pour un client compatible MCP acceptant les serveurs HTTP distants :
+
+```json
+{
+  "mcpServers": {
+    "geocontext": {
+      "type": "http",
+      "url": "https://geollm.beta.ign.fr/geocontext/mcp"
+    }
+  }
+}
+```
+
+Selon le client utilisé, la syntaxe exacte peut varier. Certaines interfaces de chat compatibles MCP demandent simplement l’URL du serveur distant dans leurs paramètres de connecteurs.
+
+### 💻 Utilisation en local
 
 > Pré-requis : Node.js (`>=22.21.0`, `>=24.5.0` recommandé, à contrôler avec `node --version`) avec `npx`.
 
