@@ -82,8 +82,11 @@ const envSchema = z.object({
     // HTTP client
     USER_AGENT: z.preprocess(emptyToUndefined, z.string().trim().default("geocontext")),
     HTTP_TIMEOUT: z.preprocess(emptyToUndefined, positiveNumberSchema.default(15)),
-    // GPF WFS
+    // GPF rate limits
     GPF_WFS_RATE_LIMIT: z.preprocess(emptyToUndefined, positiveIntegerSchema.default(30)),
+    GPF_GEOCODE_RATE_LIMIT: z.preprocess(emptyToUndefined, positiveIntegerSchema.default(50)),
+    GPF_ALTI_RATE_LIMIT: z.preprocess(emptyToUndefined, positiveIntegerSchema.default(50)),
+    // GPF WFS
     GPF_WFS_MINISEARCH_OPTIONS: z
         .string()
         .trim()

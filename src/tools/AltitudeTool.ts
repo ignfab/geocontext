@@ -5,7 +5,7 @@
 import BaseTool from "./BaseTool.js";
 import { z } from "zod";
 
-import { ALTITUDE_SOURCE, getAltitudeByLocation } from "../gpf/altitude.js";
+import { ALTITUDE_SOURCE, altitudeClient } from "../gpf/altitude.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import { lonSchema, latSchema } from "../helpers/schemas.js";
 import logger from "../logger.js";
@@ -50,7 +50,7 @@ class AltitudeTool extends BaseTool<AltitudeInput> {
       input: input
     });
 
-    return await getAltitudeByLocation(input.lon, input.lat);
+    return await altitudeClient.getByLocation(input.lon, input.lat);
   }
 }
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {geocode} from "../../src/gpf/geocode.js";
+import { GeocodeClient } from "../../src/gpf/geocode.js";
+import { RateLimiter } from "../../src/helpers/RateLimiter.js";
 
 const rawGeocodeServiceResponse = {
     results: [
@@ -34,11 +35,13 @@ const rawGeocodeServiceResponse = {
     ],
 };
 
-describe("Test geocode",() => {
+describe("Test GeocodeClient.geocode",() => {
     it("should return the expected value for 'Mairie de Loray'", async () => {
-        const results : any[] = await geocode("Mairie de Loray", 3, async () => ({
+        const rateLimiter = new RateLimiter({ name: "test", maxCalls: 100, period: 1 });
+        const client = new GeocodeClient(rateLimiter, async () => ({
             results: [rawGeocodeServiceResponse.results[0]],
         }));
+        const results = await client.geocode("Mairie de Loray", 3);
         expect(results.length).toBeGreaterThan(0);
         const firstItem = results[0];
 
@@ -52,16 +55,20 @@ describe("Test geocode",() => {
     });
 
     it("should honor maximumResponses", async () => {
-        const results : any[] = await geocode("Saint-Mande", 1, async () => ({
+        const rateLimiter = new RateLimiter({ name: "test", maxCalls: 100, period: 1 });
+        const client = new GeocodeClient(rateLimiter, async () => ({
             results: [rawGeocodeServiceResponse.results[1]],
         }));
+        const results = await client.geocode("Saint-Mande", 1);
 
         expect(results).toHaveLength(1);
         expect(results[0].fulltext).toEqual("Saint-Mandé, 94160");
     });
 
     it("should return an empty array for blank text", async () => {
-        const results : any[] = await geocode("   ");
+        const rateLimiter = new RateLimiter({ name: "test", maxCalls: 100, period: 1 });
+        const client = new GeocodeClient(rateLimiter, async () => ({ results: [] }));
+        const results = await client.geocode("   ");
 
         expect(results).toEqual([]);
     });

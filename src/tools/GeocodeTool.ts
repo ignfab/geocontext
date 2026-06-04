@@ -5,7 +5,7 @@
 import BaseTool from "./BaseTool.js";
 import { z } from "zod";
 
-import { geocode, GEOCODE_SOURCE } from "../gpf/geocode.js";
+import { geocodeClient, GEOCODE_SOURCE } from "../gpf/geocode.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import logger from "../logger.js";
 
@@ -70,7 +70,7 @@ class GeocodeTool extends BaseTool<GeocodeInput> {
     });
   
     return {
-      results: await geocode(input.text, input.maximumResponses),
+      results: await geocodeClient.geocode(input.text, input.maximumResponses),
     };
   }
 }
