@@ -10,7 +10,7 @@ import BaseTool from "./BaseTool.js";
 
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import { buildPropertyName, executeGetFeatureById } from "../wfs/byId.js";
-import { getFeatureType } from "../wfs/execution.js";
+import { wfsClient } from "../wfs/execution.js";
 import {
   buildGetFeatureByIdRequest,
   toWfsRequestPayload,
@@ -105,7 +105,7 @@ class GpfWfsGetFeatureByIdTool extends BaseTool<GpfWfsGetFeatureByIdInput> {
     if (input.result_type === "request") {
       // The `request` mode is handled here because it returns a preview payload,
       // not the actual by-id WFS result.
-      const featureType = await getFeatureType(input.typename);
+      const featureType = await wfsClient.getFeatureType(input.typename);
       const propertyName = buildPropertyName(featureType, {
         includeGeometry: true,
         select: input.select,

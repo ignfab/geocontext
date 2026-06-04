@@ -2,11 +2,13 @@ import { vi, describe, expect, it, beforeEach, afterEach } from "vitest";
 import { mairieLoray } from "../samples";
 
 const mockGetFeatureType = vi.fn<(typename: string) => Promise<any>>();
-const mockFetchWfsMultiTypename = vi.fn<(input: any) => Promise<any>>();
+const mockFetchMultiTypename = vi.fn<(input: any) => Promise<any>>();
 
 vi.doMock("../../src/wfs/execution.js", () => ({
-    getFeatureType: mockGetFeatureType,
-    fetchWfsMultiTypename: mockFetchWfsMultiTypename,
+    wfsClient: {
+        getFeatureType: mockGetFeatureType,
+        fetchMultiTypename: mockFetchMultiTypename,
+    },
 }));
 
 const { getParcellaireExpress } = await import("../../src/gpf/parcellaire-express.js");
@@ -66,7 +68,7 @@ describe("Test getParcellaireExpress", () => {
                 { name: "geometrie", type: "multipolygon", defaultCrs: "EPSG:4326" },
             ],
         });
-        mockFetchWfsMultiTypename.mockResolvedValue(parcellaireExpressFeatureCollection);
+        mockFetchMultiTypename.mockResolvedValue(parcellaireExpressFeatureCollection);
     });
 
     afterEach(() => {
@@ -78,11 +80,11 @@ describe("Test getParcellaireExpress", () => {
         const items: any[] = await getParcellaireExpress(c[0], c[1]);
 
         expect(mockGetFeatureType).toHaveBeenCalledTimes(6);
-        expect(mockFetchWfsMultiTypename).toHaveBeenCalledWith(expect.objectContaining({
+        expect(mockFetchMultiTypename).toHaveBeenCalledWith(expect.objectContaining({
             typenames: expect.any(Array),
             cqlFilters: expect.any(Array),
         }));
-        const fetchInput = mockFetchWfsMultiTypename.mock.calls[0]?.[0];
+        const fetchInput = mockFetchMultiTypename.mock.calls[0]?.[0];
         expect(fetchInput?.cqlFilters).toHaveLength(6);
         expect(fetchInput?.cqlFilter).toBeUndefined();
 

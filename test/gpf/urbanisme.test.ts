@@ -2,11 +2,13 @@ import { afterEach, beforeEach, describe, expect, vi, it } from "vitest";
 import { chamonix, mairieLoray } from "../samples";
 
 const mockGetFeatureType = vi.fn<(typename: string) => Promise<any>>();
-const mockFetchWfsMultiTypename = vi.fn<(input: any) => Promise<any>>();
+const mockFetchMultiTypename = vi.fn<(input: any) => Promise<any>>();
 
 vi.doMock("../../src/wfs/execution.js", () => ({
-    getFeatureType: mockGetFeatureType,
-    fetchWfsMultiTypename: mockFetchWfsMultiTypename,
+    wfsClient: {
+        getFeatureType: mockGetFeatureType,
+        fetchMultiTypename: mockFetchMultiTypename,
+    },
 }));
 
 const { getUrbanisme, getAssiettesServitudes } = await import("../../src/gpf/urbanisme.js");
@@ -92,7 +94,7 @@ describe("Test getUrbanisme", () => {
                 { name: "geometrie", type: "multipolygon", defaultCrs: "EPSG:4326" },
             ],
         });
-        mockFetchWfsMultiTypename.mockResolvedValue(urbanismeFeatureCollection);
+        mockFetchMultiTypename.mockResolvedValue(urbanismeFeatureCollection);
     });
 
     afterEach(() => {
@@ -104,11 +106,11 @@ describe("Test getUrbanisme", () => {
         const items: any[] = await getUrbanisme(c[0], c[1]);
 
         expect(mockGetFeatureType).toHaveBeenCalledTimes(10);
-        expect(mockFetchWfsMultiTypename).toHaveBeenCalledWith(expect.objectContaining({
+        expect(mockFetchMultiTypename).toHaveBeenCalledWith(expect.objectContaining({
             typenames: expect.any(Array),
             cqlFilters: expect.any(Array),
         }));
-        const fetchInput = mockFetchWfsMultiTypename.mock.calls[0]?.[0];
+        const fetchInput = mockFetchMultiTypename.mock.calls[0]?.[0];
         expect(fetchInput?.cqlFilters).toHaveLength(10);
         expect(fetchInput?.cqlFilter).toBeUndefined();
 
@@ -134,7 +136,7 @@ describe("Test getUrbanisme", () => {
         const items: any[] = await getUrbanisme(c[0], c[1]);
 
         expect(mockGetFeatureType).toHaveBeenCalledTimes(10);
-        const fetchInput = mockFetchWfsMultiTypename.mock.calls[0]?.[0];
+        const fetchInput = mockFetchMultiTypename.mock.calls[0]?.[0];
         expect(fetchInput?.cqlFilters).toHaveLength(10);
 
         expect(items.length).toBeGreaterThan(0);
@@ -156,7 +158,7 @@ describe("Test getAssiettesServitudes", () => {
                 { name: "geometrie", type: "multipolygon", defaultCrs: "EPSG:4326" },
             ],
         });
-        mockFetchWfsMultiTypename.mockResolvedValue(assiettesFeatureCollection);
+        mockFetchMultiTypename.mockResolvedValue(assiettesFeatureCollection);
     });
 
     afterEach(() => {
@@ -168,7 +170,7 @@ describe("Test getAssiettesServitudes", () => {
         const items: any[] = await getAssiettesServitudes(c[0], c[1]);
 
         expect(mockGetFeatureType).toHaveBeenCalledTimes(3);
-        const fetchInput = mockFetchWfsMultiTypename.mock.calls[0]?.[0];
+        const fetchInput = mockFetchMultiTypename.mock.calls[0]?.[0];
         expect(fetchInput?.cqlFilters).toHaveLength(3);
         expect(fetchInput?.cqlFilter).toBeUndefined();
 

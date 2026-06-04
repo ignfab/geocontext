@@ -1,97 +1,25 @@
 /**
- * Low-level WFS execution helpers for the structured WFS engine.
+ * WFS client facade for the structured WFS engine.
  *
- * This module centralizes:
- * - feature type lookup from the embedded catalog
- * - execution of compiled WFS requests
- * - extraction of response-level metadata such as total hit counts
+ * This module provides `WfsClient`, a facade that composes:
+ * - a `WfsSchemaStore` for feature-type catalog lookups
+ * - a `WfsTransport` for rate-limited HTTP execution
+ *
+ * A default singleton `wfsClient` is exported for normal usage.
+ * Consumers that need different rate limits or test doubles can
+ * instantiate their own `WfsClient` with custom dependencies.
  */
 
 import type { CompiledRequest } from "./request.js";
 import { buildMultiTypenameRequest } from "./request.js";
+import type { Collection } from "@ignfab/gpf-schema-store";
+import type { WfsFeatureCollectionResponse } from "./types.js";
 import { wfsSchemaStore } from "./catalog.js";
-import { fetchJSONPost } from "../helpers/http.js";
-import { createRateLimiter } from "../helpers/RateLimiter.js";
+import { WfsTransport } from "./transport.js";
+import { RateLimiter } from "../helpers/RateLimiter.js";
 import { getEnv } from "../config/env.js";
 
-/**
- * Default rate limit for WFS requests, in requests per second.
- * https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/limites-d-usage/#valeur-de-la-limite-d-usage-pour-chaque-api-concernee
- * 
- * TODO in #33 : move/call fetchFeatureCollection and fetchWfsMultiTypename in WfsSchemaStore to allow rateLimiter as a property?
- */
-const gpfWfsRateLimit = getEnv().GPF_WFS_RATE_LIMIT;
-const gpfWfsRateLimiter = createRateLimiter("GPF_WFS", gpfWfsRateLimit, 1);
-
-// --- Response Types ---
-
-export type WfsFeatureResponse = {
-  type?: "Feature";
-  id?: string;
-  geometry?: unknown;
-  geometry_name?: string;
-  properties?: Record<string, unknown>;
-  [key: string]: unknown;
-};
-
-export type WfsFeatureCollectionResponse = Record<string, unknown> & {
-  features?: WfsFeatureResponse[];
-  totalFeatures?: number;
-  numberMatched?: number | "unknown";
-  numberReturned?: number;
-};
-
-// --- Catalog Lookup ---
-
-/**
- * Loads a WFS feature type description from the embedded catalog.
- *
- * @param typename Exact WFS typename to load from the embedded schema store.
- * @returns The matching feature type description.
- */
-export async function getFeatureType(typename: string) {
-  return wfsSchemaStore.getFeatureType(typename);
-}
-
-// --- Request Execution ---
-
-/**
- * Executes a compiled WFS request as POST and returns the JSON FeatureCollection.
- *
- * @param request Compiled request split into query-string parameters and POST body.
- * @returns The parsed JSON response returned by the WFS endpoint.
- */
-export async function fetchFeatureCollection(request: CompiledRequest): Promise<WfsFeatureCollectionResponse> {
-  // Enforce a global rate limit on all WFS requests to the GPF.
-  await gpfWfsRateLimiter.limit();
-
-  const url = `${request.url}?${new URLSearchParams(request.query).toString()}`;
-  return fetchJSONPost(url, request.body, {
-    "Content-Type": "application/x-www-form-urlencoded",
-    "Accept": "application/json",
-  }) as Promise<WfsFeatureCollectionResponse>;
-}
-
-// --- Response Metadata ---
-
-/**
- * Extracts a result count from a WFS response using `numberMatched`.
- * Explicitly rejects responses that do not provide a usable WFS 2 total.
- *
- * @param featureCollection Parsed WFS response object.
- * @returns The total number of matching features.
- */
-export function getMatchedFeatureCount(featureCollection: WfsFeatureCollectionResponse) {
-  if (typeof featureCollection.numberMatched === "number") {
-    return featureCollection.numberMatched;
-  }
-  if (featureCollection.numberMatched === "unknown") {
-    throw new Error("Le service WFS a renvoyé un comptage indéterminé (numberMatched=\"unknown\").");
-  }
-  throw new Error("Le service WFS n'a pas retourné de comptage exploitable dans `numberMatched`.");
-}
-
-// --- Multi-typename Execution ---
+// --- Multi-typename Input ---
 
 /**
  * Input parameters for multi-typename WFS execution.
@@ -107,42 +35,83 @@ export type MultiTypenameExecutionInput = {
   errorLabel: string;
 };
 
+// --- WfsClient Dependencies ---
+
+export type WfsTransportLike = {
+  post(request: CompiledRequest): Promise<WfsFeatureCollectionResponse>;
+};
+
+export type WfsSchemaStoreLike = {
+  getFeatureType(typename: string): Promise<Collection>;
+};
+
+// --- WfsClient Facade ---
+
 /**
- * Executes a WFS GetFeature request targeting multiple typenames.
+ * Facade composing a schema store (catalog) and a transport (rate-limited HTTP).
  *
- * Uses the WFS 2.0.0 multi-typename format expected by GeoServer:
- * - `typeNames=(type1)(type2)...`
- * - `cql_filter=filter1;filter2;...` (one filter per typename, same order)
- *
- * This helper is used by domain-oriented modules (`src/gpf/*`) that
- * query several WFS layers at once with a pre-compiled CQL filter.
- *
- * @param input Multi-typename execution parameters.
- * @returns The parsed JSON FeatureCollection returned by the WFS endpoint.
+ * Provides the minimal surface consumed by the WFS engine modules:
+ * - `getFeatureType`: load a feature type from the embedded catalog
+ * - `fetchFeatureCollection`: execute a compiled WFS request
+ * - `fetchMultiTypename`: multi-typename execution with response validation
  */
-export async function fetchWfsMultiTypename(
-  input: MultiTypenameExecutionInput,
-): Promise<WfsFeatureCollectionResponse> {
-  // Enforce a global rate limit on all WFS requests to the GPF.
-  await gpfWfsRateLimiter.limit();
+export class WfsClient {
+  constructor(
+    private transport: WfsTransportLike,
+    private schemaStore: WfsSchemaStoreLike,
+  ) {}
 
-  const request = buildMultiTypenameRequest({
-    typenames: input.typenames,
-    cqlFilter: input.cqlFilter,
-    cqlFilters: input.cqlFilters,
-  });
-
-  const url = `${request.url}?${new URLSearchParams(request.query).toString()}`;
-  const featureCollection = await fetchJSONPost(url, request.body, {
-    "Content-Type": "application/x-www-form-urlencoded",
-    "Accept": "application/json",
-  }) as WfsFeatureCollectionResponse;
-
-  if (!Array.isArray(featureCollection?.features)) {
-    throw new Error(
-      `Le service ${input.errorLabel} n'a pas retourné de collection d'objets exploitable`,
-    );
+  /**
+   * Loads a WFS feature type description from the embedded catalog.
+   */
+  async getFeatureType(typename: string) {
+    return this.schemaStore.getFeatureType(typename);
   }
 
-  return featureCollection;
+  /**
+   * Executes a compiled WFS request as POST and returns the JSON FeatureCollection.
+   */
+  async fetchFeatureCollection(request: CompiledRequest): Promise<WfsFeatureCollectionResponse> {
+    return this.transport.post(request);
+  }
+
+  /**
+   * Executes a WFS GetFeature request targeting multiple typenames.
+   *
+   * Uses the WFS 2.0.0 multi-typename format expected by GeoServer:
+   * - `typeNames=(type1)(type2)...`
+   * - `cql_filter=filter1;filter2;...`
+   */
+  async fetchMultiTypename(
+    input: MultiTypenameExecutionInput,
+  ): Promise<WfsFeatureCollectionResponse> {
+    const request = buildMultiTypenameRequest({
+      typenames: input.typenames,
+      cqlFilter: input.cqlFilter,
+      cqlFilters: input.cqlFilters,
+    });
+
+    const featureCollection = await this.transport.post(request);
+
+    if (!Array.isArray(featureCollection?.features)) {
+      throw new Error(
+        `Le service ${input.errorLabel} n'a pas retourné de collection d'objets exploitable`,
+      );
+    }
+
+    return featureCollection;
+  }
 }
+
+// --- Default Singleton ---
+
+/**
+ * Default WFS client with GPF rate limiting.
+ * https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/limites-d-usage/
+ */
+export const wfsClient = new WfsClient(
+  new WfsTransport(
+    new RateLimiter({ name: "GPF_WFS", maxCalls: getEnv().GPF_WFS_RATE_LIMIT, period: 1 }),
+  ),
+  wfsSchemaStore,
+);

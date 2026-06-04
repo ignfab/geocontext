@@ -10,7 +10,8 @@ import logger from '../logger.js';
 import distance from '../helpers/distance.js';
 import type { Point, Geometry } from 'geojson';
 
-import { getFeatureType, fetchWfsMultiTypename, type WfsFeatureCollectionResponse } from '../wfs/execution.js';
+import { wfsClient } from '../wfs/execution.js';
+import type { WfsFeatureCollectionResponse } from '../wfs/types.js';
 import { getGeometryProperty } from '../wfs/properties.js';
 import { compileDwithinSpatialFilter } from '../wfs/spatialCql.js';
 import { mapToFlatItemsWithGeometry, type FlatItem } from '../wfs/response.js';
@@ -82,13 +83,13 @@ export async function getParcellaireExpress(lon: number, lat: number): Promise<P
     // Resolve and compile one spatial filter per typename to avoid relying on
     // cross-layer geometry property homogeneity.
     const cqlFilters = await Promise.all(PARCELLAIRE_EXPRESS_TYPENAMES.map(async (typename) => {
-        const featureType = await getFeatureType(typename);
+        const featureType = await wfsClient.getFeatureType(typename);
         const geometryProperty = getGeometryProperty(featureType);
         return compileDwithinSpatialFilter(geometryProperty, spatialFilter);
     }));
 
     // Execute the multi-typename WFS query
-    const featureCollection: WfsFeatureCollectionResponse = await fetchWfsMultiTypename({
+    const featureCollection: WfsFeatureCollectionResponse = await wfsClient.fetchMultiTypename({
         typenames: PARCELLAIRE_EXPRESS_TYPENAMES,
         cqlFilters,
         errorLabel: 'PARCELLAIRE_EXPRESS',

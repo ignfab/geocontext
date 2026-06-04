@@ -8,13 +8,12 @@
 
 import logger from '../logger.js';
 
-import { getFeatureType } from '../wfs/execution.js';
-import { fetchWfsMultiTypename } from '../wfs/execution.js';
+import { wfsClient } from '../wfs/execution.js';
+import type { WfsFeatureCollectionResponse } from '../wfs/types.js';
 import { getGeometryProperty } from '../wfs/properties.js';
 import { compileIntersectsPointSpatialFilter } from '../wfs/spatialCql.js';
 import { mapToFlatItems, type FlatItem } from '../wfs/response.js';
 import type { SpatialFilter } from '../wfs/schema.js';
-import type { WfsFeatureCollectionResponse } from '../wfs/execution.js';
 
 type AdminUnit = FlatItem;
 
@@ -53,13 +52,13 @@ export async function getAdminUnits(lon: number, lat: number): Promise<AdminUnit
     // Resolve and compile one spatial filter per typename to avoid relying on
     // cross-layer geometry property homogeneity.
     const cqlFilters = await Promise.all(ADMINEXPRESS_TYPENAMES.map(async (typename) => {
-        const featureType = await getFeatureType(typename);
+        const featureType = await wfsClient.getFeatureType(typename);
         const geometryProperty = getGeometryProperty(featureType);
         return compileIntersectsPointSpatialFilter(geometryProperty, spatialFilter);
     }));
 
     // Execute the multi-typename WFS query
-    const featureCollection: WfsFeatureCollectionResponse = await fetchWfsMultiTypename({
+    const featureCollection: WfsFeatureCollectionResponse = await wfsClient.fetchMultiTypename({
         typenames: ADMINEXPRESS_TYPENAMES,
         cqlFilters,
         errorLabel: 'ADMINEXPRESS',

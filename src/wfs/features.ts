@@ -20,11 +20,10 @@ import {
   type ResolvedFeatureGeometryRef,
 } from "./queryPreparation.js";
 import {
-  fetchFeatureCollection,
-  getFeatureType,
-  getMatchedFeatureCount,
-  type WfsFeatureCollectionResponse,
+  wfsClient,
 } from "./execution.js";
+import { getMatchedFeatureCount } from "./response.js";
+import type { WfsFeatureCollectionResponse } from "./types.js";
 import {
   buildMainRequest,
   type CompiledRequest,
@@ -107,7 +106,7 @@ export async function resolveIntersectsFeatureGeometry(
     return undefined;
   }
 
-  const referenceFeatureType = await getFeatureType(spatialFilter.typename);
+  const referenceFeatureType = await wfsClient.getFeatureType(spatialFilter.typename);
   const referenceGeometryProperty = getGeometryProperty(referenceFeatureType);
   const featureCollection = await fetchFeatureById({
     typename: spatialFilter.typename,
@@ -149,7 +148,7 @@ export async function prepareGetFeaturesRequest(
   ensureIntersectsFeatureTargetsOtherTypename(input);
   // Get the feature type definition from the embedded catalog to access
   // property definitions and the geometry column name.
-  const featureType: Collection = await getFeatureType(input.typename);
+  const featureType: Collection = await wfsClient.getFeatureType(input.typename);
   // Resolve the reference geometry for `intersects_feature`, when needed by
   // the selected spatial filter.
   const resolvedGeometryRef = await resolveIntersectsFeatureGeometry(input);
@@ -183,7 +182,7 @@ export async function executeGetFeatures(input: GpfWfsGetFeaturesInput) {
     logger.debug(
       `[gpf_wfs_get_features] POST ${request.url}?${new URLSearchParams(request.query).toString()}`,
     );
-    featureCollection = await fetchFeatureCollection(request);
+    featureCollection = await wfsClient.fetchFeatureCollection(request);
   } catch (error: unknown) {
     if (
       error instanceof ServiceResponseError &&

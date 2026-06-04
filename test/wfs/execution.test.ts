@@ -1,14 +1,14 @@
 import { vi, describe, expect, afterEach, it } from "vitest";
+import type { Collection } from "@ignfab/gpf-schema-store";
+import { getMatchedFeatureCount } from "../../src/wfs/response.js";
 
-const mockFetchJSONPost = vi.fn<(
-  url: string,
-  body?: string,
-  headers?: Record<string, string>,
-) => Promise<unknown>>();
+const mockPost = vi.fn<(request: any) => Promise<unknown>>();
 const mockGetFeatureType = vi.fn<(typename: string) => Promise<unknown>>();
 
-vi.doMock("../../src/helpers/http.js", () => ({
-  fetchJSONPost: mockFetchJSONPost,
+vi.doMock("../../src/wfs/transport.js", () => ({
+  WfsTransport: class {
+    post = mockPost;
+  },
 }));
 
 vi.doMock("../../src/wfs/catalog.js", () => ({
@@ -19,23 +19,23 @@ vi.doMock("../../src/wfs/catalog.js", () => ({
 }));
 
 const {
-  fetchWfsMultiTypename,
-  getMatchedFeatureCount,
+  WfsClient,
+  wfsClient,
 } = await import("../../src/wfs/execution");
 
-describe("wfs_engine/execution", () => {
+describe("WfsClient", () => {
   afterEach(() => {
-    mockFetchJSONPost.mockReset();
+    mockPost.mockReset();
     mockGetFeatureType.mockReset();
   });
 
-  it("should execute multi-typename requests as POST and preserve per-typename cql_filters", async () => {
-    mockFetchJSONPost.mockResolvedValue({
+  it("should execute multi-typename requests and preserve per-typename cql_filters", async () => {
+    mockPost.mockResolvedValue({
       type: "FeatureCollection",
       features: [],
     });
 
-    const response = await fetchWfsMultiTypename({
+    const response = await wfsClient.fetchMultiTypename({
       typenames: [
         "ADMINEXPRESS-COG.LATEST:commune",
         "ADMINEXPRESS-COG.LATEST:departement",
@@ -47,35 +47,28 @@ describe("wfs_engine/execution", () => {
       errorLabel: "ADMINEXPRESS",
     });
 
-    expect(mockFetchJSONPost).toHaveBeenCalledTimes(1);
-    const requestedUrl = mockFetchJSONPost.mock.calls[0]?.[0];
-    if (!requestedUrl) {
-      throw new Error("missing requested URL");
+    expect(mockPost).toHaveBeenCalledTimes(1);
+    const request = mockPost.mock.calls[0]?.[0];
+    if (!request) {
+      throw new Error("missing request");
     }
-    const requestedBody = mockFetchJSONPost.mock.calls[0]?.[1];
-    const requestedHeaders = mockFetchJSONPost.mock.calls[0]?.[2];
 
-    const parsedUrl = new URL(requestedUrl);
-    expect(parsedUrl.origin + parsedUrl.pathname).toEqual("https://data.geopf.fr/wfs");
-    expect(parsedUrl.searchParams.get("service")).toEqual("WFS");
-    expect(parsedUrl.searchParams.get("version")).toEqual("2.0.0");
-    expect(parsedUrl.searchParams.get("request")).toEqual("GetFeature");
-    expect(parsedUrl.searchParams.get("typeNames")).toEqual(
+    expect(request.url).toEqual("https://data.geopf.fr/wfs");
+    expect(request.query.service).toEqual("WFS");
+    expect(request.query.version).toEqual("2.0.0");
+    expect(request.query.request).toEqual("GetFeature");
+    expect(request.query.typeNames).toEqual(
       "(ADMINEXPRESS-COG.LATEST:commune)(ADMINEXPRESS-COG.LATEST:departement)",
     );
-    expect(parsedUrl.searchParams.get("srsName")).toEqual("EPSG:4326");
-    expect(parsedUrl.searchParams.get("outputFormat")).toEqual("application/json");
-    expect(parsedUrl.searchParams.get("exceptions")).toEqual("application/json");
-    expect(parsedUrl.searchParams.get("cql_filter")).toBeNull();
+    expect(request.query.srsName).toEqual("EPSG:4326");
+    expect(request.query.outputFormat).toEqual("application/json");
+    expect(request.query.exceptions).toEqual("application/json");
+    expect(request.query.cql_filter).toBeUndefined();
 
-    const parsedBody = new URLSearchParams(requestedBody);
+    const parsedBody = new URLSearchParams(request.body);
     expect(parsedBody.get("cql_filter")).toEqual(
       "INTERSECTS(geometrie,SRID=4326;POINT(2.35 48.85));INTERSECTS(geometrie,SRID=4326;POINT(2.35 48.85)) AND code_insee = '25'",
     );
-    expect(requestedHeaders).toEqual({
-      "Content-Type": "application/x-www-form-urlencoded",
-      "Accept": "application/json",
-    });
 
     expect(response).toMatchObject({
       type: "FeatureCollection",
@@ -84,12 +77,12 @@ describe("wfs_engine/execution", () => {
   });
 
   it("should fail when multi-typename response has no features array", async () => {
-    mockFetchJSONPost.mockResolvedValue({
+    mockPost.mockResolvedValue({
       type: "FeatureCollection",
       totalFeatures: 12,
     });
 
-    await expect(fetchWfsMultiTypename({
+    await expect(wfsClient.fetchMultiTypename({
       typenames: ["ADMINEXPRESS-COG.LATEST:commune"],
       cqlFilter: "code_insee = '94080'",
       errorLabel: "ADMINEXPRESS",
@@ -99,7 +92,7 @@ describe("wfs_engine/execution", () => {
   });
 
   it("should reject cqlFilters length mismatch before executing HTTP", async () => {
-    await expect(fetchWfsMultiTypename({
+    await expect(wfsClient.fetchMultiTypename({
       typenames: [
         "ADMINEXPRESS-COG.LATEST:commune",
         "ADMINEXPRESS-COG.LATEST:departement",
@@ -110,7 +103,42 @@ describe("wfs_engine/execution", () => {
       errorLabel: "ADMINEXPRESS",
     })).rejects.toThrow("Le nombre de filtres CQL");
 
-    expect(mockFetchJSONPost).not.toHaveBeenCalled();
+    expect(mockPost).not.toHaveBeenCalled();
+  });
+
+  it("should accept structural test doubles as dependencies", async () => {
+    const featureType: Collection = {
+      id: "BDTOPO_V3:batiment",
+      namespace: "BDTOPO_V3",
+      name: "batiment",
+      title: "Batiment",
+      description: "Description de test",
+      properties: [
+        { name: "cleabs", type: "string" },
+        { name: "geometrie", type: "multipolygon", defaultCrs: "EPSG:4326" },
+      ],
+    };
+    const post = vi.fn(async () => ({
+      type: "FeatureCollection",
+      features: [],
+    }));
+    const getFeatureType = vi.fn(async () => featureType);
+
+    const client = new WfsClient(
+      { post },
+      { getFeatureType },
+    );
+
+    await expect(client.getFeatureType("BDTOPO_V3:batiment")).resolves.toEqual(featureType);
+    await expect(client.fetchFeatureCollection({
+      method: "POST",
+      url: "https://data.geopf.fr/wfs",
+      query: { service: "WFS" },
+      body: "",
+    })).resolves.toMatchObject({
+      type: "FeatureCollection",
+      features: [],
+    });
   });
 
   it("should extract matched count from numberMatched", () => {

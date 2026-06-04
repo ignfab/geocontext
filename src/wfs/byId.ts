@@ -8,11 +8,12 @@
 import type { Collection } from "@ignfab/gpf-schema-store";
 
 import {
-  getFeatureType,
-  fetchFeatureCollection,
-  type WfsFeatureCollectionResponse,
-  type WfsFeatureResponse,
+  wfsClient,
 } from "./execution.js";
+import type {
+  WfsFeatureCollectionResponse,
+  WfsFeatureResponse,
+} from "./types.js";
 import { validateSelectProperty, getGeometryProperty } from "./queryPreparation.js";
 import { buildGetFeatureByIdRequest } from "./request.js";
 import { attachFeatureRefs } from "./response.js";
@@ -87,7 +88,7 @@ export async function fetchFeatureById(
     input.propertyName,
   );
 
-  return fetchFeatureCollection(request);
+  return wfsClient.fetchFeatureCollection(request);
 }
 
 // --- Cardinality Enforcement ---
@@ -152,7 +153,7 @@ export function requireSingleFeatureById(
 export async function executeGetFeatureById(
   input: GetFeatureByIdExecutionInput,
 ) {
-  const featureType: Collection = await getFeatureType(input.typename);
+  const featureType: Collection = await wfsClient.getFeatureType(input.typename);
   const propertyName = buildPropertyName(featureType, {
     includeGeometry: false,
     select: input.select,
