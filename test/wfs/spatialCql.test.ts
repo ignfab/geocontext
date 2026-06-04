@@ -5,10 +5,10 @@ import {
   compileIntersectsPointSpatialFilter,
   compileDwithinSpatialFilter,
   compileIntersectsFeatureSpatialFilter,
-} from "../../../src/helpers/wfs_engine/spatialCql";
+} from "../../src/wfs/spatialCql";
 
 import type { CollectionProperty } from "@ignfab/gpf-schema-store";
-import type { SpatialFilter } from "../../../src/helpers/wfs_engine/schema";
+import type { SpatialFilter } from "../../src/wfs/schema";
 
 // --- Shared fixtures ---
 

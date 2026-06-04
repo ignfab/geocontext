@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { normalizeToolError } from "../../src/helpers/errors/toolError.js";
+import { normalizeToolError } from "../../src/errors/toolError.js";
 
 type DocsHelpersModule = {
   toAnchorSlug: (value: string) => string;

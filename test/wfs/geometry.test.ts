@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { geometryToEwkt } from "../../../src/helpers/wfs_engine/geometry";
+import { geometryToEwkt } from "../../src/wfs/geometry";
 
 describe("geometryToEwkt", () => {
   // --- Point and MultiPoint (already partially covered via queryPreparation tests) ---

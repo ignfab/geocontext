@@ -7,13 +7,13 @@ const mockFetchJSONPost = vi.fn<(
 ) => Promise<unknown>>();
 const mockGetFeatureType = vi.fn<(typename: string) => Promise<unknown>>();
 
-vi.doMock("../../../src/helpers/http.js", () => ({
+vi.doMock("../../src/helpers/http.js", () => ({
   fetchJSONPost: mockFetchJSONPost,
 }));
 
-vi.doMock("../../../src/gpf/wfs-schema-catalog.js", () => ({
+vi.doMock("../../src/wfs/catalog.js", () => ({
   GPF_WFS_URL: "https://data.geopf.fr/wfs",
-  wfsClient: {
+  wfsSchemaStore: {
     getFeatureType: mockGetFeatureType,
   },
 }));
@@ -21,7 +21,7 @@ vi.doMock("../../../src/gpf/wfs-schema-catalog.js", () => ({
 const {
   fetchWfsMultiTypename,
   getMatchedFeatureCount,
-} = await import("../../../src/helpers/wfs_engine/execution");
+} = await import("../../src/wfs/execution");
 
 describe("wfs_engine/execution", () => {
   afterEach(() => {

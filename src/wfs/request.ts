@@ -7,7 +7,7 @@
  * - the compact request payload exposed by MCP `result_type="request"`
  */
 
-import { GPF_WFS_URL } from "../../gpf/wfs-schema-catalog.js";
+import { GPF_WFS_URL } from "./catalog.js";
 import type { GpfWfsGetFeaturesInput } from "./schema.js";
 import { REQUEST_GET_URL_MAX_LENGTH } from "./schema.js";
 
@@ -123,36 +123,6 @@ export function buildMainRequest(
     query,
     body,
     get_url: buildGetUrl(GPF_WFS_URL, query, compiled.cqlFilter),
-  };
-}
-
-/**
- * Builds the auxiliary request used to fetch the geometry of a reference feature.
- *
- * @param typename Typename of the reference layer.
- * @param featureId Identifier of the reference feature.
- * @param geometryPropertyName Geometry property to request from the reference layer.
- * @returns A POST request targeting the reference feature lookup.
- */
-export function buildReferenceGeometryRequest(typename: string, featureId: string, geometryPropertyName: string): CompiledRequest {
-  const query: Record<string, string> = {
-    service: "WFS",
-    version: "2.0.0",
-    request: "GetFeature",
-    typeNames: typename,
-    outputFormat: "application/json",
-    exceptions: "application/json",
-    featureID: featureId,
-    propertyName: geometryPropertyName,
-    count: "1",
-  };
-
-  return {
-    method: "POST",
-    url: GPF_WFS_URL,
-    query,
-    body: "",
-    get_url: buildGetUrl(GPF_WFS_URL, query),
   };
 }
 

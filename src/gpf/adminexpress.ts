@@ -8,13 +8,13 @@
 
 import logger from '../logger.js';
 
-import { getFeatureType } from '../helpers/wfs_engine/execution.js';
-import { fetchWfsMultiTypename } from '../helpers/wfs_engine/execution.js';
-import { getGeometryProperty } from '../helpers/wfs_engine/properties.js';
-import { compileIntersectsPointSpatialFilter } from '../helpers/wfs_engine/spatialCql.js';
-import { mapToFlatItems, type FlatItem } from '../helpers/wfs_engine/response.js';
-import type { SpatialFilter } from '../helpers/wfs_engine/schema.js';
-import type { WfsFeatureCollectionResponse } from '../helpers/wfs_engine/execution.js';
+import { getFeatureType } from '../wfs/execution.js';
+import { fetchWfsMultiTypename } from '../wfs/execution.js';
+import { getGeometryProperty } from '../wfs/properties.js';
+import { compileIntersectsPointSpatialFilter } from '../wfs/spatialCql.js';
+import { mapToFlatItems, type FlatItem } from '../wfs/response.js';
+import type { SpatialFilter } from '../wfs/schema.js';
+import type { WfsFeatureCollectionResponse } from '../wfs/execution.js';
 
 type AdminUnit = FlatItem;
 

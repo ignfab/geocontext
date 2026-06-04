@@ -28,16 +28,14 @@ const altitudeResultSchema = z.object({
   accuracy: z.string().describe("L'information de précision associée à l'altitude."),
 });
 
-const altitudeOutputSchema = altitudeResultSchema;
-
 // --- Tool ---
 
 class AltitudeTool extends BaseTool<AltitudeInput> {
   name = "altitude";
-  title = "Altitude d’une position";
+  title = "Altitude d'une position";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
   description = `Renvoie l'altitude (en mètres) et la précision de la mesure (accuracy) d'un point géographique à partir de sa longitude et de sa latitude. (source : ${ALTITUDE_SOURCE}).`;
-  protected outputSchemaShape = altitudeOutputSchema;
+  protected outputSchemaShape = altitudeResultSchema;
 
   schema = altitudeInputSchema;
 

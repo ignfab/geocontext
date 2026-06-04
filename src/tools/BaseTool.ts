@@ -1,7 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { MCPTool } from "mcp-framework";
 
-import { normalizeToolError } from "../helpers/errors/toolError.js";
+import { normalizeToolError } from "../errors/toolError.js";
 import logger from "../logger.js";
 
 const toolInputStorage = new AsyncLocalStorage<Record<string, unknown>>();
@@ -34,7 +34,7 @@ export default abstract class BaseTool<TInput extends Record<string, any> = any>
       metadata.upstream_status = payload.upstream.status;
     }
 
-    if (error instanceof Error && error.name && error.name !== "Error") {
+    if (error instanceof Error && error.name !== "Error") {
       metadata.error_name = error.name;
     }
 

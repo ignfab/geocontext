@@ -8,8 +8,8 @@
 
 import type { Collection } from "@ignfab/gpf-schema-store";
 
-import { ServiceResponseError } from "../http.js";
-import logger from "../../logger.js";
+import { ServiceResponseError } from "../helpers/http.js";
+import logger from "../logger.js";
 import { fetchFeatureById, requireSingleFeatureById } from "./byId.js";
 import {
   compileQueryParts,

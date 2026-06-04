@@ -38,7 +38,7 @@ type RawGeocodeResponse = {
  * @returns {Promise<GeocodeResult[]>}
  */
 export async function geocode(text: string, maximumResponses = 3, fetcher: JsonFetcher<RawGeocodeResponse> = fetchJSONGet): Promise<GeocodeResult[]> {
-    const normalizedText = typeof text === "string" ? text.trim() : "";
+    const normalizedText = text.trim();
 
     if (!normalizedText) {
       return [];

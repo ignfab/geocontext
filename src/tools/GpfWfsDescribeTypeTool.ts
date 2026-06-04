@@ -6,7 +6,7 @@ import BaseTool from "./BaseTool.js";
 import { z } from "zod";
 import type { Collection } from "@ignfab/gpf-schema-store";
 
-import { wfsClient } from "../gpf/wfs-schema-catalog.js";
+import { wfsSchemaStore } from "../wfs/catalog.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import logger from "../logger.js";
 
@@ -70,7 +70,7 @@ class GpfWfsDescribeTypeTool extends BaseTool<GpfWfsDescribeTypeInput> {
     });
 
     try {
-      const featureType: Collection = await wfsClient.getFeatureType(input.typename);
+      const featureType: Collection = await wfsSchemaStore.getFeatureType(input.typename);
       return featureType;
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : String(e);

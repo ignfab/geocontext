@@ -2,7 +2,7 @@ import { vi, describe, it, expect } from "vitest";
 import { z } from "zod";
 
 import { ServiceResponseError } from "../../src/helpers/http.js";
-import { normalizeToolError } from "../../src/helpers/errors/toolError.js";
+import { normalizeToolError } from "../../src/errors/toolError.js";
 
 describe("Test toolError helper", () => {
   it("should install the FR Zod error map at module load", async () => {
@@ -11,7 +11,7 @@ describe("Test toolError helper", () => {
 
     // Reset to default messages, then import toolError to trigger module-level install.
     freshZ.setErrorMap((issue, ctx) => ({ message: ctx.defaultError }));
-    await import("../../src/helpers/errors/toolError.js");
+    await import("../../src/errors/toolError.js");
 
     const schema = freshZ.object({
       lon: freshZ.number().max(180),

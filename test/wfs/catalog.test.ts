@@ -1,22 +1,25 @@
 import { describe, expect, afterEach, beforeEach, it } from "vitest";
-import { FeatureTypeNotFoundError, WfsClient, wfsClient, loadMiniSearchOptionsFromEnv } from "../../src/gpf/wfs-schema-catalog";
+import { FeatureTypeNotFoundError, WfsSchemaStore, wfsSchemaStore, loadMiniSearchOptionsFromEnv } from "../../src/wfs/catalog";
+import { resetEnv } from "../../src/config/env.js";
 
 const GPF_WFS_MINISEARCH_OPTIONS_ENV = "GPF_WFS_MINISEARCH_OPTIONS";
 
-describe("Test WfsClient",() => {
+describe("Test WfsSchemaStore",() => {
     let previousMiniSearchOptionsEnv: string | undefined;
 
     beforeEach(() => {
         previousMiniSearchOptionsEnv = process.env[GPF_WFS_MINISEARCH_OPTIONS_ENV];
         delete process.env[GPF_WFS_MINISEARCH_OPTIONS_ENV];
+        resetEnv();
     });
 
     afterEach(() => {
         if (previousMiniSearchOptionsEnv === undefined) {
             delete process.env[GPF_WFS_MINISEARCH_OPTIONS_ENV];
-            return;
+        } else {
+            process.env[GPF_WFS_MINISEARCH_OPTIONS_ENV] = previousMiniSearchOptionsEnv;
         }
-        process.env[GPF_WFS_MINISEARCH_OPTIONS_ENV] = previousMiniSearchOptionsEnv;
+        resetEnv();
     });
 
     describe("loadMiniSearchOptionsFromEnv", () => {
@@ -48,7 +51,7 @@ describe("Test WfsClient",() => {
 
         it("should throw on invalid JSON", () => {
             process.env[GPF_WFS_MINISEARCH_OPTIONS_ENV] = '{"fuzzy":0.1';
-            expect(() => loadMiniSearchOptionsFromEnv()).toThrow("Invalid GPF_WFS_MINISEARCH_OPTIONS");
+            expect(() => loadMiniSearchOptionsFromEnv()).toThrow("GPF_WFS_MINISEARCH_OPTIONS");
         });
 
         it("should throw on invalid option keys", () => {
@@ -82,27 +85,16 @@ describe("Test WfsClient",() => {
         });
     });
 
-    describe("getFeatureTypes",() => {
-        it("should return the list of feature types with BDTOPO_V3:batiment", async () => {
-            const featureTypes = await wfsClient.getFeatureTypes();
-            expect(featureTypes).toBeDefined();
-            expect(featureTypes.length).toBeGreaterThan(0);
-
-            const featureTypeNames= featureTypes.map((featureType)=>featureType.id);
-            expect(featureTypeNames).toContain("BDTOPO_V3:batiment");
-        });
-    });
-
     describe("searchFeatureTypesWithScores",() => {
         it("should find BDTOPO_V3:batiment for 'bâtiments bdtopo'", async () => {
-            const featureTypes = await wfsClient.searchFeatureTypesWithScores("bâtiments bdtopo");
+            const featureTypes = await wfsSchemaStore.searchFeatureTypesWithScores("bâtiments bdtopo");
             expect(featureTypes).toBeDefined();
             expect(featureTypes.length).toBeGreaterThan(0);
             const featureTypeNames= featureTypes.map((featureType)=>featureType.collection.id);
             expect(featureTypeNames).toContain("BDTOPO_V3:batiment");
         });
         it("should find BDTOPO_V3:departement and ADMINEXPRESS-COG.LATEST:departement for 'départements'", async () => {
-            const featureTypes = await wfsClient.searchFeatureTypesWithScores("départements");
+            const featureTypes = await wfsSchemaStore.searchFeatureTypesWithScores("départements");
             expect(featureTypes).toBeDefined();
             expect(featureTypes.length).toBeGreaterThan(0);
             const featureTypeNames= featureTypes.map((featureType)=>featureType.collection.id);
@@ -110,8 +102,8 @@ describe("Test WfsClient",() => {
             expect(featureTypeNames).toContain("ADMINEXPRESS-COG.LATEST:departement");
         });
 
-        it("should allow overriding search tuning in WfsClient constructor", async () => {
-            const tuned = new WfsClient(undefined, {
+        it("should allow overriding search tuning in WfsSchemaStore constructor", async () => {
+            const tuned = new WfsSchemaStore({
                 miniSearch: {
                     fields: ["title", "identifierTokens"],
                     combineWith: "OR",
@@ -126,7 +118,7 @@ describe("Test WfsClient",() => {
             expect(featureTypeNames).toContain("BDTOPO_V3:batiment");
         });
         it("should return scored results for 'bâtiments bdtopo'", async () => {
-            const featureTypes = await wfsClient.searchFeatureTypesWithScores("bâtiments bdtopo");
+            const featureTypes = await wfsSchemaStore.searchFeatureTypesWithScores("bâtiments bdtopo");
             expect(featureTypes).toBeDefined();
             expect(featureTypes.length).toBeGreaterThan(0);
 
@@ -138,13 +130,13 @@ describe("Test WfsClient",() => {
 
     describe("getFeatureType",() => {
         it("should return the feature type with BDTOPO_V3:batiment", async () => {
-            const featureType = await wfsClient.getFeatureType("BDTOPO_V3:batiment");
+            const featureType = await wfsSchemaStore.getFeatureType("BDTOPO_V3:batiment");
             expect(featureType).toBeDefined();
             expect(featureType?.id).toEqual("BDTOPO_V3:batiment");
         });
 
         it("should throw an error if the feature type does not exist", async () => {
-            await expect(wfsClient.getFeatureType("BDTOPO_V3:not_found")).rejects.toThrow(FeatureTypeNotFoundError);
+            await expect(wfsSchemaStore.getFeatureType("BDTOPO_V3:not_found")).rejects.toThrow(FeatureTypeNotFoundError);
         });
     });
 

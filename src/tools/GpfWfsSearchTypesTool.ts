@@ -6,7 +6,7 @@ import BaseTool from "./BaseTool.js";
 import { z } from "zod";
 
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
-import { wfsClient } from "../gpf/wfs-schema-catalog.js";
+import { wfsSchemaStore } from "../wfs/catalog.js";
 import logger from "../logger.js";
 
 // --- Schema ---
@@ -70,7 +70,7 @@ class GpfWfsSearchTypesTool extends BaseTool<GpfWfsSearchTypesInput> {
     });
 
     const maxResults = input.max_results || 10;
-    const featureTypes = await wfsClient.searchFeatureTypesWithScores(input.query, maxResults);
+    const featureTypes = await wfsSchemaStore.searchFeatureTypesWithScores(input.query, maxResults);
     return {
       results: featureTypes.map(({ collection, score }) => ({
         id: collection.id,

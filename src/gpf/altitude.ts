@@ -37,7 +37,7 @@ export async function getAltitudeByLocation(lon: number, lat: number, fetcher: J
     const url = `https://data.geopf.fr/altimetrie/1.0/calcul/alti/rest/elevation.json?lon=${lon}&lat=${lat}&resource=ign_rge_alti_wld`;
 
     const json: RawAltitudeResponse = await fetcher(url);
-    const elevation = json?.elevations?.[0];
+    const elevation = json.elevations?.[0];
 
     if (!elevation) {
         throw new Error("Le service d'altitude n'a renvoyé aucune donnée d'altitude");

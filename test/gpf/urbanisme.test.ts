@@ -4,7 +4,7 @@ import { chamonix, mairieLoray } from "../samples";
 const mockGetFeatureType = vi.fn<(typename: string) => Promise<any>>();
 const mockFetchWfsMultiTypename = vi.fn<(input: any) => Promise<any>>();
 
-vi.doMock("../../src/helpers/wfs_engine/execution.js", () => ({
+vi.doMock("../../src/wfs/execution.js", () => ({
     getFeatureType: mockGetFeatureType,
     fetchWfsMultiTypename: mockFetchWfsMultiTypename,
 }));

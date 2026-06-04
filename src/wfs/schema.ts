@@ -9,8 +9,8 @@
 
 import { z } from "zod";
 
-import { generatePublishedInputSchema } from "../jsonSchema.js";
-import { lonSchema, latSchema } from "../schemas.js";
+import { generatePublishedInputSchema } from "../helpers/jsonSchema.js";
+import { lonSchema, latSchema } from "../helpers/schemas.js";
 
 // --- Shared Constants ---
 

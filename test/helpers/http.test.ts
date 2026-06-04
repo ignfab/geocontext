@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, vi, describe, it, expect } from "vitest";
 import fetch from "node-fetch";
+import { resetEnv } from "../../src/config/env.js";
 
 vi.mock("node-fetch", async () => {
     const actual = await vi.importActual<typeof import("node-fetch")>("node-fetch");
@@ -44,10 +45,12 @@ describe("Test HTTP helpers", () => {
     beforeEach(() => {
         fetchMock.mockReset();
         delete process.env.HTTP_TIMEOUT;
+        resetEnv();
     });
 
     afterEach(() => {
         vi.useRealTimers();
+        resetEnv();
     });
 
     it("should parse JSON responses", async () => {
@@ -368,6 +371,7 @@ describe("Test HTTP helpers", () => {
     it("should abort GET requests that exceed the configured timeout", async () => {
         vi.useFakeTimers();
         process.env.HTTP_TIMEOUT = "1";
+        resetEnv();
         fetchMock.mockImplementation((_url, options) => {
             return new Promise((_, reject) => {
                 options?.signal?.addEventListener("abort", () => {
@@ -394,6 +398,7 @@ describe("Test HTTP helpers", () => {
     it("should abort POST requests that exceed the configured timeout", async () => {
         vi.useFakeTimers();
         process.env.HTTP_TIMEOUT = "2";
+        resetEnv();
         fetchMock.mockImplementation((_url, options) => {
             return new Promise((_, reject) => {
                 options?.signal?.addEventListener("abort", () => {

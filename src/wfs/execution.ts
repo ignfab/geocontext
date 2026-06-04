@@ -9,19 +9,19 @@
 
 import type { CompiledRequest } from "./request.js";
 import { buildMultiTypenameRequest } from "./request.js";
-import { wfsClient } from "../../gpf/wfs-schema-catalog.js";
-import { fetchJSONPost } from "../http.js";
-import { createRateLimiter } from "../RateLimiter.js";
+import { wfsSchemaStore } from "./catalog.js";
+import { fetchJSONPost } from "../helpers/http.js";
+import { createRateLimiter } from "../helpers/RateLimiter.js";
+import { getEnv } from "../config/env.js";
 
 /**
  * Default rate limit for WFS requests, in requests per second.
  * https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/limites-d-usage/#valeur-de-la-limite-d-usage-pour-chaque-api-concernee
  * 
- * TODO in #33 : move/call fetchFeatureCollection and fetchWfsMultiTypename in WfsClient to allow rateLimiter as a property?
+ * TODO in #33 : move/call fetchFeatureCollection and fetchWfsMultiTypename in WfsSchemaStore to allow rateLimiter as a property?
  */
-const gpfWfsRateLimit = parseInt(process.env.GPF_WFS_RATE_LIMIT || "30", 10);
+const gpfWfsRateLimit = getEnv().GPF_WFS_RATE_LIMIT;
 const gpfWfsRateLimiter = createRateLimiter("GPF_WFS", gpfWfsRateLimit, 1);
-
 
 // --- Response Types ---
 
@@ -50,7 +50,7 @@ export type WfsFeatureCollectionResponse = Record<string, unknown> & {
  * @returns The matching feature type description.
  */
 export async function getFeatureType(typename: string) {
-  return wfsClient.getFeatureType(typename);
+  return wfsSchemaStore.getFeatureType(typename);
 }
 
 // --- Request Execution ---

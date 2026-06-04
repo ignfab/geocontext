@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildMultiTypenameRequest } from "../../../src/helpers/wfs_engine/request";
+import { buildMultiTypenameRequest } from "../../src/wfs/request";
 
 describe("wfs_engine/request", () => {
   it("should build a multi-typename request with encoded cql_filter", () => {

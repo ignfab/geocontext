@@ -8,13 +8,11 @@ import {
     MiniSearchCollectionSearchOptions,
 } from '@ignfab/gpf-schema-store';
 import { z } from 'zod';
+import { getEnv } from '../config/env.js';
 
 // --- Constants ---
 
 export const GPF_WFS_URL = "https://data.geopf.fr/wfs";
-
-// Environment variable used to inject MiniSearch options at runtime (JSON string).
-const GPF_WFS_MINISEARCH_OPTIONS_ENV = "GPF_WFS_MINISEARCH_OPTIONS";
 
 // Shared keys used by both `fields` and `boost` in MiniSearchCollectionSearchOptions.
 const MINISEARCH_INDEXED_OPTION_KEYS = [
@@ -45,7 +43,7 @@ export class FeatureTypeNotFoundError extends Error {
 // --- Helpers ---
 
 function invalidSearchOptionsError(reason: string): Error {
-    return new Error(`Invalid ${GPF_WFS_MINISEARCH_OPTIONS_ENV}: ${reason}`);
+    return new Error(`Invalid GPF_WFS_MINISEARCH_OPTIONS: ${reason}`);
 }
 
 // --- Search options schema ---
@@ -83,40 +81,25 @@ function createMiniSearchEngineOptions(miniSearch?: MiniSearchOptions) {
 // Reads MiniSearch options from the GPF_WFS_MINISEARCH_OPTIONS environment variable.
 // Returns undefined when the variable is absent or empty.
 export function loadMiniSearchOptionsFromEnv(): MiniSearchOptions | undefined {
-    const rawValue = process.env[GPF_WFS_MINISEARCH_OPTIONS_ENV];
-    if (!rawValue || rawValue.trim() === "") {
+    const raw = getEnv().GPF_WFS_MINISEARCH_OPTIONS;
+    if (!raw) {
         return undefined;
     }
 
-    let parsedValue: unknown;
-    try {
-        parsedValue = JSON.parse(rawValue);
-    } catch (error: unknown) {
-        const reason = error instanceof Error ? error.message : "unknown JSON parse error";
-        throw invalidSearchOptionsError(`expected valid JSON (${reason})`);
-    }
-
-    return parseMiniSearchOptions(parsedValue);
+    return parseMiniSearchOptions(raw);
 }
 
-// --- WFS client ---
+// --- WFS Schema Store ---
 
-export class WfsClient {
+export class WfsSchemaStore {
 
     private readonly catalog;
 
-    constructor(
-        public baseUrl: string = GPF_WFS_URL,
-        options: { miniSearch?: MiniSearchOptions } = {},
-    ) {
+    constructor(options: { miniSearch?: MiniSearchOptions } = {}) {
         const searchEngineOptions = createMiniSearchEngineOptions(options.miniSearch);
         this.catalog = getCollectionCatalog({
             engineFactory: (items: Collection[]) => new MiniSearchCollectionSearchEngine(items, searchEngineOptions),
         });
-    }
-
-    async getFeatureTypes(): Promise<Collection[]> {
-        return this.catalog.list();
     }
 
     async searchFeatureTypesWithScores(query: string, maxResults: number = 20): Promise<CollectionSearchResult[]> {
@@ -138,6 +121,6 @@ export class WfsClient {
 // --- Default singleton ---
 
 // Pre-configured client using the default GPF endpoint and optional env-based MiniSearch options.
-export const wfsClient = new WfsClient(undefined, {
+export const wfsSchemaStore = new WfsSchemaStore({
     miniSearch: loadMiniSearchOptionsFromEnv(),
 });

@@ -1,129 +1,18 @@
 import { MCPServer, TransportConfig } from "mcp-framework";
-import { dirname, join } from "path";
+import { dirname } from "path";
 import { fileURLToPath } from "url";
-import { readFileSync } from "fs";
+import { createRequire } from "node:module";
 import logger from "./logger.js";
+import { getEnv } from "./config/env.js";
+
+
+// --- Entry Point ---
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-type TransportType = "stdio" | "http";
-
-function isTransportType(value: string): value is TransportType {
-  return value === "stdio" || value === "http";
-}
-
-/**
- * Get the transport type from the environment variable TRANSPORT_TYPE. 
- * Valid values are "stdio" and "http". If not set, defaults to "stdio".
- */
-function getTransportType(): TransportType {
-  const transportType = process.env.TRANSPORT_TYPE ?? "stdio";
-
-  if (!isTransportType(transportType)) {
-    throw new Error(`Invalid transport type: ${transportType}`);
-  }
-
-  return transportType;
-}
-
-/**
- * Get the HTTP port from the environment variable HTTP_PORT.
- * The variable should be a decimal integer between 1 and 65535. If not set, defaults to 3000.
- */
-function getHttpPort(): number {
-  const rawPort = process.env.HTTP_PORT?.trim();
-  const invalidHttpPortMessage = `Invalid HTTP_PORT: ${rawPort}. Expected a decimal integer between 1 and 65535.`;
-
-  if (!rawPort) {
-    return 3000;
-  }
-
-  if (!/^\d+$/.test(rawPort)) {
-    throw new Error(invalidHttpPortMessage);
-  }
-
-  const port = Number(rawPort);
-
-  if (!Number.isInteger(port) || port < 1 || port > 65535) {
-    throw new Error(invalidHttpPortMessage);
-  }
-
-  return port;
-}
-
-/**
- * Get CORS allowed origins from the environment variable HTTP_CORS_ALLOWED_ORIGINS.
- * The variable should be a comma-separated list of origins .
- */
-function getCorsAllowedOrigins(): undefined|string[] {
-  if (process.env.HTTP_CORS_ALLOWED_ORIGINS === undefined) {
-    logger.warn('Security : HTTP_CORS_ALLOWED_ORIGINS is not set. It is recommended to set this variable to prevent DNS rebinding attacks (e.g., HTTP_CORS_ALLOWED_ORIGINS="http://localhost:3000,https://geollm.beta.ign.fr".');
-    return undefined;
-  }
-
-  const rawOrigins = process.env.HTTP_CORS_ALLOWED_ORIGINS?.trim();
-  
-  const allowedOrigins = rawOrigins
-    ?.split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean);
-
-  if (!allowedOrigins || allowedOrigins.length === 0) {
-    logger.warn('Security : HTTP_CORS_ALLOWED_ORIGINS is empty. It is recommended to set this variable to prevent DNS rebinding attacks (e.g., HTTP_CORS_ALLOWED_ORIGINS="http://localhost:3000,https://geollm.beta.ign.fr".');
-    return undefined;
-  }
-
-  return allowedOrigins;
-}
-
-
-function buildTransport(transportType: TransportType): TransportConfig {
-  // Handle stdio transport configuration
-  if (transportType === "stdio") {
-    return {
-      type: "stdio",
-    };
-  }
-
-  // Handle HTTP transport configuration
-
-  const host = process.env.HTTP_HOST?.trim() || '127.0.0.1';
-  const endpoint = process.env.HTTP_MCP_ENDPOINT?.trim() || '/mcp';
-  const port = getHttpPort();
-
-  return {
-    type: "http-stream",
-    options: {
-      port: port,
-      endpoint,
-      responseMode: "stream",
-      cors: {
-        allowOrigin: "*",
-        allowedOrigins: getCorsAllowedOrigins(),
-      },
-      host,
-    },
-  };
-}
-
-/**
- * Get the version from package.json for the MCP server metadata.
- */
-function getVersion(): string {
-  const pkgMetadata = JSON.parse(
-    readFileSync(join(__dirname, "../package.json"), "utf-8")
-  );
-
-  if (!pkgMetadata?.version || typeof pkgMetadata.version !== "string") {
-    throw new Error("Missing or invalid version in package.json");
-  }
-
-  return pkgMetadata.version;
-}
-
 async function main() {
-  const transportType = getTransportType();
-  const transport = buildTransport(transportType);
+  const env = getEnv();
+  const transport = buildTransport(env);
   const version = getVersion();
 
   const mcpServer = new MCPServer({
@@ -143,3 +32,45 @@ main().catch((error) => {
   );
   process.exit(1);
 });
+
+
+// --- Helpers ---
+
+/**
+ * Build the transport configuration for the MCP server based on the environment.
+ */
+function buildTransport(env: ReturnType<typeof getEnv>): TransportConfig {
+  
+  if (env.TRANSPORT_TYPE === "stdio") {
+    return {
+      type: "stdio",
+    };
+  }
+
+  if (!env.HTTP_CORS_ALLOWED_ORIGINS) {
+    logger.warn('Security : HTTP_CORS_ALLOWED_ORIGINS is not set. It is recommended to set this variable to prevent DNS rebinding attacks (e.g., HTTP_CORS_ALLOWED_ORIGINS="http://localhost:3000,https://geollm.beta.ign.fr".');
+  }
+
+  return {
+    type: "http-stream",
+    options: {
+      port: env.HTTP_PORT,
+      endpoint: env.HTTP_MCP_ENDPOINT,
+      responseMode: "stream",
+      cors: {
+        allowOrigin: "*",
+        allowedOrigins: env.HTTP_CORS_ALLOWED_ORIGINS,
+      },
+      host: env.HTTP_HOST,
+    },
+  };
+}
+
+/**
+ * Get the version from package.json for the MCP server metadata.
+ */
+function getVersion(): string {
+  const require = createRequire(import.meta.url);
+  const { version } = require("../package.json") as { version: string };
+  return version;
+}
