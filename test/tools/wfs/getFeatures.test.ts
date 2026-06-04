@@ -128,6 +128,16 @@ describe("Test GpfWfsGetFeaturesTool", () => {
     return requests;
   }
 
+  function hasJsonSchemaComposition(value: unknown): boolean {
+    if (!value || typeof value !== "object") {
+      return false;
+    }
+    if ("anyOf" in value || "oneOf" in value || "allOf" in value) {
+      return true;
+    }
+    return Object.values(value).some(hasJsonSchemaComposition);
+  }
+
   afterEach(() => {
     vi.clearAllMocks();
     mockGetFeatureType.mockReset();
@@ -156,6 +166,20 @@ describe("Test GpfWfsGetFeaturesTool", () => {
       type: "array",
     });
     expect(tool.toolDefinition.outputSchema).toBeUndefined();
+  });
+
+  it("should publish an LLM-compatible input schema without composition keywords", () => {
+    const tool = new GpfWfsGetFeaturesTool();
+
+    expect(hasJsonSchemaComposition(tool.toolDefinition.inputSchema)).toBe(false);
+    expect(tool.toolDefinition.inputSchema.properties?.dwithin_point_filter).toMatchObject({
+      type: "object",
+      properties: expect.objectContaining({
+        lon: expect.objectContaining({ type: "number" }),
+        lat: expect.objectContaining({ type: "number" }),
+        distance_m: expect.objectContaining({ type: "number" }),
+      }),
+    });
   });
 
   it("should return a FeatureCollection without structuredContent for results", () => {
@@ -564,9 +588,10 @@ describe("Test GpfWfsGetFeaturesTool", () => {
         name: "gpf_wfs_get_features",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
-          spatial_operator: "intersects_feature",
-          intersects_feature_typename: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:localisant",
-          intersects_feature_id: "localisant.1",
+          intersects_feature_filter: {
+            typename: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:localisant",
+            feature_id: "localisant.1",
+          },
           result_type: "request",
         },
       },
@@ -599,9 +624,10 @@ describe("Test GpfWfsGetFeaturesTool", () => {
         name: "gpf_wfs_get_features",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
-          spatial_operator: "intersects_feature",
-          intersects_feature_typename: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:localisant",
-          intersects_feature_id: "localisant.404",
+          intersects_feature_filter: {
+            typename: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:localisant",
+            feature_id: "localisant.404",
+          },
         },
       },
     });
@@ -627,9 +653,10 @@ describe("Test GpfWfsGetFeaturesTool", () => {
         name: "gpf_wfs_get_features",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
-          spatial_operator: "intersects_feature",
-          intersects_feature_typename: "ADMINEXPRESS-COG.LATEST:commune",
-          intersects_feature_id: "commune.1",
+          intersects_feature_filter: {
+            typename: "ADMINEXPRESS-COG.LATEST:commune",
+            feature_id: "commune.1",
+          },
         },
       },
     });

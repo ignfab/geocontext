@@ -60,14 +60,14 @@ type GeometryLike = {
 export function ensureIntersectsFeatureTargetsOtherTypename(
   input: GpfWfsGetFeaturesInput,
 ) {
+  const spatialFilter = getSpatialFilter(input);
   if (
-    input.spatial_operator === "intersects_feature" &&
-    input.intersects_feature_typename !== undefined &&
-    input.typename === input.intersects_feature_typename
+    spatialFilter?.operator === "intersects_feature" &&
+    input.typename === spatialFilter.typename
   ) {
     throw new Error(
       "Le filtre `intersects_feature` sur le même `typename` retourne potentiellement plusieurs objets. " +
-        "Utiliser `gpf_wfs_get_feature_by_id` avec `{ typename, feature_id: intersects_feature_id }` pour cibler exactement un objet.",
+        "Utiliser `gpf_wfs_get_feature_by_id` avec `{ typename, feature_id: intersects_feature_filter.feature_id }` pour cibler exactement un objet.",
     );
   }
 }

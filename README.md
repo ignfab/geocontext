@@ -62,9 +62,10 @@
       'value': '20'
     }
   ],
-  'spatial_operator': 'intersects_feature',
-  'intersects_feature_typename': 'ADMINEXPRESS-COG.LATEST:commune',
-  'intersects_feature_id': 'commune.33667'
+  'intersects_feature_filter': {
+    'typename': 'ADMINEXPRESS-COG.LATEST:commune',
+    'feature_id': 'commune.33667'
+  }
    })
 
 💬 À Vincennes (`94300`, Val-de-Marne), il y a **509 bâtiments**

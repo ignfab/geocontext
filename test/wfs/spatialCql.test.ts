@@ -33,7 +33,7 @@ describe("compileBboxSpatialFilter", () => {
     const filter = extractSpatialFilter({ operator: "bbox", west: 3.0, south: 48.0, east: 2.0, north: 49.0 });
 
     expect(() => compileBboxSpatialFilter(geometryProperty, filter)).toThrow(
-      "Le bbox est invalide : `bbox_west` doit être strictement inférieur à `bbox_east`."
+      "Le bbox est invalide : `west` doit être strictement inférieur à `east`."
     );
   });
 
@@ -41,7 +41,7 @@ describe("compileBboxSpatialFilter", () => {
     const filter = extractSpatialFilter({ operator: "bbox", west: 2.5, south: 48.0, east: 2.5, north: 49.0 });
 
     expect(() => compileBboxSpatialFilter(geometryProperty, filter)).toThrow(
-      "Le bbox est invalide : `bbox_west` doit être strictement inférieur à `bbox_east`."
+      "Le bbox est invalide : `west` doit être strictement inférieur à `east`."
     );
   });
 
@@ -49,7 +49,7 @@ describe("compileBboxSpatialFilter", () => {
     const filter = extractSpatialFilter({ operator: "bbox", west: 2.0, south: 49.0, east: 3.0, north: 48.0 });
 
     expect(() => compileBboxSpatialFilter(geometryProperty, filter)).toThrow(
-      "Le bbox est invalide : `bbox_south` doit être strictement inférieur à `bbox_north`."
+      "Le bbox est invalide : `south` doit être strictement inférieur à `north`."
     );
   });
 
@@ -57,7 +57,7 @@ describe("compileBboxSpatialFilter", () => {
     const filter = extractSpatialFilter({ operator: "bbox", west: 2.0, south: 48.5, east: 3.0, north: 48.5 });
 
     expect(() => compileBboxSpatialFilter(geometryProperty, filter)).toThrow(
-      "Le bbox est invalide : `bbox_south` doit être strictement inférieur à `bbox_north`."
+      "Le bbox est invalide : `south` doit être strictement inférieur à `north`."
     );
   });
 

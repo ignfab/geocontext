@@ -134,7 +134,7 @@ function compileWhereClause(featureType: Collection, geometryProperty: Collectio
     featureType,
     geometryProperty,
     clause.property,
-    "La propriété '{property}' est géométrique. Utiliser `spatial_operator` et ses paramètres dédiés."
+    "La propriété '{property}' est géométrique. Utiliser un filtre spatial dédié (`bbox_filter`, `intersects_point_filter`, `dwithin_point_filter` ou `intersects_feature_filter`)."
   );
   const normalized = normalizeWhereClause(property, clause);
 
