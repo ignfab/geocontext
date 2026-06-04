@@ -310,7 +310,7 @@ function normalizeErrorResponse(response) {
 }
 
 async function loadNormalizeToolError() {
-  const moduleUrl = pathToFileURL(join(repoRoot, "dist", "helpers", "errors", "toolError.js")).href;
+  const moduleUrl = pathToFileURL(join(repoRoot, "dist", "errors", "toolError.js")).href;
   const imported = await import(moduleUrl);
 
   if (typeof imported.normalizeToolError !== "function") {

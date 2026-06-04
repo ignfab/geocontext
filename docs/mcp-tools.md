@@ -179,7 +179,7 @@ Title: Unités administratives
 
 Source: [src/tools/AltitudeTool.ts](../src/tools/AltitudeTool.ts)
 
-Title: Altitude d’une position
+Title: Altitude d'une position
 
 ### Description du tool
 
