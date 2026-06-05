@@ -17,7 +17,7 @@ const logger = createLogger({
          * see https://github.com/winstonjs/winston/blob/master/docs/transports.md#console-transport
          */
         new transports.Console({
-            stderrLevels: Object.keys(config.npm.levels), 
+            stderrLevels: Object.keys(config.npm.levels),
         })
     ] : [
         new transports.File({

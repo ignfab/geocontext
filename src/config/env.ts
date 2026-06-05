@@ -71,7 +71,7 @@ const envSchema = z.object({
                 .filter((o) => o.length > 0);
             return origins.length > 0 ? origins : undefined;
         })
-        // Intentionally not validating origin syntax: 
+        // Intentionally not validating origin syntax:
         // values are passed through to the HTTP transport layer.
         .pipe(z.array(z.string()).min(1).optional())
         .optional(),
