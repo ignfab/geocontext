@@ -4,15 +4,15 @@ import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotation
 import {
   executeGetFeatures,
   prepareGetFeaturesRequest,
-} from "../helpers/wfs_engine/features.js";
-import { toWfsRequestPayload } from "../helpers/wfs_engine/request.js";
+} from "../wfs/features.js";
+import { toWfsRequestPayload } from "../wfs/request.js";
 import {
   gpfWfsGetFeaturesHitsOutputSchema,
   gpfWfsGetFeaturesInputSchema,
   type GpfWfsGetFeaturesInput,
   gpfWfsGetFeaturesPublishedInputSchema,
   gpfWfsGetFeaturesRequestOutputSchema,
-} from "../helpers/wfs_engine/schema.js";
+} from "../wfs/schema.js";
 import logger from "../logger.js";
 
 /**

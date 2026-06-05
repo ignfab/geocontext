@@ -6,6 +6,8 @@
  * - Flat item mapping for domain-oriented modules (`src/gpf/*`)
  */
 
+import type { WfsFeatureCollectionResponse } from "./types.js";
+
 // --- Response Types ---
 
 type GenericFeature = {
@@ -47,6 +49,25 @@ export type FlatItem = Record<string, unknown> & {
   bbox?: number[];
   feature_ref?: { typename: string; feature_id: string };
 };
+
+// --- Response Metadata ---
+
+/**
+ * Extracts a result count from a WFS response using `numberMatched`.
+ * Explicitly rejects responses that do not provide a usable WFS 2 total.
+ *
+ * @param featureCollection Parsed WFS response object.
+ * @returns The total number of matching features.
+ */
+export function getMatchedFeatureCount(featureCollection: WfsFeatureCollectionResponse) {
+  if (typeof featureCollection.numberMatched === "number") {
+    return featureCollection.numberMatched;
+  }
+  if (featureCollection.numberMatched === "unknown") {
+    throw new Error("Le service WFS a renvoyé un comptage indéterminé (numberMatched=\"unknown\").");
+  }
+  throw new Error("Le service WFS n'a pas retourné de comptage exploitable dans `numberMatched`.");
+}
 
 // --- Response Transformation ---
 

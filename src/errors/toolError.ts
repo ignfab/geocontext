@@ -8,7 +8,7 @@
 
 import { ZodError } from "zod";
 
-import { ServiceResponseError } from "../http.js";
+import { ServiceResponseError } from "../helpers/http.js";
 import { installZodErrorMapFr } from "./zodErrorMapFr.js";
 
 // Install the FR Zod error map at module load so the very first parse in the

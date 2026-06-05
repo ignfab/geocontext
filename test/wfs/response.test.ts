@@ -5,7 +5,7 @@ import {
   mapToFlatItemsWithGeometry,
   transformFeatureCollectionResponse,
   attachFeatureRefs,
-} from "../../../src/helpers/wfs_engine/response";
+} from "../../src/wfs/response";
 
 describe("wfs_engine/response", () => {
   function getFeatures(

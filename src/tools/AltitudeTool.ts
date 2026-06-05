@@ -5,7 +5,7 @@
 import BaseTool from "./BaseTool.js";
 import { z } from "zod";
 
-import { ALTITUDE_SOURCE, getAltitudeByLocation } from "../gpf/altitude.js";
+import { ALTITUDE_SOURCE, altitudeClient } from "../gpf/altitude.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import { lonSchema, latSchema } from "../helpers/schemas.js";
 import logger from "../logger.js";
@@ -28,16 +28,14 @@ const altitudeResultSchema = z.object({
   accuracy: z.string().describe("L'information de précision associée à l'altitude."),
 });
 
-const altitudeOutputSchema = altitudeResultSchema;
-
 // --- Tool ---
 
 class AltitudeTool extends BaseTool<AltitudeInput> {
   name = "altitude";
-  title = "Altitude d’une position";
+  title = "Altitude d'une position";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
   description = `Renvoie l'altitude (en mètres) et la précision de la mesure (accuracy) d'un point géographique à partir de sa longitude et de sa latitude. (source : ${ALTITUDE_SOURCE}).`;
-  protected outputSchemaShape = altitudeOutputSchema;
+  protected outputSchemaShape = altitudeResultSchema;
 
   schema = altitudeInputSchema;
 
@@ -52,7 +50,7 @@ class AltitudeTool extends BaseTool<AltitudeInput> {
       input: input
     });
 
-    return await getAltitudeByLocation(input.lon, input.lat);
+    return await altitudeClient.getByLocation(input.lon, input.lat);
   }
 }
 

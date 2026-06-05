@@ -17,7 +17,7 @@ describe("Test AltitudeTool",() => {
 
     it("should expose an enriched MCP definition", () => {
         const tool = new AltitudeTool();
-        expect(tool.toolDefinition.title).toEqual("Altitude d’une position");
+        expect(tool.toolDefinition.title).toEqual("Altitude d'une position");
         expect(tool.toolDefinition.inputSchema.properties?.lon).toMatchObject({
             type: "number",
             minimum: -180,

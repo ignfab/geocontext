@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { getSpatialFilter } from "../../../src/helpers/wfs_engine/spatialFilter";
-import type { GpfWfsGetFeaturesInput } from "../../../src/helpers/wfs_engine/schema";
+import { getSpatialFilter } from "../../src/wfs/spatialFilter";
+import type { GpfWfsGetFeaturesInput } from "../../src/wfs/schema";
 
 // --- Shared fixtures ---
 

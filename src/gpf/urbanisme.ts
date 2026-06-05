@@ -8,13 +8,14 @@
 
 import logger from '../logger.js';
 import distance from '../helpers/distance.js';
-import type { Point } from 'geojson';
+import type { Point, Geometry } from 'geojson';
 
-import { getFeatureType, fetchWfsMultiTypename, type WfsFeatureCollectionResponse } from '../helpers/wfs_engine/execution.js';
-import { getGeometryProperty } from '../helpers/wfs_engine/properties.js';
-import { compileDwithinSpatialFilter } from '../helpers/wfs_engine/spatialCql.js';
-import { mapToFlatItemsWithGeometry, type FlatItem } from '../helpers/wfs_engine/response.js';
-import type { SpatialFilter } from '../helpers/wfs_engine/schema.js';
+import { wfsClient } from '../wfs/execution.js';
+import type { WfsFeatureCollectionResponse } from '../wfs/types.js';
+import { getGeometryProperty } from '../wfs/properties.js';
+import { compileDwithinSpatialFilter } from '../wfs/spatialCql.js';
+import { mapToFlatItemsWithGeometry, type FlatItem } from '../wfs/response.js';
+import type { SpatialFilter } from '../wfs/schema.js';
 
 type UrbanismeItem = FlatItem & {
     distance: number;
@@ -75,13 +76,13 @@ export async function getUrbanisme(lon: number, lat: number): Promise<Record<str
     // Resolve and compile one spatial filter per typename to avoid relying on
     // cross-layer geometry property homogeneity.
     const cqlFilters = await Promise.all(URBANISME_TYPES.map(async (typename) => {
-        const featureType = await getFeatureType(typename);
+        const featureType = await wfsClient.getFeatureType(typename);
         const geometryProperty = getGeometryProperty(featureType);
         return compileDwithinSpatialFilter(geometryProperty, spatialFilter);
     }));
 
     // Execute the multi-typename WFS query
-    const featureCollection: WfsFeatureCollectionResponse = await fetchWfsMultiTypename({
+    const featureCollection: WfsFeatureCollectionResponse = await wfsClient.fetchMultiTypename({
         typenames: URBANISME_TYPES,
         cqlFilters,
         errorLabel: 'Urbanisme',
@@ -92,10 +93,10 @@ export async function getUrbanisme(lon: number, lat: number): Promise<Record<str
     const items = mapToFlatItemsWithGeometry(featureCollection, URBANISME_TYPES);
 
     return items.map((item) => {
-        const { _rawGeometry: _, ...rest } = item;
+        const { _rawGeometry, ...rest } = item;
         const urbanismeItem: UrbanismeItem = {
             ...rest,
-            distance: distance(sourceGeom, (item as Record<string, unknown>)._rawGeometry as any),
+            distance: distance(sourceGeom, _rawGeometry as Geometry),
         };
         return sanitizeUrbanismeItem(urbanismeItem);
     });
@@ -127,13 +128,13 @@ export async function getAssiettesServitudes(lon: number, lat: number): Promise<
     // Resolve and compile one spatial filter per typename to avoid relying on
     // cross-layer geometry property homogeneity.
     const cqlFilters = await Promise.all(ASSIETTES_SUP_TYPES.map(async (typename) => {
-        const featureType = await getFeatureType(typename);
+        const featureType = await wfsClient.getFeatureType(typename);
         const geometryProperty = getGeometryProperty(featureType);
         return compileDwithinSpatialFilter(geometryProperty, spatialFilter);
     }));
 
     // Execute the multi-typename WFS query
-    const featureCollection: WfsFeatureCollectionResponse = await fetchWfsMultiTypename({
+    const featureCollection: WfsFeatureCollectionResponse = await wfsClient.fetchMultiTypename({
         typenames: ASSIETTES_SUP_TYPES,
         cqlFilters,
         errorLabel: 'Urbanisme',
@@ -144,10 +145,10 @@ export async function getAssiettesServitudes(lon: number, lat: number): Promise<
     const items = mapToFlatItemsWithGeometry(featureCollection, ASSIETTES_SUP_TYPES);
 
     return items.map((item) => {
-        const { _rawGeometry: _, ...rest } = item;
+        const { _rawGeometry, ...rest } = item;
         return {
             ...rest,
-            distance: distance(sourceGeom, (item as Record<string, unknown>)._rawGeometry as any),
+            distance: distance(sourceGeom, _rawGeometry as Geometry),
         };
     });
 }

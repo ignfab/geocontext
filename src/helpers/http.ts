@@ -18,6 +18,7 @@ import type { RequestInit } from "node-fetch";
 import { parseXml, XmlElement } from "@rgrove/parse-xml";
 
 import logger from "../logger.js";
+import { getEnv } from "../config/env.js";
 
 
 // --- Transport Types ---
@@ -73,16 +74,9 @@ type JsonServiceError = {
 
 // --- Shared Fetch State ---
 
-const USER_AGENT_ENV = "USER_AGENT";
-
-function resolveDefaultUserAgent(): string {
-  const configuredUserAgent = process.env[USER_AGENT_ENV]?.trim();
-  return configuredUserAgent || "geocontext";
-}
-
 const defaultHeaders = new Headers({
   Accept: "application/json",
-  "User-Agent": resolveDefaultUserAgent(),
+  "User-Agent": getEnv().USER_AGENT,
 });
 
 const fetchOpts: RequestInit = {
@@ -117,7 +111,6 @@ const JSON_EXCEPTION_CODE_FIELDS = ["code", "exceptionCode"] as const;
 const JSON_EXCEPTION_DETAIL_FIELDS = ["text", "message", "detail"] as const;
 const JSON_NESTED_ERROR_DETAIL_FIELDS = ["description", "message", "detail"] as const;
 const JSON_ROOT_DETAIL_FIELDS = ["message", "detail"] as const;
-const DEFAULT_HTTP_TIMEOUT_SECONDS = 15;
 const UPSTREAM_TIMEOUT_STATUS = 504;
 const UPSTREAM_TIMEOUT_STATUS_TEXT = "Gateway Timeout";
 const UPSTREAM_TIMEOUT_CODE = "TIMEOUT";
@@ -216,26 +209,8 @@ function buildFetchOptions(method: string, body: string | undefined, headers: Re
   };
 }
 
-/**
- * Reads and validates the shared upstream timeout configuration.
- *
- * @returns Timeout in milliseconds.
- */
-function getHttpTimeoutMs() {
-  const rawTimeoutSeconds = process.env.HTTP_TIMEOUT?.trim();
-
-  if (!rawTimeoutSeconds) {
-    return DEFAULT_HTTP_TIMEOUT_SECONDS * 1000;
-  }
-
-  const timeoutSeconds = Number(rawTimeoutSeconds);
-  if (!Number.isFinite(timeoutSeconds) || timeoutSeconds <= 0) {
-    throw new Error(
-      `HTTP_TIMEOUT must be a positive number of seconds. Received: ${rawTimeoutSeconds}`
-    );
-  }
-
-  return timeoutSeconds * 1000;
+function getHttpTimeoutMs(): number {
+  return getEnv().HTTP_TIMEOUT * 1000;
 }
 
 // --- Response Parsing ---

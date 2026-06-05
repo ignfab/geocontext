@@ -8,13 +8,14 @@
 
 import logger from '../logger.js';
 import distance from '../helpers/distance.js';
-import type { Point } from 'geojson';
+import type { Point, Geometry } from 'geojson';
 
-import { getFeatureType, fetchWfsMultiTypename, type WfsFeatureCollectionResponse } from '../helpers/wfs_engine/execution.js';
-import { getGeometryProperty } from '../helpers/wfs_engine/properties.js';
-import { compileDwithinSpatialFilter } from '../helpers/wfs_engine/spatialCql.js';
-import { mapToFlatItemsWithGeometry, type FlatItem } from '../helpers/wfs_engine/response.js';
-import type { SpatialFilter } from '../helpers/wfs_engine/schema.js';
+import { wfsClient } from '../wfs/execution.js';
+import type { WfsFeatureCollectionResponse } from '../wfs/types.js';
+import { getGeometryProperty } from '../wfs/properties.js';
+import { compileDwithinSpatialFilter } from '../wfs/spatialCql.js';
+import { mapToFlatItemsWithGeometry, type FlatItem } from '../wfs/response.js';
+import type { SpatialFilter } from '../wfs/schema.js';
 
 type ParcellaireExpressItem = FlatItem & {
     distance: number;
@@ -82,13 +83,13 @@ export async function getParcellaireExpress(lon: number, lat: number): Promise<P
     // Resolve and compile one spatial filter per typename to avoid relying on
     // cross-layer geometry property homogeneity.
     const cqlFilters = await Promise.all(PARCELLAIRE_EXPRESS_TYPENAMES.map(async (typename) => {
-        const featureType = await getFeatureType(typename);
+        const featureType = await wfsClient.getFeatureType(typename);
         const geometryProperty = getGeometryProperty(featureType);
         return compileDwithinSpatialFilter(geometryProperty, spatialFilter);
     }));
 
     // Execute the multi-typename WFS query
-    const featureCollection: WfsFeatureCollectionResponse = await fetchWfsMultiTypename({
+    const featureCollection: WfsFeatureCollectionResponse = await wfsClient.fetchMultiTypename({
         typenames: PARCELLAIRE_EXPRESS_TYPENAMES,
         cqlFilters,
         errorLabel: 'PARCELLAIRE_EXPRESS',
@@ -100,10 +101,10 @@ export async function getParcellaireExpress(lon: number, lat: number): Promise<P
 
     // Calculate distances, strip temporary geometry, and filter
     const enrichedItems: ParcellaireExpressItem[] = items.map((item) => {
-        const { _rawGeometry: _, ...rest } = item;
+        const { _rawGeometry, ...rest } = item;
         return {
             ...rest,
-            distance: distance(sourceGeom, (item as Record<string, unknown>)._rawGeometry as any),
+            distance: distance(sourceGeom, _rawGeometry as Geometry),
             source: PARCELLAIRE_EXPRESS_SOURCE,
         };
     });

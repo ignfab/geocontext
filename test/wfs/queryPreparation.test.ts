@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { Collection } from "@ignfab/gpf-schema-store";
 
-import { compileQueryParts, geometryToEwkt } from "../../../src/helpers/wfs_engine/queryPreparation";
-import type { GpfWfsGetFeaturesInput } from "../../../src/helpers/wfs_engine/schema";
+import { compileQueryParts, geometryToEwkt } from "../../src/wfs/queryPreparation";
+import type { GpfWfsGetFeaturesInput } from "../../src/wfs/schema";
 
 describe("gpfWfsGetFeatures/queryPreparation", () => {
   const featureType: Collection = {
