@@ -301,6 +301,48 @@ describe("Test GpfWfsGetFeaturesTool", () => {
     });
   });
 
+  it("should reject multiple spatial filters as invalid tool parameters", async () => {
+    const tool = new GpfWfsGetFeaturesTool();
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_wfs_get_features",
+        arguments: {
+          typename: "ADMINEXPRESS-COG.LATEST:commune",
+          bbox_filter: {
+            west: 2.1,
+            south: 48.7,
+            east: 2.5,
+            north: 48.9,
+          },
+          intersects_point_filter: {
+            lon: 2.3,
+            lat: 48.8,
+          },
+        },
+      },
+    });
+
+    expect(response.isError).toBe(true);
+    const textContent = response.content[0];
+    if (textContent.type !== "text") {
+      throw new Error("expected text content");
+    }
+    expect(textContent.text).toContain("Paramètres invalides");
+    expect(textContent.text).toContain("Un seul filtre spatial est autorisé");
+    expect(response.structuredContent).toMatchObject({
+      type: "urn:geocontext:problem:invalid-tool-params",
+      errors: expect.arrayContaining([
+        expect.objectContaining({
+          code: "custom",
+          name: "spatial_filters",
+          detail: expect.stringContaining("bbox_filter, intersects_point_filter"),
+        }),
+      ]),
+    });
+    expect(mockGetFeatureType).not.toHaveBeenCalled();
+    expect(mockFetchJSONPost).not.toHaveBeenCalled();
+  });
+
   it("should reject legacy inputs removed from the public schema", async () => {
     const tool = new GpfWfsGetFeaturesTool();
     const response = await tool.toolCall({

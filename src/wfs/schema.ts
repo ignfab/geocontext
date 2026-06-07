@@ -19,6 +19,12 @@ export const MAX_LIMIT = 5000;
 export const REQUEST_GET_URL_MAX_LENGTH = 6000;
 export const WHERE_OPERATORS = ["eq", "ne", "lt", "lte", "gt", "gte", "in", "is_null"] as const;
 export const ORDER_DIRECTIONS = ["asc", "desc"] as const;
+export const GPF_WFS_GET_FEATURES_SPATIAL_FILTER_KEYS = [
+  "bbox_filter",
+  "intersects_point_filter",
+  "dwithin_point_filter",
+  "intersects_feature_filter",
+] as const;
 
 // --- Shared Clauses ---
 
@@ -73,7 +79,7 @@ export const gpfWfsGetFeatureByIdRequestOutputSchema = wfsRequestOutputSchema;
 
 // --- `gpf_wfs_get_features` ---
 
-export const gpfWfsGetFeaturesInputSchema = z.object({
+export const gpfWfsGetFeaturesInputObjectSchema = z.object({
   typename: z
     .string()
     .trim()
@@ -119,6 +125,18 @@ export const gpfWfsGetFeaturesInputSchema = z.object({
     .describe("Filtre spatial par intersection avec un feature WFS de référence. Exclusif avec les autres filtres spatiaux."),
 }).strict();
 
+export const gpfWfsGetFeaturesInputSchema = gpfWfsGetFeaturesInputObjectSchema.superRefine((input, ctx) => {
+  const usedSpatialFilters = GPF_WFS_GET_FEATURES_SPATIAL_FILTER_KEYS.filter((key) => input[key] !== undefined);
+
+  if (usedSpatialFilters.length > 1) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["spatial_filters"],
+      message: `Un seul filtre spatial est autorisé (${usedSpatialFilters.join(", ")} fournis).`,
+    });
+  }
+});
+
 // --- `gpf_wfs_get_features` Types ---
 
 export type GpfWfsGetFeaturesInput = z.infer<typeof gpfWfsGetFeaturesInputSchema>;
@@ -139,7 +157,7 @@ export const gpfWfsGetFeaturesHitsOutputSchema = z.object({
 
 // --- `gpf_wfs_get_features` Published Schema ---
 
-export const gpfWfsGetFeaturesPublishedInputSchema = generatePublishedInputSchema(gpfWfsGetFeaturesInputSchema);
+export const gpfWfsGetFeaturesPublishedInputSchema = generatePublishedInputSchema(gpfWfsGetFeaturesInputObjectSchema);
 
 // --- `gpf_wfs_get_feature_by_id` ---
 

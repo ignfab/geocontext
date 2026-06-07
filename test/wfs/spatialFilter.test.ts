@@ -77,7 +77,7 @@ describe("gpfWfsGetFeaturesInputSchema spatial filters", () => {
   });
 
   it("should reject multiple spatial filters", () => {
-    const input = gpfWfsGetFeaturesInputSchema.parse({
+    expect(() => gpfWfsGetFeaturesInputSchema.parse({
       ...baseInput,
       bbox_filter: {
         west: 2.1,
@@ -89,9 +89,7 @@ describe("gpfWfsGetFeaturesInputSchema spatial filters", () => {
         lon: 2.3,
         lat: 48.8,
       },
-    });
-
-    expect(() => getSpatialFilter(input)).toThrow("Un seul filtre spatial est autorisé");
+    })).toThrow("Un seul filtre spatial est autorisé");
   });
 
   it("should reject legacy flat spatial parameters", () => {

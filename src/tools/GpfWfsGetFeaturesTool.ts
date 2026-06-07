@@ -9,6 +9,7 @@ import { toWfsRequestPayload } from "../wfs/request.js";
 import {
   gpfWfsGetFeaturesHitsOutputSchema,
   gpfWfsGetFeaturesInputSchema,
+  gpfWfsGetFeaturesInputObjectSchema,
   type GpfWfsGetFeaturesInput,
   gpfWfsGetFeaturesPublishedInputSchema,
   gpfWfsGetFeaturesRequestOutputSchema,
@@ -41,9 +42,9 @@ class GpfWfsGetFeaturesTool extends BaseTool<GpfWfsGetFeaturesInput> {
     "Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiques à chaque typename et diffèrent systématiquement des conventions habituelles (ex : pas de nom_officiel, navigabilite sans accent, etc.). Toute tentative sans appel préalable à `gpf_wfs_describe_type` **provoquera une erreur.**",
   ].join("\n");
 
-  // `schema` remains the runtime validation source, while `inputSchema`
-  // publishes the MCP-facing variant expected by clients.
-  schema = gpfWfsGetFeaturesInputSchema;
+  // The framework requires a plain Zod object here to publish a compatible
+  // input schema. Cross-field runtime validation is applied in `execute`.
+  schema = gpfWfsGetFeaturesInputObjectSchema;
 
   /**
    * Exposes an input schema variant that stays compatible with most MCP integrations.
@@ -103,16 +104,18 @@ class GpfWfsGetFeaturesTool extends BaseTool<GpfWfsGetFeaturesInput> {
    * @returns Either a compiled request, a hit count, or a transformed FeatureCollection.
    */
   async execute(input: GpfWfsGetFeaturesInput) {
+    const validatedInput = gpfWfsGetFeaturesInputSchema.parse(input);
+
     logger.info(`[tool] execute ${this.name} ...`, {
-      input: input
+      input: validatedInput
     });
 
-    if (input.result_type === "request") {
-      const { request } = await prepareGetFeaturesRequest(input);
+    if (validatedInput.result_type === "request") {
+      const { request } = await prepareGetFeaturesRequest(validatedInput);
       return toWfsRequestPayload(request);
     }
 
-    return executeGetFeatures(input);
+    return executeGetFeatures(validatedInput);
   }
 }
 
