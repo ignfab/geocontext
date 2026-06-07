@@ -16,7 +16,7 @@ const geocodeInputSchema = z.object({
     .string()
     .trim()
     .min(1, "le texte ne doit pas être vide")
-    .describe("Le texte devant être completé et géocodé"),
+    .describe("Le texte devant être complété et géocodé"),
   maximumResponses: z
     .number()
     .int()

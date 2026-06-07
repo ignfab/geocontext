@@ -9,6 +9,18 @@ const repoRoot = resolve(__dirname, "..");
 const compiledToolsDir = join(repoRoot, "dist", "tools");
 const outputPath = join(repoRoot, "docs", "mcp-tools.md");
 const miniSearchOptionsEnv = "GPF_WFS_MINISEARCH_OPTIONS";
+const toolDisplayOrder = [
+  "geocode",
+  "altitude",
+  "adminexpress",
+  "cadastre",
+  "urbanisme",
+  "assiette_sup",
+  "gpf_wfs_search_types",
+  "gpf_wfs_describe_type",
+  "gpf_wfs_get_feature_by_id",
+  "gpf_wfs_get_features",
+];
 
 /**
  * @typedef {object} JsonSchema
@@ -29,6 +41,7 @@ const miniSearchOptionsEnv = "GPF_WFS_MINISEARCH_OPTIONS";
  * @property {string} name
  * @property {string=} title
  * @property {string=} description
+ * @property {Record<string, boolean>=} annotations
  * @property {JsonSchema=} inputSchema
  * @property {JsonSchema=} outputSchema
  */
@@ -54,19 +67,18 @@ function escapeCell(value) {
  */
 export function renderDescription(description) {
   if (!description || description.trim() === "") {
-    return "_No description provided._";
+    return "_Aucune description fournie._";
   }
 
-  const lines = description
+  const normalizedDescription = description
     .split("\n")
     .map((line) => line.trim())
-    .filter((line) => line.length > 0);
+    .filter((line) => line.length > 0)
+    .join("\n");
 
-  if (lines.length <= 1) {
-    return lines[0] ?? "_No description provided._";
-  }
-
-  return lines.map((line) => `- ${line}`).join("\n");
+  return normalizedDescription
+    ? `\`\`\`\n${normalizedDescription}\n\`\`\``
+    : "_Aucune description fournie._";
 }
 
 /**
@@ -93,10 +105,11 @@ export function schemaType(schema) {
     return "";
   }
   if (Array.isArray(schema.type)) {
-    return schema.type.join(" | ");
+    const type = schema.type.join(" | ");
+    return schema.enum?.length ? `${type} (enum)` : type;
   }
   if (schema.type) {
-    return schema.type;
+    return schema.enum?.length ? `${schema.type} (enum)` : schema.type;
   }
   if (schema.enum?.length) {
     return "enum";
@@ -120,7 +133,7 @@ export function schemaType(schema) {
 export function renderPropertyTable(schema) {
   const properties = schema?.properties;
   if (!properties || Object.keys(properties).length === 0) {
-    return "_No top-level properties documented._";
+    return "_Aucune propriété de premier niveau documentée._";
   }
 
   const required = new Set(schema?.required ?? []);
@@ -129,19 +142,19 @@ export function renderPropertyTable(schema) {
     .map(([name, propertySchema]) => {
       const type = schemaType(propertySchema);
       const enumValues = propertySchema.enum?.length
-        ? ` Values: ${propertySchema.enum.map(formatInline).join(", ")}.`
+        ? ` Valeurs : ${propertySchema.enum.map(formatInline).join(", ")}.`
         : "";
       const defaultValue =
         propertySchema.default !== undefined
-          ? ` Default: ${formatInline(propertySchema.default)}.`
+          ? ` Valeur par défaut : ${formatInline(propertySchema.default)}.`
           : "";
       const description = `${propertySchema.description ?? ""}${enumValues}${defaultValue}`.trim();
 
-      return `| \`${escapeCell(name)}\` | ${escapeCell(type || " ")} | ${required.has(name) ? "yes" : "no"} | ${escapeCell(description || " ")} |`;
+      return `| \`${escapeCell(name)}\` | ${escapeCell(type || " ")} | ${required.has(name) ? "oui" : "non"} | ${escapeCell(description || " ")} |`;
     });
 
   return [
-    "| Field | Type | Required | Description |",
+    "| Champ | Type | Requis | Description |",
     "| --- | --- | --- | --- |",
     ...rows,
   ].join("\n");
@@ -153,10 +166,97 @@ export function renderPropertyTable(schema) {
  */
 export function renderSchemaBlock(schema) {
   if (!schema) {
-    return "_No JSON Schema exposed by this tool definition._";
+    return "_Aucun JSON Schema exposé par cette définition de tool._";
   }
 
   return `\`\`\`json\n${JSON.stringify(schema, null, 2)}\n\`\`\``;
+}
+
+function renderResponseContractTable(rows) {
+  return [
+    "| Cas | `content` | `structuredContent` | Relation entre `content` et `structuredContent` |",
+    "| --- | --- | --- | --- |",
+    ...rows.map((row) => `| ${row.caseName} | ${row.content} | ${row.structuredContent} | ${row.relation} |`),
+  ].join("\n");
+}
+
+/**
+ * @param {ToolDefinition} definition
+ * @returns {string}
+ */
+export function renderResponseContractSection(definition) {
+  const errorRow = {
+    caseName: "Erreur",
+    content: "oui",
+    structuredContent: "oui",
+    relation: "`content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`.",
+  };
+
+  if (definition.name === "gpf_wfs_get_features") {
+    return [
+      "### Réponse MCP",
+      "",
+      renderResponseContractTable([
+        {
+          caseName: 'Succès `result_type="results"`',
+          content: "oui",
+          structuredContent: "non",
+          relation: "`content[0].text` est la FeatureCollection stringifiée ; aucun `structuredContent` n'est ajouté dans ce mode.",
+        },
+        {
+          caseName: 'Succès `result_type="hits"`',
+          content: "oui",
+          structuredContent: "oui",
+          relation: "`content[0].text` est `JSON.stringify(structuredContent)`.",
+        },
+        {
+          caseName: 'Succès `result_type="request"`',
+          content: "oui",
+          structuredContent: "oui",
+          relation: "`content[0].text` est `JSON.stringify(structuredContent)`.",
+        },
+        errorRow,
+      ]),
+    ].join("\n");
+  }
+
+  if (definition.name === "gpf_wfs_get_feature_by_id") {
+    return [
+      "### Réponse MCP",
+      "",
+      renderResponseContractTable([
+        {
+          caseName: 'Succès `result_type="results"`',
+          content: "oui",
+          structuredContent: "oui",
+          relation: "`content[0].text` est `JSON.stringify(structuredContent)`.",
+        },
+        {
+          caseName: 'Succès `result_type="request"`',
+          content: "oui",
+          structuredContent: "oui",
+          relation: "`content[0].text` est `JSON.stringify(structuredContent)`.",
+        },
+        errorRow,
+      ]),
+    ].join("\n");
+  }
+
+  return [
+    "### Réponse MCP",
+    "",
+    renderResponseContractTable([
+      {
+        caseName: "Succès",
+        content: "oui",
+        structuredContent: definition.outputSchema ? "oui" : "non",
+        relation: definition.outputSchema
+          ? "`content[0].text` est `JSON.stringify(structuredContent)`."
+          : "`content[0].text` contient la réponse stringifiée ; aucun `structuredContent` n'est ajouté.",
+      },
+      errorRow,
+    ]),
+  ].join("\n");
 }
 
 /**
@@ -166,12 +266,12 @@ export function renderSchemaBlock(schema) {
 export function renderOutputSection(definition) {
   if (definition.outputSchema) {
     return [
-      "### Output Schema",
+      "### Schéma de sortie",
       "",
       renderPropertyTable(definition.outputSchema),
       "",
       "<details>",
-      "<summary>Raw output schema</summary>",
+      "<summary>Schéma de sortie brut</summary>",
       "",
       renderSchemaBlock(definition.outputSchema),
       "",
@@ -184,10 +284,10 @@ export function renderOutputSection(definition) {
     [];
 
   const note = modes.length
-    ? `No single \`outputSchema\` is exposed. Output depends on \`result_type\` (${modes.join(", ")}).`
-    : "No single `outputSchema` is exposed. Output is handled by the framework default serialization or custom response formatting.";
+    ? `Aucun \`outputSchema\` unique n'est exposé. La sortie dépend de \`result_type\` (${modes.join(", ")}).`
+    : "Aucun `outputSchema` unique n'est exposé. La sortie est gérée par la sérialisation par défaut du framework ou par un formatage de réponse spécifique.";
 
-  return ["### Output", "", note].join("\n");
+  return ["### Sortie", "", note].join("\n");
 }
 
 async function loadPackageMetadata() {
@@ -245,6 +345,26 @@ function sourcePathForCompiledTool(filename) {
   return `src/tools/${filename.replace(/\.js$/, ".ts")}`;
 }
 
+export function sortToolDefinitions(definitions) {
+  const order = new Map(toolDisplayOrder.map((name, index) => [name, index]));
+
+  return definitions.sort((left, right) => {
+    const leftOrder = order.get(left.name);
+    const rightOrder = order.get(right.name);
+
+    if (leftOrder !== undefined && rightOrder !== undefined) {
+      return leftOrder - rightOrder;
+    }
+    if (leftOrder !== undefined) {
+      return -1;
+    }
+    if (rightOrder !== undefined) {
+      return 1;
+    }
+    return left.name.localeCompare(right.name);
+  });
+}
+
 async function loadToolDefinitions() {
   await ensureCompiledToolsExist();
   normalizePotentiallyInvalidEnv();
@@ -289,7 +409,7 @@ async function loadToolDefinitions() {
     );
   }
 
-  return definitions.sort((left, right) => left.name.localeCompare(right.name));
+  return sortToolDefinitions(definitions);
 }
 
 function normalizeErrorResponse(response) {
@@ -452,15 +572,41 @@ async function buildErrorContractSection(tools) {
   ];
 }
 
+export function buildAnnotationsSection(tools) {
+  const annotations = tools.map((tool) => tool.annotations);
+  const hasSharedAnnotations =
+    annotations.length > 0 &&
+    annotations.every((annotation) => JSON.stringify(annotation) === JSON.stringify(annotations[0]));
+
+  if (!hasSharedAnnotations || !annotations[0]) {
+    return [];
+  }
+
+  return [
+    "## Annotations MCP",
+    "",
+    "Tous les tools exposent les mêmes annotations MCP dans leur définition `tools/list` :",
+    "",
+    "| Annotation | Valeur | Signification |",
+    "| --- | --- | --- |",
+    `| \`readOnlyHint\` | ${annotations[0].readOnlyHint ? "oui" : "non"} | Le tool consulte des données sans modifier d'état côté serveur. |`,
+    `| \`destructiveHint\` | ${annotations[0].destructiveHint ? "oui" : "non"} | Le tool n'est pas signalé comme destructif. |`,
+    `| \`idempotentHint\` | ${annotations[0].idempotentHint ? "oui" : "non"} | Répéter le même appel ne déclenche pas d'effet de bord supplémentaire attendu. |`,
+    `| \`openWorldHint\` | ${annotations[0].openWorldHint ? "oui" : "non"} | Le tool interroge des sources externes ou ouvertes, dont le contenu peut évoluer. |`,
+  ];
+}
+
 async function buildDocumentLines(pkg, tools) {
   const errorContractSection = await buildErrorContractSection(tools);
+  const annotationsSection = buildAnnotationsSection(tools);
   const lines = [
-    "# MCP Tool Reference",
+    "# Référence des tools MCP",
     "",
-    `Generated from runtime \`toolDefinition\` metadata for \`${pkg.name}\` v${pkg.version}.`,
+    `Ce document est généré automatiquement à partir des définitions de tools exposées par la méthode \`tools/list\` du protocole MCP pour \`${pkg.name}\` dans sa version v${pkg.version}. Pour le mettre à jour, lancer \`npm run docs:mcp\`.`,
     ...(errorContractSection.length > 0 ? ["", ...errorContractSection] : []),
+    ...(annotationsSection.length > 0 ? ["", ...annotationsSection] : []),
     "",
-    "## Index",
+    "## Liste des tools",
     "",
     ...tools.map((tool) => `- [\`${tool.name}\`](#${toAnchorSlug(tool.name)})`),
   ];
@@ -470,26 +616,30 @@ async function buildDocumentLines(pkg, tools) {
       "",
       `## \`${tool.name}\``,
       "",
-      `Source: [${tool.source}](../${tool.source})`,
+      `Code Source : [${tool.source}](../${tool.source})`,
       "",
-      `Title: ${tool.title ?? ""}`,
+      "### Titre",
+      "",
+      tool.title ?? "",
       "",
       "### Description du tool",
       "",
       renderDescription(tool.description),
       "",
-      "### Input Schema",
+      "### Schéma d’entrée",
       "",
       renderPropertyTable(tool.inputSchema),
       "",
       "<details>",
-      "<summary>Raw input schema</summary>",
+      "<summary>Schéma d’entrée brut</summary>",
       "",
       renderSchemaBlock(tool.inputSchema),
       "",
       "</details>",
       "",
       renderOutputSection(tool),
+      "",
+      renderResponseContractSection(tool),
     );
   }
 

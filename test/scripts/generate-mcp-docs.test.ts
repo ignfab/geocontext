@@ -8,6 +8,9 @@ type DocsHelpersModule = {
   schemaType: (schema: unknown) => string;
   renderPropertyTable: (schema: unknown) => string;
   renderDescription: (description: string | undefined) => string;
+  renderResponseContractSection: (definition: { name: string; outputSchema?: unknown }) => string;
+  buildAnnotationsSection: (tools: Array<{ annotations?: Record<string, boolean> }>) => string[];
+  sortToolDefinitions: <T extends { name: string }>(definitions: T[]) => T[];
   buildValidationErrorExampleForTool: (
     tool: unknown,
     normalizeToolError: (error: unknown) => Record<string, unknown>,
@@ -48,10 +51,31 @@ describe("generate-mcp-docs helpers", () => {
     expect(schemaType(undefined)).toEqual("");
     expect(schemaType({ type: "number" })).toEqual("number");
     expect(schemaType({ type: ["string", "null"] })).toEqual("string | null");
+    expect(schemaType({ type: "string", enum: ["a", "b"] })).toEqual("string (enum)");
     expect(schemaType({ enum: ["a", "b"] })).toEqual("enum");
     expect(schemaType({ oneOf: [{ type: "string" }] })).toEqual("oneOf");
     expect(schemaType({ anyOf: [{ type: "string" }] })).toEqual("anyOf");
     expect(schemaType({ allOf: [{ type: "string" }] })).toEqual("allOf");
+  });
+
+  it("should sort tools in documentation reading order", async () => {
+    const { sortToolDefinitions } = await loadDocsHelpers();
+
+    const sorted = sortToolDefinitions([
+      { name: "gpf_wfs_get_features" },
+      { name: "adminexpress" },
+      { name: "geocode" },
+      { name: "unknown_custom_tool" },
+      { name: "altitude" },
+    ]);
+
+    expect(sorted.map((tool) => tool.name)).toEqual([
+      "geocode",
+      "altitude",
+      "adminexpress",
+      "gpf_wfs_get_features",
+      "unknown_custom_tool",
+    ]);
   });
 
   it("should render a markdown table sorted by property name", async () => {
@@ -69,8 +93,9 @@ describe("generate-mcp-docs helpers", () => {
       required: ["alpha"],
     });
 
-    expect(markdown).toContain("| `alpha` | number | yes | Primary value Default: 3. |");
-    expect(markdown).toContain("| `zeta` | string | no |   |");
+    expect(markdown).toContain("| Champ | Type | Requis | Description |");
+    expect(markdown).toContain("| `alpha` | number | oui | Primary value Valeur par défaut : 3. |");
+    expect(markdown).toContain("| `zeta` | string | non |   |");
 
     const alphaIndex = markdown.indexOf("`alpha`");
     const zetaIndex = markdown.indexOf("`zeta`");
@@ -78,12 +103,73 @@ describe("generate-mcp-docs helpers", () => {
     expect(zetaIndex).toBeGreaterThan(alphaIndex);
   });
 
-  it("should preserve multiline descriptions as bullet lists", async () => {
+  it("should preserve multiline descriptions as technical text blocks", async () => {
     const { renderDescription } = await loadDocsHelpers();
 
     const markdown = renderDescription("Line one\nLine two\n\nLine three");
-    expect(markdown).toEqual("- Line one\n- Line two\n- Line three");
-    expect(renderDescription("Single line")).toEqual("Single line");
+    expect(markdown).toEqual("```\nLine one\nLine two\nLine three\n```");
+    expect(renderDescription("Single line")).toEqual("```\nSingle line\n```");
+  });
+
+  it("should document the default MCP response contract", async () => {
+    const { renderResponseContractSection } = await loadDocsHelpers();
+
+    const markdown = renderResponseContractSection({
+      name: "altitude",
+      outputSchema: { type: "object" },
+    });
+
+    expect(markdown).toContain("### Réponse MCP");
+    expect(markdown).toContain("| Succès | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |");
+    expect(markdown).toContain("| Erreur | oui | oui | `content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`. |");
+  });
+
+  it("should document the WFS get features response modes", async () => {
+    const { renderResponseContractSection } = await loadDocsHelpers();
+
+    const markdown = renderResponseContractSection({
+      name: "gpf_wfs_get_features",
+    });
+
+    expect(markdown).toContain('| Succès `result_type="results"` | oui | non | `content[0].text` est la FeatureCollection stringifiée ; aucun `structuredContent` n\'est ajouté dans ce mode. |');
+    expect(markdown).toContain('| Succès `result_type="hits"` | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |');
+    expect(markdown).toContain('| Succès `result_type="request"` | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |');
+  });
+
+  it("should document shared MCP annotations", async () => {
+    const { buildAnnotationsSection } = await loadDocsHelpers();
+
+    const section = buildAnnotationsSection([
+      {
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: true,
+        },
+      },
+      {
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: true,
+        },
+      },
+    ]);
+
+    const markdown = section.join("\n");
+    expect(markdown).toContain("## Annotations MCP");
+    expect(markdown).toContain("Tous les tools exposent les mêmes annotations MCP");
+    expect(markdown).toContain("| `readOnlyHint` | oui |");
+    expect(markdown).toContain("| `destructiveHint` | non |");
+    expect(markdown).toContain("| `idempotentHint` | oui |");
+    expect(markdown).toContain("| `openWorldHint` | oui |");
+
+    expect(buildAnnotationsSection([
+      { annotations: { readOnlyHint: true } },
+      { annotations: { readOnlyHint: false } },
+    ])).toEqual([]);
   });
 
   it("should build a validation example without executing the tool", async () => {
