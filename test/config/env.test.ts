@@ -20,6 +20,7 @@ describe("parseEnv", () => {
       GPF_WFS_RATE_LIMIT: 30,
       GPF_GEOCODE_RATE_LIMIT: 50,
       GPF_ALTI_RATE_LIMIT: 50,
+      GPF_NAVIGATION_RATE_LIMIT: 5,
     });
     expect(env).not.toHaveProperty("HTTP_CORS_ALLOWED_ORIGINS");
     expect(env).not.toHaveProperty("GPF_WFS_MINISEARCH_OPTIONS");
@@ -48,11 +49,13 @@ describe("parseEnv", () => {
       GPF_WFS_RATE_LIMIT: "10",
       GPF_GEOCODE_RATE_LIMIT: "20",
       GPF_ALTI_RATE_LIMIT: "100",
+      GPF_NAVIGATION_RATE_LIMIT: "5",
     });
     expect(env.TRANSPORT_TYPE).toBe("http");
     expect(env.HTTP_PORT).toBe(8080);
     expect(env.HTTP_TIMEOUT).toBe(30);
     expect(env.GPF_WFS_RATE_LIMIT).toBe(10);
+    expect(env.GPF_NAVIGATION_RATE_LIMIT).toBe(5);
   });
 
   // --- CORS ---

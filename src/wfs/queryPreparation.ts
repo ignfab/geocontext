@@ -134,7 +134,7 @@ function compileWhereClause(featureType: Collection, geometryProperty: Collectio
     featureType,
     geometryProperty,
     clause.property,
-    "La propriété '{property}' est géométrique. Utiliser un filtre spatial dédié (`bbox_filter`, `intersects_point_filter`, `dwithin_point_filter` ou `intersects_feature_filter`)."
+    "La propriété '{property}' est géométrique. Utiliser un filtre spatial dédié (`bbox_filter`, `intersects_point_filter`, `dwithin_point_filter`, `intersects_feature_filter` ou `travel_time_filter`)."
   );
   const normalized = normalizeWhereClause(property, clause);
 
@@ -207,6 +207,12 @@ export function compileQueryParts(
       case "intersects_feature":
         if (!resolvedGeometryRef) {
           throw new Error("Le filtre spatial `intersects_feature` exige la résolution préalable de la géométrie de référence.");
+        }
+        fragments.push(compileIntersectsFeatureSpatialFilter(geometryProperty, resolvedGeometryRef.geometry_ewkt));
+        break;
+      case "travel_time":
+        if (!resolvedGeometryRef) {
+          throw new Error("Le filtre spatial `travel_time` exige la résolution préalable de la géométrie d'isochrone.");
         }
         fragments.push(compileIntersectsFeatureSpatialFilter(geometryProperty, resolvedGeometryRef.geometry_ewkt));
         break;

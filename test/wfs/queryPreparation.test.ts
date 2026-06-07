@@ -91,6 +91,22 @@ describe("gpfWfsGetFeatures/queryPreparation", () => {
     expect(compiled.cqlFilter).toEqual("INTERSECTS(geometrie,SRID=4326;MULTIPOLYGON(((2 48,2.2 48,2.2 48.2,2 48,2 48))))");
   });
 
+  it("should compile travel_time with resolved isochrone geometry", () => {
+    const compiled = compileQueryParts({
+      ...baseInput,
+      travel_time_filter: {
+        lon: 2.3522,
+        lat: 48.8566,
+        minutes: 15,
+        profile: "pedestrian",
+      },
+    }, featureType, {
+      geometry_ewkt: "SRID=4326;POLYGON((2 48,2.2 48,2.2 48.2,2 48))",
+    });
+
+    expect(compiled.cqlFilter).toEqual("INTERSECTS(geometrie,SRID=4326;POLYGON((2 48,2.2 48,2.2 48.2,2 48)))");
+  });
+
   it("should reject geometric properties in select", () => {
     expect(() => compileQueryParts({
       ...baseInput,

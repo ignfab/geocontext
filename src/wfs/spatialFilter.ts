@@ -8,31 +8,31 @@ import type {
 } from "./schema.js";
 import { GPF_WFS_GET_FEATURES_SPATIAL_FILTER_KEYS } from "./schema.js";
 
+const FILTER_KEY_TO_OPERATOR = {
+  bbox_filter: "bbox",
+  intersects_point_filter: "intersects_point",
+  dwithin_point_filter: "dwithin_point",
+  intersects_feature_filter: "intersects_feature",
+  travel_time_filter: "travel_time",
+} as const satisfies Record<(typeof GPF_WFS_GET_FEATURES_SPATIAL_FILTER_KEYS)[number], string>;
+
 /**
  * Reads the already-validated spatial filter from normalized tool input and
  * converts the selected per-operator object into the compiler's discriminated
  * representation.
  *
+ * The mutual exclusivity of spatial filters is enforced upstream by the Zod
+ * schema's `superRefine`; this function assumes a single filter at most.
+ *
  * @param input Normalized tool input.
  * @returns The spatial filter, or `undefined` when no spatial filter is requested.
  */
 export function getSpatialFilter(input: GpfWfsGetFeaturesInput): SpatialFilter | undefined {
-  const usedSpatialFilters = GPF_WFS_GET_FEATURES_SPATIAL_FILTER_KEYS.filter((key) => input[key] !== undefined);
-  if (usedSpatialFilters.length > 1) {
-    throw new Error(`Un seul filtre spatial est autorisé (${usedSpatialFilters.join(", ")} fournis).`);
-  }
-
-  if (input.bbox_filter) {
-    return { operator: "bbox", ...input.bbox_filter };
-  }
-  if (input.intersects_point_filter) {
-    return { operator: "intersects_point", ...input.intersects_point_filter };
-  }
-  if (input.dwithin_point_filter) {
-    return { operator: "dwithin_point", ...input.dwithin_point_filter };
-  }
-  if (input.intersects_feature_filter) {
-    return { operator: "intersects_feature", ...input.intersects_feature_filter };
+  for (const key of GPF_WFS_GET_FEATURES_SPATIAL_FILTER_KEYS) {
+    const value = input[key];
+    if (value) {
+      return { operator: FILTER_KEY_TO_OPERATOR[key], ...value } as SpatialFilter;
+    }
   }
   return undefined;
 }

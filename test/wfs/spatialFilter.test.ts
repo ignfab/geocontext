@@ -34,6 +34,26 @@ describe("getSpatialFilter", () => {
       distance_m: 500,
     });
   });
+
+  it("should map a travel_time_filter to the compiler spatial filter", () => {
+    const input: GpfWfsGetFeaturesInput = {
+      ...baseInput,
+      travel_time_filter: {
+        lon: 2.3522,
+        lat: 48.8566,
+        minutes: 15,
+        profile: "pedestrian",
+      },
+    };
+
+    expect(getSpatialFilter(input)).toEqual({
+      operator: "travel_time",
+      lon: 2.3522,
+      lat: 48.8566,
+      minutes: 15,
+      profile: "pedestrian",
+    });
+  });
 });
 
 describe("gpfWfsGetFeaturesInputSchema spatial filters", () => {
@@ -90,6 +110,55 @@ describe("gpfWfsGetFeaturesInputSchema spatial filters", () => {
         lat: 48.8,
       },
     })).toThrow("Un seul filtre spatial est autorisé");
+  });
+
+  it("should validate travel-time filters", () => {
+    expect(gpfWfsGetFeaturesInputSchema.parse({
+      ...baseInput,
+      travel_time_filter: {
+        lon: 2.3522,
+        lat: 48.8566,
+        minutes: 120,
+        profile: "car",
+      },
+    }).travel_time_filter).toEqual({
+      lon: 2.3522,
+      lat: 48.8566,
+      minutes: 120,
+      profile: "car",
+    });
+  });
+
+  it("should reject invalid travel-time filters", () => {
+    expect(() => gpfWfsGetFeaturesInputSchema.parse({
+      ...baseInput,
+      travel_time_filter: {
+        lon: 2.3522,
+        lat: 48.8566,
+        minutes: 0,
+        profile: "pedestrian",
+      },
+    })).toThrow();
+
+    expect(() => gpfWfsGetFeaturesInputSchema.parse({
+      ...baseInput,
+      travel_time_filter: {
+        lon: 2.3522,
+        lat: 48.8566,
+        minutes: 121,
+        profile: "pedestrian",
+      },
+    })).toThrow();
+
+    expect(() => gpfWfsGetFeaturesInputSchema.parse({
+      ...baseInput,
+      travel_time_filter: {
+        lon: 2.3522,
+        lat: 48.8566,
+        minutes: 15,
+        profile: "bicycle",
+      },
+    })).toThrow();
   });
 
   it("should reject legacy flat spatial parameters", () => {

@@ -11,6 +11,7 @@ import { z } from "zod";
 
 import { generatePublishedInputSchema } from "../helpers/jsonSchema.js";
 import { lonSchema, latSchema } from "../helpers/schemas.js";
+import { TRAVEL_TIME_MAX_MINUTES, TRAVEL_TIME_PROFILES } from "../gpf/navigation.js";
 
 // --- Shared Constants ---
 
@@ -24,6 +25,7 @@ export const GPF_WFS_GET_FEATURES_SPATIAL_FILTER_KEYS = [
   "intersects_point_filter",
   "dwithin_point_filter",
   "intersects_feature_filter",
+  "travel_time_filter",
 ] as const;
 
 // --- Shared Clauses ---
@@ -62,6 +64,20 @@ const intersectsFeatureFilterSchema = z.object({
   typename: z.string().trim().min(1).describe("Type WFS du feature de référence."),
   feature_id: z.string().trim().min(1).describe("Identifiant du feature de référence."),
 }).strict().describe("Filtre les objets dont la géométrie intersecte celle d'un objet WFS de référence.");
+
+const travelTimeFilterSchema = z.object({
+  lon: lonSchema.describe("Longitude du point de départ en WGS84 `lon/lat`."),
+  lat: latSchema.describe("Latitude du point de départ en WGS84 `lon/lat`."),
+  minutes: z
+    .number()
+    .finite()
+    .positive()
+    .max(TRAVEL_TIME_MAX_MINUTES)
+    .describe(`Temps de trajet maximal en minutes. Maximum : ${TRAVEL_TIME_MAX_MINUTES}.`),
+  profile: z
+    .enum(TRAVEL_TIME_PROFILES)
+    .describe("Mode de déplacement utilisé pour calculer l'isochrone (`car` ou `pedestrian`)."),
+}).strict().describe("Filtre les objets situés dans une zone atteignable en un temps donné depuis un point.");
 
 // --- Shared Compact Outputs ---
 
@@ -123,6 +139,9 @@ export const gpfWfsGetFeaturesInputObjectSchema = z.object({
   intersects_feature_filter: intersectsFeatureFilterSchema
     .optional()
     .describe("Filtre spatial par intersection avec un feature WFS de référence. Exclusif avec les autres filtres spatiaux."),
+  travel_time_filter: travelTimeFilterSchema
+    .optional()
+    .describe("Filtre spatial par temps de trajet depuis un point (`profile` voiture ou piéton). Exclusif avec les autres filtres spatiaux."),
 }).strict();
 
 export const gpfWfsGetFeaturesInputSchema = gpfWfsGetFeaturesInputObjectSchema.superRefine((input, ctx) => {
@@ -144,7 +163,8 @@ export type SpatialFilter =
   | ({ operator: "bbox" } & NonNullable<GpfWfsGetFeaturesInput["bbox_filter"]>)
   | ({ operator: "intersects_point" } & NonNullable<GpfWfsGetFeaturesInput["intersects_point_filter"]>)
   | ({ operator: "dwithin_point" } & NonNullable<GpfWfsGetFeaturesInput["dwithin_point_filter"]>)
-  | ({ operator: "intersects_feature" } & NonNullable<GpfWfsGetFeaturesInput["intersects_feature_filter"]>);
+  | ({ operator: "intersects_feature" } & NonNullable<GpfWfsGetFeaturesInput["intersects_feature_filter"]>)
+  | ({ operator: "travel_time" } & NonNullable<GpfWfsGetFeaturesInput["travel_time_filter"]>);
 export type WhereClause = NonNullable<GpfWfsGetFeaturesInput["where"]>[number];
 export type OrderByClause = NonNullable<GpfWfsGetFeaturesInput["order_by"]>[number];
 
