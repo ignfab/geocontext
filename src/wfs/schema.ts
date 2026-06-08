@@ -4,7 +4,7 @@
  * This module centralizes:
  * - shared schema fragments reused by WFS tools
  * - public tool input schemas and inferred input types
- * - compact output schemas used for `hits` and `request` responses
+ * - compact output schemas used for `hits` and HTTP preview responses
  */
 
 import { z } from "zod";
@@ -17,7 +17,6 @@ import { TRAVEL_TIME_MAX_MINUTES, TRAVEL_TIME_PROFILES } from "../gpf/navigation
 
 export const DEFAULT_LIMIT = 100;
 export const MAX_LIMIT = 5000;
-export const REQUEST_GET_URL_MAX_LENGTH = 6000;
 export const WHERE_OPERATORS = ["eq", "ne", "lt", "lte", "gt", "gte", "in", "is_null"] as const;
 export const ORDER_DIRECTIONS = ["asc", "desc"] as const;
 export const GPF_WFS_GET_FEATURES_SPATIAL_FILTER_KEYS = [
@@ -81,17 +80,27 @@ const travelTimeFilterSchema = z.object({
 
 // --- Shared Compact Outputs ---
 
-const wfsRequestOutputSchema = z.object({
-  result_type: z.literal("request").describe("Indique que la réponse contient la requête WFS compilée (équivalent enrichi géométrie pour `create_map` et le débogage)."),
-  method: z.literal("POST").describe("Méthode HTTP réellement utilisée pour exécuter la requête."),
-  url: z.string().describe("URL de base appelée pour la requête POST."),
-  query: z.record(z.string()).describe("Paramètres WFS envoyés dans la query string."),
-  body: z.string().describe("Corps de la requête POST, encodé en `application/x-www-form-urlencoded`."),
-  get_url: z.string().nullable().optional().describe("URL GET dérivée quand la requête reste raisonnablement portable en GET."),
+const wfsHttpPostRequestOutputSchema = z.object({
+  result_type: z.literal("http_post_request").describe("Indique que la réponse contient une requête WFS POST robuste à exécuter par un client HTTP."),
+  http_post_request: z.object({
+    method: z.literal("POST").describe("Méthode HTTP à utiliser."),
+    url: z.string().url().describe("URL WFS avec les paramètres query standards, hors `cql_filter`."),
+    headers: z.object({
+      "Content-Type": z.literal("application/x-www-form-urlencoded").describe("Type de contenu du corps POST."),
+    }).strict().describe("En-têtes HTTP à envoyer avec la requête POST."),
+    body: z.string().describe("Corps de la requête POST, encodé en `application/x-www-form-urlencoded`; contient `cql_filter=...` quand un filtre existe."),
+  }).strict().describe("Requête HTTP POST complète à utiliser pour appeler directement le WFS."),
 });
 
-export const gpfWfsGetFeaturesRequestOutputSchema = wfsRequestOutputSchema;
-export const gpfWfsGetFeatureByIdRequestOutputSchema = wfsRequestOutputSchema;
+const wfsHttpGetUrlOutputSchema = z.object({
+  result_type: z.literal("http_get_url").describe("Indique que la réponse contient l'URL GET WFS équivalente."),
+  http_get_url: z.string().url().describe("URL GET WFS complète avec tous les paramètres, y compris `cql_filter`. Utile pour les consommateurs URL-first comme `mcp-carte-ign` via `layers[].data_url`; pour une exécution HTTP robuste, préférer `http_post_request`."),
+});
+
+export const gpfWfsGetFeaturesHttpPostRequestOutputSchema = wfsHttpPostRequestOutputSchema;
+export const gpfWfsGetFeaturesHttpGetUrlOutputSchema = wfsHttpGetUrlOutputSchema;
+export const gpfWfsGetFeatureByIdHttpPostRequestOutputSchema = wfsHttpPostRequestOutputSchema;
+export const gpfWfsGetFeatureByIdHttpGetUrlOutputSchema = wfsHttpGetUrlOutputSchema;
 
 // --- `gpf_wfs_get_features` ---
 
@@ -109,9 +118,9 @@ export const gpfWfsGetFeaturesInputObjectSchema = z.object({
     .default(DEFAULT_LIMIT)
     .describe(`Nombre maximum d'objets à renvoyer. Valeur par défaut : ${DEFAULT_LIMIT}. Maximum : ${MAX_LIMIT}.`),
   result_type: z
-    .enum(["results", "hits", "request"])
+    .enum(["results", "hits", "http_post_request", "http_get_url"])
     .default("results")
-    .describe("`results` renvoie une FeatureCollection avec les propriétés attributaires uniquement — **les géométries ne sont pas incluses**, ce mode ne peut donc pas être utilisé directement pour cartographier. `hits` renvoie uniquement le nombre total d'objets correspondant à la requête. `request` renvoie l'URL WFS compilée (`get_url`) à destination de `create_map` via `geojson_url`, ou pour déboguer la requête générée. **La géométrie est automatiquement ajoutée aux propriétés du `select`** pour garantir l'affichage cartographique."),
+    .describe("`results` renvoie une FeatureCollection avec les propriétés attributaires uniquement — **les géométries ne sont pas incluses**, ce mode ne peut donc pas être utilisé directement pour cartographier. `hits` renvoie uniquement le nombre total d'objets correspondant à la requête. `http_post_request` renvoie une requête POST WFS robuste à exécuter directement. `http_get_url` renvoie l'URL GET WFS équivalente, utile comme `layers[].data_url` dans `mcp-carte-ign` ou pour les consommateurs URL-first. Avec `http_post_request` ou `http_get_url`, la géométrie est automatiquement ajoutée aux propriétés du `select` pour garantir l'affichage cartographique."),
   select: z
     .array(z.string().trim().min(1))
     .min(1)
@@ -193,14 +202,14 @@ export const gpfWfsGetFeatureByIdInputSchema = z.object({
     .min(1, "le feature_id ne doit pas être vide")
     .describe("Identifiant WFS exact de l'objet à récupérer, par exemple `commune.8952`."),
   result_type: z
-    .enum(["results", "request"])
+    .enum(["results", "http_post_request", "http_get_url"])
     .default("results")
-    .describe("`results` renvoie une FeatureCollection normalisée avec exactement un objet. `request` renvoie la requête WFS compilée (`get_url`) à destination de `create_map` via `geojson_url`, ou pour déboguer."),
+    .describe("`results` renvoie une FeatureCollection normalisée avec exactement un objet. `http_post_request` renvoie une requête POST WFS robuste à exécuter directement. `http_get_url` renvoie l'URL GET WFS équivalente, utile comme `layers[].data_url` dans `mcp-carte-ign` ou pour les consommateurs URL-first."),
   select: z
     .array(z.string().trim().min(1))
     .min(1)
     .optional()
-    .describe("Liste des propriétés non géométriques à renvoyer. Quand `result_type=\"request\"`, la géométrie est automatiquement ajoutée."),
+    .describe("Liste des propriétés non géométriques à renvoyer. Quand `result_type=\"http_post_request\"` ou `result_type=\"http_get_url\"`, la géométrie est automatiquement ajoutée."),
 }).strict();
 
 // --- `gpf_wfs_get_feature_by_id` Types ---

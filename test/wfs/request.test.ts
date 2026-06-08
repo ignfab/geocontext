@@ -84,12 +84,13 @@ describe("wfs_engine/request", () => {
     })).toThrow("`cqlFilter` et `cqlFilters`");
   });
 
-  it("should omit get_url when it exceeds the max length", () => {
+  it("should keep long get_url values for URL-first consumers", () => {
     const request = buildMultiTypenameRequest({
       typenames: ["ADMINEXPRESS-COG.LATEST:commune"],
       cqlFilter: `code_insee IN (${Array.from({ length: 900 }, (_, i) => `'${i}'`).join(",")})`,
     });
 
-    expect(request.get_url).toBeNull();
+    expect(request.get_url).toContain("cql_filter=");
+    expect(request.get_url.length).toBeGreaterThan(6000);
   });
 });

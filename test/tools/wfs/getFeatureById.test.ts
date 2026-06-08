@@ -50,7 +50,7 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
     mockFetchJSONPost.mockReset();
   });
 
-  it("should expose an MCP definition with `results|request` result_type only", () => {
+  it("should expose an MCP definition with explicit HTTP result types", () => {
     const tool = new GpfWfsGetFeatureByIdTool();
     expect(tool.toolDefinition.title).toEqual("Lecture d’un objet WFS par identifiant");
     expect(tool.toolDefinition.inputSchema).toEqual({
@@ -68,9 +68,9 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
         },
         result_type: {
           type: "string",
-          enum: ["results", "request"],
+          enum: ["results", "http_post_request", "http_get_url"],
           default: "results",
-          description: "`results` renvoie une FeatureCollection normalisée avec exactement un objet. `request` renvoie la requête WFS compilée (`get_url`) à destination de `create_map` via `geojson_url`, ou pour déboguer.",
+          description: "`results` renvoie une FeatureCollection normalisée avec exactement un objet. `http_post_request` renvoie une requête POST WFS robuste à exécuter directement. `http_get_url` renvoie l'URL GET WFS équivalente, utile comme `layers[].data_url` dans `mcp-carte-ign` ou pour les consommateurs URL-first.",
         },
         select: {
           type: "array",
@@ -79,7 +79,7 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
             minLength: 1,
           },
           minItems: 1,
-          description: "Liste des propriétés non géométriques à renvoyer. Quand `result_type=\"request\"`, la géométrie est automatiquement ajoutée.",
+          description: "Liste des propriétés non géométriques à renvoyer. Quand `result_type=\"http_post_request\"` ou `result_type=\"http_get_url\"`, la géométrie est automatiquement ajoutée.",
         },
       },
       required: ["typename", "feature_id"],
@@ -88,7 +88,7 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
     });
   });
 
-  it("should return text content and structuredContent for request", async () => {
+  it("should return text content and structuredContent for http_post_request", async () => {
     const tool = new GpfWfsGetFeatureByIdTool();
     mockGetFeatureType.mockResolvedValue(polygonFeatureType);
 
@@ -98,7 +98,7 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
           feature_id: "commune.1",
-          result_type: "request",
+          result_type: "http_post_request",
           select: ["code_insee"],
         },
       },
@@ -109,17 +109,52 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
     if (textContent.type !== "text") {
       throw new Error("expected text content");
     }
-    const request = JSON.parse(textContent.text);
-    expect(request.method).toEqual("POST");
-    expect(request.query.featureID).toEqual("commune.1");
-    expect(request.query.typeNames).toEqual("ADMINEXPRESS-COG.LATEST:commune");
-    expect(request.query.exceptions).toEqual("application/json");
-    expect(request.query.propertyName).toEqual("code_insee,geometrie");
-    expect(request.query.count).toEqual("2");
-    expect(response.structuredContent).toMatchObject({
-      result_type: "request",
+    const payload = JSON.parse(textContent.text);
+    expect(payload).toEqual(response.structuredContent);
+    expect(payload.result_type).toEqual("http_post_request");
+    expect(payload.http_get_url).toBeUndefined();
+    expect(payload.http_post_request).toMatchObject({
       method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: "",
     });
+    const url = new URL(payload.http_post_request.url);
+    expect(url.searchParams.get("featureID")).toEqual("commune.1");
+    expect(url.searchParams.get("typeNames")).toEqual("ADMINEXPRESS-COG.LATEST:commune");
+    expect(url.searchParams.get("exceptions")).toEqual("application/json");
+    expect(url.searchParams.get("propertyName")).toEqual("code_insee,geometrie");
+    expect(url.searchParams.get("count")).toEqual("2");
+  });
+
+  it("should return text content and structuredContent for http_get_url", async () => {
+    const tool = new GpfWfsGetFeatureByIdTool();
+    mockGetFeatureType.mockResolvedValue(polygonFeatureType);
+
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_wfs_get_feature_by_id",
+        arguments: {
+          typename: "ADMINEXPRESS-COG.LATEST:commune",
+          feature_id: "commune.1",
+          result_type: "http_get_url",
+          select: ["code_insee"],
+        },
+      },
+    });
+
+    expect(response.isError).toBeUndefined();
+    const textContent = response.content[0];
+    if (textContent.type !== "text") {
+      throw new Error("expected text content");
+    }
+    const payload = JSON.parse(textContent.text);
+    expect(payload).toEqual(response.structuredContent);
+    expect(payload.result_type).toEqual("http_get_url");
+    expect(payload.http_post_request).toBeUndefined();
+    const url = new URL(payload.http_get_url);
+    expect(url.searchParams.get("featureID")).toEqual("commune.1");
+    expect(url.searchParams.get("typeNames")).toEqual("ADMINEXPRESS-COG.LATEST:commune");
+    expect(url.searchParams.get("propertyName")).toEqual("code_insee,geometrie");
   });
 
   it("should return exactly one transformed feature for results", async () => {
@@ -299,6 +334,32 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
           name: "result_type",
           code: "invalid_enum_value",
           detail: expect.stringContaining("results"),
+        }),
+      ]),
+    });
+  });
+
+  it("should reject legacy request result_type", async () => {
+    const tool = new GpfWfsGetFeatureByIdTool();
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_wfs_get_feature_by_id",
+        arguments: {
+          typename: "ADMINEXPRESS-COG.LATEST:commune",
+          feature_id: "commune.1",
+          result_type: "request",
+        },
+      },
+    });
+
+    expect(response.isError).toBe(true);
+    expect(response.structuredContent).toMatchObject({
+      type: "urn:geocontext:problem:invalid-tool-params",
+      errors: expect.arrayContaining([
+        expect.objectContaining({
+          name: "result_type",
+          code: "invalid_enum_value",
+          detail: expect.stringContaining("http_post_request"),
         }),
       ]),
     });

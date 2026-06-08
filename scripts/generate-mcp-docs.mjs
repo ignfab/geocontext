@@ -210,7 +210,13 @@ export function renderResponseContractSection(definition) {
           relation: "`content[0].text` est `JSON.stringify(structuredContent)`.",
         },
         {
-          caseName: 'Succès `result_type="request"`',
+          caseName: 'Succès `result_type="http_post_request"`',
+          content: "oui",
+          structuredContent: "oui",
+          relation: "`content[0].text` est `JSON.stringify(structuredContent)`.",
+        },
+        {
+          caseName: 'Succès `result_type="http_get_url"`',
           content: "oui",
           structuredContent: "oui",
           relation: "`content[0].text` est `JSON.stringify(structuredContent)`.",
@@ -232,7 +238,13 @@ export function renderResponseContractSection(definition) {
           relation: "`content[0].text` est `JSON.stringify(structuredContent)`.",
         },
         {
-          caseName: 'Succès `result_type="request"`',
+          caseName: 'Succès `result_type="http_post_request"`',
+          content: "oui",
+          structuredContent: "oui",
+          relation: "`content[0].text` est `JSON.stringify(structuredContent)`.",
+        },
+        {
+          caseName: 'Succès `result_type="http_get_url"`',
           content: "oui",
           structuredContent: "oui",
           relation: "`content[0].text` est `JSON.stringify(structuredContent)`.",

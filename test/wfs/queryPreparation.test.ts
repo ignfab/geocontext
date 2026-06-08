@@ -114,10 +114,10 @@ describe("gpfWfsGetFeatures/queryPreparation", () => {
     }, featureType)).toThrow("`select` accepte uniquement");
   });
 
-  it("should append geometry to propertyName for request when select is provided", () => {
+  it("should append geometry to propertyName for HTTP preview modes when select is provided", () => {
     const compiled = compileQueryParts({
       ...baseInput,
-      result_type: "request",
+      result_type: "http_post_request",
       select: ["code_insee", "population"],
     }, featureType);
 

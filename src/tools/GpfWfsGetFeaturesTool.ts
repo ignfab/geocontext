@@ -5,14 +5,18 @@ import {
   executeGetFeatures,
   prepareGetFeaturesRequest,
 } from "../wfs/features.js";
-import { toWfsRequestPayload } from "../wfs/request.js";
+import {
+  toWfsHttpGetUrlPayload,
+  toWfsHttpPostRequestPayload,
+} from "../wfs/request.js";
 import {
   gpfWfsGetFeaturesHitsOutputSchema,
+  gpfWfsGetFeaturesHttpGetUrlOutputSchema,
+  gpfWfsGetFeaturesHttpPostRequestOutputSchema,
   gpfWfsGetFeaturesInputSchema,
   gpfWfsGetFeaturesInputObjectSchema,
   type GpfWfsGetFeaturesInput,
   gpfWfsGetFeaturesPublishedInputSchema,
-  gpfWfsGetFeaturesRequestOutputSchema,
 } from "../wfs/schema.js";
 import logger from "../logger.js";
 
@@ -31,7 +35,7 @@ class GpfWfsGetFeaturesTool extends BaseTool<GpfWfsGetFeaturesInput> {
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
   description = [
     "Interroge un type WFS et renvoie des résultats structurés sans demander au modèle d'écrire du CQL ou du WFS.",
-    "Utiliser `select` pour choisir les propriétés, `where` pour filtrer, `order_by` pour trier et un filtre spatial dédié (`bbox_filter`, `intersects_point_filter`, `dwithin_point_filter`, `intersects_feature_filter` ou `travel_time_filter`) pour le spatial. Avec `result_type=\"request\"`, la géométrie est automatiquement ajoutée aux propriétés sélectionnées pour garantir une requête cartographiable.",
+    "Utiliser `select` pour choisir les propriétés, `where` pour filtrer, `order_by` pour trier et un filtre spatial dédié (`bbox_filter`, `intersects_point_filter`, `dwithin_point_filter`, `intersects_feature_filter` ou `travel_time_filter`) pour le spatial. Avec `result_type=\"http_post_request\"` ou `result_type=\"http_get_url\"`, la géométrie est automatiquement ajoutée aux propriétés sélectionnées pour garantir une requête cartographiable.",
     "Exemple attributaire : `where=[{ property: \"code_insee\", operator: \"eq\", value: \"75056\" }]`.",
     "Exemple bbox : `bbox_filter={ west: 2.1, south: 48.7, east: 2.5, north: 48.9 }`.",
     "Exemple point dans géométrie : `intersects_point_filter={ lon: 2.35, lat: 48.85 }`.",
@@ -57,7 +61,7 @@ class GpfWfsGetFeaturesTool extends BaseTool<GpfWfsGetFeaturesInput> {
   }
 
   /**
-   * Formats compact responses (`hits`, `request`) into `structuredContent`.
+   * Formats compact responses (`hits`, `http_post_request`, `http_get_url`) into `structuredContent`.
    * Full result sets are still delegated to the framework default behavior.
    *
    * @param data Raw execution result returned by the tool implementation.
@@ -84,11 +88,27 @@ class GpfWfsGetFeaturesTool extends BaseTool<GpfWfsGetFeaturesInput> {
       typeof data === "object" &&
       data !== null &&
       "result_type" in data &&
-      data.result_type === "request"
+      data.result_type === "http_post_request"
     ) {
+      const payload = gpfWfsGetFeaturesHttpPostRequestOutputSchema.parse(data);
+
       return {
-        content: [{ type: "text" as const, text: JSON.stringify(data) }],
-        structuredContent: gpfWfsGetFeaturesRequestOutputSchema.parse(data),
+        content: [{ type: "text" as const, text: JSON.stringify(payload) }],
+        structuredContent: payload,
+      };
+    }
+
+    if (
+      typeof data === "object" &&
+      data !== null &&
+      "result_type" in data &&
+      data.result_type === "http_get_url"
+    ) {
+      const payload = gpfWfsGetFeaturesHttpGetUrlOutputSchema.parse(data);
+
+      return {
+        content: [{ type: "text" as const, text: JSON.stringify(payload) }],
+        structuredContent: payload,
       };
     }
 
@@ -111,9 +131,11 @@ class GpfWfsGetFeaturesTool extends BaseTool<GpfWfsGetFeaturesInput> {
       input: validatedInput
     });
 
-    if (validatedInput.result_type === "request") {
+    if (validatedInput.result_type === "http_post_request" || validatedInput.result_type === "http_get_url") {
       const { request } = await prepareGetFeaturesRequest(validatedInput);
-      return toWfsRequestPayload(request);
+      return validatedInput.result_type === "http_post_request"
+        ? toWfsHttpPostRequestPayload(request)
+        : toWfsHttpGetUrlPayload(request);
     }
 
     return executeGetFeatures(validatedInput);
