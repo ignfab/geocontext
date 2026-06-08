@@ -66,6 +66,20 @@ const mcpScenarios = [
     },
   },
   {
+    testName: "should call isochrone directly for a pedestrian isodistance from coordinates",
+    userInput: "Calcule l'isodistance à pied de 500 mètres autour du point lon=2.333333 lat=48.866667. Réponds brièvement avec le mot isodistance.",
+    expectedResponseFragments: ["isodistance"],
+    toolMode: "mcp",
+    requiredToolCalls: ["isochrone"],
+  },
+  {
+    testName: "should chain geocode and isochrone tools for a place-based walking isochrone",
+    userInput: "Calcule l'isochrone à pied à 15 minutes depuis la mairie de Vincennes. Réponds brièvement avec le mot isochrone.",
+    expectedResponseFragments: ["isochrone"],
+    toolMode: "mcp",
+    requiredToolCalls: ["geocode", "isochrone"],
+  },
+  {
     testName: "should answer the question about 14 lycées near the chateau de Vincennes",
     userInput: "Combien de lycées sont situés à 2km du chateau de vincennes?",
     expectedResponseFragments: ["14", "lycées"],

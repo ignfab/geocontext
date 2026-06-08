@@ -175,6 +175,7 @@ Les fonctionnalités correspondent aux outils MCP documentés dans [`docs/mcp-to
 | ----------------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
 | Géocoder un lieu                    | `geocode`                   | [Autocomplétion Géoplateforme](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/autocompletion/)                                                                                  | Localiser une mairie            |
 | Obtenir une altitude                | `altitude`                  | [Calcul altimétrique Géoplateforme](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/calcul-altimetrique/)                                                                        | Altitude d'un point             |
+| Calculer une isochrone/isodistance  | `isochrone`                 | [Calcul d'isochrone/isodistance Géoplateforme](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/calcul-isochrone-isodistance/) avec `bdtopo-valhalla`                             | Zone accessible à pied          |
 | Récupérer le contexte administratif | `adminexpress`              | [WFS](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/diffusion/wfs/) + [ADMIN-EXPRESS](https://cartes.gouv.fr/rechercher-une-donnee/dataset/IGNF_ADMIN-EXPRESS)                 | Commune, département, région    |
 | Récupérer le cadastre               | `cadastre`                  | [WFS](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/diffusion/wfs/) + [PARCELLAIRE-EXPRESS](https://cartes.gouv.fr/rechercher-une-donnee/dataset/IGNF_PARCELLAIRE-EXPRESS-PCI) | Parcelle cadastrale             |
 | Récupérer les documents d'urbanisme | `urbanisme`                 | [WFS](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/diffusion/wfs/) + [données GPU](https://www.geoportail-urbanisme.gouv.fr/)                                                 | PLU, POS, CC                    |
@@ -194,7 +195,7 @@ Il n’héberge pas les données : il expose des outils MCP, interroge les servi
 flowchart TB
     assistant["Assistant IA / client MCP"]
     geocontext["Geocontext<br/>serveur MCP"]
-    geopf["Géoplateforme IGN<br/>géocodage · altimétrie · WFS · urbanisme · cadastre"]
+    geopf["Géoplateforme IGN<br/>géocodage · altimétrie · isochrone · WFS · urbanisme · cadastre"]
 
     assistant -->|"appels d'outils MCP"| geocontext
     geocontext -->|"requêtes aux services IGN"| geopf

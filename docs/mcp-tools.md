@@ -54,6 +54,7 @@ Exemple complet généré automatiquement à partir d'un appel de tool invalide 
 - [`gpf_wfs_get_feature_by_id`](#gpf_wfs_get_feature_by_id)
 - [`gpf_wfs_get_features`](#gpf_wfs_get_features)
 - [`gpf_wfs_search_types`](#gpf_wfs_search_types)
+- [`isochrone`](#isochrone)
 - [`urbanisme`](#urbanisme)
 
 ## `adminexpress`
@@ -1172,6 +1173,180 @@ Title: Recherche de types WFS
 ```
 
 </details>
+
+## `isochrone`
+
+Source: [src/tools/IsochroneTool.ts](../src/tools/IsochroneTool.ts)
+
+Title: Isochrone et isodistance
+
+### Description du tool
+
+- Calcule une zone isochrone ou isodistance depuis un point `lon/lat` via le service de navigation de la Géoplateforme.
+- La ressource GeoPlateforme est fixée à `bdtopo-valhalla`.
+- `cost_type="time"` calcule une zone accessible en un temps donné ; `cost_type="distance"` calcule une zone accessible dans une distance donnée.
+- `profile` accepte `car` ou `pedestrian` ; le service Valhalla de la Géoplateforme n'expose pas de profil vélo.
+- Les contraintes exposées sont celles de `bdtopo-valhalla` : exclusion (`banned`) d'un `waytype` égal à `autoroute`, `pont` ou `tunnel`.
+- `result_type="request"` renvoie une requête compacte (`get_url`) cohérente avec les tools WFS en mode request.
+- `result_type="results"` renvoie une FeatureCollection GeoJSON normalisée avec une seule feature : la géométrie calculée est placée dans `geometry` et les métadonnées du service dans `properties`.
+- Les coordonnées d'entrée sont toujours exprimées en WGS84 (`lon/lat`) ; le service est appelé avec `crs=EPSG:4326`.
+- Aucun `feature_ref` n'est renvoyé : une isochrone est une géométrie calculée à la demande, pas un objet WFS persistant.
+- (source : Géoplateforme (navigation, isochrone/isodistance)).
+
+### Input Schema
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `constraints` | array | no | Contraintes GeoPlateforme optionnelles appliquées au calcul. Elles permettent notamment d'exclure certains types de tronçons routiers. Default: []. |
+| `cost_type` | string | yes | Type de coût utilisé pour le calcul : `time` pour une isochrone, `distance` pour une isodistance. Values: time, distance. |
+| `cost_value` | number | yes | Valeur du coût utilisé pour le calcul, exprimée dans l'unité correspondante (`time_unit` ou `distance_unit`). |
+| `direction` | string | no | Sens du calcul : départ depuis le point ou arrivée vers le point. Values: departure, arrival. Default: departure. |
+| `distance_unit` | string | no | Unité utilisée lorsque `cost_type="distance"`. Values: meter, kilometer. Default: meter. |
+| `lat` | number | yes | La latitude du point. |
+| `lon` | number | yes | La longitude du point. |
+| `profile` | string | no | Mode de déplacement utilisé pour le calcul. `bdtopo-valhalla` expose `car` et `pedestrian` ; aucun profil vélo n'est disponible. Values: car, pedestrian. Default: pedestrian. |
+| `result_type` | string | no | `results` renvoie une FeatureCollection GeoJSON normalisée contenant l'isochrone calculée. `request` renvoie la requête GeoPlateforme compilée (`get_url`) pour visualisation ou débogage. Values: results, request. Default: results. |
+| `time_unit` | string | no | Unité utilisée lorsque `cost_type="time"`. Values: hour, minute, second, standard. Default: second. |
+
+<details>
+<summary>Raw input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "lon": {
+      "type": "number",
+      "minimum": -180,
+      "maximum": 180,
+      "description": "La longitude du point."
+    },
+    "lat": {
+      "type": "number",
+      "minimum": -90,
+      "maximum": 90,
+      "description": "La latitude du point."
+    },
+    "cost_type": {
+      "type": "string",
+      "enum": [
+        "time",
+        "distance"
+      ],
+      "description": "Type de coût utilisé pour le calcul : `time` pour une isochrone, `distance` pour une isodistance."
+    },
+    "cost_value": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "maximum": 50000,
+      "description": "Valeur du coût utilisé pour le calcul, exprimée dans l'unité correspondante (`time_unit` ou `distance_unit`)."
+    },
+    "profile": {
+      "type": "string",
+      "enum": [
+        "car",
+        "pedestrian"
+      ],
+      "default": "pedestrian",
+      "description": "Mode de déplacement utilisé pour le calcul. `bdtopo-valhalla` expose `car` et `pedestrian` ; aucun profil vélo n'est disponible."
+    },
+    "direction": {
+      "type": "string",
+      "enum": [
+        "departure",
+        "arrival"
+      ],
+      "default": "departure",
+      "description": "Sens du calcul : départ depuis le point ou arrivée vers le point."
+    },
+    "distance_unit": {
+      "type": "string",
+      "enum": [
+        "meter",
+        "kilometer"
+      ],
+      "default": "meter",
+      "description": "Unité utilisée lorsque `cost_type=\"distance\"`."
+    },
+    "time_unit": {
+      "type": "string",
+      "enum": [
+        "hour",
+        "minute",
+        "second",
+        "standard"
+      ],
+      "default": "second",
+      "description": "Unité utilisée lorsque `cost_type=\"time\"`."
+    },
+    "constraints": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "constraint_type": {
+            "type": "string",
+            "const": "banned",
+            "default": "banned",
+            "description": "Type de contrainte GeoPlateforme Valhalla. `banned` exclut du calcul les tronçons du graphe routier qui correspondent à la condition."
+          },
+          "key": {
+            "type": "string",
+            "const": "waytype",
+            "default": "waytype",
+            "description": "Critère de contrainte GeoPlateforme Valhalla. Seul `waytype` est exposé par `bdtopo-valhalla`."
+          },
+          "operator": {
+            "type": "string",
+            "const": "=",
+            "default": "=",
+            "description": "Opérateur de contrainte GeoPlateforme Valhalla. Seul `=` est exposé par `bdtopo-valhalla`."
+          },
+          "value": {
+            "type": "string",
+            "enum": [
+              "autoroute",
+              "pont",
+              "tunnel"
+            ],
+            "description": "Type de tronçon à exclure du calcul Valhalla."
+          }
+        },
+        "required": [
+          "value"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 3,
+      "default": [],
+      "description": "Contraintes GeoPlateforme optionnelles appliquées au calcul. Elles permettent notamment d'exclure certains types de tronçons routiers."
+    },
+    "result_type": {
+      "type": "string",
+      "enum": [
+        "results",
+        "request"
+      ],
+      "default": "results",
+      "description": "`results` renvoie une FeatureCollection GeoJSON normalisée contenant l'isochrone calculée. `request` renvoie la requête GeoPlateforme compilée (`get_url`) pour visualisation ou débogage."
+    }
+  },
+  "required": [
+    "lon",
+    "lat",
+    "cost_type",
+    "cost_value"
+  ],
+  "additionalProperties": false,
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}
+```
+
+</details>
+
+### Output
+
+No single `outputSchema` is exposed. Output depends on `result_type` (`results`, `request`).
 
 ## `urbanisme`
 

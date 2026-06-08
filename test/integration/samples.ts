@@ -17,6 +17,7 @@ export const EXPECTED_TOOL_NAMES = [
   "altitude",
   "adminexpress",
   "cadastre",
+  "isochrone",
   "urbanisme",
   "assiette_sup",
   "gpf_wfs_search_types",
