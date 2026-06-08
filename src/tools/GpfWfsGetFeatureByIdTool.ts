@@ -35,7 +35,7 @@ class GpfWfsGetFeatureByIdTool extends BaseTool<GpfWfsGetFeatureByIdInput> {
     "Récupère exactement un objet WFS à partir de `typename` et `feature_id`, sans filtre attributaire ni spatial.",
     "Ce tool est le chemin robuste quand vous disposez déjà d'une `feature_ref { typename, feature_id }` issue d'un autre tool (`adminexpress`, `cadastre`, `urbanisme`, `assiette_sup`, `gpf_wfs_get_features`).",
     "Le contrat garantit une cardinalité stricte : 0 résultat ou plusieurs résultats provoquent une erreur explicite.",
-    "Utiliser `result_type=\"http_post_request\"` pour récupérer une requête WFS POST robuste, ou `result_type=\"http_get_url\"` pour récupérer l'URL GET WFS équivalente utilisable comme `layers[].data_url` dans `mcp-carte-ign`."
+    "Utiliser `result_type=\"http_post_request\"` pour récupérer une requête WFS POST robuste, ou `result_type=\"http_get_url\"` pour récupérer l'URL GET WFS équivalente et l'utiliser ou la visualiser dans un outil la supportant."
   ].join("\n");
 
   // `schema` remains the runtime validation source, while `inputSchema`

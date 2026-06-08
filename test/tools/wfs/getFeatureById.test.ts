@@ -70,7 +70,7 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
           type: "string",
           enum: ["results", "http_post_request", "http_get_url"],
           default: "results",
-          description: "`results` renvoie une FeatureCollection normalisée avec exactement un objet. `http_post_request` renvoie une requête POST WFS robuste à exécuter directement. `http_get_url` renvoie l'URL GET WFS équivalente, utile comme `layers[].data_url` dans `mcp-carte-ign` ou pour les consommateurs URL-first.",
+          description: "`results` renvoie une FeatureCollection normalisée avec exactement un objet. `http_post_request` renvoie une requête POST WFS robuste à exécuter directement. `http_get_url` renvoie l'URL GET WFS équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant.",
         },
         select: {
           type: "array",

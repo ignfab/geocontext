@@ -94,7 +94,7 @@ const wfsHttpPostRequestOutputSchema = z.object({
 
 const wfsHttpGetUrlOutputSchema = z.object({
   result_type: z.literal("http_get_url").describe("Indique que la réponse contient l'URL GET WFS équivalente."),
-  http_get_url: z.string().url().describe("URL GET WFS complète avec tous les paramètres, y compris `cql_filter`. Utile pour les consommateurs URL-first comme `mcp-carte-ign` via `layers[].data_url`; pour une exécution HTTP robuste, préférer `http_post_request`."),
+  http_get_url: z.string().url().describe("URL GET WFS complète avec tous les paramètres, y compris `cql_filter`. Utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant; pour une exécution HTTP robuste, préférer `http_post_request`."),
 });
 
 export const gpfWfsGetFeaturesHttpPostRequestOutputSchema = wfsHttpPostRequestOutputSchema;
@@ -120,7 +120,7 @@ export const gpfWfsGetFeaturesInputObjectSchema = z.object({
   result_type: z
     .enum(["results", "hits", "http_post_request", "http_get_url"])
     .default("results")
-    .describe("`results` renvoie une FeatureCollection avec les propriétés attributaires uniquement — **les géométries ne sont pas incluses**, ce mode ne peut donc pas être utilisé directement pour cartographier. `hits` renvoie uniquement le nombre total d'objets correspondant à la requête. `http_post_request` renvoie une requête POST WFS robuste à exécuter directement. `http_get_url` renvoie l'URL GET WFS équivalente, utile comme `layers[].data_url` dans `mcp-carte-ign` ou pour les consommateurs URL-first. Avec `http_post_request` ou `http_get_url`, la géométrie est automatiquement ajoutée aux propriétés du `select` pour garantir l'affichage cartographique."),
+    .describe("`results` renvoie une FeatureCollection avec les propriétés attributaires uniquement — **les géométries ne sont pas incluses**, ce mode ne peut donc pas être utilisé directement pour cartographier. `hits` renvoie uniquement le nombre total d'objets correspondant à la requête. `http_post_request` renvoie une requête POST WFS robuste à exécuter directement. `http_get_url` renvoie l'URL GET WFS équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant. Avec `http_post_request` ou `http_get_url`, la géométrie est automatiquement ajoutée aux propriétés du `select` pour garantir l'affichage cartographique."),
   select: z
     .array(z.string().trim().min(1))
     .min(1)
@@ -204,7 +204,7 @@ export const gpfWfsGetFeatureByIdInputSchema = z.object({
   result_type: z
     .enum(["results", "http_post_request", "http_get_url"])
     .default("results")
-    .describe("`results` renvoie une FeatureCollection normalisée avec exactement un objet. `http_post_request` renvoie une requête POST WFS robuste à exécuter directement. `http_get_url` renvoie l'URL GET WFS équivalente, utile comme `layers[].data_url` dans `mcp-carte-ign` ou pour les consommateurs URL-first."),
+    .describe("`results` renvoie une FeatureCollection normalisée avec exactement un objet. `http_post_request` renvoie une requête POST WFS robuste à exécuter directement. `http_get_url` renvoie l'URL GET WFS équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant."),
   select: z
     .array(z.string().trim().min(1))
     .min(1)
