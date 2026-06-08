@@ -152,6 +152,16 @@ Par exemple, dans Cursor ("Settings" > "MCP" > "Add server"):
     </p>
 </details>
 
+### Isochrone
+
+<details>
+    <summary><strong>Quelle est la liste des lycées à moins de 20 minutes à pied du Métro Bérault</strong></summary>
+    <p>
+      <img src="docs/imgs/usage/isochrone.png" alt="Copilot - lycées à moins de 20 minutes à pied du métro Bérault">
+    </p>
+</details>
+
+
 ### Géoportail de l'Urbanisme
 
 <details>
@@ -247,7 +257,6 @@ N'hésitez pas non plus à [créer une issue](https://github.com/ignfab/geoconte
 
 Merci de **fournir la question type** pour laquelle vous souhaiteriez que le MCP aide à apporter une réponse. Par exemple :
 
-- "Combien y a-t-il de bâtiments à moins de 5 km à pied de la tour Eiffel ?" -> nous verrons comment exploiter les isochrones
 - "Quels sont les fonds de carte disponibles ?" -> nous verrons comment exploiter le service WMTS de la Géoplateforme.
 
 ## Crédits
