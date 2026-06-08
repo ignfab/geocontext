@@ -9,6 +9,7 @@ import { toWfsRequestPayload } from "../wfs/request.js";
 import {
   gpfWfsGetFeaturesHitsOutputSchema,
   gpfWfsGetFeaturesInputSchema,
+  gpfWfsGetFeaturesInputObjectSchema,
   type GpfWfsGetFeaturesInput,
   gpfWfsGetFeaturesPublishedInputSchema,
   gpfWfsGetFeaturesRequestOutputSchema,
@@ -30,20 +31,21 @@ class GpfWfsGetFeaturesTool extends BaseTool<GpfWfsGetFeaturesInput> {
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
   description = [
     "Interroge un type WFS et renvoie des résultats structurés sans demander au modèle d'écrire du CQL ou du WFS.",
-    "Utiliser `select` pour choisir les propriétés, `where` pour filtrer, `order_by` pour trier et `spatial_operator` avec ses paramètres dédiés pour le spatial. Avec `result_type=\"request\"`, la géométrie est automatiquement ajoutée aux propriétés sélectionnées pour garantir une requête cartographiable.",
+    "Utiliser `select` pour choisir les propriétés, `where` pour filtrer, `order_by` pour trier et un filtre spatial dédié (`bbox_filter`, `intersects_point_filter`, `dwithin_point_filter`, `intersects_feature_filter` ou `travel_time_filter`) pour le spatial. Avec `result_type=\"request\"`, la géométrie est automatiquement ajoutée aux propriétés sélectionnées pour garantir une requête cartographiable.",
     "Exemple attributaire : `where=[{ property: \"code_insee\", operator: \"eq\", value: \"75056\" }]`.",
-    "Exemple bbox : `spatial_operator=\"bbox\"` avec `bbox_west`, `bbox_south`, `bbox_east`, `bbox_north` en `lon/lat`.",
-    "Exemple point dans géométrie : `spatial_operator=\"intersects_point\"` avec `intersects_lon` et `intersects_lat`.",
-    "Exemple distance : `spatial_operator=\"dwithin_point\"` avec `dwithin_lon`, `dwithin_lat`, `dwithin_distance_m`.",
-    "Exemple réutilisation : `spatial_operator=\"intersects_feature\"` avec `intersects_feature_typename` et `intersects_feature_id` issus d'une `feature_ref`.",
-    "⚠️ Quand `typename` et `intersects_feature_typename` sont identiques, utiliser `gpf_wfs_get_feature_by_id` pour récupérer exactement l'objet ciblé.",
+    "Exemple bbox : `bbox_filter={ west: 2.1, south: 48.7, east: 2.5, north: 48.9 }`.",
+    "Exemple point dans géométrie : `intersects_point_filter={ lon: 2.35, lat: 48.85 }`.",
+    "Exemple distance : `dwithin_point_filter={ lon: 2.35, lat: 48.85, distance_m: 500 }`.",
+    "Exemple réutilisation : `intersects_feature_filter={ typename, feature_id }` avec `typename` et `feature_id` issus d'une `feature_ref`.",
+    "Exemple temps de trajet : `travel_time_filter={ lon: 2.35, lat: 48.85, minutes: 15, profile: \"pedestrian\" }` pour les objets atteignables en 15 minutes à pied depuis ce point.",
+    "⚠️ Quand `typename` et `intersects_feature_filter.typename` sont identiques, utiliser `gpf_wfs_get_feature_by_id` pour récupérer exactement l'objet ciblé.",
     "**OBLIGATOIRE : toujours appeler `gpf_wfs_describe_type` avant ce tool, sauf si `gpf_wfs_describe_type` a déjà été appelé pour ce même typename dans la conversation en cours.**",
     "Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiques à chaque typename et diffèrent systématiquement des conventions habituelles (ex : pas de nom_officiel, navigabilite sans accent, etc.). Toute tentative sans appel préalable à `gpf_wfs_describe_type` **provoquera une erreur.**",
   ].join("\n");
 
-  // `schema` remains the runtime validation source, while `inputSchema`
-  // publishes the MCP-facing variant expected by clients.
-  schema = gpfWfsGetFeaturesInputSchema;
+  // The framework requires a plain Zod object here to publish a compatible
+  // input schema. Cross-field runtime validation is applied in `execute`.
+  schema = gpfWfsGetFeaturesInputObjectSchema;
 
   /**
    * Exposes an input schema variant that stays compatible with most MCP integrations.
@@ -103,16 +105,18 @@ class GpfWfsGetFeaturesTool extends BaseTool<GpfWfsGetFeaturesInput> {
    * @returns Either a compiled request, a hit count, or a transformed FeatureCollection.
    */
   async execute(input: GpfWfsGetFeaturesInput) {
+    const validatedInput = gpfWfsGetFeaturesInputSchema.parse(input);
+
     logger.info(`[tool] execute ${this.name} ...`, {
-      input: input
+      input: validatedInput
     });
 
-    if (input.result_type === "request") {
-      const { request } = await prepareGetFeaturesRequest(input);
+    if (validatedInput.result_type === "request") {
+      const { request } = await prepareGetFeaturesRequest(validatedInput);
       return toWfsRequestPayload(request);
     }
 
-    return executeGetFeatures(input);
+    return executeGetFeatures(validatedInput);
   }
 }
 

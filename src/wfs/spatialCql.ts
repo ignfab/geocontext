@@ -20,10 +20,10 @@ import type { SpatialFilter } from "./schema.js";
  */
 export function compileBboxSpatialFilter(geometryProperty: CollectionProperty, spatialFilter: Extract<SpatialFilter, { operator: "bbox" }>) {
   if (spatialFilter.west >= spatialFilter.east) {
-    throw new Error("Le bbox est invalide : `bbox_west` doit être strictement inférieur à `bbox_east`.");
+    throw new Error("Le bbox est invalide : `west` doit être strictement inférieur à `east`.");
   }
   if (spatialFilter.south >= spatialFilter.north) {
-    throw new Error("Le bbox est invalide : `bbox_south` doit être strictement inférieur à `bbox_north`.");
+    throw new Error("Le bbox est invalide : `south` doit être strictement inférieur à `north`.");
   }
   return `BBOX(${geometryProperty.name},${spatialFilter.west},${spatialFilter.south},${spatialFilter.east},${spatialFilter.north},'EPSG:4326')`;
 }

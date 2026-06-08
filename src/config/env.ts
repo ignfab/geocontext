@@ -86,6 +86,7 @@ const envSchema = z.object({
     GPF_WFS_RATE_LIMIT: z.preprocess(emptyToUndefined, positiveIntegerSchema.default(30)),
     GPF_GEOCODE_RATE_LIMIT: z.preprocess(emptyToUndefined, positiveIntegerSchema.default(50)),
     GPF_ALTI_RATE_LIMIT: z.preprocess(emptyToUndefined, positiveIntegerSchema.default(50)),
+    GPF_NAVIGATION_RATE_LIMIT: z.preprocess(emptyToUndefined, positiveIntegerSchema.default(5)),
     // GPF WFS
     GPF_WFS_MINISEARCH_OPTIONS: z
         .string()

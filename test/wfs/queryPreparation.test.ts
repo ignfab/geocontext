@@ -44,11 +44,12 @@ describe("gpfWfsGetFeatures/queryPreparation", () => {
   it("should compile bbox in lon lat order", () => {
     const compiled = compileQueryParts({
       ...baseInput,
-      spatial_operator: "bbox",
-      bbox_west: 2.4,
-      bbox_south: 48.7,
-      bbox_east: 2.5,
-      bbox_north: 48.8,
+      bbox_filter: {
+        west: 2.4,
+        south: 48.7,
+        east: 2.5,
+        north: 48.8,
+      },
     }, featureType);
 
     expect(compiled.cqlFilter).toEqual("BBOX(geometrie,2.4,48.7,2.5,48.8,'EPSG:4326')");
@@ -57,17 +58,19 @@ describe("gpfWfsGetFeatures/queryPreparation", () => {
   it("should compile point spatial filters", () => {
     const intersects = compileQueryParts({
       ...baseInput,
-      spatial_operator: "intersects_point",
-      intersects_lon: 2.3522,
-      intersects_lat: 48.8566,
+      intersects_point_filter: {
+        lon: 2.3522,
+        lat: 48.8566,
+      },
     }, featureType);
 
     const dwithin = compileQueryParts({
       ...baseInput,
-      spatial_operator: "dwithin_point",
-      dwithin_lon: 2.3522,
-      dwithin_lat: 48.8566,
-      dwithin_distance_m: 250,
+      dwithin_point_filter: {
+        lon: 2.3522,
+        lat: 48.8566,
+        distance_m: 250,
+      },
     }, featureType);
 
     expect(intersects.cqlFilter).toEqual("INTERSECTS(geometrie,SRID=4326;POINT(2.3522 48.8566))");
@@ -77,14 +80,31 @@ describe("gpfWfsGetFeatures/queryPreparation", () => {
   it("should compile intersects_feature with resolved geometry", () => {
     const compiled = compileQueryParts({
       ...baseInput,
-      spatial_operator: "intersects_feature",
-      intersects_feature_typename: "ADMINEXPRESS-COG.LATEST:commune",
-      intersects_feature_id: "commune.1",
+      intersects_feature_filter: {
+        typename: "ADMINEXPRESS-COG.LATEST:commune",
+        feature_id: "commune.1",
+      },
     }, featureType, {
       geometry_ewkt: "SRID=4326;MULTIPOLYGON(((2 48,2.2 48,2.2 48.2,2 48,2 48)))",
     });
 
     expect(compiled.cqlFilter).toEqual("INTERSECTS(geometrie,SRID=4326;MULTIPOLYGON(((2 48,2.2 48,2.2 48.2,2 48,2 48))))");
+  });
+
+  it("should compile travel_time with resolved isochrone geometry", () => {
+    const compiled = compileQueryParts({
+      ...baseInput,
+      travel_time_filter: {
+        lon: 2.3522,
+        lat: 48.8566,
+        minutes: 15,
+        profile: "pedestrian",
+      },
+    }, featureType, {
+      geometry_ewkt: "SRID=4326;POLYGON((2 48,2.2 48,2.2 48.2,2 48))",
+    });
+
+    expect(compiled.cqlFilter).toEqual("INTERSECTS(geometrie,SRID=4326;POLYGON((2 48,2.2 48,2.2 48.2,2 48)))");
   });
 
   it("should reject geometric properties in select", () => {
@@ -102,13 +122,6 @@ describe("gpfWfsGetFeatures/queryPreparation", () => {
     }, featureType);
 
     expect(compiled.propertyName).toEqual("code_insee,population,geometrie");
-  });
-
-  it("should reject stray spatial params without operator", () => {
-    expect(() => compileQueryParts({
-      ...baseInput,
-      bbox_west: 2.3,
-    }, featureType)).toThrow("paramètres spatiaux exigent `spatial_operator`");
   });
 
   it("should build sortBy from structured order_by", () => {

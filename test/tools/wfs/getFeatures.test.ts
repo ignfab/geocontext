@@ -9,6 +9,7 @@ const mockFetchJSONPost = vi.fn<(
   body?: string,
   headers?: Record<string, string>,
 ) => Promise<unknown>>();
+const mockFetchJSONGet = vi.fn<(url: string) => Promise<unknown>>();
 
 vi.doMock("../../../src/wfs/catalog.js", () => ({
   GPF_WFS_URL: "https://data.geopf.fr/wfs",
@@ -18,6 +19,7 @@ vi.doMock("../../../src/wfs/catalog.js", () => ({
 }));
 
 vi.doMock("../../../src/helpers/http.js", () => ({
+  fetchJSONGet: mockFetchJSONGet,
   fetchJSONPost: mockFetchJSONPost,
   ServiceResponseError,
 }));
@@ -128,9 +130,36 @@ describe("Test GpfWfsGetFeaturesTool", () => {
     return requests;
   }
 
+  function captureIsochroneRequests() {
+    const urls: string[] = [];
+    mockFetchJSONGet.mockImplementation(async (url) => {
+      urls.push(url);
+      return {
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [[2, 48], [2.2, 48], [2.2, 48.2], [2, 48]],
+          ],
+        },
+      };
+    });
+    return urls;
+  }
+
+  function hasJsonSchemaComposition(value: unknown): boolean {
+    if (!value || typeof value !== "object") {
+      return false;
+    }
+    if ("anyOf" in value || "oneOf" in value || "allOf" in value) {
+      return true;
+    }
+    return Object.values(value).some(hasJsonSchemaComposition);
+  }
+
   afterEach(() => {
     vi.clearAllMocks();
     mockGetFeatureType.mockReset();
+    mockFetchJSONGet.mockReset();
     mockFetchJSONPost.mockReset();
   });
 
@@ -156,6 +185,29 @@ describe("Test GpfWfsGetFeaturesTool", () => {
       type: "array",
     });
     expect(tool.toolDefinition.outputSchema).toBeUndefined();
+  });
+
+  it("should publish an LLM-compatible input schema without composition keywords", () => {
+    const tool = new GpfWfsGetFeaturesTool();
+
+    expect(hasJsonSchemaComposition(tool.toolDefinition.inputSchema)).toBe(false);
+    expect(tool.toolDefinition.inputSchema.properties?.dwithin_point_filter).toMatchObject({
+      type: "object",
+      properties: expect.objectContaining({
+        lon: expect.objectContaining({ type: "number" }),
+        lat: expect.objectContaining({ type: "number" }),
+        distance_m: expect.objectContaining({ type: "number" }),
+      }),
+    });
+    expect(tool.toolDefinition.inputSchema.properties?.travel_time_filter).toMatchObject({
+      type: "object",
+      properties: expect.objectContaining({
+        lon: expect.objectContaining({ type: "number" }),
+        lat: expect.objectContaining({ type: "number" }),
+        minutes: expect.objectContaining({ type: "number", maximum: 120 }),
+        profile: expect.objectContaining({ enum: ["car", "pedestrian"] }),
+      }),
+    });
   });
 
   it("should return a FeatureCollection without structuredContent for results", () => {
@@ -245,6 +297,46 @@ describe("Test GpfWfsGetFeaturesTool", () => {
     });
   });
 
+  it("should compile travel_time_filter into a WFS request using an isochrone geometry", async () => {
+    const tool = new GpfWfsGetFeaturesTool();
+    mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
+    const isochroneUrls = captureIsochroneRequests();
+
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_wfs_get_features",
+        arguments: {
+          typename: "ADMINEXPRESS-COG.LATEST:commune",
+          result_type: "request",
+          travel_time_filter: {
+            lon: 2.337306,
+            lat: 48.849319,
+            minutes: 15,
+            profile: "pedestrian",
+          },
+        },
+      },
+    });
+
+    expect(response.isError).toBeUndefined();
+    expect(isochroneUrls).toHaveLength(1);
+    const isochroneUrl = new URL(isochroneUrls[0]);
+    expect(isochroneUrl.searchParams.get("resource")).toEqual("bdtopo-valhalla");
+    expect(isochroneUrl.searchParams.get("costType")).toEqual("time");
+    expect(isochroneUrl.searchParams.get("costValue")).toEqual("15");
+    expect(isochroneUrl.searchParams.get("profile")).toEqual("pedestrian");
+
+    const textContent = response.content[0];
+    if (textContent.type !== "text") {
+      throw new Error("expected text content");
+    }
+    const request = JSON.parse(textContent.text);
+    expect(new URLSearchParams(request.body).get("cql_filter")).toEqual(
+      "INTERSECTS(geometrie,SRID=4326;POLYGON((2 48,2.2 48,2.2 48.2,2 48)))",
+    );
+    expect(mockFetchJSONPost).not.toHaveBeenCalled();
+  });
+
   it("should return isError=true for invalid input", async () => {
     const tool = new GpfWfsGetFeaturesTool();
     const response = await tool.toolCall({
@@ -275,6 +367,48 @@ describe("Test GpfWfsGetFeaturesTool", () => {
         }),
       ]),
     });
+  });
+
+  it("should reject multiple spatial filters as invalid tool parameters", async () => {
+    const tool = new GpfWfsGetFeaturesTool();
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_wfs_get_features",
+        arguments: {
+          typename: "ADMINEXPRESS-COG.LATEST:commune",
+          bbox_filter: {
+            west: 2.1,
+            south: 48.7,
+            east: 2.5,
+            north: 48.9,
+          },
+          intersects_point_filter: {
+            lon: 2.3,
+            lat: 48.8,
+          },
+        },
+      },
+    });
+
+    expect(response.isError).toBe(true);
+    const textContent = response.content[0];
+    if (textContent.type !== "text") {
+      throw new Error("expected text content");
+    }
+    expect(textContent.text).toContain("Paramètres invalides");
+    expect(textContent.text).toContain("Un seul filtre spatial est autorisé");
+    expect(response.structuredContent).toMatchObject({
+      type: "urn:geocontext:problem:invalid-tool-params",
+      errors: expect.arrayContaining([
+        expect.objectContaining({
+          code: "custom",
+          name: "spatial_filters",
+          detail: expect.stringContaining("bbox_filter, intersects_point_filter"),
+        }),
+      ]),
+    });
+    expect(mockGetFeatureType).not.toHaveBeenCalled();
+    expect(mockFetchJSONPost).not.toHaveBeenCalled();
   });
 
   it("should reject legacy inputs removed from the public schema", async () => {
@@ -402,6 +536,43 @@ describe("Test GpfWfsGetFeaturesTool", () => {
     expect(JSON.parse(textContent.text)).toEqual({
       result_type: "hits",
       totalFeatures: 321,
+    });
+  });
+
+  it("should apply travel_time_filter before returning hit counts", async () => {
+    const tool = new GpfWfsGetFeaturesTool();
+    mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
+    captureIsochroneRequests();
+    const requests = captureRequests({ numberMatched: 12 });
+
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_wfs_get_features",
+        arguments: {
+          typename: "ADMINEXPRESS-COG.LATEST:commune",
+          result_type: "hits",
+          travel_time_filter: {
+            lon: 2.337306,
+            lat: 48.849319,
+            minutes: 5,
+            profile: "car",
+          },
+        },
+      },
+    });
+
+    expect(response.isError).toBeUndefined();
+    expect(requests).toHaveLength(1);
+    expect(new URLSearchParams(requests[0].body).get("cql_filter")).toEqual(
+      "INTERSECTS(geometrie,SRID=4326;POLYGON((2 48,2.2 48,2.2 48.2,2 48)))",
+    );
+    const textContent = response.content[0];
+    if (textContent.type !== "text") {
+      throw new Error("expected text content");
+    }
+    expect(JSON.parse(textContent.text)).toEqual({
+      result_type: "hits",
+      totalFeatures: 12,
     });
   });
 
@@ -564,9 +735,10 @@ describe("Test GpfWfsGetFeaturesTool", () => {
         name: "gpf_wfs_get_features",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
-          spatial_operator: "intersects_feature",
-          intersects_feature_typename: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:localisant",
-          intersects_feature_id: "localisant.1",
+          intersects_feature_filter: {
+            typename: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:localisant",
+            feature_id: "localisant.1",
+          },
           result_type: "request",
         },
       },
@@ -599,9 +771,10 @@ describe("Test GpfWfsGetFeaturesTool", () => {
         name: "gpf_wfs_get_features",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
-          spatial_operator: "intersects_feature",
-          intersects_feature_typename: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:localisant",
-          intersects_feature_id: "localisant.404",
+          intersects_feature_filter: {
+            typename: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:localisant",
+            feature_id: "localisant.404",
+          },
         },
       },
     });
@@ -627,9 +800,10 @@ describe("Test GpfWfsGetFeaturesTool", () => {
         name: "gpf_wfs_get_features",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
-          spatial_operator: "intersects_feature",
-          intersects_feature_typename: "ADMINEXPRESS-COG.LATEST:commune",
-          intersects_feature_id: "commune.1",
+          intersects_feature_filter: {
+            typename: "ADMINEXPRESS-COG.LATEST:commune",
+            feature_id: "commune.1",
+          },
         },
       },
     });
