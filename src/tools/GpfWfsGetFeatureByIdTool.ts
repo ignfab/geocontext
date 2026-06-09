@@ -13,13 +13,15 @@ import { buildPropertyName, executeGetFeatureById } from "../wfs/byId.js";
 import { wfsClient } from "../wfs/execution.js";
 import {
   buildGetFeatureByIdRequest,
-  toWfsRequestPayload,
+  toWfsHttpGetUrlPayload,
+  toWfsHttpPostRequestPayload,
 } from "../wfs/request.js";
 import {
+  gpfWfsGetFeatureByIdHttpGetUrlOutputSchema,
+  gpfWfsGetFeatureByIdHttpPostRequestOutputSchema,
   gpfWfsGetFeatureByIdInputSchema,
   type GpfWfsGetFeatureByIdInput,
   gpfWfsGetFeatureByIdPublishedInputSchema,
-  gpfWfsGetFeatureByIdRequestOutputSchema,
 } from "../wfs/schema.js";
 import logger from "../logger.js";
 
@@ -33,7 +35,7 @@ class GpfWfsGetFeatureByIdTool extends BaseTool<GpfWfsGetFeatureByIdInput> {
     "Récupère exactement un objet WFS à partir de `typename` et `feature_id`, sans filtre attributaire ni spatial.",
     "Ce tool est le chemin robuste quand vous disposez déjà d'une `feature_ref { typename, feature_id }` issue d'un autre tool (`adminexpress`, `cadastre`, `urbanisme`, `assiette_sup`, `gpf_wfs_get_features`).",
     "Le contrat garantit une cardinalité stricte : 0 résultat ou plusieurs résultats provoquent une erreur explicite.",
-    "Utiliser `result_type=\"request\"` pour récupérer la requête WFS compilée (avec `get_url`) et l'utiliser ou la visualiser ailleurs."
+    "Utiliser `result_type=\"http_post_request\"` pour récupérer une requête WFS POST robuste, ou `result_type=\"http_get_url\"` pour récupérer l'URL GET WFS équivalente et l'utiliser ou la visualiser dans un outil la supportant."
   ].join("\n");
 
   // `schema` remains the runtime validation source, while `inputSchema`
@@ -50,12 +52,12 @@ class GpfWfsGetFeatureByIdTool extends BaseTool<GpfWfsGetFeatureByIdInput> {
   }
 
   /**
-   * Formats compact responses (`request`, `results`) into `structuredContent`.
+   * Formats compact responses (`http_post_request`, `http_get_url`, `results`) into `structuredContent`.
    *
    * We intentionally do not expose a single `outputSchemaShape` for the tool as
    * a whole: the `results` path returns a generic FeatureCollection whose
-   * feature properties depend on the queried WFS layer, while `request` has a
-   * compact, closed shape that is worth validating explicitly.
+   * feature properties depend on the queried WFS layer, while HTTP preview
+   * modes have compact, closed shapes that are worth validating explicitly.
    *
    * @param data Raw execution result returned by the tool implementation.
    * @returns An MCP success response, optionally enriched with structured content.
@@ -65,11 +67,27 @@ class GpfWfsGetFeatureByIdTool extends BaseTool<GpfWfsGetFeatureByIdInput> {
       typeof data === "object" &&
       data !== null &&
       "result_type" in data &&
-      data.result_type === "request"
+      data.result_type === "http_post_request"
     ) {
+      const payload = gpfWfsGetFeatureByIdHttpPostRequestOutputSchema.parse(data);
+
       return {
-        content: [{ type: "text" as const, text: JSON.stringify(data) }],
-        structuredContent: gpfWfsGetFeatureByIdRequestOutputSchema.parse(data),
+        content: [{ type: "text" as const, text: JSON.stringify(payload) }],
+        structuredContent: payload,
+      };
+    }
+
+    if (
+      typeof data === "object" &&
+      data !== null &&
+      "result_type" in data &&
+      data.result_type === "http_get_url"
+    ) {
+      const payload = gpfWfsGetFeatureByIdHttpGetUrlOutputSchema.parse(data);
+
+      return {
+        content: [{ type: "text" as const, text: JSON.stringify(payload) }],
+        structuredContent: payload,
       };
     }
 
@@ -86,24 +104,24 @@ class GpfWfsGetFeatureByIdTool extends BaseTool<GpfWfsGetFeatureByIdInput> {
     }
 
     throw new Error(
-      "Réponse interne inattendue pour gpf_wfs_get_feature_by_id : le résultat devrait être une requête WFS ou une FeatureCollection.",
+      "Réponse interne inattendue pour gpf_wfs_get_feature_by_id : le résultat devrait être une requête HTTP WFS, une URL GET WFS ou une FeatureCollection.",
     );
   }
 
   /**
    * Orchestrates the by-id execution flow:
-   * schema lookup -> request compilation -> optional request output -> WFS execution -> cardinality validation.
+   * schema lookup -> request compilation -> optional HTTP preview output -> WFS execution -> cardinality validation.
    *
    * @param input Normalized tool input.
-   * @returns Either a compiled request or a transformed FeatureCollection containing one feature.
+   * @returns Either an HTTP preview payload or a transformed FeatureCollection containing one feature.
    */
   async execute(input: GpfWfsGetFeatureByIdInput) {
     logger.info(`[tool] execute ${this.name} ...`, {
       input: input
     });
 
-    if (input.result_type === "request") {
-      // The `request` mode is handled here because it returns a preview payload,
+    if (input.result_type === "http_post_request" || input.result_type === "http_get_url") {
+      // HTTP preview modes are handled here because they return a preview payload,
       // not the actual by-id WFS result.
       const featureType = await wfsClient.getFeatureType(input.typename);
       const propertyName = buildPropertyName(featureType, {
@@ -111,7 +129,9 @@ class GpfWfsGetFeatureByIdTool extends BaseTool<GpfWfsGetFeatureByIdInput> {
         select: input.select,
       });
       const request = buildGetFeatureByIdRequest(input.typename, input.feature_id, propertyName);
-      return toWfsRequestPayload(request);
+      return input.result_type === "http_post_request"
+        ? toWfsHttpPostRequestPayload(request)
+        : toWfsHttpGetUrlPayload(request);
     }
 
     return executeGetFeatureById({

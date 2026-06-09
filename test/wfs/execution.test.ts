@@ -135,6 +135,7 @@ describe("WfsClient", () => {
       url: "https://data.geopf.fr/wfs",
       query: { service: "WFS" },
       body: "",
+      get_url: "https://data.geopf.fr/wfs?service=WFS",
     })).resolves.toMatchObject({
       type: "FeatureCollection",
       features: [],

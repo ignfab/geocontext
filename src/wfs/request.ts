@@ -4,12 +4,11 @@
  * This module centralizes:
  * - the transport shape shared by compiled requests
  * - GET/POST request assembly helpers
- * - the compact request payload exposed by MCP `result_type="request"`
+ * - the compact HTTP payloads exposed by MCP WFS tools
  */
 
 import { GPF_WFS_URL } from "./catalog.js";
 import type { GpfWfsGetFeaturesInput } from "./schema.js";
-import { REQUEST_GET_URL_MAX_LENGTH } from "./schema.js";
 
 // --- Transport Types ---
 
@@ -21,30 +20,65 @@ type WfsRequestTransport = {
 };
 
 export type CompiledRequest = WfsRequestTransport & {
-  get_url?: string | null;
+  get_url: string;
 };
 
-export type WfsRequestPayload = WfsRequestTransport & {
-  result_type: "request";
-  get_url: string | null;
+export type WfsHttpPostRequestPayload = {
+  result_type: "http_post_request";
+  http_post_request: {
+    method: "POST";
+    url: string;
+    headers: { "Content-Type": "application/x-www-form-urlencoded" };
+    body: string;
+  };
+};
+
+export type WfsHttpGetUrlPayload = {
+  result_type: "http_get_url";
+  http_get_url: string;
 };
 
 // --- Request Payload Mapping ---
 
 /**
- * Maps a compiled WFS request to the compact MCP request payload.
+ * Builds a full URL from base endpoint and query parameters.
+ *
+ * @param url Base WFS endpoint URL.
+ * @param query Query-string parameters sent with the request.
+ * @returns URL with encoded query-string parameters.
+ */
+function buildUrlWithQuery(url: string, query: Record<string, string>) {
+  return `${url}?${new URLSearchParams(query).toString()}`;
+}
+
+/**
+ * Maps a compiled WFS request to the compact MCP POST payload.
  *
  * @param request Compiled request ready to be executed against the WFS service.
- * @returns A normalized request payload exposed by MCP tools.
+ * @returns A normalized POST payload exposed by MCP tools.
  */
-export function toWfsRequestPayload(request: CompiledRequest): WfsRequestPayload {
+export function toWfsHttpPostRequestPayload(request: CompiledRequest): WfsHttpPostRequestPayload {
   return {
-    result_type: "request",
-    method: request.method,
-    url: request.url,
-    query: request.query,
-    body: request.body,
-    get_url: request.get_url ?? null,
+    result_type: "http_post_request",
+    http_post_request: {
+      method: request.method,
+      url: buildUrlWithQuery(request.url, request.query),
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: request.body,
+    },
+  };
+}
+
+/**
+ * Maps a compiled WFS request to the compact MCP GET URL payload.
+ *
+ * @param request Compiled request ready to be serialized as an equivalent GET URL.
+ * @returns A normalized GET URL payload exposed by MCP tools.
+ */
+export function toWfsHttpGetUrlPayload(request: CompiledRequest): WfsHttpGetUrlPayload {
+  return {
+    result_type: "http_get_url",
+    http_get_url: request.get_url,
   };
 }
 
@@ -64,26 +98,22 @@ function buildBody(cqlFilter?: string) {
 }
 
 /**
- * Builds a portable GET URL variant of the request when it stays below the configured limit.
+ * Builds the equivalent GET URL variant of the request.
  *
- * This helper is mainly used to populate `get_url` in request payloads
- * returned by `result_type="request"`.
+ * Consumers should prefer `http_post_request` for robust direct WFS execution
+ * when this URL is very long or contains a large `cql_filter`.
  *
  * @param url Base WFS endpoint URL.
  * @param query Query-string parameters sent with the request.
  * @param cqlFilter Optional CQL filter to append to the GET variant.
- * @returns A derived GET URL, or `null` when it would be too long to expose safely.
+ * @returns A derived GET URL.
  */
 export function buildGetUrl(url: string, query: Record<string, string>, cqlFilter?: string) {
   const params = new URLSearchParams(query);
   if (cqlFilter) {
     params.set("cql_filter", cqlFilter);
   }
-  const getUrl = `${url}?${params.toString()}`;
-  if (getUrl.length > REQUEST_GET_URL_MAX_LENGTH) {
-    return null;
-  }
-  return getUrl;
+  return `${url}?${params.toString()}`;
 }
 
 // --- Public Builders ---

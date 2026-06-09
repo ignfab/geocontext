@@ -118,7 +118,7 @@ export function validateSelectProperty(featureType: Collection, geometryProperty
  * Note that:
  * - when `select` is omitted and `result_type` is `results`, every non-geometric property is returned
  * - when `select` is provided, each property is validated against the embedded catalog
- * - when `result_type` is `request`, the geometry column is appended to the requested selection
+ * - when `result_type` is an HTTP preview mode, the geometry column is appended to the requested selection
  *
  * @param featureType Feature type definition loaded from the embedded catalog.
  * @param geometryProperty Geometry property already resolved for the feature type.
@@ -137,9 +137,9 @@ export function buildSelectList(
       validateSelectProperty(featureType, geometryProperty, propertyName),
     );
 
-    // For `result_type="request"`, also include the geometry column so the
-    // compiled request stays directly usable for mapping/debugging.
-    if (input.result_type === "request") {
+    // For HTTP preview modes, also include the geometry column so the compiled
+    // request stays directly usable for mapping/debugging.
+    if (input.result_type === "http_post_request" || input.result_type === "http_get_url") {
       return [...selectedProperties, geometryProperty.name];
     }
 
@@ -154,7 +154,7 @@ export function buildSelectList(
       .map((property: CollectionProperty) => property.name);
   }
 
-  // If `select` is omitted and `result_type` is `hits` or `request`,
+  // If `select` is omitted and `result_type` is `hits` or an HTTP preview mode,
   // do not send any `propertyName` selection.
   return [];
 }

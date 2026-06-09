@@ -1091,7 +1091,7 @@ Lecture d’un objet WFS par identifiant
 Récupère exactement un objet WFS à partir de `typename` et `feature_id`, sans filtre attributaire ni spatial.
 Ce tool est le chemin robuste quand vous disposez déjà d'une `feature_ref { typename, feature_id }` issue d'un autre tool (`adminexpress`, `cadastre`, `urbanisme`, `assiette_sup`, `gpf_wfs_get_features`).
 Le contrat garantit une cardinalité stricte : 0 résultat ou plusieurs résultats provoquent une erreur explicite.
-Utiliser `result_type="request"` pour récupérer la requête WFS compilée (avec `get_url`) et l'utiliser ou la visualiser ailleurs.
+Utiliser `result_type="http_post_request"` pour récupérer une requête WFS POST robuste, ou `result_type="http_get_url"` pour récupérer l'URL GET WFS équivalente et l'utiliser ou la visualiser dans un outil la supportant.
 ```
 
 ### Schéma d’entrée
@@ -1099,8 +1099,8 @@ Utiliser `result_type="request"` pour récupérer la requête WFS compilée (ave
 | Champ | Type | Requis | Description |
 | --- | --- | --- | --- |
 | `feature_id` | string | oui | Identifiant WFS exact de l'objet à récupérer, par exemple `commune.8952`. |
-| `result_type` | string (enum) | non | `results` renvoie une FeatureCollection normalisée avec exactement un objet. `request` renvoie la requête WFS compilée (`get_url`) à destination de `create_map` via `geojson_url`, ou pour déboguer. Valeurs : results, request. Valeur par défaut : results. |
-| `select` | array | non | Liste des propriétés non géométriques à renvoyer. Quand `result_type="request"`, la géométrie est automatiquement ajoutée. |
+| `result_type` | string (enum) | non | `results` renvoie une FeatureCollection normalisée avec exactement un objet. `http_post_request` renvoie une requête POST WFS robuste à exécuter directement. `http_get_url` renvoie l'URL GET WFS équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant. Valeurs : results, http_post_request, http_get_url. Valeur par défaut : results. |
+| `select` | array | non | Liste des propriétés non géométriques à renvoyer. Quand `result_type="http_post_request"` ou `result_type="http_get_url"`, la géométrie est automatiquement ajoutée. |
 | `typename` | string | oui | Nom exact du type WFS à interroger, par exemple `ADMINEXPRESS-COG.LATEST:commune`. |
 
 <details>
@@ -1124,10 +1124,11 @@ Utiliser `result_type="request"` pour récupérer la requête WFS compilée (ave
       "type": "string",
       "enum": [
         "results",
-        "request"
+        "http_post_request",
+        "http_get_url"
       ],
       "default": "results",
-      "description": "`results` renvoie une FeatureCollection normalisée avec exactement un objet. `request` renvoie la requête WFS compilée (`get_url`) à destination de `create_map` via `geojson_url`, ou pour déboguer."
+      "description": "`results` renvoie une FeatureCollection normalisée avec exactement un objet. `http_post_request` renvoie une requête POST WFS robuste à exécuter directement. `http_get_url` renvoie l'URL GET WFS équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant."
     },
     "select": {
       "type": "array",
@@ -1136,7 +1137,7 @@ Utiliser `result_type="request"` pour récupérer la requête WFS compilée (ave
         "minLength": 1
       },
       "minItems": 1,
-      "description": "Liste des propriétés non géométriques à renvoyer. Quand `result_type=\"request\"`, la géométrie est automatiquement ajoutée."
+      "description": "Liste des propriétés non géométriques à renvoyer. Quand `result_type=\"http_post_request\"` ou `result_type=\"http_get_url\"`, la géométrie est automatiquement ajoutée."
     }
   },
   "required": [
@@ -1152,14 +1153,15 @@ Utiliser `result_type="request"` pour récupérer la requête WFS compilée (ave
 
 ### Sortie
 
-Aucun `outputSchema` unique n'est exposé. La sortie dépend de `result_type` (`results`, `request`).
+Aucun `outputSchema` unique n'est exposé. La sortie dépend de `result_type` (`results`, `http_post_request`, `http_get_url`).
 
 ### Réponse MCP
 
 | Cas | `content` | `structuredContent` | Relation entre `content` et `structuredContent` |
 | --- | --- | --- | --- |
 | Succès `result_type="results"` | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
-| Succès `result_type="request"` | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
+| Succès `result_type="http_post_request"` | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
+| Succès `result_type="http_get_url"` | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
 | Erreur | oui | oui | `content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`. |
 
 ## `gpf_wfs_get_features`
@@ -1174,7 +1176,7 @@ Lecture d’objets WFS
 
 ```
 Interroge un type WFS et renvoie des résultats structurés sans demander au modèle d'écrire du CQL ou du WFS.
-Utiliser `select` pour choisir les propriétés, `where` pour filtrer, `order_by` pour trier et un filtre spatial dédié (`bbox_filter`, `intersects_point_filter`, `dwithin_point_filter`, `intersects_feature_filter` ou `travel_time_filter`) pour le spatial. Avec `result_type="request"`, la géométrie est automatiquement ajoutée aux propriétés sélectionnées pour garantir une requête cartographiable.
+Utiliser `select` pour choisir les propriétés, `where` pour filtrer, `order_by` pour trier et un filtre spatial dédié (`bbox_filter`, `intersects_point_filter`, `dwithin_point_filter`, `intersects_feature_filter` ou `travel_time_filter`) pour le spatial. Avec `result_type="http_post_request"` ou `result_type="http_get_url"`, la géométrie est automatiquement ajoutée aux propriétés sélectionnées pour garantir une requête cartographiable.
 Exemple attributaire : `where=[{ property: "code_insee", operator: "eq", value: "75056" }]`.
 Exemple bbox : `bbox_filter={ west: 2.1, south: 48.7, east: 2.5, north: 48.9 }`.
 Exemple point dans géométrie : `intersects_point_filter={ lon: 2.35, lat: 48.85 }`.
@@ -1196,7 +1198,7 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
 | `intersects_point_filter` | object | non | Filtre spatial par intersection avec un point. Exclusif avec les autres filtres spatiaux. |
 | `limit` | integer | non | Nombre maximum d'objets à renvoyer. Valeur par défaut : 100. Maximum : 5000. Valeur par défaut : 100. |
 | `order_by` | array | non | Liste ordonnée des critères de tri. |
-| `result_type` | string (enum) | non | `results` renvoie une FeatureCollection avec les propriétés attributaires uniquement — **les géométries ne sont pas incluses**, ce mode ne peut donc pas être utilisé directement pour cartographier. `hits` renvoie uniquement le nombre total d'objets correspondant à la requête. `request` renvoie l'URL WFS compilée (`get_url`) à destination de `create_map` via `geojson_url`, ou pour déboguer la requête générée. **La géométrie est automatiquement ajoutée aux propriétés du `select`** pour garantir l'affichage cartographique. Valeurs : results, hits, request. Valeur par défaut : results. |
+| `result_type` | string (enum) | non | `results` renvoie une FeatureCollection avec les propriétés attributaires uniquement — **les géométries ne sont pas incluses**, ce mode ne peut donc pas être utilisé directement pour cartographier. `hits` renvoie uniquement le nombre total d'objets correspondant à la requête. `http_post_request` renvoie une requête POST WFS robuste à exécuter directement. `http_get_url` renvoie l'URL GET WFS équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant. Avec `http_post_request` ou `http_get_url`, la géométrie est automatiquement ajoutée aux propriétés du `select` pour garantir l'affichage cartographique. Valeurs : results, hits, http_post_request, http_get_url. Valeur par défaut : results. |
 | `select` | array | non | Liste des propriétés non géométriques à renvoyer pour chaque objet. Utiliser `gpf_wfs_describe_type` pour connaître les noms exacts disponibles. Exemple : `["code_insee", "nom_officiel"]`. |
 | `travel_time_filter` | object | non | Filtre spatial par temps de trajet depuis un point (`profile` voiture ou piéton). Exclusif avec les autres filtres spatiaux. |
 | `typename` | string | oui | Nom exact du type WFS à interroger, par exemple `BDTOPO_V3:batiment`. Utiliser `gpf_wfs_search_types` pour trouver un `typename` valide. |
@@ -1226,10 +1228,11 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
       "enum": [
         "results",
         "hits",
-        "request"
+        "http_post_request",
+        "http_get_url"
       ],
       "default": "results",
-      "description": "`results` renvoie une FeatureCollection avec les propriétés attributaires uniquement — **les géométries ne sont pas incluses**, ce mode ne peut donc pas être utilisé directement pour cartographier. `hits` renvoie uniquement le nombre total d'objets correspondant à la requête. `request` renvoie l'URL WFS compilée (`get_url`) à destination de `create_map` via `geojson_url`, ou pour déboguer la requête générée. **La géométrie est automatiquement ajoutée aux propriétés du `select`** pour garantir l'affichage cartographique."
+      "description": "`results` renvoie une FeatureCollection avec les propriétés attributaires uniquement — **les géométries ne sont pas incluses**, ce mode ne peut donc pas être utilisé directement pour cartographier. `hits` renvoie uniquement le nombre total d'objets correspondant à la requête. `http_post_request` renvoie une requête POST WFS robuste à exécuter directement. `http_get_url` renvoie l'URL GET WFS équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant. Avec `http_post_request` ou `http_get_url`, la géométrie est automatiquement ajoutée aux propriétés du `select` pour garantir l'affichage cartographique."
     },
     "select": {
       "type": "array",
@@ -1478,7 +1481,7 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
 
 ### Sortie
 
-Aucun `outputSchema` unique n'est exposé. La sortie dépend de `result_type` (`results`, `hits`, `request`).
+Aucun `outputSchema` unique n'est exposé. La sortie dépend de `result_type` (`results`, `hits`, `http_post_request`, `http_get_url`).
 
 ### Réponse MCP
 
@@ -1486,5 +1489,6 @@ Aucun `outputSchema` unique n'est exposé. La sortie dépend de `result_type` (`
 | --- | --- | --- | --- |
 | Succès `result_type="results"` | oui | non | `content[0].text` est la FeatureCollection stringifiée ; aucun `structuredContent` n'est ajouté dans ce mode. |
 | Succès `result_type="hits"` | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
-| Succès `result_type="request"` | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
+| Succès `result_type="http_post_request"` | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
+| Succès `result_type="http_get_url"` | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
 | Erreur | oui | oui | `content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`. |
