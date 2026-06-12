@@ -61,6 +61,7 @@ Tous les tools exposent les mêmes annotations MCP dans leur définition `tools/
 - [`gpf_wfs_describe_type`](#gpf_wfs_describe_type)
 - [`gpf_wfs_get_feature_by_id`](#gpf_wfs_get_feature_by_id)
 - [`gpf_wfs_get_features`](#gpf_wfs_get_features)
+- [`pointsdinteret`](#pointsdinteret)
 
 ## `geocode`
 
@@ -1487,4 +1488,154 @@ Aucun `outputSchema` unique n'est exposé. La sortie dépend de `result_type` (`
 | Succès `result_type="results"` | oui | non | `content[0].text` est la FeatureCollection stringifiée ; aucun `structuredContent` n'est ajouté dans ce mode. |
 | Succès `result_type="hits"` | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
 | Succès `result_type="request"` | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
+| Erreur | oui | oui | `content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`. |
+
+## `pointsdinteret`
+
+Code Source : [src/tools/PointsDInteretTool.ts](../src/tools/PointsDInteretTool.ts)
+
+### Titre
+
+Points d'intérêt obtenus par géocodage inverse
+
+### Description du tool
+
+```
+Renvoie les points d'intérêt les plus proches des coordonnées en entrée.
+Le champ `name` contient le nom du point d'intérêt et le champ `categories` liste ses classifications.
+Chaque résultat peut aussi inclure les coordonnées du point d'intérêt (`centroid`), sa distance aux coordonnées de départ (`distance`), ainsi que des informations de localisation (`city`, `zipcode`).
+Les réultats sont classés par distance, puis par importance : utilisez des coordonnées précises et montez la valeur de `maximumResponses` si l'information ne semble pas assez pertinente.
+Pour obtenir un résultat plus détaillé sur un point d'intérêt trouvé, appelez ensuite `wfs_search_types` avec des éléments pertinents de `category`, puis `wfs_get_features` avec le `typename` obtenu et les coordonnées du centroïde.
+(source : Géoplateforme (service de géocodage)).
+```
+
+### Schéma d’entrée
+
+| Champ | Type | Requis | Description |
+| --- | --- | --- | --- |
+| `lat` | number | oui | La latitude du point. |
+| `lon` | number | oui | La longitude du point. |
+| `maximumResponses` | integer | non | Le nombre maximum de résultats à retourner (entre 1 et 20). Défaut : 3. |
+
+<details>
+<summary>Schéma d’entrée brut</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "lon": {
+      "type": "number",
+      "description": "La longitude du point.",
+      "minimum": -180,
+      "maximum": 180
+    },
+    "lat": {
+      "type": "number",
+      "description": "La latitude du point.",
+      "minimum": -90,
+      "maximum": 90
+    },
+    "maximumResponses": {
+      "type": "integer",
+      "description": "Le nombre maximum de résultats à retourner (entre 1 et 20). Défaut : 3.",
+      "minimum": 1,
+      "maximum": 20
+    }
+  },
+  "required": [
+    "lon",
+    "lat"
+  ]
+}
+```
+
+</details>
+
+### Schéma de sortie
+
+| Champ | Type | Requis | Description |
+| --- | --- | --- | --- |
+| `results` | array | oui | La liste des points d'intérêt à proximité, ordonnée par distance. |
+
+<details>
+<summary>Schéma de sortie brut</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "results": {
+      "type": "array",
+      "description": "La liste des points d'intérêt à proximité, ordonnée par distance.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Le nom du point d'intérêt trouvé."
+          },
+          "categories": {
+            "type": "array",
+            "description": "Les catégories du point d'intérêt.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "city": {
+            "type": "string",
+            "description": "Le nom de la ville où est le point d'intérêt."
+          },
+          "zipcode": {
+            "type": "string",
+            "description": "Le code postal du point d'intérêt"
+          },
+          "distance": {
+            "type": "number",
+            "description": "La distance en mètres entre le point demandé et le point d'intérêt retenu."
+          },
+          "centroid": {
+            "type": "object",
+            "description": "Les coordonnées du centre du point d'intérêt.",
+            "properties": {
+              "lon": {
+                "type": "number",
+                "description": "La longitude du point.",
+                "minimum": -180,
+                "maximum": 180
+              },
+              "lat": {
+                "type": "number",
+                "description": "La latitude du point.",
+                "minimum": -90,
+                "maximum": 90
+              }
+            },
+            "required": [
+              "lon",
+              "lat"
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "categories",
+          "distance"
+        ]
+      }
+    }
+  },
+  "required": [
+    "results"
+  ]
+}
+```
+
+</details>
+
+### Réponse MCP
+
+| Cas | `content` | `structuredContent` | Relation entre `content` et `structuredContent` |
+| --- | --- | --- | --- |
+| Succès | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
 | Erreur | oui | oui | `content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`. |

@@ -19,6 +19,7 @@ export const EXPECTED_TOOL_NAMES = [
   "cadastre",
   "urbanisme",
   "assiette_sup",
+  "pointsdinteret",
   "gpf_wfs_search_types",
   "gpf_wfs_describe_type",
   "gpf_wfs_get_features",
