@@ -66,6 +66,13 @@ const mcpScenarios = [
     },
   },
   {
+    testName: "should chain geocode and pointsofinterest tools to answer the question",
+    userInput: "Qu'est-ce qui se trouve exactement à mi-chemin entre la place de la Contrescarpe  et le Centre Pompidou ?",
+    expectedResponseFragments: ["Trésor", "Notre-Dame"],
+    toolMode: "mcp",
+    requiredToolCalls: ["geocode", "pointsofinterest"],
+  },
+  {
     testName: "should answer the question about 14 lycées near the chateau de Vincennes",
     userInput: "Combien de lycées sont situés à 2km du chateau de vincennes?",
     expectedResponseFragments: ["14", "lycées"],
