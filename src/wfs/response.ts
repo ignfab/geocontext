@@ -7,6 +7,38 @@
  */
 
 import type { WfsFeatureCollectionResponse } from "./types.js";
+import * as turf from "@turf/turf"
+
+function isGeoJson(value: unknown): value is turf.AllGeoJSON {
+  return typeof value === "object" && value !== null;
+}
+
+function deriveGeometry(geometry: unknown, geometrykind: string): unknown {
+  if (!isGeoJson(geometry)) {
+    return null;
+  }
+
+  try {
+    if (geometrykind === "centroid") {
+      const centroid = turf.centroid(geometry).geometry.coordinates
+      return {
+        centroid: {
+          lon: centroid[0],
+          lat: centroid[1],
+        }
+      };
+    }
+    if (geometrykind === "bbox") {
+      return {
+        bbox: turf.bbox(geometry),
+      };
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
 
 // --- Response Types ---
 
@@ -80,6 +112,7 @@ export function getMatchedFeatureCount(featureCollection: WfsFeatureCollectionRe
  */
 export function transformFeatureCollectionResponse(
   featureCollection: GenericFeatureCollection,
+  geometrykind: string,
 ): TransformedFeatureCollection {
   if (!Array.isArray(featureCollection.features)) {
     return featureCollection;
@@ -90,7 +123,7 @@ export function transformFeatureCollectionResponse(
 
     const nextFeature: Record<string, unknown> = {
       ...rest,
-      geometry: null,
+      geometry: deriveGeometry(_geometry, geometrykind),
     };
 
     if (typeof feature.id === "string") {
@@ -116,8 +149,8 @@ export function transformFeatureCollectionResponse(
  * @param typename Typename of the queried layer.
  * @returns A transformed FeatureCollection whose `feature_ref` objects carry the exact typename.
  */
-export function attachFeatureRefs(featureCollection: GenericFeatureCollection, typename: string) {
-  const transformed = transformFeatureCollectionResponse(featureCollection);
+export function attachFeatureRefs(featureCollection: GenericFeatureCollection, typename: string, geometrykind: string) {
+  const transformed = transformFeatureCollectionResponse(featureCollection, geometrykind);
   if (!Array.isArray(transformed.features)) {
     return transformed;
   }

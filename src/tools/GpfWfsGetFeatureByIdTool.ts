@@ -125,7 +125,7 @@ class GpfWfsGetFeatureByIdTool extends BaseTool<GpfWfsGetFeatureByIdInput> {
       // not the actual by-id WFS result.
       const featureType = await wfsClient.getFeatureType(input.typename);
       const propertyName = buildPropertyName(featureType, {
-        includeGeometry: true,
+        includeGeometry: input.geometrykind != 'omit',
         select: input.select,
       });
       const request = buildGetFeatureByIdRequest(input.typename, input.feature_id, propertyName);
@@ -138,6 +138,7 @@ class GpfWfsGetFeatureByIdTool extends BaseTool<GpfWfsGetFeatureByIdInput> {
       typename: input.typename,
       feature_id: input.feature_id,
       select: input.select,
+      geometrykind: input.geometrykind,
     });
   }
 }
