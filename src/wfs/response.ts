@@ -13,31 +13,31 @@ function isGeoJson(value: unknown): value is turf.AllGeoJSON {
   return typeof value === "object" && value !== null;
 }
 
-function deriveGeometry(geometry: unknown, geometrykind: string): unknown {
+function deriveGeometry(geometry: unknown, geometrykind: Set<string>): unknown {
+  const ret: Record<string, unknown> = {}
+
   if (!isGeoJson(geometry)) {
-    return null;
+    return ret;
   }
 
-  try {
-    if (geometrykind === "centroid") {
+  
+  if (geometrykind.has("centroid")) {
+    try {
       const centroid = turf.centroid(geometry).geometry.coordinates
-      return {
-        centroid: {
-          lon: centroid[0],
-          lat: centroid[1],
-        }
+      ret.centroid = {
+        lon: centroid[0],
+        lat: centroid[1],
       };
-    }
-    if (geometrykind === "bbox") {
-      return {
-        bbox: turf.bbox(geometry),
-      };
-    }
-  } catch {
-    return null;
+    } catch {}
   }
 
-  return null;
+  if (geometrykind.has("bbox")) {
+    try {
+      ret.bbox = turf.bbox(geometry);
+    } catch {}
+  }
+
+  return ret;
 }
 
 // --- Response Types ---
@@ -112,7 +112,7 @@ export function getMatchedFeatureCount(featureCollection: WfsFeatureCollectionRe
  */
 export function transformFeatureCollectionResponse(
   featureCollection: GenericFeatureCollection,
-  geometrykind: string,
+  geometrykind: Set<string>,
 ): TransformedFeatureCollection {
   if (!Array.isArray(featureCollection.features)) {
     return featureCollection;
@@ -149,7 +149,7 @@ export function transformFeatureCollectionResponse(
  * @param typename Typename of the queried layer.
  * @returns A transformed FeatureCollection whose `feature_ref` objects carry the exact typename.
  */
-export function attachFeatureRefs(featureCollection: GenericFeatureCollection, typename: string, geometrykind: string) {
+export function attachFeatureRefs(featureCollection: GenericFeatureCollection, typename: string, geometrykind: Set<string>) {
   const transformed = transformFeatureCollectionResponse(featureCollection, geometrykind);
   if (!Array.isArray(transformed.features)) {
     return transformed;

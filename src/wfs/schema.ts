@@ -27,7 +27,6 @@ export const GPF_WFS_GET_FEATURES_SPATIAL_FILTER_KEYS = [
   "travel_time_filter",
 ] as const;
 export const GPF_WFS_GET_FEATURES_GEOMETRY_KIND = [
-  "omit",
   "centroid",
   "bbox"
 ] as const;
@@ -132,9 +131,10 @@ export const gpfWfsGetFeaturesInputObjectSchema = z.object({
     .optional()
     .describe("Liste des propriétés non géométriques à renvoyer pour chaque objet. Utiliser `gpf_wfs_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`."),
   geometrykind: z
-    .enum(GPF_WFS_GET_FEATURES_GEOMETRY_KIND)
-    .default("omit")
-    .describe("Type de géométrie à renvoyer pour `result_type=results`: `omit` aucune (par défaut), `centroid` le centroïde, `bbox` la bounding box"),
+    .array(z.enum(GPF_WFS_GET_FEATURES_GEOMETRY_KIND))
+    .default([])
+    .transform((val) => new Set(val))
+    .describe("Type(s) de géométrie à renvoyer pour `result_type=results`. Peut inclure `centroid` et `bbox`, aucune par défaut."),
   order_by: z
     .array(orderBySchema)
     .min(1)
@@ -220,9 +220,10 @@ export const gpfWfsGetFeatureByIdInputSchema = z.object({
     .optional()
     .describe("Liste des propriétés non géométriques à renvoyer."),
   geometrykind: z
-    .enum(GPF_WFS_GET_FEATURES_GEOMETRY_KIND)
-    .default("omit")
-    .describe("Type de géométrie à renvoyer pour `result_type=results`: `omit` aucune (par défaut), `centroid` le centroïde, `bbox` la bounding box"),
+    .array(z.enum(GPF_WFS_GET_FEATURES_GEOMETRY_KIND))
+    .default([])
+    .transform((val) => new Set(val))
+    .describe("Type(s) de géométrie à renvoyer pour `result_type=results`. Peut inclure `centroid` et `bbox`, aucune par défaut."),
 }).strict();
 
 // --- `gpf_wfs_get_feature_by_id` Types ---
