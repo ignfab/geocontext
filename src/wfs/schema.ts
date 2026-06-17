@@ -134,6 +134,7 @@ export const gpfWfsGetFeaturesInputObjectSchema = z.object({
     .array(z.enum(GPF_WFS_GET_FEATURES_GEOMETRY_KEEP))
     .default([])
     .transform((val) => [...new Set(val)])
+    .optional()
     .describe("Éléments de géométrie à renvoyer pour `result_type=results`. Peut inclure `centroid` et `bbox`, aucun par défaut."),
   order_by: z
     .array(orderBySchema)
@@ -173,7 +174,7 @@ export const gpfWfsGetFeaturesInputSchema = gpfWfsGetFeaturesInputObjectSchema.s
     });
   }
 
-  if (input.geometry_keep.length > 0 && input.result_type != "results") {
+  if ((input.geometry_keep ?? []).length > 0 && input.result_type != "results") {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["geometry_keep"],
@@ -229,13 +230,14 @@ export const gpfWfsGetFeatureByIdInputObjectSchema = z.object({
     .describe("Liste des propriétés non géométriques à renvoyer. Utiliser `gpf_wfs_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`."),
   geometry_keep: z
     .array(z.enum(GPF_WFS_GET_FEATURES_GEOMETRY_KEEP))
-    .default([])
+    .optional()
     .transform((val) => [...new Set(val)])
+    .default([])
     .describe("Éléments de géométrie à renvoyer pour `result_type=results`. Peut inclure `centroid` et `bbox`, aucun par défaut."),
 }).strict();
 
 export const gpfWfsGetFeatureByIdInputSchema = gpfWfsGetFeatureByIdInputObjectSchema.superRefine((input, ctx) => {
-  if (input.geometry_keep.length > 0 && input.result_type != "results") {
+  if ((input.geometry_keep ?? []).length > 0 && input.result_type != "results") {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["geometry_keep"],

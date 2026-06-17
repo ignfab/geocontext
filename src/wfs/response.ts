@@ -13,7 +13,7 @@ function isGeoJson(value: unknown): value is turf.AllGeoJSON {
   return typeof value === "object" && value !== null;
 }
 
-function deriveGeometry(geometry: unknown, geometry_keep: string[]): null | GeoJSON.Point | GeoJSON.GeometryCollection {
+function deriveGeometry(geometry: unknown, geometry_keep: string[] = []): null | GeoJSON.Point | GeoJSON.GeometryCollection {
   if (geometry_keep.length == 0 || !isGeoJson(geometry)) {
     return null;
   }

@@ -27,7 +27,7 @@ export type GetFeatureByIdExecutionInput = {
   typename: string;
   feature_id: string;
   select?: string[];
-  geometry_keep: string[];
+  geometry_keep?: string[];
 };
 
 // --- Internal Types ---
@@ -156,7 +156,7 @@ export async function executeGetFeatureById(
 ) {
   const featureType: Collection = await wfsClient.getFeatureType(input.typename);
   const propertyName = buildPropertyName(featureType, {
-    includeGeometry: input.geometry_keep.length != 0,
+    includeGeometry: (input.geometry_keep ?? []).length != 0,
     select: input.select,
   });
   const featureCollection = await fetchFeatureById({
