@@ -55,4 +55,26 @@ describe("WFS GetFeatures (integration)", () => {
       }),
     );
   }, INTEGRATION_CONFIG.timeout);
+
+  it("should return bbox-only geometry when geometry_keep includes bbox", async () => {
+    const result = await callTool<GetFeaturesResult>(getHandle().client, "gpf_wfs_get_features", {
+      typename: "BDTOPO_V3:commune",
+      where: [{ property: "code_insee", operator: "eq", value: "75056" }],
+      select: ["code_insee", "nom_officiel"],
+      geometry_keep: ["bbox"],
+      limit: 1,
+    });
+
+    expectFeatureCollectionWithFeatures(result);
+
+    const first = result.features[0];
+    expect(first.geometry).toBeDefined();
+    expect(first.geometry).toMatchObject({
+      type: "GeometryCollection",
+      geometries: [],
+      bbox: expect.any(Array),
+    });
+    const geometry = first.geometry as GeoJSON.GeometryCollection;
+    expect(geometry.bbox).toHaveLength(4);
+  }, INTEGRATION_CONFIG.timeout);
 });

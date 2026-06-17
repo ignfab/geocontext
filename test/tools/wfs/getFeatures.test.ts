@@ -437,6 +437,38 @@ describe("Test GpfWfsGetFeaturesTool", () => {
     });
   });
 
+  it("should reject geometry_keep with hits result_type", async () => {
+    const tool = new GpfWfsGetFeaturesTool();
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_wfs_get_features",
+        arguments: {
+          typename: "ADMINEXPRESS-COG.LATEST:commune",
+          result_type: "hits",
+          geometry_keep: ["bbox"],
+        },
+      },
+    });
+
+    expect(response.isError).toBe(true);
+    const textContent = response.content[0];
+    if (textContent.type !== "text") {
+      throw new Error("expected text content");
+    }
+    expect(textContent.text).toContain("geometry_keep");
+    expect(response.structuredContent).toMatchObject({
+      type: "urn:geocontext:problem:invalid-tool-params",
+      errors: expect.arrayContaining([
+        expect.objectContaining({
+          name: "geometry_keep",
+          code: "custom",
+        }),
+      ]),
+    });
+    expect(mockGetFeatureType).not.toHaveBeenCalled();
+    expect(mockFetchJSONPost).not.toHaveBeenCalled();
+  });
+
   it("should reject multiple spatial filters as invalid tool parameters", async () => {
     const tool = new GpfWfsGetFeaturesTool();
     const response = await tool.toolCall({
@@ -735,6 +767,57 @@ describe("Test GpfWfsGetFeaturesTool", () => {
       feature_id: "commune.1",
     });
     expect(results.features[0].geometry_name).toBeUndefined();
+  });
+
+  it("should keep bbox-only geometry as a valid GeometryCollection in results mode", async () => {
+    const tool = new GpfWfsGetFeaturesTool();
+    mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
+    const requests = captureRequests({
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          id: "commune.1",
+          geometry: {
+            type: "Polygon",
+            coordinates: [[[2.3, 48.8], [2.4, 48.8], [2.4, 48.9], [2.3, 48.9], [2.3, 48.8]]],
+          },
+          geometry_name: "geometrie",
+          properties: { code_insee: "01001" },
+        },
+      ],
+      totalFeatures: 1,
+    });
+
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_wfs_get_features",
+        arguments: {
+          typename: "ADMINEXPRESS-COG.LATEST:commune",
+          select: ["code_insee"],
+          geometry_keep: ["bbox"],
+          limit: 1,
+        },
+      },
+    });
+
+    expect(response.isError).toBeUndefined();
+    expect(requests).toHaveLength(1);
+    expect(requests[0].query.propertyName).toEqual("code_insee,geometrie");
+    const textContent = response.content[0];
+    if (textContent.type !== "text") {
+      throw new Error("expected text content");
+    }
+    const results = JSON.parse(textContent.text);
+    expect(results.features[0].geometry).toMatchObject({
+      type: "GeometryCollection",
+      geometries: [],
+      bbox: [2.3, 48.8, 2.4, 48.9],
+    });
+    expect(results.features[0].feature_ref).toEqual({
+      typename: "ADMINEXPRESS-COG.LATEST:commune",
+      feature_id: "commune.1",
+    });
   });
 
   it("should set point geometry to null and keep feature_ref", async () => {

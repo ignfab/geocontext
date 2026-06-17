@@ -35,7 +35,7 @@ interface GetFeatureByIdResult {
     type: string;
     id: string;
     properties: Record<string, unknown>;
-    geometry: unknown;
+    geometry: null | GeoJSON.Point | GeoJSON.GeometryCollection;
     feature_ref?: {
       typename: string;
       feature_id: string;
@@ -75,11 +75,38 @@ describe("WFS GetFeatureById (integration)", () => {
     expect(result.features[0].geometry).toBeDefined();
   }, INTEGRATION_CONFIG.timeout);
 
+  it("should retrieve a centroid and a bbox", async () => {
+    const result = await callTool<GetFeatureByIdResult>(getHandle().client, "gpf_wfs_get_feature_by_id", {
+      typename: featureRef.typename,
+      feature_id: featureRef.feature_id,
+      geometry_keep: ["centroid", "bbox"]
+    });
+
+    expectFeatureCollectionWithFeatures(result, 1);
+    expect(result.features.length).toBe(1);
+    expect(result.features[0].id).toBeDefined();
+    expect(result.features[0].properties).toBeDefined();
+    expect(result.features[0].geometry).toBeDefined();
+    expect(result.features[0].geometry?.type).toBe("Point");
+    expect(result.features[0].geometry?.bbox).toBeDefined();
+  }, INTEGRATION_CONFIG.timeout);
+
   it("should return an error for invalid typename", async () => {
     await expectToolCallToThrow(
       callTool(getHandle().client, "gpf_wfs_get_feature_by_id", {
         typename: "INVALID:type",
         feature_id: "nonexistent",
+      }),
+    );
+  }, INTEGRATION_CONFIG.timeout);
+
+  it("should return an error for when trying to combine `geometry_keep` with a `result_type` other than `request`", async () => {
+    await expectToolCallToThrow(
+      callTool(getHandle().client, "gpf_wfs_get_feature_by_id", {
+        typename: featureRef.typename,
+        feature_id: featureRef.feature_id,
+        geometry_keep: ["centroid"],
+        result_type: "http_post_request"
       }),
     );
   }, INTEGRATION_CONFIG.timeout);

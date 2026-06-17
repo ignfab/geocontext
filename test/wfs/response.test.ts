@@ -65,6 +65,57 @@ describe("wfs_engine/response", () => {
         geometry: null,
       });
     });
+
+    it("should return a GeometryCollection with bbox when only bbox is requested", () => {
+      const result = transformFeatureCollectionResponse({
+        type: "FeatureCollection",
+        features: [
+          {
+            id: "commune.1",
+            geometry: {
+              type: "Polygon",
+              coordinates: [[[2.3, 48.8], [2.4, 48.8], [2.4, 48.9], [2.3, 48.9], [2.3, 48.8]]],
+            },
+            geometry_name: "geometrie",
+            properties: { code_insee: "94080" },
+          },
+        ],
+      }, ["bbox"]);
+
+      const features = getFeatures(result);
+
+      expect(features[0].geometry).toMatchObject({
+        type: "GeometryCollection",
+        geometries: [],
+        bbox: [2.3, 48.8, 2.4, 48.9],
+      });
+    });
+
+    it("should return a Point with bbox when centroid and bbox are requested", () => {
+      const result = transformFeatureCollectionResponse({
+        type: "FeatureCollection",
+        features: [
+          {
+            id: "commune.1",
+            geometry: {
+              type: "Polygon",
+              coordinates: [[[2.3, 48.8], [2.4, 48.8], [2.4, 48.9], [2.3, 48.9], [2.3, 48.8]]],
+            },
+            geometry_name: "geometrie",
+            properties: { code_insee: "94080" },
+          },
+        ],
+      }, ["centroid", "bbox"]);
+
+      const features = getFeatures(result);
+      expect(features[0].geometry).toMatchObject({
+        type: "Point",
+        bbox: [2.3, 48.8, 2.4, 48.9],
+      });
+      const point = features[0].geometry as GeoJSON.Point;
+      expect(point.coordinates[0]).toBeCloseTo(2.35);
+      expect(point.coordinates[1]).toBeCloseTo(48.85);
+    });
   });
 
   // --- attachFeatureRefs ---

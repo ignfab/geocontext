@@ -225,6 +225,64 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
     expect(results.features[0].geometry_name).toBeUndefined();
   });
 
+  it("should keep bbox-only geometry as a valid GeometryCollection in results mode", async () => {
+    const tool = new GpfWfsGetFeatureByIdTool();
+    const requests: Array<{ url: string; query: Record<string, string> }> = [];
+    mockGetFeatureType.mockResolvedValue(polygonFeatureType);
+    mockFetchJSONPost.mockImplementation(async (url, _body) => {
+      const [baseUrl, queryString = ""] = url.split("?");
+      requests.push({
+        url: baseUrl,
+        query: Object.fromEntries(new URLSearchParams(queryString).entries()),
+      });
+
+      return {
+        type: "FeatureCollection",
+        totalFeatures: 1,
+        features: [
+          {
+            type: "Feature",
+            id: "commune.1",
+            geometry: {
+              type: "Polygon",
+              coordinates: [[[2.3, 48.8], [2.4, 48.8], [2.4, 48.9], [2.3, 48.9], [2.3, 48.8]]],
+            },
+            geometry_name: "geometrie",
+            properties: {
+              code_insee: "01001",
+            },
+          },
+        ],
+      };
+    });
+
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_wfs_get_feature_by_id",
+        arguments: {
+          typename: "ADMINEXPRESS-COG.LATEST:commune",
+          feature_id: "commune.1",
+          select: ["code_insee"],
+          geometry_keep: ["bbox"],
+        },
+      },
+    });
+
+    expect(response.isError).toBeUndefined();
+    expect(requests).toHaveLength(1);
+    expect(requests[0].query.propertyName).toEqual("code_insee,geometrie");
+    const textContent = response.content[0];
+    if (textContent.type !== "text") {
+      throw new Error("expected text content");
+    }
+    const results = JSON.parse(textContent.text);
+    expect(results.features[0].geometry).toMatchObject({
+      type: "GeometryCollection",
+      geometries: [],
+      bbox: [2.3, 48.8, 2.4, 48.9],
+    });
+  });
+
   it("should fail clearly when the feature is missing", async () => {
     const tool = new GpfWfsGetFeatureByIdTool();
     mockGetFeatureType.mockResolvedValue(polygonFeatureType);
@@ -369,6 +427,38 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
           name: "result_type",
           code: "invalid_enum_value",
           detail: expect.stringContaining("http_post_request"),
+        }),
+      ]),
+    });
+  });
+
+  it("should reject geometry_keep with http_get_url result_type", async () => {
+    const tool = new GpfWfsGetFeatureByIdTool();
+
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_wfs_get_feature_by_id",
+        arguments: {
+          typename: "ADMINEXPRESS-COG.LATEST:commune",
+          feature_id: "commune.1",
+          geometry_keep: ["bbox"],
+          result_type: "http_get_url",
+        },
+      },
+    });
+
+    expect(response.isError).toBe(true);
+    const textContent = response.content[0];
+    if (textContent.type !== "text") {
+      throw new Error("expected text content");
+    }
+    expect(textContent.text).toContain("geometry_keep");
+    expect(response.structuredContent).toMatchObject({
+      type: "urn:geocontext:problem:invalid-tool-params",
+      errors: expect.arrayContaining([
+        expect.objectContaining({
+          name: "geometry_keep",
+          code: "custom",
         }),
       ]),
     });
