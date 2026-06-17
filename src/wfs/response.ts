@@ -7,9 +7,12 @@
  */
 
 import type { WfsFeatureCollectionResponse } from "./types.js";
-import * as turf from "@turf/turf"
+import { centroid } from "@turf/centroid";
+import { bbox } from "@turf/bbox";
+import { AllGeoJSON } from "@turf/helpers";
 
-function isGeoJson(value: unknown): value is turf.AllGeoJSON {
+
+function isGeoJson(value: unknown): value is AllGeoJSON {
   return typeof value === "object" && value !== null;
 }
 
@@ -25,13 +28,13 @@ function deriveGeometry(geometry: unknown, geometry_keep: string[] = []): null |
 
   if (geometry_keep.includes("centroid")) {
     try {
-      ret = turf.centroid(geometry).geometry;
+      ret = centroid(geometry).geometry;
     } catch {}
   }
 
   if (geometry_keep.includes("bbox")) {
     try {
-      ret.bbox = turf.bbox(geometry);
+      ret.bbox = bbox(geometry);
     } catch {}
   }
 
