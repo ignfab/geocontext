@@ -251,5 +251,5 @@ export async function executeGetFeatures(input: GpfWfsGetFeaturesInput) {
     };
   }
 
-  return attachFeatureRefs(featureCollection, input.typename, input.geometrykind);
+  return attachFeatureRefs(featureCollection, input.typename, input.geometry_keep);
 }

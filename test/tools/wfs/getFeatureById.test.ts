@@ -66,11 +66,20 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
           minLength: 1,
           description: "Identifiant WFS exact de l'objet à récupérer, par exemple `commune.8952`.",
         },
+        geometry_keep: {
+          type: "array",
+          items: {
+            enum: ["centroid", "bbox"],
+            type: "string",
+          },
+          default: [],
+          description: "Éléments de géométrie à renvoyer pour `result_type=results`. Peut inclure `centroid` et `bbox`, aucun par défaut.",
+        },
         result_type: {
           type: "string",
           enum: ["results", "http_post_request", "http_get_url"],
           default: "results",
-          description: "`results` renvoie une FeatureCollection normalisée avec exactement un objet. `http_post_request` renvoie une requête POST WFS robuste à exécuter directement. `http_get_url` renvoie l'URL GET WFS équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant.",
+          description: "`results` renvoie une FeatureCollection normalisée avec exactement un objet et le choix de `geometry_keep` en guise de géométrie. `http_post_request` renvoie une requête POST WFS robuste à exécuter directement. `http_get_url` renvoie l'URL GET WFS équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant. Avec `http_post_request` ou `http_get_url`, la géométrie complète est automatiquement ajoutée aux propriétés du `select` pour garantir l'affichage cartographique ; sinon, elle est omise.",
         },
         select: {
           type: "array",
@@ -79,7 +88,7 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
             minLength: 1,
           },
           minItems: 1,
-          description: "Liste des propriétés non géométriques à renvoyer. Quand `result_type=\"http_post_request\"` ou `result_type=\"http_get_url\"`, la géométrie est automatiquement ajoutée.",
+          description: "Liste des propriétés non géométriques à renvoyer. Utiliser `gpf_wfs_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`.",
         },
       },
       required: ["typename", "feature_id"],

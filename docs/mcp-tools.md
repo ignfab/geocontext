@@ -1099,8 +1099,9 @@ Utiliser `result_type="http_post_request"` pour récupérer une requête WFS POS
 | Champ | Type | Requis | Description |
 | --- | --- | --- | --- |
 | `feature_id` | string | oui | Identifiant WFS exact de l'objet à récupérer, par exemple `commune.8952`. |
-| `result_type` | string (enum) | non | `results` renvoie une FeatureCollection normalisée avec exactement un objet. `http_post_request` renvoie une requête POST WFS robuste à exécuter directement. `http_get_url` renvoie l'URL GET WFS équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant. Valeurs : results, http_post_request, http_get_url. Valeur par défaut : results. |
-| `select` | array | non | Liste des propriétés non géométriques à renvoyer. Quand `result_type="http_post_request"` ou `result_type="http_get_url"`, la géométrie est automatiquement ajoutée. |
+| `geometry_keep` | array | non | Éléments de géométrie à renvoyer pour `result_type=results`. Peut inclure `centroid` et `bbox`, aucun par défaut. Valeur par défaut : []. |
+| `result_type` | string (enum) | non | `results` renvoie une FeatureCollection normalisée avec exactement un objet et le choix de `geometry_keep` en guise de géométrie. `http_post_request` renvoie une requête POST WFS robuste à exécuter directement. `http_get_url` renvoie l'URL GET WFS équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant. Avec `http_post_request` ou `http_get_url`, la géométrie complète est automatiquement ajoutée aux propriétés du `select` pour garantir l'affichage cartographique ; sinon, elle est omise. Valeurs : results, http_post_request, http_get_url. Valeur par défaut : results. |
+| `select` | array | non | Liste des propriétés non géométriques à renvoyer. Utiliser `gpf_wfs_describe_type` pour connaître les noms exacts disponibles. Exemple : `["code_insee", "nom_officiel"]`. |
 | `typename` | string | oui | Nom exact du type WFS à interroger, par exemple `ADMINEXPRESS-COG.LATEST:commune`. |
 
 <details>
@@ -1128,7 +1129,7 @@ Utiliser `result_type="http_post_request"` pour récupérer une requête WFS POS
         "http_get_url"
       ],
       "default": "results",
-      "description": "`results` renvoie une FeatureCollection normalisée avec exactement un objet. `http_post_request` renvoie une requête POST WFS robuste à exécuter directement. `http_get_url` renvoie l'URL GET WFS équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant."
+      "description": "`results` renvoie une FeatureCollection normalisée avec exactement un objet et le choix de `geometry_keep` en guise de géométrie. `http_post_request` renvoie une requête POST WFS robuste à exécuter directement. `http_get_url` renvoie l'URL GET WFS équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant. Avec `http_post_request` ou `http_get_url`, la géométrie complète est automatiquement ajoutée aux propriétés du `select` pour garantir l'affichage cartographique ; sinon, elle est omise."
     },
     "select": {
       "type": "array",
@@ -1137,7 +1138,19 @@ Utiliser `result_type="http_post_request"` pour récupérer une requête WFS POS
         "minLength": 1
       },
       "minItems": 1,
-      "description": "Liste des propriétés non géométriques à renvoyer. Quand `result_type=\"http_post_request\"` ou `result_type=\"http_get_url\"`, la géométrie est automatiquement ajoutée."
+      "description": "Liste des propriétés non géométriques à renvoyer. Utiliser `gpf_wfs_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`."
+    },
+    "geometry_keep": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "centroid",
+          "bbox"
+        ]
+      },
+      "default": [],
+      "description": "Éléments de géométrie à renvoyer pour `result_type=results`. Peut inclure `centroid` et `bbox`, aucun par défaut."
     }
   },
   "required": [
@@ -1194,11 +1207,12 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
 | --- | --- | --- | --- |
 | `bbox_filter` | object | non | Filtre spatial par boîte englobante. Exclusif avec les autres filtres spatiaux. |
 | `dwithin_point_filter` | object | non | Filtre spatial par distance à un point. Exclusif avec les autres filtres spatiaux. |
+| `geometry_keep` | array | non | Éléments de géométrie à renvoyer pour `result_type=results`. Peut inclure `centroid` et `bbox`, aucun par défaut. Valeur par défaut : []. |
 | `intersects_feature_filter` | object | non | Filtre spatial par intersection avec un feature WFS de référence. Exclusif avec les autres filtres spatiaux. |
 | `intersects_point_filter` | object | non | Filtre spatial par intersection avec un point. Exclusif avec les autres filtres spatiaux. |
 | `limit` | integer | non | Nombre maximum d'objets à renvoyer. Valeur par défaut : 100. Maximum : 5000. Valeur par défaut : 100. |
 | `order_by` | array | non | Liste ordonnée des critères de tri. |
-| `result_type` | string (enum) | non | `results` renvoie une FeatureCollection avec les propriétés attributaires uniquement — **les géométries ne sont pas incluses**, ce mode ne peut donc pas être utilisé directement pour cartographier. `hits` renvoie uniquement le nombre total d'objets correspondant à la requête. `http_post_request` renvoie une requête POST WFS robuste à exécuter directement. `http_get_url` renvoie l'URL GET WFS équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant. Avec `http_post_request` ou `http_get_url`, la géométrie est automatiquement ajoutée aux propriétés du `select` pour garantir l'affichage cartographique. Valeurs : results, hits, http_post_request, http_get_url. Valeur par défaut : results. |
+| `result_type` | string (enum) | non | `results` renvoie une FeatureCollection avec les propriétés attributaires et le choix de `geometry_keep` en guise de géométrie . `hits` renvoie uniquement le nombre total d'objets correspondant à la requête. `http_post_request` renvoie une requête POST WFS robuste à exécuter directement. `http_get_url` renvoie l'URL GET WFS équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant. Avec `http_post_request` ou `http_get_url`, la géométrie complète est automatiquement ajoutée aux propriétés du `select` pour garantir l'affichage cartographique ; sinon, elle est omise. Valeurs : results, hits, http_post_request, http_get_url. Valeur par défaut : results. |
 | `select` | array | non | Liste des propriétés non géométriques à renvoyer pour chaque objet. Utiliser `gpf_wfs_describe_type` pour connaître les noms exacts disponibles. Exemple : `["code_insee", "nom_officiel"]`. |
 | `travel_time_filter` | object | non | Filtre spatial par temps de trajet depuis un point (`profile` voiture ou piéton). Exclusif avec les autres filtres spatiaux. |
 | `typename` | string | oui | Nom exact du type WFS à interroger, par exemple `BDTOPO_V3:batiment`. Utiliser `gpf_wfs_search_types` pour trouver un `typename` valide. |
@@ -1232,7 +1246,7 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
         "http_get_url"
       ],
       "default": "results",
-      "description": "`results` renvoie une FeatureCollection avec les propriétés attributaires uniquement — **les géométries ne sont pas incluses**, ce mode ne peut donc pas être utilisé directement pour cartographier. `hits` renvoie uniquement le nombre total d'objets correspondant à la requête. `http_post_request` renvoie une requête POST WFS robuste à exécuter directement. `http_get_url` renvoie l'URL GET WFS équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant. Avec `http_post_request` ou `http_get_url`, la géométrie est automatiquement ajoutée aux propriétés du `select` pour garantir l'affichage cartographique."
+      "description": "`results` renvoie une FeatureCollection avec les propriétés attributaires et le choix de `geometry_keep` en guise de géométrie . `hits` renvoie uniquement le nombre total d'objets correspondant à la requête. `http_post_request` renvoie une requête POST WFS robuste à exécuter directement. `http_get_url` renvoie l'URL GET WFS équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant. Avec `http_post_request` ou `http_get_url`, la géométrie complète est automatiquement ajoutée aux propriétés du `select` pour garantir l'affichage cartographique ; sinon, elle est omise."
     },
     "select": {
       "type": "array",
@@ -1242,6 +1256,18 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
       },
       "minItems": 1,
       "description": "Liste des propriétés non géométriques à renvoyer pour chaque objet. Utiliser `gpf_wfs_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`."
+    },
+    "geometry_keep": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "centroid",
+          "bbox"
+        ]
+      },
+      "default": [],
+      "description": "Éléments de géométrie à renvoyer pour `result_type=results`. Peut inclure `centroid` et `bbox`, aucun par défaut."
     },
     "order_by": {
       "type": "array",

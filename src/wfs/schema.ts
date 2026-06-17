@@ -26,7 +26,7 @@ export const GPF_WFS_GET_FEATURES_SPATIAL_FILTER_KEYS = [
   "intersects_feature_filter",
   "travel_time_filter",
 ] as const;
-export const GPF_WFS_GET_FEATURES_GEOMETRY_KIND = [
+export const GPF_WFS_GET_FEATURES_GEOMETRY_KEEP = [
   "centroid",
   "bbox"
 ] as const;
@@ -124,17 +124,17 @@ export const gpfWfsGetFeaturesInputObjectSchema = z.object({
   result_type: z
     .enum(["results", "hits", "http_post_request", "http_get_url"])
     .default("results")
-    .describe("`results` renvoie une FeatureCollection avec les propriétés attributaires et le choix de `geometrykind` en guise de géométrie . `hits` renvoie uniquement le nombre total d'objets correspondant à la requête. `http_post_request` renvoie une requête POST WFS robuste à exécuter directement. `http_get_url` renvoie l'URL GET WFS équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant. Avec `http_post_request` ou `http_get_url`, la géométrie complète est automatiquement ajoutée aux propriétés du `select` pour garantir l'affichage cartographique."),
+    .describe("`results` renvoie une FeatureCollection avec les propriétés attributaires et le choix de `geometry_keep` en guise de géométrie . `hits` renvoie uniquement le nombre total d'objets correspondant à la requête. `http_post_request` renvoie une requête POST WFS robuste à exécuter directement. `http_get_url` renvoie l'URL GET WFS équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant. Avec `http_post_request` ou `http_get_url`, la géométrie complète est automatiquement ajoutée aux propriétés du `select` pour garantir l'affichage cartographique ; sinon, elle est omise."),
   select: z
     .array(z.string().trim().min(1))
     .min(1)
     .optional()
     .describe("Liste des propriétés non géométriques à renvoyer pour chaque objet. Utiliser `gpf_wfs_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`."),
-  geometrykind: z
-    .array(z.enum(GPF_WFS_GET_FEATURES_GEOMETRY_KIND))
+  geometry_keep: z
+    .array(z.enum(GPF_WFS_GET_FEATURES_GEOMETRY_KEEP))
     .default([])
-    .transform((val) => new Set(val))
-    .describe("Type(s) de géométrie à renvoyer pour `result_type=results`. Peut inclure `centroid` et `bbox`, aucune par défaut."),
+    .transform((val) => [...new Set(val)])
+    .describe("Éléments de géométrie à renvoyer pour `result_type=results`. Peut inclure `centroid` et `bbox`, aucun par défaut."),
   order_by: z
     .array(orderBySchema)
     .min(1)
@@ -172,6 +172,14 @@ export const gpfWfsGetFeaturesInputSchema = gpfWfsGetFeaturesInputObjectSchema.s
       message: `Un seul filtre spatial est autorisé (${usedSpatialFilters.join(", ")} fournis).`,
     });
   }
+
+  if (input.geometry_keep.length > 0 && input.result_type != "results") {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["geometry_keep"],
+      message: "`geometry_keep` ne peut être utilisé qu'avec `result_type=results`. Si `result_type=hits`, aucune géométrie n'est renvoyée et dans cas `http_post_request` et `http_get_url`, la géométrie complète est renvoyée par la requête."
+    })
+  }
 });
 
 // --- `gpf_wfs_get_features` Types ---
@@ -199,7 +207,7 @@ export const gpfWfsGetFeaturesPublishedInputSchema = generatePublishedInputSchem
 
 // --- `gpf_wfs_get_feature_by_id` ---
 
-export const gpfWfsGetFeatureByIdInputSchema = z.object({
+export const gpfWfsGetFeatureByIdInputObjectSchema = z.object({
   typename: z
     .string()
     .trim()
@@ -213,18 +221,28 @@ export const gpfWfsGetFeatureByIdInputSchema = z.object({
   result_type: z
     .enum(["results", "http_post_request", "http_get_url"])
     .default("results")
-    .describe("`results` renvoie une FeatureCollection normalisée avec exactement un objet. `http_post_request` renvoie une requête POST WFS robuste à exécuter directement. `http_get_url` renvoie l'URL GET WFS équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant."),
+    .describe("`results` renvoie une FeatureCollection normalisée avec exactement un objet et le choix de `geometry_keep` en guise de géométrie. `http_post_request` renvoie une requête POST WFS robuste à exécuter directement. `http_get_url` renvoie l'URL GET WFS équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant. Avec `http_post_request` ou `http_get_url`, la géométrie complète est automatiquement ajoutée aux propriétés du `select` pour garantir l'affichage cartographique ; sinon, elle est omise."),
   select: z
     .array(z.string().trim().min(1))
     .min(1)
     .optional()
-    .describe("Liste des propriétés non géométriques à renvoyer."),
-  geometrykind: z
-    .array(z.enum(GPF_WFS_GET_FEATURES_GEOMETRY_KIND))
+    .describe("Liste des propriétés non géométriques à renvoyer. Utiliser `gpf_wfs_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`."),
+  geometry_keep: z
+    .array(z.enum(GPF_WFS_GET_FEATURES_GEOMETRY_KEEP))
     .default([])
-    .transform((val) => new Set(val))
-    .describe("Type(s) de géométrie à renvoyer pour `result_type=results`. Peut inclure `centroid` et `bbox`, aucune par défaut."),
+    .transform((val) => [...new Set(val)])
+    .describe("Éléments de géométrie à renvoyer pour `result_type=results`. Peut inclure `centroid` et `bbox`, aucun par défaut."),
 }).strict();
+
+export const gpfWfsGetFeatureByIdInputSchema = gpfWfsGetFeatureByIdInputObjectSchema.superRefine((input, ctx) => {
+  if (input.geometry_keep.length > 0 && input.result_type != "results") {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["geometry_keep"],
+      message: "`geometry_keep` ne peut être utilisé qu'avec `result_type=results`. Dans les autres cas, la géométrie complète est toujours renvoyée par la requête."
+    })
+  }
+});
 
 // --- `gpf_wfs_get_feature_by_id` Types ---
 

@@ -19,6 +19,7 @@ import {
 import {
   gpfWfsGetFeatureByIdHttpGetUrlOutputSchema,
   gpfWfsGetFeatureByIdHttpPostRequestOutputSchema,
+  gpfWfsGetFeatureByIdInputObjectSchema,
   gpfWfsGetFeatureByIdInputSchema,
   type GpfWfsGetFeatureByIdInput,
   gpfWfsGetFeatureByIdPublishedInputSchema,
@@ -40,7 +41,10 @@ class GpfWfsGetFeatureByIdTool extends BaseTool<GpfWfsGetFeatureByIdInput> {
 
   // `schema` remains the runtime validation source, while `inputSchema`
   // publishes the MCP-facing variant expected by clients.
-  schema = gpfWfsGetFeatureByIdInputSchema;
+  // The framework requires a plain Zod object here to publish a compatible
+  // input schema. Cross-field runtime validation is applied in `execute`.
+  schema = gpfWfsGetFeatureByIdInputObjectSchema;
+  
 
   /**
    * Exposes an input schema variant that stays compatible with most MCP integrations.
@@ -116,20 +120,21 @@ class GpfWfsGetFeatureByIdTool extends BaseTool<GpfWfsGetFeatureByIdInput> {
    * @returns Either an HTTP preview payload or a transformed FeatureCollection containing one feature.
    */
   async execute(input: GpfWfsGetFeatureByIdInput) {
+    const validatedInput = gpfWfsGetFeatureByIdInputSchema.parse(input);
     logger.info(`[tool] execute ${this.name} ...`, {
-      input: input
+      input: validatedInput
     });
 
-    if (input.result_type === "http_post_request" || input.result_type === "http_get_url") {
+    if (validatedInput.result_type === "http_post_request" || validatedInput.result_type === "http_get_url") {
       // HTTP preview modes are handled here because they return a preview payload,
       // not the actual by-id WFS result.
-      const featureType = await wfsClient.getFeatureType(input.typename);
+      const featureType = await wfsClient.getFeatureType(validatedInput.typename);
       const propertyName = buildPropertyName(featureType, {
-        includeGeometry: input.geometrykind.size != 0,
-        select: input.select,
+        includeGeometry: true,
+        select: validatedInput.select,
       });
-      const request = buildGetFeatureByIdRequest(input.typename, input.feature_id, propertyName);
-      return input.result_type === "http_post_request"
+      const request = buildGetFeatureByIdRequest(validatedInput.typename, validatedInput.feature_id, propertyName);
+      return validatedInput.result_type === "http_post_request"
         ? toWfsHttpPostRequestPayload(request)
         : toWfsHttpGetUrlPayload(request);
     }
@@ -138,7 +143,7 @@ class GpfWfsGetFeatureByIdTool extends BaseTool<GpfWfsGetFeatureByIdInput> {
       typename: input.typename,
       feature_id: input.feature_id,
       select: input.select,
-      geometrykind: input.geometrykind,
+      geometry_keep: input.geometry_keep,
     });
   }
 }

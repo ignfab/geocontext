@@ -35,7 +35,7 @@ interface GetFeatureByIdResult {
     type: string;
     id: string;
     properties: Record<string, unknown>;
-    geometry?: unknown;
+    geometry: unknown;
     feature_ref?: {
       typename: string;
       feature_id: string;
@@ -72,6 +72,7 @@ describe("WFS GetFeatureById (integration)", () => {
     expect(result.features.length).toBe(1);
     expect(result.features[0].id).toBeDefined();
     expect(result.features[0].properties).toBeDefined();
+    expect(result.features[0].geometry).toBeDefined();
   }, INTEGRATION_CONFIG.timeout);
 
   it("should return an error for invalid typename", async () => {
