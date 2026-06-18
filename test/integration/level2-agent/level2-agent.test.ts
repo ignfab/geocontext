@@ -90,6 +90,13 @@ const mcpScenarios = [
     // assuming that it won't often change and that the number is correct at the moment of writing
     // (switch to assertScenarioResult with a range if needed in the future)
     expectedResponseFragments: ["19", "batiments"] 
+  },
+  {
+    testName: "should find that Sivom swimming pool in Mondeville is the nearest pool to the LUX cinema in Caen, and that the walking distance is 29 minutes",
+    userInput: "Quelle est le temps de marche exact entre le cinéma LUX, situé au sud-est de Caen, et la piscine la plus proche ?",
+    toolMode: "mcp",
+    requiredToolCalls: ["geocode", "gpf_wfs_search_types", "gpf_wfs_describe_type", "gpf_wfs_get_features", "distance"],
+    expectedResponseFragments: ["Sivom", "Mondeville", "29 minutes"]
   }
 ] satisfies Level2AgentScenario[];
 
