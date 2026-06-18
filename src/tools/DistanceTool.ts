@@ -5,6 +5,7 @@
 import BaseTool from "./BaseTool.js";
 import { z } from "zod";
 
+import { NAVIGATION_ITINERARY_SOURCE, navigationItineraryClient } from "../gpf/itinerary.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import { lonSchema, latSchema } from "../helpers/schemas.js";
 import logger from "../logger.js";
@@ -22,11 +23,12 @@ const distanceInputSchema = z.object({
     lat: latSchema,
   }).describe("Le point d'arrivée"),
   profile: z
-    .enum(["direct", "vincenty"])
+    .enum(["direct", "vincenty", "pedestrian", "car"])
     .default("direct")
     .describe(["Le type de chemin suivi :",
       " `direct` distance à vol d'oiseau (approximation Terre plate ou Terre ronde, précision à 0.5%),",
       " `vincenty` distance à vol d'oiseau (Terre ellipsoïde, plus précise et coûteuse, précision à 0.5mm)",
+      " `pedestrian` à pied, `car` en voiture",
       ". Par défaut : `direct`."
     ].join(""))
 }).strict();
@@ -37,15 +39,20 @@ type DistanceInput = z.infer<typeof distanceInputSchema>;
 
 const distanceResultSchema = z.object({
   distance: z.number().describe("La distance entre les deux points, en mètres."),
+  time: z.number().optional().describe("Estimation du temps de trajet, en minutes. Absent si `profile`=`direct` ou `vincenty`."),
 });
 
 // --- Tool ---
 
 class DistanceTool extends BaseTool<DistanceInput> {
   name = "distance";
-  title = "Distance entre deux points";
+  title = "Distance et temps de trajet entre deux points";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
-  description = `Renvoie la distance (en mètres) entre deux points à partir de leur longitude et latitude.`;
+  description = [
+    `Renvoie la distance (en mètres) entre deux points à partir de leur longitude et latitude.`,
+    `Renvoie aussi une estimation du temps de trajet dans le cas où un profil (marche, voiture) est renseigné.`,
+    `(source : ${NAVIGATION_ITINERARY_SOURCE}).`,
+  ].join("\n");
   protected outputSchemaShape = distanceResultSchema;
 
   schema = distanceInputSchema;
@@ -65,17 +72,28 @@ class DistanceTool extends BaseTool<DistanceInput> {
       case "direct": {
         return {
           distance: distanceInternal({
-          type : "Point",
-          coordinates: [input.departure.lon, input.departure.lat]
-        }, {
-          type : "Point",
-          coordinates: [input.arrival.lon, input.arrival.lat]
-        })
+            type : "Point",
+            coordinates: [input.departure.lon, input.departure.lat]
+          }, {
+            type : "Point",
+            coordinates: [input.arrival.lon, input.arrival.lat]
+          })
         }
       }
       case "vincenty": {
         return {
           distance: distanceVincenty(input.departure.lat, input.departure.lon, input.arrival.lat, input.arrival.lon)
+        }
+      } 
+      default: {
+        const itinerary = await navigationItineraryClient.getItinerary({
+          departure: input.departure,
+          arrival: input.arrival,
+          profile: input.profile,
+        });
+        return {
+          distance: itinerary.distance,
+          time: Math.floor(itinerary.duration)
         }
       }
     }
