@@ -96,7 +96,7 @@ export async function getUrbanisme(lon: number, lat: number): Promise<Record<str
         const { _rawGeometry, ...rest } = item;
         const urbanismeItem: UrbanismeItem = {
             ...rest,
-            distance: distance(sourceGeom, _rawGeometry as Geometry),
+            distance: distance(sourceGeom, _rawGeometry as Geometry).distance,
         };
         return sanitizeUrbanismeItem(urbanismeItem);
     });
@@ -148,7 +148,7 @@ export async function getAssiettesServitudes(lon: number, lat: number): Promise<
         const { _rawGeometry, ...rest } = item;
         return {
             ...rest,
-            distance: distance(sourceGeom, _rawGeometry as Geometry),
+            distance: distance(sourceGeom, _rawGeometry as Geometry).distance,
         };
     });
 }
