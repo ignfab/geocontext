@@ -10,6 +10,7 @@ import type {
   Polygon,
   Position,
 } from "geojson";
+import { distVincenty } from "node-vincenty";
 
 type FlattenedGeometry = Point | LineString | Polygon;
 
@@ -183,5 +184,8 @@ export function distance(gA: Geometry, gB: Geometry): DistanceResult {
   return { ...best, distance: roundDistance(best.distance) };
 }
 
+export function distanceVincenty(lat1 : number, lon1 : number, lat2 : number, lon2 : number) {
+  return distVincenty(lat1, lon1, lat2, lon2).distance;
+}
 
 export default distance

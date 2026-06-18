@@ -66,6 +66,7 @@
     "jsts": "^2.12.1",
     "mcp-framework": "^0.2.22",
     "node-fetch": "^3.3.2",
+    "node-vincenty": "^0.0.6",
     "winston": "^3.19.0",
     "zod": "^3.25.76"
   },
