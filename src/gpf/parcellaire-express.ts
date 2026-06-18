@@ -104,7 +104,7 @@ export async function getParcellaireExpress(lon: number, lat: number): Promise<P
         const { _rawGeometry, ...rest } = item;
         return {
             ...rest,
-            distance: distance(sourceGeom, _rawGeometry as Geometry),
+            distance: distance(sourceGeom, _rawGeometry as Geometry).distance,
             source: PARCELLAIRE_EXPRESS_SOURCE,
         };
     });

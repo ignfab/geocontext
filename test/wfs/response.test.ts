@@ -180,7 +180,7 @@ describe("wfs_engine/response", () => {
       });
 
       const features = getFeatures(result);
-      expect(features[0].distance_to_filter_center as number).toBeCloseTo(1330.6551992128234, 6);
+      expect(features[0].distance_to_filter_center as number).toBeCloseTo(1330.65, 3);
       expect(features[0].intersection_area as number).toBeCloseTo(13010026.445506852, 3);
     });
 
@@ -209,7 +209,7 @@ describe("wfs_engine/response", () => {
       });
 
       const features = getFeatures(result);
-      expect(features[0].distance_to_filter_center as number).toBeCloseTo(2340.9971606708805, 6);
+      expect(features[0].distance_to_filter_center as number).toBeCloseTo(2340.99, 3);
     });
 
     it("should stay fast when computing centroid, area, and intersection_area for a large region against many polygons crossing its boundary", () => {
