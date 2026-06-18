@@ -5,7 +5,7 @@
 import BaseTool from "./BaseTool.js";
 import { z } from "zod";
 
-import { NAVIGATION_ITINERARY_SOURCE, navigationItineraryClient } from "../gpf/itinerary.js";
+import { NAVIGATION_ITINERARY_SOURCE, navigationItineraryClient, ITINERARY_METRICS, ItineraryGeometryInput } from "../gpf/itinerary.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import { lonSchema, latSchema } from "../helpers/schemas.js";
 import logger from "../logger.js";
@@ -30,6 +30,14 @@ const distanceInputSchema = z.object({
       " `vincenty` distance à vol d'oiseau (Terre ellipsoïde, plus précise et coûteuse, précision à 0.5mm)",
       " `pedestrian` à pied, `car` en voiture",
       ". Par défaut : `direct`."
+    ].join("")),
+  shortest: z
+    .enum(ITINERARY_METRICS)
+    .default("time")
+    .describe(["La métrique à optimiser, lorsqu'il y a un choix:",
+      " `time` chemin le plus rapide,",
+      " `distance` chemin le plus court.",
+      " Cette option est sans effet lorsque `profile=direct` ou `vincenty`."
     ].join(""))
 }).strict();
 
@@ -86,11 +94,7 @@ class DistanceTool extends BaseTool<DistanceInput> {
         }
       } 
       default: {
-        const itinerary = await navigationItineraryClient.getItinerary({
-          departure: input.departure,
-          arrival: input.arrival,
-          profile: input.profile,
-        });
+        const itinerary = await navigationItineraryClient.getItinerary(input as ItineraryGeometryInput);
         return {
           distance: itinerary.distance,
           time: Math.floor(itinerary.duration)

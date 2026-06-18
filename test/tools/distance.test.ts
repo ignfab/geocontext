@@ -43,6 +43,7 @@ describe("Test DistanceTool", () => {
         lat: 47.326213,
       },
       profile: "car",
+      shortest: "time",
     });
     expect(response.isError).toBeUndefined();
     expect(response.content[0]).toMatchObject({

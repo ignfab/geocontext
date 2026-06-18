@@ -8,8 +8,10 @@ export const NAVIGATION_ITINERARY_SOURCE = "Géoplateforme (calcul d'itinéraire
 export const NAVIGATION_ITINERARY_URL = "https://data.geopf.fr/navigation/itineraire";
 export const ITINERARY_RESOURCE = "bdtopo-osrm";
 export const ITINERARY_PROFILES = ["car", "pedestrian"] as const;
+export const ITINERARY_METRICS = ["time", "distance"] as const;
 
 export type ItineraryProfile = typeof ITINERARY_PROFILES[number];
+export type ItineraryMetrics = typeof ITINERARY_METRICS[number];
 
 type GeoJsonGeometryLike = {
   type: string;
@@ -32,6 +34,7 @@ export type ItineraryGeometryInput = {
     lat: number;
   }
   profile: ItineraryProfile;
+  shortest?: ItineraryMetrics;
   needGeometry?: boolean;
 };
 
@@ -60,7 +63,7 @@ export class NavigationItineraryClient {
       start: `${input.departure.lon},${input.departure.lat}`,
       end: `${input.arrival.lon},${input.arrival.lat}`,
       profile: input.profile,
-      optimization: "fastest",
+      optimization: input.shortest == "distance" ? "shortest" : "fastest",
       timeUnit: "minute",
       distanceUnit: "meter",
       crs: "EPSG:4326",
