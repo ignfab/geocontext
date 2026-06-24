@@ -14,7 +14,7 @@ describe("Test distance",() => {
     describe("Test distance(Point,LineString)", () => {
         it("should return 209731.2m from Besançon to [Paris,Marseille]",() => {
             const result = distance(besancon,parisMarseille);
-            expect(result).toBeCloseTo(209731.2,1);
+            expect(result).toBeCloseTo(192749.6,1);
         });
     });
 

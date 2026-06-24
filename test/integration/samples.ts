@@ -23,4 +23,5 @@ export const EXPECTED_TOOL_NAMES = [
   "gpf_wfs_describe_type",
   "gpf_wfs_get_features",
   "gpf_wfs_get_feature_by_id",
+  "distance"
 ] as const;

@@ -61,6 +61,7 @@ Tous les tools exposent les mêmes annotations MCP dans leur définition `tools/
 - [`gpf_wfs_describe_type`](#gpf_wfs_describe_type)
 - [`gpf_wfs_get_feature_by_id`](#gpf_wfs_get_feature_by_id)
 - [`gpf_wfs_get_features`](#gpf_wfs_get_features)
+- [`distance`](#distance)
 
 ## `geocode`
 
@@ -1491,4 +1492,130 @@ Aucun `outputSchema` unique n'est exposé. La sortie dépend de `result_type` (`
 | Succès `result_type="hits"` | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
 | Succès `result_type="http_post_request"` | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
 | Succès `result_type="http_get_url"` | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
+| Erreur | oui | oui | `content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`. |
+
+## `distance`
+
+Code Source : [src/tools/DistanceTool.ts](../src/tools/DistanceTool.ts)
+
+### Titre
+
+Distance entre deux points
+
+### Description du tool
+
+```
+Renvoie la distance (en mètres) entre deux points à partir de leur longitude et latitude.
+```
+
+### Schéma d’entrée
+
+| Champ | Type | Requis | Description |
+| --- | --- | --- | --- |
+| `arrival` | object | oui | Le point d'arrivée |
+| `departure` | object | oui | Le point de départ |
+| `profile` | string (enum) | oui | Le type de chemin suivi : `direct` distance à vol d'oiseau (approximation Terre plate ou Terre ronde, précision à 0.5%), `vincenty` distance à vol d'oiseau (Terre ellipsoïde, plus précise et coûteuse, précision à 0.5mm). Par défaut : `direct`. Valeurs : direct, vincenty. Valeur par défaut : direct. |
+
+<details>
+<summary>Schéma d’entrée brut</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "departure": {
+      "type": "object",
+      "description": "Le point de départ",
+      "properties": {
+        "lon": {
+          "type": "number",
+          "description": "La longitude du point.",
+          "minimum": -180,
+          "maximum": 180
+        },
+        "lat": {
+          "type": "number",
+          "description": "La latitude du point.",
+          "minimum": -90,
+          "maximum": 90
+        }
+      },
+      "required": [
+        "lon",
+        "lat"
+      ]
+    },
+    "arrival": {
+      "type": "object",
+      "description": "Le point d'arrivée",
+      "properties": {
+        "lon": {
+          "type": "number",
+          "description": "La longitude du point.",
+          "minimum": -180,
+          "maximum": 180
+        },
+        "lat": {
+          "type": "number",
+          "description": "La latitude du point.",
+          "minimum": -90,
+          "maximum": 90
+        }
+      },
+      "required": [
+        "lon",
+        "lat"
+      ]
+    },
+    "profile": {
+      "type": "string",
+      "description": "Le type de chemin suivi : `direct` distance à vol d'oiseau (approximation Terre plate ou Terre ronde, précision à 0.5%), `vincenty` distance à vol d'oiseau (Terre ellipsoïde, plus précise et coûteuse, précision à 0.5mm). Par défaut : `direct`.",
+      "default": "direct",
+      "enum": [
+        "direct",
+        "vincenty"
+      ]
+    }
+  },
+  "required": [
+    "departure",
+    "arrival",
+    "profile"
+  ]
+}
+```
+
+</details>
+
+### Schéma de sortie
+
+| Champ | Type | Requis | Description |
+| --- | --- | --- | --- |
+| `distance` | number | oui | La distance entre les deux points, en mètres. |
+
+<details>
+<summary>Schéma de sortie brut</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "distance": {
+      "type": "number",
+      "description": "La distance entre les deux points, en mètres."
+    }
+  },
+  "required": [
+    "distance"
+  ]
+}
+```
+
+</details>
+
+### Réponse MCP
+
+| Cas | `content` | `structuredContent` | Relation entre `content` et `structuredContent` |
+| --- | --- | --- | --- |
+| Succès | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
 | Erreur | oui | oui | `content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`. |
