@@ -9,6 +9,7 @@ import GpfWfsDescribeTypeTool from "../../src/tools/GpfWfsDescribeTypeTool";
 import GpfWfsGetFeatureByIdTool from "../../src/tools/GpfWfsGetFeatureByIdTool";
 import GpfWfsGetFeaturesTool from "../../src/tools/GpfWfsGetFeaturesTool";
 import GpfWfsSearchTypesTool from "../../src/tools/GpfWfsSearchTypesTool";
+import PointsDInteretTool from "../../src/tools/PointsDInteretTool";
 import UrbanismeTool from "../../src/tools/UrbanismeTool";
 
 const strictInputCases = [
@@ -65,6 +66,11 @@ const strictInputCases = [
     tool: new UrbanismeTool(),
     validArguments: { lon: 2.3522, lat: 48.8566 },
   },
+  {
+    label: "PointsDInteretTool",
+    tool: new PointsDInteretTool(),
+    validArguments: { lon: 2.3522, lat: 48.8566 },
+  }
 ] as const;
 
 describe("Strict tool input schemas", () => {
