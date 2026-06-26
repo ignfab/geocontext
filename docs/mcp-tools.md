@@ -57,10 +57,10 @@ Tous les tools exposent les mêmes annotations MCP dans leur définition `tools/
 - [`cadastre`](#cadastre)
 - [`urbanisme`](#urbanisme)
 - [`assiette_sup`](#assiette_sup)
-- [`gpf_wfs_search_types`](#gpf_wfs_search_types)
-- [`gpf_wfs_describe_type`](#gpf_wfs_describe_type)
-- [`gpf_wfs_get_feature_by_id`](#gpf_wfs_get_feature_by_id)
-- [`gpf_wfs_get_features`](#gpf_wfs_get_features)
+- [`gpf_search_types`](#gpf_search_types)
+- [`gpf_describe_type`](#gpf_describe_type)
+- [`gpf_get_feature_by_id`](#gpf_get_feature_by_id)
+- [`gpf_get_features`](#gpf_get_features)
 
 ## `geocode`
 
@@ -292,9 +292,9 @@ Unités administratives
 
 ```
 Renvoie, pour un point donné par sa `longitude` et sa `latitude`, la liste des unités administratives (arrondissement, arrondissement_municipal, canton, collectivite_territoriale, commune, commune_associee_ou_deleguee, departement, epci, region) qui le couvrent, sous forme d'objets typés contenant leurs propriétés administratives.
-Les résultats incluent un `feature_ref` WFS réutilisable. Les propriétés incluent notamment le code INSEE.
-Le `feature_ref` de chaque unité administrative est directement réutilisable dans `gpf_wfs_get_features` avec `intersects_feature_filter` pour interroger d'autres données sur cette emprise.
-Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gpf_wfs_get_feature_by_id`.
+Les résultats incluent un `feature_ref` GPF réutilisable. Les propriétés incluent notamment le code INSEE.
+Le `feature_ref` de chaque unité administrative est directement réutilisable dans `gpf_get_features` avec `intersects_feature_filter` pour interroger d'autres données sur cette emprise.
+Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gpf_get_feature_by_id`.
 (source : Géoplateforme (WFS, ADMINEXPRESS-COG.LATEST)).
 ```
 
@@ -370,15 +370,15 @@ Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gp
           },
           "feature_ref": {
             "type": "object",
-            "description": "Référence WFS réutilisable, notamment avec `gpf_wfs_get_features` et `intersects_feature_filter`.",
+            "description": "Référence GPF réutilisable, notamment avec `gpf_get_features` et `intersects_feature_filter`.",
             "properties": {
               "typename": {
                 "type": "string",
-                "description": "Le `typename` WFS réutilisable pour une requête ultérieure."
+                "description": "Le `typename` GPF réutilisable pour une requête ultérieure."
               },
               "feature_id": {
                 "type": "string",
-                "description": "L'identifiant WFS réutilisable du feature."
+                "description": "L'identifiant GPF réutilisable du feature."
               }
             },
             "required": [
@@ -422,10 +422,10 @@ Informations cadastrales
 
 ```
 Renvoie, pour un point donné par sa `longitude` et sa `latitude`, la liste des objets cadastraux (arrondissement, commune, feuille, parcelle, subdivision_fiscale, localisant) les plus proches, avec leurs informations associées.
-Les résultats sont retournés au plus une fois par type lorsqu'ils sont disponibles et incluent un `feature_ref` WFS réutilisable.
-Le `feature_ref` est directement réutilisable dans `gpf_wfs_get_features` avec `intersects_feature_filter`.
+Les résultats sont retournés au plus une fois par type lorsqu'ils sont disponibles et incluent un `feature_ref` GPF réutilisable.
+Le `feature_ref` est directement réutilisable dans `gpf_get_features` avec `intersects_feature_filter`.
 La distance de recherche est fixée à 10 mètres.  Si aucun objet n'est trouvé dans les 10 mètres, le résultat est vide.
-Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gpf_wfs_get_feature_by_id`.
+Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gpf_get_feature_by_id`.
 (source : Géoplateforme (WFS, CADASTRALPARCELS.PARCELLAIRE_EXPRESS)).
 ```
 
@@ -501,15 +501,15 @@ Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gp
           },
           "feature_ref": {
             "type": "object",
-            "description": "Référence WFS réutilisable, notamment avec `gpf_wfs_get_features` et `intersects_feature_filter`.",
+            "description": "Référence GPF réutilisable, notamment avec `gpf_get_features` et `intersects_feature_filter`.",
             "properties": {
               "typename": {
                 "type": "string",
-                "description": "Le `typename` WFS réutilisable pour une requête ultérieure."
+                "description": "Le `typename` GPF réutilisable pour une requête ultérieure."
               },
               "feature_id": {
                 "type": "string",
-                "description": "L'identifiant WFS réutilisable du feature."
+                "description": "L'identifiant GPF réutilisable du feature."
               }
             },
             "required": [
@@ -564,9 +564,9 @@ Informations d’urbanisme
 ```
 Renvoie, pour un point donné par sa `longitude` et sa `latitude`, la liste des objets d'urbanisme pertinents du Géoportail de l'Urbanisme (document, zones, prescriptions, informations, etc.), avec leurs propriétés associées. (source : Géoplateforme - (WFS Géoportail de l'Urbanisme)).
 Les résultats peuvent notamment inclure le document d'urbanisme applicable ainsi que des éléments réglementaires associés à proximité du point.
-Quand un objet correspond à une couche WFS réutilisable, il expose aussi un `feature_ref` compatible avec `gpf_wfs_get_features` et `intersects_feature_filter`.
+Quand un objet correspond à une couche GPF réutilisable, il expose aussi un `feature_ref` compatible avec `gpf_get_features` et `intersects_feature_filter`.
 Le zonage PLU (zone U, AU, A, N...) est inclus dans les zones retournées et constitue souvent l'information principale recherchée.
-Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gpf_wfs_get_feature_by_id`.
+Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gpf_get_feature_by_id`.
 Modèles d'URL Géoportail de l'Urbanisme :
 - fiche document: https://www.geoportail-urbanisme.gouv.fr/document/by-id/{gpu_doc_id}
 - carte: https://www.geoportail-urbanisme.gouv.fr/map/?documentId={gpu_doc_id}
@@ -645,15 +645,15 @@ Modèles d'URL Géoportail de l'Urbanisme :
           },
           "feature_ref": {
             "type": "object",
-            "description": "Référence WFS réutilisable, notamment avec `gpf_wfs_get_features` et `intersects_feature_filter`.",
+            "description": "Référence GPF réutilisable, notamment avec `gpf_get_features` et `intersects_feature_filter`.",
             "properties": {
               "typename": {
                 "type": "string",
-                "description": "Le `typename` WFS réutilisable pour une requête ultérieure."
+                "description": "Le `typename` GPF réutilisable pour une requête ultérieure."
               },
               "feature_id": {
                 "type": "string",
-                "description": "L'identifiant WFS réutilisable du feature."
+                "description": "L'identifiant GPF réutilisable du feature."
               }
             },
             "required": [
@@ -702,8 +702,8 @@ Servitudes d’utilité publique
 ```
 Renvoie, pour un point donné par sa longitude et sa latitude, la liste des assiettes de servitudes d'utilité publique (SUP) pertinentes à proximité, avec leurs propriétés associées.
 Une SUP est une contrainte légale sur l'usage du sol liée à un équipement ou une infrastructure publique (ex : AC pour patrimoine, EL pour voirie, PT pour télécoms, I pour installations classées...).
-Les résultats peuvent inclure des assiettes ponctuelles, linéaires ou surfaciques et exposent un `feature_ref` WFS réutilisable quand il est disponible.
-Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gpf_wfs_get_feature_by_id`.
+Les résultats peuvent inclure des assiettes ponctuelles, linéaires ou surfaciques et exposent un `feature_ref` GPF réutilisable quand il est disponible.
+Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gpf_get_feature_by_id`.
 (source : Géoplateforme - (WFS Géoportail de l'Urbanisme)).
 ```
 
@@ -779,15 +779,15 @@ Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gp
           },
           "feature_ref": {
             "type": "object",
-            "description": "Référence WFS réutilisable, notamment avec `gpf_wfs_get_features` et `intersects_feature_filter`.",
+            "description": "Référence GPF réutilisable, notamment avec `gpf_get_features` et `intersects_feature_filter`.",
             "properties": {
               "typename": {
                 "type": "string",
-                "description": "Le `typename` WFS réutilisable pour une requête ultérieure."
+                "description": "Le `typename` GPF réutilisable pour une requête ultérieure."
               },
               "feature_id": {
                 "type": "string",
-                "description": "L'identifiant WFS réutilisable du feature."
+                "description": "L'identifiant GPF réutilisable du feature."
               }
             },
             "required": [
@@ -823,21 +823,21 @@ Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gp
 | Succès | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
 | Erreur | oui | oui | `content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`. |
 
-## `gpf_wfs_search_types`
+## `gpf_search_types`
 
-Code Source : [src/tools/GpfWfsSearchTypesTool.ts](../src/tools/GpfWfsSearchTypesTool.ts)
+Code Source : [src/tools/GpfSearchTypesTool.ts](../src/tools/GpfSearchTypesTool.ts)
 
 ### Titre
 
-Recherche de types WFS
+Recherche de types GPF
 
 ### Description du tool
 
 ```
-Recherche des types WFS de la Géoplateforme (GPF) à partir de mots-clés afin de trouver un identifiant de type (`typename`) valide.
+Recherche des types de la Géoplateforme (GPF) à partir de mots-clés afin de trouver un identifiant de type (`typename`) valide.
 La recherche est textuelle (mini-search) et retourne une liste ordonnée de candidats avec leur identifiant, leur titre, leur description et un score de pertinence éventuel.
 Le paramètre `max_results` permet d'élargir le nombre de candidats retournés (10 par défaut).
-**Important** : Utiliser ce tool avant `gpf_wfs_describe_type` ou `gpf_wfs_get_features` lorsque le nom exact du type n'est pas connu.
+**Important** : Utiliser ce tool avant `gpf_describe_type` ou `gpf_get_features` lorsque le nom exact du type n'est pas connu.
 **Important** : Privilégier des termes métier en français pour la recherche.
 ```
 
@@ -879,7 +879,7 @@ Le paramètre `max_results` permet d'élargir le nombre de candidats retournés 
 
 | Champ | Type | Requis | Description |
 | --- | --- | --- | --- |
-| `results` | array | oui | La liste ordonnée des types WFS trouvés. |
+| `results` | array | oui | La liste ordonnée des types GPF trouvés. |
 
 <details>
 <summary>Schéma de sortie brut</summary>
@@ -890,21 +890,21 @@ Le paramètre `max_results` permet d'élargir le nombre de candidats retournés 
   "properties": {
     "results": {
       "type": "array",
-      "description": "La liste ordonnée des types WFS trouvés.",
+      "description": "La liste ordonnée des types GPF trouvés.",
       "items": {
         "type": "object",
         "properties": {
           "id": {
             "type": "string",
-            "description": "L'identifiant complet du type WFS."
+            "description": "L'identifiant complet du type GPF."
           },
           "title": {
             "type": "string",
-            "description": "Le titre lisible du type WFS."
+            "description": "Le titre lisible du type GPF."
           },
           "description": {
             "type": "string",
-            "description": "La description du type WFS."
+            "description": "La description du type GPF."
           },
           "score": {
             "type": "number",
@@ -934,19 +934,19 @@ Le paramètre `max_results` permet d'élargir le nombre de candidats retournés 
 | Succès | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
 | Erreur | oui | oui | `content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`. |
 
-## `gpf_wfs_describe_type`
+## `gpf_describe_type`
 
-Code Source : [src/tools/GpfWfsDescribeTypeTool.ts](../src/tools/GpfWfsDescribeTypeTool.ts)
+Code Source : [src/tools/GpfDescribeTypeTool.ts](../src/tools/GpfDescribeTypeTool.ts)
 
 ### Titre
 
-Description d’un type WFS
+Description d’un type GPF
 
 ### Description du tool
 
 ```
-Renvoie le schéma détaillé d'un type WFS à partir de son identifiant (`typename`) : identifiants, description et liste des propriétés.
-Utiliser ce tool après `gpf_wfs_search_types` pour inspecter les propriétés disponibles avant d'appeler `gpf_wfs_get_features`.
+Renvoie le schéma détaillé d'un type GPF à partir de son identifiant (`typename`) : identifiants, description et liste des propriétés.
+Utiliser ce tool après `gpf_search_types` pour inspecter les propriétés disponibles avant d'appeler `gpf_get_features`.
 La sortie inclut notamment le type des propriétés, leur description, leurs valeurs possibles (`enum`) lorsqu'elles existent
 **IMPORTANT : Appel fortement recommandé si les noms exacts des propriétés ne sont pas connus : un nom de propriété incorrect provoque une erreur**.
 ```
@@ -982,12 +982,12 @@ La sortie inclut notamment le type des propriétés, leur description, leurs val
 
 | Champ | Type | Requis | Description |
 | --- | --- | --- | --- |
-| `description` | string | oui | La description du type WFS. |
-| `id` | string | oui | L'identifiant complet du type WFS. |
-| `name` | string | oui | Le nom court du type WFS. |
-| `namespace` | string | oui | L'espace de nommage du type WFS. |
-| `properties` | array | oui | La liste des propriétés du type WFS. |
-| `title` | string | oui | Le titre lisible du type WFS. |
+| `description` | string | oui | La description du type GPF. |
+| `id` | string | oui | L'identifiant complet du type GPF. |
+| `name` | string | oui | Le nom court du type GPF. |
+| `namespace` | string | oui | L'espace de nommage du type GPF. |
+| `properties` | array | oui | La liste des propriétés du type GPF. |
+| `title` | string | oui | Le titre lisible du type GPF. |
 
 <details>
 <summary>Schéma de sortie brut</summary>
@@ -998,27 +998,27 @@ La sortie inclut notamment le type des propriétés, leur description, leurs val
   "properties": {
     "id": {
       "type": "string",
-      "description": "L'identifiant complet du type WFS."
+      "description": "L'identifiant complet du type GPF."
     },
     "namespace": {
       "type": "string",
-      "description": "L'espace de nommage du type WFS."
+      "description": "L'espace de nommage du type GPF."
     },
     "name": {
       "type": "string",
-      "description": "Le nom court du type WFS."
+      "description": "Le nom court du type GPF."
     },
     "title": {
       "type": "string",
-      "description": "Le titre lisible du type WFS."
+      "description": "Le titre lisible du type GPF."
     },
     "description": {
       "type": "string",
-      "description": "La description du type WFS."
+      "description": "La description du type GPF."
     },
     "properties": {
       "type": "array",
-      "description": "La liste des propriétés du type WFS.",
+      "description": "La liste des propriétés du type GPF.",
       "items": {
         "type": "object",
         "properties": {
@@ -1077,31 +1077,31 @@ La sortie inclut notamment le type des propriétés, leur description, leurs val
 | Succès | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
 | Erreur | oui | oui | `content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`. |
 
-## `gpf_wfs_get_feature_by_id`
+## `gpf_get_feature_by_id`
 
-Code Source : [src/tools/GpfWfsGetFeatureByIdTool.ts](../src/tools/GpfWfsGetFeatureByIdTool.ts)
+Code Source : [src/tools/GpfGetFeatureByIdTool.ts](../src/tools/GpfGetFeatureByIdTool.ts)
 
 ### Titre
 
-Lecture d’un objet WFS par identifiant
+Lecture d’un objet GPF par identifiant
 
 ### Description du tool
 
 ```
-Récupère exactement un objet WFS à partir de `typename` et `feature_id`, sans filtre attributaire ni spatial.
-Ce tool est le chemin robuste quand vous disposez déjà d'une `feature_ref { typename, feature_id }` issue d'un autre tool (`adminexpress`, `cadastre`, `urbanisme`, `assiette_sup`, `gpf_wfs_get_features`).
+Récupère exactement un objet GPF à partir de `typename` et `feature_id`, sans filtre attributaire ni spatial.
+Ce tool est le chemin robuste quand vous disposez déjà d'une `feature_ref { typename, feature_id }` issue d'un autre tool (`adminexpress`, `cadastre`, `urbanisme`, `assiette_sup`, `gpf_get_features`).
 Le contrat garantit une cardinalité stricte : 0 résultat ou plusieurs résultats provoquent une erreur explicite.
-Utiliser `result_type="http_post_request"` pour récupérer une requête WFS POST robuste, ou `result_type="http_get_url"` pour récupérer l'URL GET WFS équivalente et l'utiliser ou la visualiser dans un outil la supportant.
+Utiliser `result_type="http_post_request"` pour récupérer une requête POST robuste, ou `result_type="http_get_url"` pour récupérer l'URL GET équivalente et l'utiliser ou la visualiser dans un outil la supportant.
 ```
 
 ### Schéma d’entrée
 
 | Champ | Type | Requis | Description |
 | --- | --- | --- | --- |
-| `feature_id` | string | oui | Identifiant WFS exact de l'objet à récupérer, par exemple `commune.8952`. |
-| `result_type` | string (enum) | non | `results` renvoie une FeatureCollection normalisée avec exactement un objet. `http_post_request` renvoie une requête POST WFS robuste à exécuter directement. `http_get_url` renvoie l'URL GET WFS équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant. Valeurs : results, http_post_request, http_get_url. Valeur par défaut : results. |
+| `feature_id` | string | oui | Identifiant GPF exact de l'objet à récupérer, par exemple `commune.8952`. |
+| `result_type` | string (enum) | non | `results` renvoie une FeatureCollection normalisée avec exactement un objet. `http_post_request` renvoie une requête POST robuste à exécuter directement. `http_get_url` renvoie l'URL GET équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant. Valeurs : results, http_post_request, http_get_url. Valeur par défaut : results. |
 | `select` | array | non | Liste des propriétés non géométriques à renvoyer. Quand `result_type="http_post_request"` ou `result_type="http_get_url"`, la géométrie est automatiquement ajoutée. |
-| `typename` | string | oui | Nom exact du type WFS à interroger, par exemple `ADMINEXPRESS-COG.LATEST:commune`. |
+| `typename` | string | oui | Nom exact du type GPF à interroger, par exemple `ADMINEXPRESS-COG.LATEST:commune`. |
 
 <details>
 <summary>Schéma d’entrée brut</summary>
@@ -1113,12 +1113,12 @@ Utiliser `result_type="http_post_request"` pour récupérer une requête WFS POS
     "typename": {
       "type": "string",
       "minLength": 1,
-      "description": "Nom exact du type WFS à interroger, par exemple `ADMINEXPRESS-COG.LATEST:commune`."
+      "description": "Nom exact du type GPF à interroger, par exemple `ADMINEXPRESS-COG.LATEST:commune`."
     },
     "feature_id": {
       "type": "string",
       "minLength": 1,
-      "description": "Identifiant WFS exact de l'objet à récupérer, par exemple `commune.8952`."
+      "description": "Identifiant GPF exact de l'objet à récupérer, par exemple `commune.8952`."
     },
     "result_type": {
       "type": "string",
@@ -1128,7 +1128,7 @@ Utiliser `result_type="http_post_request"` pour récupérer une requête WFS POS
         "http_get_url"
       ],
       "default": "results",
-      "description": "`results` renvoie une FeatureCollection normalisée avec exactement un objet. `http_post_request` renvoie une requête POST WFS robuste à exécuter directement. `http_get_url` renvoie l'URL GET WFS équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant."
+      "description": "`results` renvoie une FeatureCollection normalisée avec exactement un objet. `http_post_request` renvoie une requête POST robuste à exécuter directement. `http_get_url` renvoie l'URL GET équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant."
     },
     "select": {
       "type": "array",
@@ -1164,18 +1164,18 @@ Aucun `outputSchema` unique n'est exposé. La sortie dépend de `result_type` (`
 | Succès `result_type="http_get_url"` | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
 | Erreur | oui | oui | `content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`. |
 
-## `gpf_wfs_get_features`
+## `gpf_get_features`
 
-Code Source : [src/tools/GpfWfsGetFeaturesTool.ts](../src/tools/GpfWfsGetFeaturesTool.ts)
+Code Source : [src/tools/GpfGetFeaturesTool.ts](../src/tools/GpfGetFeaturesTool.ts)
 
 ### Titre
 
-Lecture d’objets WFS
+Lecture d’objets GPF
 
 ### Description du tool
 
 ```
-Interroge un type WFS et renvoie des résultats structurés sans demander au modèle d'écrire du CQL ou du WFS.
+Interroge un type GPF et renvoie des résultats structurés.
 Utiliser `select` pour choisir les propriétés, `where` pour filtrer, `order_by` pour trier et un filtre spatial dédié (`bbox_filter`, `intersects_point_filter`, `dwithin_point_filter`, `intersects_feature_filter` ou `travel_time_filter`) pour le spatial. Avec `result_type="http_post_request"` ou `result_type="http_get_url"`, la géométrie est automatiquement ajoutée aux propriétés sélectionnées pour garantir une requête cartographiable.
 Exemple attributaire : `where=[{ property: "code_insee", operator: "eq", value: "75056" }]`.
 Exemple bbox : `bbox_filter={ west: 2.1, south: 48.7, east: 2.5, north: 48.9 }`.
@@ -1183,9 +1183,9 @@ Exemple point dans géométrie : `intersects_point_filter={ lon: 2.35, lat: 48.8
 Exemple distance : `dwithin_point_filter={ lon: 2.35, lat: 48.85, distance_m: 500 }`.
 Exemple réutilisation : `intersects_feature_filter={ typename, feature_id }` avec `typename` et `feature_id` issus d'une `feature_ref`.
 Exemple temps de trajet : `travel_time_filter={ lon: 2.35, lat: 48.85, minutes: 15, profile: "pedestrian" }` pour les objets atteignables en 15 minutes à pied depuis ce point.
-⚠️ Quand `typename` et `intersects_feature_filter.typename` sont identiques, utiliser `gpf_wfs_get_feature_by_id` pour récupérer exactement l'objet ciblé.
-**OBLIGATOIRE : toujours appeler `gpf_wfs_describe_type` avant ce tool, sauf si `gpf_wfs_describe_type` a déjà été appelé pour ce même typename dans la conversation en cours.**
-Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiques à chaque typename et diffèrent systématiquement des conventions habituelles (ex : pas de nom_officiel, navigabilite sans accent, etc.). Toute tentative sans appel préalable à `gpf_wfs_describe_type` **provoquera une erreur.**
+⚠️ Quand `typename` et `intersects_feature_filter.typename` sont identiques, utiliser `gpf_get_feature_by_id` pour récupérer exactement l'objet ciblé.
+**OBLIGATOIRE : toujours appeler `gpf_describe_type` avant ce tool, sauf si `gpf_describe_type` a déjà été appelé pour ce même typename dans la conversation en cours.**
+Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiques à chaque typename et diffèrent systématiquement des conventions habituelles (ex : pas de nom_officiel, navigabilite sans accent, etc.). Toute tentative sans appel préalable à `gpf_describe_type` **provoquera une erreur.**
 ```
 
 ### Schéma d’entrée
@@ -1194,14 +1194,14 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
 | --- | --- | --- | --- |
 | `bbox_filter` | object | non | Filtre spatial par boîte englobante. Exclusif avec les autres filtres spatiaux. |
 | `dwithin_point_filter` | object | non | Filtre spatial par distance à un point. Exclusif avec les autres filtres spatiaux. |
-| `intersects_feature_filter` | object | non | Filtre spatial par intersection avec un feature WFS de référence. Exclusif avec les autres filtres spatiaux. |
+| `intersects_feature_filter` | object | non | Filtre spatial par intersection avec un feature GPF de référence. Exclusif avec les autres filtres spatiaux. |
 | `intersects_point_filter` | object | non | Filtre spatial par intersection avec un point. Exclusif avec les autres filtres spatiaux. |
 | `limit` | integer | non | Nombre maximum d'objets à renvoyer. Valeur par défaut : 100. Maximum : 5000. Valeur par défaut : 100. |
 | `order_by` | array | non | Liste ordonnée des critères de tri. |
-| `result_type` | string (enum) | non | `results` renvoie une FeatureCollection avec les propriétés attributaires uniquement — **les géométries ne sont pas incluses**, ce mode ne peut donc pas être utilisé directement pour cartographier. `hits` renvoie uniquement le nombre total d'objets correspondant à la requête. `http_post_request` renvoie une requête POST WFS robuste à exécuter directement. `http_get_url` renvoie l'URL GET WFS équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant. Avec `http_post_request` ou `http_get_url`, la géométrie est automatiquement ajoutée aux propriétés du `select` pour garantir l'affichage cartographique. Valeurs : results, hits, http_post_request, http_get_url. Valeur par défaut : results. |
-| `select` | array | non | Liste des propriétés non géométriques à renvoyer pour chaque objet. Utiliser `gpf_wfs_describe_type` pour connaître les noms exacts disponibles. Exemple : `["code_insee", "nom_officiel"]`. |
+| `result_type` | string (enum) | non | `results` renvoie une FeatureCollection avec les propriétés attributaires uniquement — **les géométries ne sont pas incluses**, ce mode ne peut donc pas être utilisé directement pour cartographier. `hits` renvoie uniquement le nombre total d'objets correspondant à la requête. `http_post_request` renvoie une requête POST robuste à exécuter directement. `http_get_url` renvoie l'URL GET équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant. Avec `http_post_request` ou `http_get_url`, la géométrie est automatiquement ajoutée aux propriétés du `select` pour garantir l'affichage cartographique. Valeurs : results, hits, http_post_request, http_get_url. Valeur par défaut : results. |
+| `select` | array | non | Liste des propriétés non géométriques à renvoyer pour chaque objet. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles. Exemple : `["code_insee", "nom_officiel"]`. |
 | `travel_time_filter` | object | non | Filtre spatial par temps de trajet depuis un point (`profile` voiture ou piéton). Exclusif avec les autres filtres spatiaux. |
-| `typename` | string | oui | Nom exact du type WFS à interroger, par exemple `BDTOPO_V3:batiment`. Utiliser `gpf_wfs_search_types` pour trouver un `typename` valide. |
+| `typename` | string | oui | Nom exact du type GPF à interroger, par exemple `BDTOPO_V3:batiment`. Utiliser `gpf_search_types` pour trouver un `typename` valide. |
 | `where` | array | non | Clauses de filtre attributaire, combinées avec `AND`. |
 
 <details>
@@ -1214,7 +1214,7 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
     "typename": {
       "type": "string",
       "minLength": 1,
-      "description": "Nom exact du type WFS à interroger, par exemple `BDTOPO_V3:batiment`. Utiliser `gpf_wfs_search_types` pour trouver un `typename` valide."
+      "description": "Nom exact du type GPF à interroger, par exemple `BDTOPO_V3:batiment`. Utiliser `gpf_search_types` pour trouver un `typename` valide."
     },
     "limit": {
       "type": "integer",
@@ -1232,7 +1232,7 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
         "http_get_url"
       ],
       "default": "results",
-      "description": "`results` renvoie une FeatureCollection avec les propriétés attributaires uniquement — **les géométries ne sont pas incluses**, ce mode ne peut donc pas être utilisé directement pour cartographier. `hits` renvoie uniquement le nombre total d'objets correspondant à la requête. `http_post_request` renvoie une requête POST WFS robuste à exécuter directement. `http_get_url` renvoie l'URL GET WFS équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant. Avec `http_post_request` ou `http_get_url`, la géométrie est automatiquement ajoutée aux propriétés du `select` pour garantir l'affichage cartographique."
+      "description": "`results` renvoie une FeatureCollection avec les propriétés attributaires uniquement — **les géométries ne sont pas incluses**, ce mode ne peut donc pas être utilisé directement pour cartographier. `hits` renvoie uniquement le nombre total d'objets correspondant à la requête. `http_post_request` renvoie une requête POST robuste à exécuter directement. `http_get_url` renvoie l'URL GET équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant. Avec `http_post_request` ou `http_get_url`, la géométrie est automatiquement ajoutée aux propriétés du `select` pour garantir l'affichage cartographique."
     },
     "select": {
       "type": "array",
@@ -1241,7 +1241,7 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
         "minLength": 1
       },
       "minItems": 1,
-      "description": "Liste des propriétés non géométriques à renvoyer pour chaque objet. Utiliser `gpf_wfs_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`."
+      "description": "Liste des propriétés non géométriques à renvoyer pour chaque objet. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`."
     },
     "order_by": {
       "type": "array",
@@ -1251,7 +1251,7 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
           "property": {
             "type": "string",
             "minLength": 1,
-            "description": "Nom exact d'une propriété non géométrique à utiliser pour le tri. Utiliser `gpf_wfs_describe_type` pour connaître les noms exacts disponibles."
+            "description": "Nom exact d'une propriété non géométrique à utiliser pour le tri. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles."
           },
           "direction": {
             "type": "string",
@@ -1280,7 +1280,7 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
           "property": {
             "type": "string",
             "minLength": 1,
-            "description": "Nom exact d'une propriété non géométrique du type WFS. Utiliser `gpf_wfs_describe_type` pour connaître les noms exacts disponibles."
+            "description": "Nom exact d'une propriété non géométrique du type GPF. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles."
           },
           "operator": {
             "type": "string",
@@ -1414,7 +1414,7 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
         "typename": {
           "type": "string",
           "minLength": 1,
-          "description": "Type WFS du feature de référence."
+          "description": "Type GPF du feature de référence."
         },
         "feature_id": {
           "type": "string",
@@ -1427,7 +1427,7 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
         "feature_id"
       ],
       "additionalProperties": false,
-      "description": "Filtre spatial par intersection avec un feature WFS de référence. Exclusif avec les autres filtres spatiaux."
+      "description": "Filtre spatial par intersection avec un feature GPF de référence. Exclusif avec les autres filtres spatiaux."
     },
     "travel_time_filter": {
       "type": "object",

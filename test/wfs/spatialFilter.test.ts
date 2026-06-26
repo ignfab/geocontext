@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import { getSpatialFilter } from "../../src/wfs/spatialFilter";
 import {
-  gpfWfsGetFeaturesInputSchema,
-  type GpfWfsGetFeaturesInput,
+  gpfGetFeaturesInputSchema,
+  type GpfGetFeaturesInput,
 } from "../../src/wfs/schema";
 
-const baseInput: GpfWfsGetFeaturesInput = {
+const baseInput: GpfGetFeaturesInput = {
   typename: "ADMINEXPRESS-COG.LATEST:commune",
   limit: 100,
   result_type: "results",
@@ -18,7 +18,7 @@ describe("getSpatialFilter", () => {
   });
 
   it("should map a dwithin_point_filter to the compiler spatial filter", () => {
-    const input: GpfWfsGetFeaturesInput = {
+    const input: GpfGetFeaturesInput = {
       ...baseInput,
       dwithin_point_filter: {
         lon: 2.3522,
@@ -36,7 +36,7 @@ describe("getSpatialFilter", () => {
   });
 
   it("should map a travel_time_filter to the compiler spatial filter", () => {
-    const input: GpfWfsGetFeaturesInput = {
+    const input: GpfGetFeaturesInput = {
       ...baseInput,
       travel_time_filter: {
         lon: 2.3522,
@@ -56,9 +56,9 @@ describe("getSpatialFilter", () => {
   });
 });
 
-describe("gpfWfsGetFeaturesInputSchema spatial filters", () => {
+describe("gpfGetFeaturesInputSchema spatial filters", () => {
   it("should validate bbox filters", () => {
-    expect(gpfWfsGetFeaturesInputSchema.parse({
+    expect(gpfGetFeaturesInputSchema.parse({
       ...baseInput,
       bbox_filter: {
         west: 2.1,
@@ -75,7 +75,7 @@ describe("gpfWfsGetFeaturesInputSchema spatial filters", () => {
   });
 
   it("should reject incomplete spatial filters", () => {
-    expect(() => gpfWfsGetFeaturesInputSchema.parse({
+    expect(() => gpfGetFeaturesInputSchema.parse({
       ...baseInput,
       intersects_point_filter: {
         lon: 2.3522,
@@ -84,7 +84,7 @@ describe("gpfWfsGetFeaturesInputSchema spatial filters", () => {
   });
 
   it("should reject fields from another spatial filter mode", () => {
-    expect(() => gpfWfsGetFeaturesInputSchema.parse({
+    expect(() => gpfGetFeaturesInputSchema.parse({
       ...baseInput,
       bbox_filter: {
         west: 2.1,
@@ -97,7 +97,7 @@ describe("gpfWfsGetFeaturesInputSchema spatial filters", () => {
   });
 
   it("should reject multiple spatial filters", () => {
-    expect(() => gpfWfsGetFeaturesInputSchema.parse({
+    expect(() => gpfGetFeaturesInputSchema.parse({
       ...baseInput,
       bbox_filter: {
         west: 2.1,
@@ -113,7 +113,7 @@ describe("gpfWfsGetFeaturesInputSchema spatial filters", () => {
   });
 
   it("should validate travel-time filters", () => {
-    expect(gpfWfsGetFeaturesInputSchema.parse({
+    expect(gpfGetFeaturesInputSchema.parse({
       ...baseInput,
       travel_time_filter: {
         lon: 2.3522,
@@ -130,7 +130,7 @@ describe("gpfWfsGetFeaturesInputSchema spatial filters", () => {
   });
 
   it("should reject invalid travel-time filters", () => {
-    expect(() => gpfWfsGetFeaturesInputSchema.parse({
+    expect(() => gpfGetFeaturesInputSchema.parse({
       ...baseInput,
       travel_time_filter: {
         lon: 2.3522,
@@ -140,7 +140,7 @@ describe("gpfWfsGetFeaturesInputSchema spatial filters", () => {
       },
     })).toThrow();
 
-    expect(() => gpfWfsGetFeaturesInputSchema.parse({
+    expect(() => gpfGetFeaturesInputSchema.parse({
       ...baseInput,
       travel_time_filter: {
         lon: 2.3522,
@@ -150,7 +150,7 @@ describe("gpfWfsGetFeaturesInputSchema spatial filters", () => {
       },
     })).toThrow();
 
-    expect(() => gpfWfsGetFeaturesInputSchema.parse({
+    expect(() => gpfGetFeaturesInputSchema.parse({
       ...baseInput,
       travel_time_filter: {
         lon: 2.3522,
@@ -162,7 +162,7 @@ describe("gpfWfsGetFeaturesInputSchema spatial filters", () => {
   });
 
   it("should reject legacy flat spatial parameters", () => {
-    expect(() => gpfWfsGetFeaturesInputSchema.parse({
+    expect(() => gpfGetFeaturesInputSchema.parse({
       ...baseInput,
       spatial_operator: "bbox",
     })).toThrow();

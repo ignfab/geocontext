@@ -12,7 +12,7 @@ const mockFetchJSONPost = vi.fn<(
 const mockFetchJSONGet = vi.fn<(url: string) => Promise<unknown>>();
 
 vi.doMock("../../../src/wfs/catalog.js", () => ({
-  GPF_WFS_URL: "https://data.geopf.fr/wfs",
+  GPF_URL: "https://data.geopf.fr/wfs",
   wfsSchemaStore: {
     getFeatureType: mockGetFeatureType,
   },
@@ -24,12 +24,12 @@ vi.doMock("../../../src/helpers/http.js", () => ({
   ServiceResponseError,
 }));
 
-const { default: GpfWfsGetFeaturesTool } = await import(
-  "../../../src/tools/GpfWfsGetFeaturesTool"
+const { default: GpfGetFeaturesTool } = await import(
+  "../../../src/tools/GpfGetFeaturesTool"
 );
 
-describe("Test GpfWfsGetFeaturesTool", () => {
-  class RespondableGpfWfsGetFeaturesTool extends GpfWfsGetFeaturesTool {
+describe("Test GpfGetFeaturesTool", () => {
+  class RespondableGpfGetFeaturesTool extends GpfGetFeaturesTool {
     respond(data: unknown) {
       return this.createSuccessResponse(data);
     }
@@ -164,8 +164,8 @@ describe("Test GpfWfsGetFeaturesTool", () => {
   });
 
   it("should expose an enriched MCP definition", () => {
-    const tool = new GpfWfsGetFeaturesTool();
-    expect(tool.toolDefinition.title).toEqual("Lecture d’objets WFS");
+    const tool = new GpfGetFeaturesTool();
+    expect(tool.toolDefinition.title).toEqual("Lecture d’objets GPF");
     expect(tool.toolDefinition.inputSchema.properties?.typename).toMatchObject({
       type: "string",
       minLength: 1,
@@ -188,7 +188,7 @@ describe("Test GpfWfsGetFeaturesTool", () => {
   });
 
   it("should publish an LLM-compatible input schema without composition keywords", () => {
-    const tool = new GpfWfsGetFeaturesTool();
+    const tool = new GpfGetFeaturesTool();
 
     expect(hasJsonSchemaComposition(tool.toolDefinition.inputSchema)).toBe(false);
     expect(tool.toolDefinition.inputSchema.properties?.dwithin_point_filter).toMatchObject({
@@ -211,7 +211,7 @@ describe("Test GpfWfsGetFeaturesTool", () => {
   });
 
   it("should return a FeatureCollection without structuredContent for results", () => {
-    const tool = new RespondableGpfWfsGetFeaturesTool();
+    const tool = new RespondableGpfGetFeaturesTool();
     const response = tool.respond(featureCollection as never);
 
     expect("isError" in response).toBe(false);
@@ -230,7 +230,7 @@ describe("Test GpfWfsGetFeaturesTool", () => {
   });
 
   it("should return text content and structuredContent for hits", () => {
-    const tool = new RespondableGpfWfsGetFeaturesTool();
+    const tool = new RespondableGpfGetFeaturesTool();
     const response = tool.respond({
       result_type: "hits",
       totalFeatures: featureCollection.totalFeatures,
@@ -255,12 +255,12 @@ describe("Test GpfWfsGetFeaturesTool", () => {
   });
 
   it("should return text content and structuredContent for http_post_request", async () => {
-    const tool = new GpfWfsGetFeaturesTool();
+    const tool = new GpfGetFeaturesTool();
     mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
 
     const response = await tool.toolCall({
       params: {
-        name: "gpf_wfs_get_features",
+        name: "gpf_get_features",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
           result_type: "http_post_request",
@@ -302,12 +302,12 @@ describe("Test GpfWfsGetFeaturesTool", () => {
   });
 
   it("should return text content and structuredContent for http_get_url", async () => {
-    const tool = new GpfWfsGetFeaturesTool();
+    const tool = new GpfGetFeaturesTool();
     mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
 
     const response = await tool.toolCall({
       params: {
-        name: "gpf_wfs_get_features",
+        name: "gpf_get_features",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
           result_type: "http_get_url",
@@ -341,13 +341,13 @@ describe("Test GpfWfsGetFeaturesTool", () => {
   });
 
   it("should compile travel_time_filter into a WFS request using an isochrone geometry", async () => {
-    const tool = new GpfWfsGetFeaturesTool();
+    const tool = new GpfGetFeaturesTool();
     mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
     const isochroneUrls = captureIsochroneRequests();
 
     const response = await tool.toolCall({
       params: {
-        name: "gpf_wfs_get_features",
+        name: "gpf_get_features",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
           result_type: "http_post_request",
@@ -381,10 +381,10 @@ describe("Test GpfWfsGetFeaturesTool", () => {
   });
 
   it("should return isError=true for invalid input", async () => {
-    const tool = new GpfWfsGetFeaturesTool();
+    const tool = new GpfGetFeaturesTool();
     const response = await tool.toolCall({
       params: {
-        name: "gpf_wfs_get_features",
+        name: "gpf_get_features",
         arguments: {
           typename: "",
         },
@@ -413,10 +413,10 @@ describe("Test GpfWfsGetFeaturesTool", () => {
   });
 
   it("should reject legacy request result_type", async () => {
-    const tool = new GpfWfsGetFeaturesTool();
+    const tool = new GpfGetFeaturesTool();
     const response = await tool.toolCall({
       params: {
-        name: "gpf_wfs_get_features",
+        name: "gpf_get_features",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
           result_type: "request",
@@ -438,10 +438,10 @@ describe("Test GpfWfsGetFeaturesTool", () => {
   });
 
   it("should reject multiple spatial filters as invalid tool parameters", async () => {
-    const tool = new GpfWfsGetFeaturesTool();
+    const tool = new GpfGetFeaturesTool();
     const response = await tool.toolCall({
       params: {
-        name: "gpf_wfs_get_features",
+        name: "gpf_get_features",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
           bbox_filter: {
@@ -480,10 +480,10 @@ describe("Test GpfWfsGetFeaturesTool", () => {
   });
 
   it("should reject legacy inputs removed from the public schema", async () => {
-    const tool = new GpfWfsGetFeaturesTool();
+    const tool = new GpfGetFeaturesTool();
     const response = await tool.toolCall({
       params: {
-        name: "gpf_wfs_get_features",
+        name: "gpf_get_features",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
           cql_filter: "code_insee = '01001'",
@@ -510,13 +510,13 @@ describe("Test GpfWfsGetFeaturesTool", () => {
   });
 
   it("should build a POST request with query params and encoded body", async () => {
-    const tool = new GpfWfsGetFeaturesTool();
+    const tool = new GpfGetFeaturesTool();
     mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
     const requests = captureRequests(featureCollection);
 
     const response = await tool.toolCall({
       params: {
-        name: "gpf_wfs_get_features",
+        name: "gpf_get_features",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
           limit: 7,
@@ -537,7 +537,7 @@ describe("Test GpfWfsGetFeaturesTool", () => {
   });
 
   it("should report live geometry property mismatches with a catalog desync hint", async () => {
-    const tool = new GpfWfsGetFeaturesTool();
+    const tool = new GpfGetFeaturesTool();
     mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
     mockFetchJSONPost.mockRejectedValue(
       new ServiceResponseError(
@@ -557,7 +557,7 @@ describe("Test GpfWfsGetFeaturesTool", () => {
 
     const response = await tool.toolCall({
       params: {
-        name: "gpf_wfs_get_features",
+        name: "gpf_get_features",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
         },
@@ -577,13 +577,13 @@ describe("Test GpfWfsGetFeaturesTool", () => {
   });
 
   it("should keep hits independent from limit and omit propertyName", async () => {
-    const tool = new GpfWfsGetFeaturesTool();
+    const tool = new GpfGetFeaturesTool();
     mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
     const requests = captureRequests({ numberMatched: 321, totalFeatures: 999 });
 
     const response = await tool.toolCall({
       params: {
-        name: "gpf_wfs_get_features",
+        name: "gpf_get_features",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
           result_type: "hits",
@@ -608,14 +608,14 @@ describe("Test GpfWfsGetFeaturesTool", () => {
   });
 
   it("should apply travel_time_filter before returning hit counts", async () => {
-    const tool = new GpfWfsGetFeaturesTool();
+    const tool = new GpfGetFeaturesTool();
     mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
     captureIsochroneRequests();
     const requests = captureRequests({ numberMatched: 12 });
 
     const response = await tool.toolCall({
       params: {
-        name: "gpf_wfs_get_features",
+        name: "gpf_get_features",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
           result_type: "hits",
@@ -645,13 +645,13 @@ describe("Test GpfWfsGetFeaturesTool", () => {
   });
 
   it("should fail clearly when numberMatched is absent", async () => {
-    const tool = new GpfWfsGetFeaturesTool();
+    const tool = new GpfGetFeaturesTool();
     mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
     captureRequests({ totalFeatures: 321 });
 
     const response = await tool.toolCall({
       params: {
-        name: "gpf_wfs_get_features",
+        name: "gpf_get_features",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
           result_type: "hits",
@@ -671,13 +671,13 @@ describe("Test GpfWfsGetFeaturesTool", () => {
   });
 
   it("should fail clearly when numberMatched is unknown", async () => {
-    const tool = new GpfWfsGetFeaturesTool();
+    const tool = new GpfGetFeaturesTool();
     mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
     captureRequests({ numberMatched: "unknown" });
 
     const response = await tool.toolCall({
       params: {
-        name: "gpf_wfs_get_features",
+        name: "gpf_get_features",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
           result_type: "hits",
@@ -697,7 +697,7 @@ describe("Test GpfWfsGetFeaturesTool", () => {
   });
 
   it("should return feature_ref for non point layers with geometry set to null", async () => {
-    const tool = new GpfWfsGetFeaturesTool();
+    const tool = new GpfGetFeaturesTool();
     mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
     captureRequests({
       ...featureCollection,
@@ -715,7 +715,7 @@ describe("Test GpfWfsGetFeaturesTool", () => {
 
     const response = await tool.toolCall({
       params: {
-        name: "gpf_wfs_get_features",
+        name: "gpf_get_features",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
         },
@@ -738,7 +738,7 @@ describe("Test GpfWfsGetFeaturesTool", () => {
   });
 
   it("should set point geometry to null and keep feature_ref", async () => {
-    const tool = new GpfWfsGetFeaturesTool();
+    const tool = new GpfGetFeaturesTool();
     mockFeatureTypes({ [pointFeatureType.id]: pointFeatureType });
     const requests = captureRequests({
       type: "FeatureCollection",
@@ -756,7 +756,7 @@ describe("Test GpfWfsGetFeaturesTool", () => {
 
     const response = await tool.toolCall({
       params: {
-        name: "gpf_wfs_get_features",
+        name: "gpf_get_features",
         arguments: {
           typename: "BDTOPO_V3:point_d_acces",
           select: ["cleabs"],
@@ -780,7 +780,7 @@ describe("Test GpfWfsGetFeaturesTool", () => {
   });
 
   it("should resolve intersects_feature from MultiPoint references", async () => {
-    const tool = new GpfWfsGetFeaturesTool();
+    const tool = new GpfGetFeaturesTool();
     mockFeatureTypes({
       [polygonFeatureType.id]: polygonFeatureType,
       [multipointFeatureType.id]: multipointFeatureType,
@@ -800,7 +800,7 @@ describe("Test GpfWfsGetFeaturesTool", () => {
 
     const response = await tool.toolCall({
       params: {
-        name: "gpf_wfs_get_features",
+        name: "gpf_get_features",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
           intersects_feature_filter: {
@@ -823,7 +823,7 @@ describe("Test GpfWfsGetFeaturesTool", () => {
   });
 
   it("should report missing reference features clearly for intersects_feature", async () => {
-    const tool = new GpfWfsGetFeaturesTool();
+    const tool = new GpfGetFeaturesTool();
     mockFeatureTypes({
       [polygonFeatureType.id]: polygonFeatureType,
       [multipointFeatureType.id]: multipointFeatureType,
@@ -836,7 +836,7 @@ describe("Test GpfWfsGetFeaturesTool", () => {
 
     const response = await tool.toolCall({
       params: {
-        name: "gpf_wfs_get_features",
+        name: "gpf_get_features",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
           intersects_feature_filter: {
@@ -860,12 +860,12 @@ describe("Test GpfWfsGetFeaturesTool", () => {
   });
 
   it("should reject intersects_feature on the same typename and guide to by-id tool", async () => {
-    const tool = new GpfWfsGetFeaturesTool();
+    const tool = new GpfGetFeaturesTool();
     const requests = captureRequests(featureCollection);
 
     const response = await tool.toolCall({
       params: {
-        name: "gpf_wfs_get_features",
+        name: "gpf_get_features",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
           intersects_feature_filter: {
@@ -881,7 +881,7 @@ describe("Test GpfWfsGetFeaturesTool", () => {
     if (textContent.type !== "text") {
       throw new Error("expected text content");
     }
-    expect(textContent.text).toContain("gpf_wfs_get_feature_by_id");
+    expect(textContent.text).toContain("gpf_get_feature_by_id");
     expect(textContent.text).toContain("intersects_feature");
     expect(response.structuredContent).toMatchObject({
       type: "urn:geocontext:problem:execution-error",

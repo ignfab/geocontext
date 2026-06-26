@@ -12,7 +12,7 @@ vi.doMock("../../src/wfs/transport.js", () => ({
 }));
 
 vi.doMock("../../src/wfs/catalog.js", () => ({
-  GPF_WFS_URL: "https://data.geopf.fr/wfs",
+  GPF_URL: "https://data.geopf.fr/wfs",
   wfsSchemaStore: {
     getFeatureType: mockGetFeatureType,
   },

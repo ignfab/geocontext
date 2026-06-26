@@ -2,7 +2,7 @@
 
 ## Contexte
 
-La recherche des tables disponibles ( `gpf_wfs_search_types` ) s'appuie sur le moteur de recherche MiniSearch qui est intégré au dépôt [ignfab/gpf-schema-store](https://github.com/ignfab/gpf-schema-store#readme).
+La recherche des tables disponibles ( `gpf_search_types` ) s'appuie sur le moteur de recherche MiniSearch qui est intégré au dépôt [ignfab/gpf-schema-store](https://github.com/ignfab/gpf-schema-store#readme).
 
 **Cette documentation est à destination des développeurs** souhaitant tester des modifications sur les poids.
 

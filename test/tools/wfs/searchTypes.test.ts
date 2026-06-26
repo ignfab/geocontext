@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
 
-import GpfWfsSearchTypesTool from "../../../src/tools/GpfWfsSearchTypesTool";
+import GpfSearchTypesTool from "../../../src/tools/GpfSearchTypesTool";
 
-describe("Test GpfWfsSearchTypesTool",() => {
-    class TestableGpfWfsSearchTypesTool extends GpfWfsSearchTypesTool {
+describe("Test GpfSearchTypesTool",() => {
+    class TestableGpfSearchTypesTool extends GpfSearchTypesTool {
         async execute() {
             return {
                 results: [
@@ -18,8 +18,8 @@ describe("Test GpfWfsSearchTypesTool",() => {
     }
 
     it("should expose an enriched MCP definition", () => {
-        const tool = new GpfWfsSearchTypesTool();
-        expect(tool.toolDefinition.title).toEqual("Recherche de types WFS");
+        const tool = new GpfSearchTypesTool();
+        expect(tool.toolDefinition.title).toEqual("Recherche de types GPF");
         expect(tool.toolDefinition.inputSchema.properties?.query).toMatchObject({
             type: "string",
             minLength: 1,
@@ -33,10 +33,10 @@ describe("Test GpfWfsSearchTypesTool",() => {
     });
 
     it("should return both text content and structuredContent", async () => {
-        const tool = new TestableGpfWfsSearchTypesTool();
+        const tool = new TestableGpfSearchTypesTool();
         const response = await tool.toolCall({
             params: {
-                name: "gpf_wfs_search_types",
+                name: "gpf_search_types",
                 arguments: {
                     query: "batiment",
                     max_results: 1,
@@ -70,10 +70,10 @@ describe("Test GpfWfsSearchTypesTool",() => {
     });
 
     it("should return isError=true for invalid input", async () => {
-        const tool = new GpfWfsSearchTypesTool();
+        const tool = new GpfSearchTypesTool();
         const response = await tool.toolCall({
             params: {
-                name: "gpf_wfs_search_types",
+                name: "gpf_search_types",
                 arguments: {
                     query: "",
                 },

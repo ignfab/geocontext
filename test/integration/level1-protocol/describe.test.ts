@@ -1,5 +1,5 @@
 /**
- * Integration test: WFS describe type tool with real API calls.
+ * Integration test: describe type tool with real API calls.
  */
 
 import { describe, it, expect } from "vitest";
@@ -8,7 +8,7 @@ import { withMcpServer } from "../helpers/level1-fixtures.js";
 import { expectToolCallToThrow } from "../helpers/level1-assertions.js";
 import { INTEGRATION_CONFIG } from "../config/shared.js";
 
-interface WfsDescribeResult {
+interface DescribeResult {
   id: string;
   namespace: string;
   name: string;
@@ -24,11 +24,11 @@ interface WfsDescribeResult {
   }>;
 }
 
-describe("WFS Describe Type (integration)", () => {
+describe("GPF Describe Type (integration)", () => {
   const { getHandle } = withMcpServer();
 
   it("should describe BDTOPO_V3:batiment", async () => {
-    const result = await callTool<WfsDescribeResult>(getHandle().client, "gpf_wfs_describe_type", {
+    const result = await callTool<DescribeResult>(getHandle().client, "gpf_describe_type", {
       typename: "BDTOPO_V3:batiment",
     });
 
@@ -44,6 +44,6 @@ describe("WFS Describe Type (integration)", () => {
   }, INTEGRATION_CONFIG.timeout);
 
   it("should return an error for empty typename", async () => {
-    await expectToolCallToThrow(callTool(getHandle().client, "gpf_wfs_describe_type", { typename: "" }));
+    await expectToolCallToThrow(callTool(getHandle().client, "gpf_describe_type", { typename: "" }));
   }, INTEGRATION_CONFIG.timeout);
 });

@@ -40,9 +40,9 @@ describe("generate-mcp-docs helpers", () => {
   it("should build stable github-like slugs", async () => {
     const { toAnchorSlug } = await loadDocsHelpers();
 
-    expect(toAnchorSlug("gpf_wfs_get_features")).toEqual("gpf_wfs_get_features");
+    expect(toAnchorSlug("gpf_get_features")).toEqual("gpf_get_features");
     expect(toAnchorSlug("  Tool Name  ")).toEqual("tool-name");
-    expect(toAnchorSlug("Lecture d’un objet WFS")).toEqual("lecture-dun-objet-wfs");
+    expect(toAnchorSlug("Lecture d’un objet GPF")).toEqual("lecture-dun-objet-gpf");
   });
 
   it("should infer schema types from enum and composition keywords", async () => {
@@ -62,7 +62,7 @@ describe("generate-mcp-docs helpers", () => {
     const { sortToolDefinitions } = await loadDocsHelpers();
 
     const sorted = sortToolDefinitions([
-      { name: "gpf_wfs_get_features" },
+      { name: "gpf_get_features" },
       { name: "adminexpress" },
       { name: "geocode" },
       { name: "unknown_custom_tool" },
@@ -73,7 +73,7 @@ describe("generate-mcp-docs helpers", () => {
       "geocode",
       "altitude",
       "adminexpress",
-      "gpf_wfs_get_features",
+      "gpf_get_features",
       "unknown_custom_tool",
     ]);
   });
@@ -124,11 +124,11 @@ describe("generate-mcp-docs helpers", () => {
     expect(markdown).toContain("| Erreur | oui | oui | `content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`. |");
   });
 
-  it("should document the WFS get features response modes", async () => {
+  it("should document the get features response modes", async () => {
     const { renderResponseContractSection } = await loadDocsHelpers();
 
     const markdown = renderResponseContractSection({
-      name: "gpf_wfs_get_features",
+      name: "gpf_get_features",
     });
 
     expect(markdown).toContain('| Succès `result_type="results"` | oui | non | `content[0].text` est la FeatureCollection stringifiée ; aucun `structuredContent` n\'est ajouté dans ce mode. |');

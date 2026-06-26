@@ -7,8 +7,8 @@
  * - the compact HTTP payloads exposed by MCP WFS tools
  */
 
-import { GPF_WFS_URL } from "./catalog.js";
-import type { GpfWfsGetFeaturesInput } from "./schema.js";
+import { GPF_URL } from "./catalog.js";
+import type { GpfGetFeaturesInput } from "./schema.js";
 
 // --- Transport Types ---
 
@@ -126,7 +126,7 @@ export function buildGetUrl(url: string, query: Record<string, string>, cqlFilte
  * @returns A POST request split into base URL, query-string parameters, encoded body, and optional GET variant.
  */
 export function buildMainRequest(
-  input: GpfWfsGetFeaturesInput,
+  input: GpfGetFeaturesInput,
   compiled: { cqlFilter?: string; propertyName?: string; sortBy?: string },
 ): CompiledRequest {
   const query: Record<string, string> = {
@@ -149,10 +149,10 @@ export function buildMainRequest(
   const body = buildBody(compiled.cqlFilter);
   return {
     method: "POST",
-    url: GPF_WFS_URL,
+    url: GPF_URL,
     query,
     body,
-    get_url: buildGetUrl(GPF_WFS_URL, query, compiled.cqlFilter),
+    get_url: buildGetUrl(GPF_URL, query, compiled.cqlFilter),
   };
 }
 
@@ -186,10 +186,10 @@ export function buildGetFeatureByIdRequest(
 
   return {
     method: "POST",
-    url: GPF_WFS_URL,
+    url: GPF_URL,
     query,
     body: "",
-    get_url: buildGetUrl(GPF_WFS_URL, query),
+    get_url: buildGetUrl(GPF_URL, query),
   };
 }
 
@@ -253,9 +253,9 @@ export function buildMultiTypenameRequest(
 
   return {
     method: "POST",
-    url: GPF_WFS_URL,
+    url: GPF_URL,
     query,
     body,
-    get_url: buildGetUrl(GPF_WFS_URL, query, expandedCqlFilter),
+    get_url: buildGetUrl(GPF_URL, query, expandedCqlFilter),
   };
 }

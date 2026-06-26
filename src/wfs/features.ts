@@ -1,7 +1,7 @@
 /**
  * Shared execution helpers for structured WFS feature search.
  *
- * This module owns the WFS-side execution flow for `gpf_wfs_get_features`:
+ * This module owns the WFS-side execution flow for `gpf_get_features`:
  * request preparation, optional reference-geometry lookup, query execution,
  * hit counting, and FeatureCollection post-processing.
  */
@@ -30,7 +30,7 @@ import {
   type CompiledRequest,
 } from "./request.js";
 import { attachFeatureRefs } from "./response.js";
-import type { GpfWfsGetFeaturesInput } from "./schema.js";
+import type { GpfGetFeaturesInput } from "./schema.js";
 
 // --- Types ---
 
@@ -59,7 +59,7 @@ type GeometryLike = {
  * @param input Normalized tool input.
  */
 export function ensureIntersectsFeatureTargetsOtherTypename(
-  input: GpfWfsGetFeaturesInput,
+  input: GpfGetFeaturesInput,
 ) {
   const spatialFilter = getSpatialFilter(input);
   if (
@@ -68,7 +68,7 @@ export function ensureIntersectsFeatureTargetsOtherTypename(
   ) {
     throw new Error(
       "Le filtre `intersects_feature` sur le même `typename` retourne potentiellement plusieurs objets. " +
-        "Utiliser `gpf_wfs_get_feature_by_id` avec `{ typename, feature_id: intersects_feature_filter.feature_id }` pour cibler exactement un objet.",
+        "Utiliser `gpf_get_feature_by_id` avec `{ typename, feature_id: intersects_feature_filter.feature_id }` pour cibler exactement un objet.",
     );
   }
 }
@@ -100,7 +100,7 @@ function isGeometryLike(value: unknown): value is GeometryLike {
  * @returns The resolved reference geometry, or `undefined` when no reference feature is needed.
  */
 export async function resolveIntersectsFeatureGeometry(
-  input: GpfWfsGetFeaturesInput,
+  input: GpfGetFeaturesInput,
 ): Promise<ResolvedFeatureGeometryRef | undefined> {
   const spatialFilter = getSpatialFilter(input);
   if (!spatialFilter || spatialFilter.operator !== "intersects_feature") {
@@ -138,7 +138,7 @@ export async function resolveIntersectsFeatureGeometry(
  * @returns The resolved isochrone geometry, or `undefined` when no travel-time filter is requested.
  */
 export async function resolveTravelTimeGeometry(
-  input: GpfWfsGetFeaturesInput,
+  input: GpfGetFeaturesInput,
 ): Promise<ResolvedFeatureGeometryRef | undefined> {
   const spatialFilter = getSpatialFilter(input);
   if (!spatialFilter || spatialFilter.operator !== "travel_time") {
@@ -164,7 +164,7 @@ export async function resolveTravelTimeGeometry(
  * @returns The resolved geometry, or `undefined` when the selected filter is already self-contained.
  */
 export async function resolveSpatialFilterGeometry(
-  input: GpfWfsGetFeaturesInput,
+  input: GpfGetFeaturesInput,
 ): Promise<ResolvedFeatureGeometryRef | undefined> {
   const spatialFilter = getSpatialFilter(input);
 
@@ -181,7 +181,7 @@ export async function resolveSpatialFilterGeometry(
 // --- Request Preparation ---
 
 /**
- * Prepares the main WFS request for `gpf_wfs_get_features`.
+ * Prepares the main WFS request for `gpf_get_features`.
  *
  * This includes upfront validation of unsupported same-typename
  * `intersects_feature` requests, feature type lookup, optional
@@ -191,7 +191,7 @@ export async function resolveSpatialFilterGeometry(
  * @returns The compiled query fragments and final WFS request.
  */
 export async function prepareGetFeaturesRequest(
-  input: GpfWfsGetFeaturesInput,
+  input: GpfGetFeaturesInput,
 ): Promise<PreparedGetFeaturesRequest> {
   // TODO: Assess if this guard does not prevent legitimate use cases.
   ensureIntersectsFeatureTargetsOtherTypename(input);
@@ -221,14 +221,14 @@ export async function prepareGetFeaturesRequest(
  * @param input Normalized tool input.
  * @returns Either a hit-count payload or a transformed FeatureCollection.
  */
-export async function executeGetFeatures(input: GpfWfsGetFeaturesInput) {
+export async function executeGetFeatures(input: GpfGetFeaturesInput) {
   const { compiled, request } = await prepareGetFeaturesRequest(input);
 
   let featureCollection: WfsFeatureCollectionResponse;
 
   try {
     logger.debug(
-      `[gpf_wfs_get_features] POST ${request.url}?${new URLSearchParams(request.query).toString()}`,
+      `[gpf_get_features] POST ${request.url}?${new URLSearchParams(request.query).toString()}`,
     );
     featureCollection = await wfsClient.fetchFeatureCollection(request);
   } catch (error: unknown) {

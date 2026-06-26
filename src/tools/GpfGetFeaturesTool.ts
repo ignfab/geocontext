@@ -10,13 +10,13 @@ import {
   toWfsHttpPostRequestPayload,
 } from "../wfs/request.js";
 import {
-  gpfWfsGetFeaturesHitsOutputSchema,
-  gpfWfsGetFeaturesHttpGetUrlOutputSchema,
-  gpfWfsGetFeaturesHttpPostRequestOutputSchema,
-  gpfWfsGetFeaturesInputSchema,
-  gpfWfsGetFeaturesInputObjectSchema,
-  type GpfWfsGetFeaturesInput,
-  gpfWfsGetFeaturesPublishedInputSchema,
+  gpfGetFeaturesHitsOutputSchema,
+  gpfGetFeaturesHttpGetUrlOutputSchema,
+  gpfGetFeaturesHttpPostRequestOutputSchema,
+  gpfGetFeaturesInputSchema,
+  gpfGetFeaturesInputObjectSchema,
+  type GpfGetFeaturesInput,
+  gpfGetFeaturesPublishedInputSchema,
 } from "../wfs/schema.js";
 import logger from "../logger.js";
 
@@ -29,12 +29,13 @@ import logger from "../logger.js";
 
 // --- Tool ---
 
-class GpfWfsGetFeaturesTool extends BaseTool<GpfWfsGetFeaturesInput> {
-  name = "gpf_wfs_get_features";
-  title = "Lecture d’objets WFS";
+class GpfGetFeaturesTool extends BaseTool<GpfGetFeaturesInput> {
+  name = "gpf_get_features";
+  title = "Lecture d’objets GPF";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
   description = [
-    "Interroge un type WFS et renvoie des résultats structurés sans demander au modèle d'écrire du CQL ou du WFS.",
+    "Interroge un type GPF et renvoie des résultats structurés.",
+    "",
     "Utiliser `select` pour choisir les propriétés, `where` pour filtrer, `order_by` pour trier et un filtre spatial dédié (`bbox_filter`, `intersects_point_filter`, `dwithin_point_filter`, `intersects_feature_filter` ou `travel_time_filter`) pour le spatial. Avec `result_type=\"http_post_request\"` ou `result_type=\"http_get_url\"`, la géométrie est automatiquement ajoutée aux propriétés sélectionnées pour garantir une requête cartographiable.",
     "Exemple attributaire : `where=[{ property: \"code_insee\", operator: \"eq\", value: \"75056\" }]`.",
     "Exemple bbox : `bbox_filter={ west: 2.1, south: 48.7, east: 2.5, north: 48.9 }`.",
@@ -42,14 +43,14 @@ class GpfWfsGetFeaturesTool extends BaseTool<GpfWfsGetFeaturesInput> {
     "Exemple distance : `dwithin_point_filter={ lon: 2.35, lat: 48.85, distance_m: 500 }`.",
     "Exemple réutilisation : `intersects_feature_filter={ typename, feature_id }` avec `typename` et `feature_id` issus d'une `feature_ref`.",
     "Exemple temps de trajet : `travel_time_filter={ lon: 2.35, lat: 48.85, minutes: 15, profile: \"pedestrian\" }` pour les objets atteignables en 15 minutes à pied depuis ce point.",
-    "⚠️ Quand `typename` et `intersects_feature_filter.typename` sont identiques, utiliser `gpf_wfs_get_feature_by_id` pour récupérer exactement l'objet ciblé.",
-    "**OBLIGATOIRE : toujours appeler `gpf_wfs_describe_type` avant ce tool, sauf si `gpf_wfs_describe_type` a déjà été appelé pour ce même typename dans la conversation en cours.**",
-    "Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiques à chaque typename et diffèrent systématiquement des conventions habituelles (ex : pas de nom_officiel, navigabilite sans accent, etc.). Toute tentative sans appel préalable à `gpf_wfs_describe_type` **provoquera une erreur.**",
+    "⚠️ Quand `typename` et `intersects_feature_filter.typename` sont identiques, utiliser `gpf_get_feature_by_id` pour récupérer exactement l'objet ciblé.",
+    "**OBLIGATOIRE : toujours appeler `gpf_describe_type` avant ce tool, sauf si `gpf_describe_type` a déjà été appelé pour ce même typename dans la conversation en cours.**",
+    "Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiques à chaque typename et diffèrent systématiquement des conventions habituelles (ex : pas de nom_officiel, navigabilite sans accent, etc.). Toute tentative sans appel préalable à `gpf_describe_type` **provoquera une erreur.**",
   ].join("\n");
 
   // The framework requires a plain Zod object here to publish a compatible
   // input schema. Cross-field runtime validation is applied in `execute`.
-  schema = gpfWfsGetFeaturesInputObjectSchema;
+  schema = gpfGetFeaturesInputObjectSchema;
 
   /**
    * Exposes an input schema variant that stays compatible with most MCP integrations.
@@ -57,7 +58,7 @@ class GpfWfsGetFeaturesTool extends BaseTool<GpfWfsGetFeaturesInput> {
    * @returns The published input schema exposed through the MCP tool definition.
    */
   get inputSchema() {
-    return gpfWfsGetFeaturesPublishedInputSchema;
+    return gpfGetFeaturesPublishedInputSchema;
   }
 
   /**
@@ -76,7 +77,7 @@ class GpfWfsGetFeaturesTool extends BaseTool<GpfWfsGetFeaturesInput> {
       "totalFeatures" in data &&
       typeof data.totalFeatures === "number"
     ) {
-      const payload = gpfWfsGetFeaturesHitsOutputSchema.parse(data);
+      const payload = gpfGetFeaturesHitsOutputSchema.parse(data);
 
       return {
         content: [{ type: "text" as const, text: JSON.stringify(payload) }],
@@ -90,7 +91,7 @@ class GpfWfsGetFeaturesTool extends BaseTool<GpfWfsGetFeaturesInput> {
       "result_type" in data &&
       data.result_type === "http_post_request"
     ) {
-      const payload = gpfWfsGetFeaturesHttpPostRequestOutputSchema.parse(data);
+      const payload = gpfGetFeaturesHttpPostRequestOutputSchema.parse(data);
 
       return {
         content: [{ type: "text" as const, text: JSON.stringify(payload) }],
@@ -104,7 +105,7 @@ class GpfWfsGetFeaturesTool extends BaseTool<GpfWfsGetFeaturesInput> {
       "result_type" in data &&
       data.result_type === "http_get_url"
     ) {
-      const payload = gpfWfsGetFeaturesHttpGetUrlOutputSchema.parse(data);
+      const payload = gpfGetFeaturesHttpGetUrlOutputSchema.parse(data);
 
       return {
         content: [{ type: "text" as const, text: JSON.stringify(payload) }],
@@ -124,8 +125,8 @@ class GpfWfsGetFeaturesTool extends BaseTool<GpfWfsGetFeaturesInput> {
    * @param input Normalized tool input.
    * @returns Either a compiled request, a hit count, or a transformed FeatureCollection.
    */
-  async execute(input: GpfWfsGetFeaturesInput) {
-    const validatedInput = gpfWfsGetFeaturesInputSchema.parse(input);
+  async execute(input: GpfGetFeaturesInput) {
+    const validatedInput = gpfGetFeaturesInputSchema.parse(input);
 
     logger.info(`[tool] execute ${this.name} ...`, {
       input: validatedInput
@@ -142,4 +143,4 @@ class GpfWfsGetFeaturesTool extends BaseTool<GpfWfsGetFeaturesInput> {
   }
 }
 
-export default GpfWfsGetFeaturesTool;
+export default GpfGetFeaturesTool;

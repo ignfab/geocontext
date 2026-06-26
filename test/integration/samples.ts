@@ -19,8 +19,8 @@ export const EXPECTED_TOOL_NAMES = [
   "cadastre",
   "urbanisme",
   "assiette_sup",
-  "gpf_wfs_search_types",
-  "gpf_wfs_describe_type",
-  "gpf_wfs_get_features",
-  "gpf_wfs_get_feature_by_id",
+  "gpf_search_types",
+  "gpf_describe_type",
+  "gpf_get_features",
+  "gpf_get_feature_by_id",
 ] as const;

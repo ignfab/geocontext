@@ -1,5 +1,5 @@
 /**
- * Integration test: WFS GetFeatures tool with real API calls.
+ * Integration test: GetFeatures tool with real API calls.
  *
  * Uses BDTOPO_V3:commune to test attribute filtering with a known code INSEE.
  */
@@ -29,11 +29,11 @@ interface GetFeaturesResult {
   numberMatched?: number;
 }
 
-describe("WFS GetFeatures (integration)", () => {
+describe("GetFeatures (integration)", () => {
   const { getHandle } = withMcpServer();
 
   it("should query BDTOPO_V3:commune with attribute filter (code_insee=75056)", async () => {
-    const result = await callTool<GetFeaturesResult>(getHandle().client, "gpf_wfs_get_features", {
+    const result = await callTool<GetFeaturesResult>(getHandle().client, "gpf_get_features", {
       typename: "BDTOPO_V3:commune",
       where: [{ property: "code_insee", operator: "eq", value: "75056" }],
       select: ["code_insee", "nom_officiel"],
@@ -49,7 +49,7 @@ describe("WFS GetFeatures (integration)", () => {
 
   it("should return an error for invalid typename", async () => {
     await expectToolCallToThrow(
-      callTool(getHandle().client, "gpf_wfs_get_features", {
+      callTool(getHandle().client, "gpf_get_features", {
         typename: "INVALID:type",
         limit: 1,
       }),

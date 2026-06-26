@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import type { Collection } from "@ignfab/gpf-schema-store";
 
 import { compileQueryParts, geometryToEwkt } from "../../src/wfs/queryPreparation";
-import type { GpfWfsGetFeaturesInput } from "../../src/wfs/schema";
+import type { GpfGetFeaturesInput } from "../../src/wfs/schema";
 
-describe("gpfWfsGetFeatures/queryPreparation", () => {
+describe("gpfGetFeatures/queryPreparation", () => {
   const featureType: Collection = {
     id: "ADMINEXPRESS-COG.LATEST:commune",
     namespace: "ADMINEXPRESS-COG.LATEST",
@@ -22,7 +22,7 @@ describe("gpfWfsGetFeatures/queryPreparation", () => {
     ],
   };
 
-  const baseInput: GpfWfsGetFeaturesInput = {
+  const baseInput: GpfGetFeaturesInput = {
     typename: "ADMINEXPRESS-COG.LATEST:commune",
     limit: 100,
     result_type: "results",
