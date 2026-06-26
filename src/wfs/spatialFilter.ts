@@ -3,7 +3,7 @@
  */
 
 import type {
-  GpfGetFeaturesInput,
+  GpfGetOrCountFeatureInput,
   SpatialFilter,
 } from "./schema.js";
 import { GPF_GET_FEATURES_SPATIAL_FILTER_KEYS } from "./schema.js";
@@ -27,7 +27,7 @@ const FILTER_KEY_TO_OPERATOR = {
  * @param input Normalized tool input.
  * @returns The spatial filter, or `undefined` when no spatial filter is requested.
  */
-export function getSpatialFilter(input: GpfGetFeaturesInput): SpatialFilter | undefined {
+export function getSpatialFilter(input: GpfGetOrCountFeatureInput): SpatialFilter | undefined {
   for (const key of GPF_GET_FEATURES_SPATIAL_FILTER_KEYS) {
     const value = input[key];
     if (value) {

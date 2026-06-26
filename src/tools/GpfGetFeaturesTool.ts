@@ -2,15 +2,14 @@ import BaseTool from "./BaseTool.js";
 
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import {
-  executeGetFeatures,
-  prepareGetFeaturesRequest,
+  executeGetOrCountFeatures,
+  prepareGetOrCountFeaturesRequest,
 } from "../wfs/features.js";
 import {
   toWfsHttpGetUrlPayload,
   toWfsHttpPostRequestPayload,
 } from "../wfs/request.js";
 import {
-  gpfGetFeaturesHitsOutputSchema,
   gpfGetFeaturesHttpGetUrlOutputSchema,
   gpfGetFeaturesHttpPostRequestOutputSchema,
   gpfGetFeaturesInputSchema,
@@ -62,29 +61,13 @@ class GpfGetFeaturesTool extends BaseTool<GpfGetFeaturesInput> {
   }
 
   /**
-   * Formats compact responses (`hits`, `http_post_request`, `http_get_url`) into `structuredContent`.
+   * Formats compact responses (`http_post_request`, `http_get_url`) into `structuredContent`.
    * Full result sets are still delegated to the framework default behavior.
    *
    * @param data Raw execution result returned by the tool implementation.
    * @returns An MCP success response, optionally enriched with structured content.
    */
   protected createSuccessResponse(data: unknown) {
-    if (
-      typeof data === "object" &&
-      data !== null &&
-      "result_type" in data &&
-      data.result_type === "hits" &&
-      "totalFeatures" in data &&
-      typeof data.totalFeatures === "number"
-    ) {
-      const payload = gpfGetFeaturesHitsOutputSchema.parse(data);
-
-      return {
-        content: [{ type: "text" as const, text: JSON.stringify(payload) }],
-        structuredContent: payload,
-      };
-    }
-
     if (
       typeof data === "object" &&
       data !== null &&
@@ -123,7 +106,7 @@ class GpfGetFeaturesTool extends BaseTool<GpfGetFeaturesInput> {
    * mode, while the WFS-side preparation and execution live in `features.ts`.
    *
    * @param input Normalized tool input.
-   * @returns Either a compiled request, a hit count, or a transformed FeatureCollection.
+   * @returns Either a compiled request or a transformed FeatureCollection.
    */
   async execute(input: GpfGetFeaturesInput) {
     const validatedInput = gpfGetFeaturesInputSchema.parse(input);
@@ -133,13 +116,13 @@ class GpfGetFeaturesTool extends BaseTool<GpfGetFeaturesInput> {
     });
 
     if (validatedInput.result_type === "http_post_request" || validatedInput.result_type === "http_get_url") {
-      const { request } = await prepareGetFeaturesRequest(validatedInput);
+      const { request } = await prepareGetOrCountFeaturesRequest(validatedInput);
       return validatedInput.result_type === "http_post_request"
         ? toWfsHttpPostRequestPayload(request)
         : toWfsHttpGetUrlPayload(request);
     }
 
-    return executeGetFeatures(validatedInput);
+    return executeGetOrCountFeatures(validatedInput, false);
   }
 }
 
