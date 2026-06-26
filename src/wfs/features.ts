@@ -30,7 +30,7 @@ import {
   type CompiledRequest,
 } from "./request.js";
 import { attachFeatureRefs } from "./response.js";
-import type { GpfGetFeaturesInput } from "./schema.js";
+import type { GpfGetOrCountFeatureInput } from "./schema.js";
 
 // --- Types ---
 
@@ -59,7 +59,7 @@ type GeometryLike = {
  * @param input Normalized tool input.
  */
 export function ensureIntersectsFeatureTargetsOtherTypename(
-  input: GpfGetFeaturesInput,
+  input: GpfGetOrCountFeatureInput,
 ) {
   const spatialFilter = getSpatialFilter(input);
   if (
@@ -100,7 +100,7 @@ function isGeometryLike(value: unknown): value is GeometryLike {
  * @returns The resolved reference geometry, or `undefined` when no reference feature is needed.
  */
 export async function resolveIntersectsFeatureGeometry(
-  input: GpfGetFeaturesInput,
+  input: GpfGetOrCountFeatureInput,
 ): Promise<ResolvedFeatureGeometryRef | undefined> {
   const spatialFilter = getSpatialFilter(input);
   if (!spatialFilter || spatialFilter.operator !== "intersects_feature") {
@@ -138,7 +138,7 @@ export async function resolveIntersectsFeatureGeometry(
  * @returns The resolved isochrone geometry, or `undefined` when no travel-time filter is requested.
  */
 export async function resolveTravelTimeGeometry(
-  input: GpfGetFeaturesInput,
+  input: GpfGetOrCountFeatureInput,
 ): Promise<ResolvedFeatureGeometryRef | undefined> {
   const spatialFilter = getSpatialFilter(input);
   if (!spatialFilter || spatialFilter.operator !== "travel_time") {
@@ -164,7 +164,7 @@ export async function resolveTravelTimeGeometry(
  * @returns The resolved geometry, or `undefined` when the selected filter is already self-contained.
  */
 export async function resolveSpatialFilterGeometry(
-  input: GpfGetFeaturesInput,
+  input: GpfGetOrCountFeatureInput,
 ): Promise<ResolvedFeatureGeometryRef | undefined> {
   const spatialFilter = getSpatialFilter(input);
 
@@ -190,8 +190,8 @@ export async function resolveSpatialFilterGeometry(
  * @param input Normalized tool input.
  * @returns The compiled query fragments and final WFS request.
  */
-export async function prepareGetFeaturesRequest(
-  input: GpfGetFeaturesInput,
+export async function prepareGetOrCountFeaturesRequest(
+  input: GpfGetOrCountFeatureInput
 ): Promise<PreparedGetFeaturesRequest> {
   // TODO: Assess if this guard does not prevent legitimate use cases.
   ensureIntersectsFeatureTargetsOtherTypename(input);
@@ -212,7 +212,7 @@ export async function prepareGetFeaturesRequest(
 // --- Execution ---
 
 /**
- * Executes the structured WFS search flow for `result_type="results"` and `hits`.
+ * Executes the structured WFS search flow for `result_type="results"`.
  *
  * This function prepares the request, executes it against the live WFS, then
  * either extracts a hit count or attaches `feature_ref` metadata to the result
@@ -221,14 +221,14 @@ export async function prepareGetFeaturesRequest(
  * @param input Normalized tool input.
  * @returns Either a hit-count payload or a transformed FeatureCollection.
  */
-export async function executeGetFeatures(input: GpfGetFeaturesInput) {
-  const { compiled, request } = await prepareGetFeaturesRequest(input);
+export async function executeGetOrCountFeatures(input: GpfGetOrCountFeatureInput, onlyCount: boolean) {
+  const { compiled, request } = await prepareGetOrCountFeaturesRequest(input);
 
   let featureCollection: WfsFeatureCollectionResponse;
 
   try {
     logger.debug(
-      `[gpf_get_features] POST ${request.url}?${new URLSearchParams(request.query).toString()}`,
+      `[${onlyCount ? "gpf_count_features" : "gpf_get_features"}] POST ${request.url}?${new URLSearchParams(request.query).toString()}`,
     );
     featureCollection = await wfsClient.fetchFeatureCollection(request);
   } catch (error: unknown) {
@@ -244,10 +244,9 @@ export async function executeGetFeatures(input: GpfGetFeaturesInput) {
     throw error;
   }
 
-  if (input.result_type === "hits") {
+  if (onlyCount) {
     return {
-      result_type: "hits" as const,
-      totalFeatures: getMatchedFeatureCount(featureCollection),
+      numberMatched: getMatchedFeatureCount(featureCollection),
     };
   }
 

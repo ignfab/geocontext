@@ -61,6 +61,7 @@ Tous les tools exposent les mêmes annotations MCP dans leur définition `tools/
 - [`gpf_describe_type`](#gpf_describe_type)
 - [`gpf_get_feature_by_id`](#gpf_get_feature_by_id)
 - [`gpf_get_features`](#gpf_get_features)
+- [`gpf_count_features`](#gpf_count_features)
 
 ## `geocode`
 
@@ -1198,7 +1199,7 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
 | `intersects_point_filter` | object | non | Filtre spatial par intersection avec un point. Exclusif avec les autres filtres spatiaux. |
 | `limit` | integer | non | Nombre maximum d'objets à renvoyer. Valeur par défaut : 100. Maximum : 5000. Valeur par défaut : 100. |
 | `order_by` | array | non | Liste ordonnée des critères de tri. |
-| `result_type` | string (enum) | non | `results` renvoie une FeatureCollection avec les propriétés attributaires uniquement — **les géométries ne sont pas incluses**, ce mode ne peut donc pas être utilisé directement pour cartographier. `hits` renvoie uniquement le nombre total d'objets correspondant à la requête. `http_post_request` renvoie une requête POST robuste à exécuter directement. `http_get_url` renvoie l'URL GET équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant. Avec `http_post_request` ou `http_get_url`, la géométrie est automatiquement ajoutée aux propriétés du `select` pour garantir l'affichage cartographique. Valeurs : results, hits, http_post_request, http_get_url. Valeur par défaut : results. |
+| `result_type` | string (enum) | non | `results` renvoie une FeatureCollection avec les propriétés attributaires uniquement — **les géométries ne sont pas incluses**, ce mode ne peut donc pas être utilisé directement pour cartographier. `http_post_request` renvoie une requête POST robuste à exécuter directement. `http_get_url` renvoie l'URL GET équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant. Avec `http_post_request` ou `http_get_url`, la géométrie est automatiquement ajoutée aux propriétés du `select` pour garantir l'affichage cartographique. Valeurs : results, http_post_request, http_get_url. Valeur par défaut : results. |
 | `select` | array | non | Liste des propriétés non géométriques à renvoyer pour chaque objet. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles. Exemple : `["code_insee", "nom_officiel"]`. |
 | `travel_time_filter` | object | non | Filtre spatial par temps de trajet depuis un point (`profile` voiture ou piéton). Exclusif avec les autres filtres spatiaux. |
 | `typename` | string | oui | Nom exact du type GPF à interroger, par exemple `BDTOPO_V3:batiment`. Utiliser `gpf_search_types` pour trouver un `typename` valide. |
@@ -1211,11 +1212,6 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
 {
   "type": "object",
   "properties": {
-    "typename": {
-      "type": "string",
-      "minLength": 1,
-      "description": "Nom exact du type GPF à interroger, par exemple `BDTOPO_V3:batiment`. Utiliser `gpf_search_types` pour trouver un `typename` valide."
-    },
     "limit": {
       "type": "integer",
       "minimum": 1,
@@ -1227,12 +1223,11 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
       "type": "string",
       "enum": [
         "results",
-        "hits",
         "http_post_request",
         "http_get_url"
       ],
       "default": "results",
-      "description": "`results` renvoie une FeatureCollection avec les propriétés attributaires uniquement — **les géométries ne sont pas incluses**, ce mode ne peut donc pas être utilisé directement pour cartographier. `hits` renvoie uniquement le nombre total d'objets correspondant à la requête. `http_post_request` renvoie une requête POST robuste à exécuter directement. `http_get_url` renvoie l'URL GET équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant. Avec `http_post_request` ou `http_get_url`, la géométrie est automatiquement ajoutée aux propriétés du `select` pour garantir l'affichage cartographique."
+      "description": "`results` renvoie une FeatureCollection avec les propriétés attributaires uniquement — **les géométries ne sont pas incluses**, ce mode ne peut donc pas être utilisé directement pour cartographier. `http_post_request` renvoie une requête POST robuste à exécuter directement. `http_get_url` renvoie l'URL GET équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant. Avec `http_post_request` ou `http_get_url`, la géométrie est automatiquement ajoutée aux propriétés du `select` pour garantir l'affichage cartographique."
     },
     "select": {
       "type": "array",
@@ -1271,6 +1266,11 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
       },
       "minItems": 1,
       "description": "Liste ordonnée des critères de tri."
+    },
+    "typename": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Nom exact du type GPF à interroger, par exemple `BDTOPO_V3:batiment`. Utiliser `gpf_search_types` pour trouver un `typename` valide."
     },
     "where": {
       "type": "array",
@@ -1481,14 +1481,270 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
 
 ### Sortie
 
-Aucun `outputSchema` unique n'est exposé. La sortie dépend de `result_type` (`results`, `hits`, `http_post_request`, `http_get_url`).
+Aucun `outputSchema` unique n'est exposé. La sortie dépend de `result_type` (`results`, `http_post_request`, `http_get_url`).
 
 ### Réponse MCP
 
 | Cas | `content` | `structuredContent` | Relation entre `content` et `structuredContent` |
 | --- | --- | --- | --- |
 | Succès `result_type="results"` | oui | non | `content[0].text` est la FeatureCollection stringifiée ; aucun `structuredContent` n'est ajouté dans ce mode. |
-| Succès `result_type="hits"` | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
 | Succès `result_type="http_post_request"` | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
 | Succès `result_type="http_get_url"` | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
+| Erreur | oui | oui | `content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`. |
+
+## `gpf_count_features`
+
+Code Source : [src/tools/GpfCountFeaturesTool.ts](../src/tools/GpfCountFeaturesTool.ts)
+
+### Titre
+
+Décompte d’objets GPF
+
+### Description du tool
+
+```
+Interroge un type GPF et renvoie le nombre de résultats obtenus.
+Voir la description de `gpf_get_features` pour la liste des filtres possibles.
+```
+
+### Schéma d’entrée
+
+| Champ | Type | Requis | Description |
+| --- | --- | --- | --- |
+| `bbox_filter` | object | non | Filtre spatial par boîte englobante. Exclusif avec les autres filtres spatiaux. |
+| `dwithin_point_filter` | object | non | Filtre spatial par distance à un point. Exclusif avec les autres filtres spatiaux. |
+| `intersects_feature_filter` | object | non | Filtre spatial par intersection avec un feature GPF de référence. Exclusif avec les autres filtres spatiaux. |
+| `intersects_point_filter` | object | non | Filtre spatial par intersection avec un point. Exclusif avec les autres filtres spatiaux. |
+| `travel_time_filter` | object | non | Filtre spatial par temps de trajet depuis un point (`profile` voiture ou piéton). Exclusif avec les autres filtres spatiaux. |
+| `typename` | string | oui | Nom exact du type GPF à interroger, par exemple `BDTOPO_V3:batiment`. Utiliser `gpf_search_types` pour trouver un `typename` valide. |
+| `where` | array | non | Clauses de filtre attributaire, combinées avec `AND`. |
+
+<details>
+<summary>Schéma d’entrée brut</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "typename": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Nom exact du type GPF à interroger, par exemple `BDTOPO_V3:batiment`. Utiliser `gpf_search_types` pour trouver un `typename` valide."
+    },
+    "where": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "property": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Nom exact d'une propriété non géométrique du type GPF. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles."
+          },
+          "operator": {
+            "type": "string",
+            "enum": [
+              "eq",
+              "ne",
+              "lt",
+              "lte",
+              "gt",
+              "gte",
+              "in",
+              "is_null"
+            ],
+            "description": "Opérateur de filtre : `eq`, `ne`, `lt`, `lte`, `gt`, `gte`, `in`, `is_null`."
+          },
+          "value": {
+            "type": "string",
+            "description": "Valeur scalaire sérialisée en texte, utilisée avec tous les opérateurs sauf `in` et `is_null`."
+          },
+          "values": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "description": "Liste de valeurs sérialisées en texte, utilisée uniquement avec `operator = \"in\"`."
+          }
+        },
+        "required": [
+          "property",
+          "operator"
+        ],
+        "additionalProperties": false,
+        "description": "Clause de filtre structurée. Exemple : `{ property: \"code_insee\", operator: \"eq\", value: \"75056\" }`."
+      },
+      "minItems": 1,
+      "description": "Clauses de filtre attributaire, combinées avec `AND`."
+    },
+    "bbox_filter": {
+      "type": "object",
+      "properties": {
+        "west": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180,
+          "description": "Longitude ouest en WGS84 `lon/lat`."
+        },
+        "south": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90,
+          "description": "Latitude sud en WGS84 `lon/lat`."
+        },
+        "east": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180,
+          "description": "Longitude est en WGS84 `lon/lat`."
+        },
+        "north": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90,
+          "description": "Latitude nord en WGS84 `lon/lat`."
+        }
+      },
+      "required": [
+        "west",
+        "south",
+        "east",
+        "north"
+      ],
+      "additionalProperties": false,
+      "description": "Filtre spatial par boîte englobante. Exclusif avec les autres filtres spatiaux."
+    },
+    "intersects_point_filter": {
+      "type": "object",
+      "properties": {
+        "lon": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180,
+          "description": "Longitude du point en WGS84 `lon/lat`."
+        },
+        "lat": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90,
+          "description": "Latitude du point en WGS84 `lon/lat`."
+        }
+      },
+      "required": [
+        "lon",
+        "lat"
+      ],
+      "additionalProperties": false,
+      "description": "Filtre spatial par intersection avec un point. Exclusif avec les autres filtres spatiaux."
+    },
+    "dwithin_point_filter": {
+      "type": "object",
+      "properties": {
+        "lon": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180,
+          "description": "Longitude du point en WGS84 `lon/lat`."
+        },
+        "lat": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90,
+          "description": "Latitude du point en WGS84 `lon/lat`."
+        },
+        "distance_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Distance maximale en mètres."
+        }
+      },
+      "required": [
+        "lon",
+        "lat",
+        "distance_m"
+      ],
+      "additionalProperties": false,
+      "description": "Filtre spatial par distance à un point. Exclusif avec les autres filtres spatiaux."
+    },
+    "intersects_feature_filter": {
+      "type": "object",
+      "properties": {
+        "typename": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Type GPF du feature de référence."
+        },
+        "feature_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Identifiant du feature de référence."
+        }
+      },
+      "required": [
+        "typename",
+        "feature_id"
+      ],
+      "additionalProperties": false,
+      "description": "Filtre spatial par intersection avec un feature GPF de référence. Exclusif avec les autres filtres spatiaux."
+    },
+    "travel_time_filter": {
+      "type": "object",
+      "properties": {
+        "lon": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180,
+          "description": "Longitude du point de départ en WGS84 `lon/lat`."
+        },
+        "lat": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90,
+          "description": "Latitude du point de départ en WGS84 `lon/lat`."
+        },
+        "minutes": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 120,
+          "description": "Temps de trajet maximal en minutes. Maximum : 120."
+        },
+        "profile": {
+          "type": "string",
+          "enum": [
+            "car",
+            "pedestrian"
+          ],
+          "description": "Mode de déplacement utilisé pour calculer l'isochrone (`car` ou `pedestrian`)."
+        }
+      },
+      "required": [
+        "lon",
+        "lat",
+        "minutes",
+        "profile"
+      ],
+      "additionalProperties": false,
+      "description": "Filtre spatial par temps de trajet depuis un point (`profile` voiture ou piéton). Exclusif avec les autres filtres spatiaux."
+    }
+  },
+  "required": [
+    "typename"
+  ],
+  "additionalProperties": false,
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}
+```
+
+</details>
+
+### Sortie
+
+Aucun `outputSchema` unique n'est exposé. La sortie est gérée par la sérialisation par défaut du framework ou par un formatage de réponse spécifique.
+
+### Réponse MCP
+
+| Cas | `content` | `structuredContent` | Relation entre `content` et `structuredContent` |
+| --- | --- | --- | --- |
+| Succès | oui | non | `content[0].text` contient la réponse stringifiée ; aucun `structuredContent` n'est ajouté. |
 | Erreur | oui | oui | `content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`. |
