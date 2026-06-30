@@ -136,7 +136,7 @@ export function buildMainRequest(
     typeNames: input.typename,
     outputFormat: "application/json",
     exceptions: "application/json",
-    count: String(input.limit ?? 1)
+    count: "limit" in input ? String(input.limit) : "1"
   };
 
   if (compiled.propertyName) {

@@ -224,10 +224,9 @@ export type OrderByClause = NonNullable<GpfGetFeaturesInput["order_by"]>[number]
 
 export const gpfGetFeaturesPublishedInputSchema = generatePublishedInputSchema(gpfGetFeaturesInputObjectSchema);
 
-// hybrid `gpf_get_or_count_features` schema
+// --- Hybrid `gpf_get_features` / `gpf_count_features` schema ---
 
-export const gpfGetOrCountFeaturesInputObjectSchema = gpfGetFeaturesInputObjectSchema.partial().merge(gpfCountFeaturesInputObjectSchema)
-export type GpfGetOrCountFeatureInput = z.infer<typeof gpfGetOrCountFeaturesInputObjectSchema>
+export type GpfGetOrCountFeatureInput = GpfGetFeaturesInput | GpfCountFeaturesInput
 
 // --- `gpf_get_feature_by_id` ---
 

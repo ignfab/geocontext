@@ -229,7 +229,7 @@ export function compileQueryParts(
     ? input.order_by.map((clause) => compileOrderByClause(featureType, geometryProperty, clause)).join(",")
     : undefined;
 
-  const propertyNames = buildSelectList(featureType, geometryProperty, input);
+  const propertyNames = isGetFeaturesQuery ? buildSelectList(featureType, geometryProperty, input) : [];
 
   return {
     geometryProperty,

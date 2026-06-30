@@ -8,7 +8,7 @@
  */
 
 import type { Collection, CollectionProperty } from "@ignfab/gpf-schema-store";
-import type { GpfGetOrCountFeatureInput } from "./schema.js";
+import type { GpfGetFeaturesInput } from "./schema.js";
 
 // --- Property Listing ---
 
@@ -128,7 +128,7 @@ export function validateSelectProperty(featureType: Collection, geometryProperty
 export function buildSelectList(
   featureType: Collection,
   geometryProperty: CollectionProperty,
-  input: GpfGetOrCountFeatureInput,
+  input: GpfGetFeaturesInput,
 ) {
   // If `select` is specified, only the requested properties are returned
   // after validation against the embedded catalog.
