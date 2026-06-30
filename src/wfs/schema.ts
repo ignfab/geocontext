@@ -165,7 +165,17 @@ export type SpatialFilter =
 
 // --- `gpf_get_features` ---
 
-export const gpfGetFeaturesInputObjectSchema = z.object({
+export const gpfGetFeaturesInputObjectSchema = gpfTypenameInputSchema
+  .merge(z.object({
+    select: z
+    .array(z.string().trim().min(1))
+    .min(1)
+    .optional()
+    .describe("Liste des propriétés non géométriques à renvoyer pour chaque objet. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`."),
+  }))
+  .merge(gpfWhereFilterInputSchema)
+  .merge(gpfSpatialFilterInputSchema)
+  .merge(z.object({
   limit: z
     .number()
     .int()
@@ -177,20 +187,12 @@ export const gpfGetFeaturesInputObjectSchema = z.object({
     .enum(["results", "http_post_request", "http_get_url"])
     .default("results")
     .describe("`results` renvoie une FeatureCollection avec les propriétés attributaires uniquement — **les géométries ne sont pas incluses**, ce mode ne peut donc pas être utilisé directement pour cartographier. `http_post_request` renvoie une requête POST robuste à exécuter directement. `http_get_url` renvoie l'URL GET équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant. Avec `http_post_request` ou `http_get_url`, la géométrie est automatiquement ajoutée aux propriétés du `select` pour garantir l'affichage cartographique."),
-  select: z
-    .array(z.string().trim().min(1))
-    .min(1)
-    .optional()
-    .describe("Liste des propriétés non géométriques à renvoyer pour chaque objet. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`."),
   order_by: z
     .array(orderBySchema)
     .min(1)
     .optional()
     .describe("Liste ordonnée des critères de tri."),
-})
-  .merge(gpfTypenameInputSchema)
-  .merge(gpfWhereFilterInputSchema)
-  .merge(gpfSpatialFilterInputSchema)
+}))
   .strict();
 
 export const gpfGetFeaturesInputSchema = gpfGetFeaturesInputObjectSchema.superRefine(assertSpatialFilterExclusion);
