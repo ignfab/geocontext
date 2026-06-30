@@ -163,29 +163,6 @@ export type SpatialFilter =
   | ({ operator: "intersects_feature" } & z.infer<typeof intersectsFeatureFilterSchema>)
   | ({ operator: "travel_time" } & z.infer<typeof travelTimeFilterSchema>);
 
-// --- `gpf_count_features`
-
-export const gpfCountFeaturesInputObjectSchema = gpfTypenameInputSchema
-  .merge(gpfWhereFilterInputSchema)
-  .merge(gpfSpatialFilterInputSchema)
-  .strict();
-
-export const gpfCountFeaturesInputSchema = gpfCountFeaturesInputObjectSchema.superRefine(assertSpatialFilterExclusion);
-
-// --- `gpf_count_features` Outputs ---
-
-export const gpfCountFeaturesOutputSchema = z.object({
-  numberMatched: z.number().describe("Le nombre d'objets correspondant à la requête."),
-});
-
-// --- `gpf_count_features` Types ---
-
-export type GpfCountFeaturesInput = z.infer<typeof gpfCountFeaturesInputSchema>;
-
-// --- `gpf_count_features` Published Schema ---
-
-export const gpfCountFeaturesPublishedInputSchema = generatePublishedInputSchema(gpfCountFeaturesInputObjectSchema);
-
 // --- `gpf_get_features` ---
 
 export const gpfGetFeaturesInputObjectSchema = z.object({
@@ -225,6 +202,29 @@ export type GpfGetFeaturesInput = z.infer<typeof gpfGetFeaturesInputSchema>;
 // --- `gpf_get_features` Published Schema ---
 
 export const gpfGetFeaturesPublishedInputSchema = generatePublishedInputSchema(gpfGetFeaturesInputObjectSchema);
+
+// --- `gpf_count_features`
+
+export const gpfCountFeaturesInputObjectSchema = gpfTypenameInputSchema
+  .merge(gpfWhereFilterInputSchema)
+  .merge(gpfSpatialFilterInputSchema)
+  .strict();
+
+export const gpfCountFeaturesInputSchema = gpfCountFeaturesInputObjectSchema.superRefine(assertSpatialFilterExclusion);
+
+// --- `gpf_count_features` Outputs ---
+
+export const gpfCountFeaturesOutputSchema = z.object({
+  numberMatched: z.number().describe("Le nombre d'objets correspondant à la requête."),
+});
+
+// --- `gpf_count_features` Types ---
+
+export type GpfCountFeaturesInput = z.infer<typeof gpfCountFeaturesInputSchema>;
+
+// --- `gpf_count_features` Published Schema ---
+
+export const gpfCountFeaturesPublishedInputSchema = generatePublishedInputSchema(gpfCountFeaturesInputObjectSchema);
 
 // --- Hybrid `gpf_get_features` / `gpf_count_features` schema ---
 
