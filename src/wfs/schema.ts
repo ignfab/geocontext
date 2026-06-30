@@ -138,7 +138,7 @@ const gpfSpatialFilterInputSchema = z.object({
     .describe("Filtre spatial par temps de trajet depuis un point (`profile` voiture ou piéton). Exclusif avec les autres filtres spatiaux."),
 })
 
-function assertSpatialFilterExclusion(input : Record<string,any>, ctx : any) {
+function assertSpatialFilterExclusion(input : Record<string, unknown>, ctx : z.RefinementCtx) {
   const usedSpatialFilters = GPF_GET_FEATURES_SPATIAL_FILTER_KEYS.filter((key) => input[key] !== undefined);
 
   if (usedSpatialFilters.length > 1) {
