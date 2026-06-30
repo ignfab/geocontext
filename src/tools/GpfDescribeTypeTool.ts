@@ -12,7 +12,7 @@ import logger from "../logger.js";
 
 // --- Schema ---
 
-const GpfDescribeTypeInputSchema = z.object({
+const gpfDescribeTypeInputSchema = z.object({
   typename: z
     .string()
     .trim()
@@ -22,9 +22,9 @@ const GpfDescribeTypeInputSchema = z.object({
 
 // --- Types ---
 
-type GpfDescribeTypeInput = z.infer<typeof GpfDescribeTypeInputSchema>;
+type GpfDescribeTypeInput = z.infer<typeof gpfDescribeTypeInputSchema>;
 
-const GpfPropertySchema = z.object({
+const gpfPropertySchema = z.object({
   name: z.string().describe("Le nom de la propriété."),
   type: z.string().describe("Le type de la propriété."),
   title: z.string().describe("Le titre lisible de la propriété.").optional(),
@@ -33,13 +33,13 @@ const GpfPropertySchema = z.object({
   defaultCrs: z.string().describe("Le système de coordonnées par défaut si la propriété est géométrique.").optional(),
 });
 
-const GpfDescribeTypeOutputSchema = z.object({
+const gpfDescribeTypeOutputSchema = z.object({
   id: z.string().describe("L'identifiant complet du type GPF."),
   namespace: z.string().describe("L'espace de nommage du type GPF."),
   name: z.string().describe("Le nom court du type GPF."),
   title: z.string().describe("Le titre lisible du type GPF."),
   description: z.string().describe("La description du type GPF."),
-  properties: z.array(GpfPropertySchema).describe("La liste des propriétés du type GPF."),
+  properties: z.array(gpfPropertySchema).describe("La liste des propriétés du type GPF."),
 });
 
 // --- Tool ---
@@ -54,9 +54,9 @@ class GpfDescribeTypeTool extends BaseTool<GpfDescribeTypeInput> {
     "La sortie inclut notamment le type des propriétés, leur description, leurs valeurs possibles (`enum`) lorsqu'elles existent",
     "**IMPORTANT : Appel fortement recommandé si les noms exacts des propriétés ne sont pas connus : un nom de propriété incorrect provoque une erreur**."
   ].join("\n");
-  protected outputSchemaShape = GpfDescribeTypeOutputSchema;
+  protected outputSchemaShape = gpfDescribeTypeOutputSchema;
 
-  schema = GpfDescribeTypeInputSchema;
+  schema = gpfDescribeTypeInputSchema;
 
   /**
    * Loads the detailed schema description for one WFS typename.
