@@ -122,7 +122,7 @@ class GpfGetFeaturesTool extends BaseTool<GpfGetFeaturesInput> {
         : toWfsHttpGetUrlPayload(request);
     }
 
-    return executeGetOrCountFeatures(validatedInput, false);
+    return executeGetOrCountFeatures(validatedInput);
   }
 }
 
