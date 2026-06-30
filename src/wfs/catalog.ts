@@ -12,7 +12,7 @@ import { getEnv } from '../config/env.js';
 
 // --- Constants ---
 
-export const GPF_URL = "https://data.geopf.fr/wfs";
+export const GPF_WFS_URL = "https://data.geopf.fr/wfs";
 
 // Shared keys used by both `fields` and `boost` in MiniSearchCollectionSearchOptions.
 const MINISEARCH_INDEXED_OPTION_KEYS = [

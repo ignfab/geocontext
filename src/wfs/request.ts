@@ -7,7 +7,7 @@
  * - the compact HTTP payloads exposed by MCP WFS tools
  */
 
-import { GPF_URL } from "./catalog.js";
+import { GPF_WFS_URL } from "./catalog.js";
 import type { GpfGetFeaturesInput } from "./schema.js";
 
 // --- Transport Types ---
@@ -149,10 +149,10 @@ export function buildMainRequest(
   const body = buildBody(compiled.cqlFilter);
   return {
     method: "POST",
-    url: GPF_URL,
+    url: GPF_WFS_URL,
     query,
     body,
-    get_url: buildGetUrl(GPF_URL, query, compiled.cqlFilter),
+    get_url: buildGetUrl(GPF_WFS_URL, query, compiled.cqlFilter),
   };
 }
 
@@ -186,10 +186,10 @@ export function buildGetFeatureByIdRequest(
 
   return {
     method: "POST",
-    url: GPF_URL,
+    url: GPF_WFS_URL,
     query,
     body: "",
-    get_url: buildGetUrl(GPF_URL, query),
+    get_url: buildGetUrl(GPF_WFS_URL, query),
   };
 }
 
@@ -253,9 +253,9 @@ export function buildMultiTypenameRequest(
 
   return {
     method: "POST",
-    url: GPF_URL,
+    url: GPF_WFS_URL,
     query,
     body,
-    get_url: buildGetUrl(GPF_URL, query, expandedCqlFilter),
+    get_url: buildGetUrl(GPF_WFS_URL, query, expandedCqlFilter),
   };
 }

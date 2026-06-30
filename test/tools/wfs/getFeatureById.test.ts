@@ -11,7 +11,7 @@ const mockFetchJSONPost = vi.fn<(
 ) => Promise<unknown>>();
 
 vi.doMock("../../../src/wfs/catalog.js", () => ({
-  GPF_URL: "https://data.geopf.fr/wfs",
+  GPF_WFS_URL: "https://data.geopf.fr/wfs",
   wfsSchemaStore: {
     getFeatureType: mockGetFeatureType,
   },
