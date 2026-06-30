@@ -11,7 +11,7 @@ const mockFetchJSONPost = vi.fn<(
 const mockFetchJSONGet = vi.fn<(url: string) => Promise<unknown>>();
 
 vi.doMock("../../../src/wfs/catalog.js", () => ({
-  GPF_URL: "https://data.geopf.fr/wfs",
+  GPF_WFS_URL: "https://data.geopf.fr/wfs",
   wfsSchemaStore: {
     getFeatureType: mockGetFeatureType,
   },
@@ -35,7 +35,7 @@ const { default: GpfCountFeaturesTool } = await import(
 
 describe("Test GpfCountFeaturesTool", () => {
   class RespondableGpfCountFeaturesTool extends GpfCountFeaturesTool {
-    respond(data: unknown) {
+    respond(data: {numberMatched: number}) {
       return this.createSuccessResponse(data);
     }
   }
@@ -111,7 +111,7 @@ describe("Test GpfCountFeaturesTool", () => {
     const tool = new RespondableGpfCountFeaturesTool();
     const response = tool.respond({
       numberMatched: 34877,
-    } as never);
+    });
 
     expect("isError" in response).toBe(false);
     expect(response.content[0]).toMatchObject({
@@ -121,15 +121,11 @@ describe("Test GpfCountFeaturesTool", () => {
     if (textContent.type !== "text") {
       throw new Error("expected text content");
     }
-    expect(JSON.parse(textContent.text)).toMatchObject({
-      numberMatched: expect.any(Number),
-    });
-    expect(response.structuredContent).toMatchObject({
-      numberMatched: expect.any(Number),
-    });
+    expect(JSON.parse(textContent.text)).toEqual({ numberMatched: 34877 });
+    expect(response.structuredContent).toEqual({ numberMatched: 34877 });
   });
 
-  it("should apply travel_time_filter before returning hit counts", async () => {
+  it("should apply travel_time_filter before returning the count", async () => {
     const tool = new GpfCountFeaturesTool();
     mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
     captureIsochroneRequests();
@@ -152,6 +148,8 @@ describe("Test GpfCountFeaturesTool", () => {
 
     expect(response.isError).toBeUndefined();
     expect(requests).toHaveLength(1);
+    expect(requests[0].query.count).toEqual("1");
+    expect(requests[0].query.propertyName).toBeUndefined();
     expect(new URLSearchParams(requests[0].body).get("cql_filter")).toEqual(
       "INTERSECTS(geometrie,SRID=4326;POLYGON((2 48,2.2 48,2.2 48.2,2 48)))",
     );
@@ -164,10 +162,13 @@ describe("Test GpfCountFeaturesTool", () => {
     });
   });
 
-  it("should fail clearly when numberMatched is absent", async () => {
+  it.each([
+    { kind: "absent", mockResponse: {}, errorMessage: "n'a pas retourné de comptage exploitable dans `numberMatched`"},
+    { kind: "wrong", mockResponse: { numberMatched: "unknown" }, errorMessage: 'numberMatched="unknown"'}
+  ])("should fail clearly when numberMatched is $kind", async ({mockResponse, errorMessage}) => {
     const tool = new GpfCountFeaturesTool();
     mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
-    captureRequests({});
+    captureRequests(mockResponse);
 
     const response = await tool.toolCall({
       params: {
@@ -183,32 +184,7 @@ describe("Test GpfCountFeaturesTool", () => {
     if (textContent.type !== "text") {
       throw new Error("expected text content");
     }
-    expect(textContent.text).toContain("n'a pas retourné de comptage exploitable dans `numberMatched`");
-    expect(response.structuredContent).toMatchObject({
-      type: "urn:geocontext:problem:execution-error",
-    });
-  });
-
-  it("should fail clearly when numberMatched is unknown", async () => {
-    const tool = new GpfCountFeaturesTool();
-    mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
-    captureRequests({ numberMatched: "unknown" });
-
-    const response = await tool.toolCall({
-      params: {
-        name: "gpf_count_features",
-        arguments: {
-          typename: "ADMINEXPRESS-COG.LATEST:commune",
-        },
-      },
-    });
-
-    expect(response.isError).toBe(true);
-    const textContent = response.content[0];
-    if (textContent.type !== "text") {
-      throw new Error("expected text content");
-    }
-    expect(textContent.text).toContain('numberMatched="unknown"');
+    expect(textContent.text).toContain(errorMessage);
     expect(response.structuredContent).toMatchObject({
       type: "urn:geocontext:problem:execution-error",
     });
