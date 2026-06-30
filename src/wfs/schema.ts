@@ -30,6 +30,10 @@ export const GPF_SPATIAL_FILTER_DOCNAMES = GPF_GET_FEATURES_SPATIAL_FILTER_KEYS
   .map((name) => `\`${name}\``)
   .join(", ")
   .replace(/, ([^,]*)$/, ' ou $1')
+export const GPF_GET_FEATURES_GEOMETRY_EXTRA = [
+  "centroid",
+  "bbox"
+] as const;
 
 // --- Shared Clauses ---
 
@@ -142,6 +146,14 @@ const gpfSpatialFilterInputSchema = z.object({
     .describe("Filtre spatial par temps de trajet depuis un point (`profile` voiture ou piéton). Exclusif avec les autres filtres spatiaux."),
 })
 
+const gpfGeometryExtraInputSchema = z.object({
+  geometry_extra: z
+    .array(z.enum(GPF_GET_FEATURES_GEOMETRY_EXTRA))
+    .default([])
+    .transform((val) => [...new Set(val)])
+    .describe("Éléments de géométrie à renvoyer pour `result_type=results`. Peut inclure `centroid` et `bbox`, aucun par défaut."),
+})
+
 function assertSpatialFilterExclusion(input : Record<string, unknown>, ctx : z.RefinementCtx) {
   const usedSpatialFilters = GPF_GET_FEATURES_SPATIAL_FILTER_KEYS.filter((key) => input[key] !== undefined);
 
@@ -151,6 +163,21 @@ function assertSpatialFilterExclusion(input : Record<string, unknown>, ctx : z.R
       path: ["spatial_filters"],
       message: `Un seul filtre spatial est autorisé (${usedSpatialFilters.join(", ")} fournis).`,
     });
+  }
+}
+
+type GeometryExtraRefinementInput = {
+  geometry_extra: z.output<typeof gpfGetFeaturesInputObjectSchema>["geometry_extra"];
+  result_type: z.output<typeof gpfGetFeaturesInputObjectSchema>["result_type"];
+};
+
+function assertGeometryExtraQuery(input: GeometryExtraRefinementInput, ctx: z.RefinementCtx) {
+  if (input.geometry_extra.length > 0 && input.result_type != "results") {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["geometry_extra"],
+      message: "`geometry_extra` ne peut être utilisé qu'avec `result_type=results`. Dans les cas `http_post_request` et `http_get_url`, la géométrie complète est renvoyée par la requête."
+    })
   }
 }
 
@@ -197,9 +224,12 @@ export const gpfGetFeaturesInputObjectSchema = gpfTypenameInputSchema
     .optional()
     .describe("Liste ordonnée des critères de tri."),
 }))
+  .merge(gpfGeometryExtraInputSchema)
   .strict();
 
-export const gpfGetFeaturesInputSchema = gpfGetFeaturesInputObjectSchema.superRefine(assertSpatialFilterExclusion);
+export const gpfGetFeaturesInputSchema = gpfGetFeaturesInputObjectSchema
+  .superRefine(assertSpatialFilterExclusion)
+  .superRefine(assertGeometryExtraQuery)
 
 // --- `gpf_get_features` Types ---
 
@@ -238,7 +268,7 @@ export type GpfQueryFeaturesInput = GpfGetFeaturesInput | GpfCountFeaturesInput
 
 // --- `gpf_get_feature_by_id` ---
 
-export const gpfGetFeatureByIdInputSchema = z.object({
+export const gpfGetFeatureByIdInputObjectSchema = z.object({
   typename: z
     .string()
     .trim()
@@ -254,18 +284,21 @@ export const gpfGetFeatureByIdInputSchema = z.object({
   result_type: z
     .enum(["results", "http_post_request", "http_get_url"])
     .default("results")
-    .describe("`results` renvoie une FeatureCollection normalisée avec exactement un objet. `http_post_request` renvoie une requête POST robuste à exécuter directement. `http_get_url` renvoie l'URL GET équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant."),
+    .describe("`results` renvoie une FeatureCollection normalisée avec exactement un objet et le choix de `geometry_extra` en guise d'information géométrique. `http_post_request` renvoie une requête POST robuste à exécuter directement. `http_get_url` renvoie l'URL GET équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant."),
   select: z
     .array(z.string().trim().min(1))
     .min(1)
     .optional()
-    .describe("Liste des propriétés non géométriques à renvoyer. Quand `result_type=\"http_post_request\"` ou `result_type=\"http_get_url\"`, la géométrie est automatiquement ajoutée."),
-}).strict();
+    .describe("Liste des propriétés non géométriques à renvoyer. Utiliser `gpf_wfs_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`."),
+})
+  .merge(gpfGeometryExtraInputSchema)
+  .strict();
 
-// --- `gpf_get_feature_by_id` Types ---
+export const gpfGetFeatureByIdInputSchema = gpfGetFeatureByIdInputObjectSchema
+  .superRefine(assertGeometryExtraQuery)
 
 export type GpfGetFeatureByIdInput = z.infer<typeof gpfGetFeatureByIdInputSchema>;
 
 // --- `gpf_get_feature_by_id` Published Schema ---
 
-export const gpfGetFeatureByIdPublishedInputSchema = generatePublishedInputSchema(gpfGetFeatureByIdInputSchema);
+export const gpfGetFeatureByIdPublishedInputSchema = generatePublishedInputSchema(gpfGetFeatureByIdInputObjectSchema);

@@ -19,7 +19,7 @@ interface GetFeaturesResult {
     type: string;
     id: string;
     properties: Record<string, unknown>;
-    geometry?: unknown;
+    geometry_extra?: Record<string, unknown>;
     feature_ref?: {
       typename: string;
       feature_id: string;
@@ -54,5 +54,23 @@ describe("GetFeatures (integration)", () => {
         limit: 1,
       }),
     );
+  }, INTEGRATION_CONFIG.timeout);
+
+  it("should include the bbox when asked in geometry_extra", async () => {
+    const result = await callTool<GetFeaturesResult>(getHandle().client, "gpf_get_features", {
+      typename: "BDTOPO_V3:commune",
+      where: [{ property: "code_insee", operator: "eq", value: "75056" }],
+      select: ["code_insee", "nom_officiel"],
+      geometry_extra: ["bbox"],
+      limit: 1,
+    });
+
+    expectFeatureCollectionWithFeatures(result);
+
+    const first = result.features[0];
+    expect(first.geometry_extra).toBeDefined();
+    expect(first.geometry_extra?.bbox).toBeDefined();
+    let bbox = (first.geometry_extra as { bbox?: { west?: number } } | undefined)?.bbox
+    expect(bbox?.west).toBe(2.22421717);
   }, INTEGRATION_CONFIG.timeout);
 });

@@ -35,7 +35,7 @@ interface GetFeatureByIdResult {
     type: string;
     id: string;
     properties: Record<string, unknown>;
-    geometry?: unknown;
+    geometry_extra?: Record<string, unknown>;
     feature_ref?: {
       typename: string;
       feature_id: string;
@@ -72,6 +72,26 @@ describe("GetFeatureById (integration)", () => {
     expect(result.features.length).toBe(1);
     expect(result.features[0].id).toBeDefined();
     expect(result.features[0].properties).toBeDefined();
+    expect(result.features[0].geometry_extra).toBeDefined();
+  }, INTEGRATION_CONFIG.timeout);
+
+  it("should retrieve a centroid and a bbox", async () => {
+    const result = await callTool<GetFeatureByIdResult>(getHandle().client, "gpf_get_feature_by_id", {
+      typename: featureRef.typename,
+      feature_id: featureRef.feature_id,
+      geometry_extra: ["centroid", "bbox"]
+    });
+
+    expectFeatureCollectionWithFeatures(result, 1);
+    expect(result.features.length).toBe(1);
+    expect(result.features[0].id).toBeDefined();
+    expect(result.features[0].properties).toBeDefined();
+    expect(result.features[0].geometry_extra).toBeDefined();
+    expect(result.features[0].geometry_extra?.centroid).toStrictEqual({
+      lon: 2.382778372262143,
+      lat: 48.8518070503727,
+    });
+    expect(result.features[0].geometry_extra?.bbox).toBeDefined();
   }, INTEGRATION_CONFIG.timeout);
 
   it("should return an error for invalid typename", async () => {
@@ -79,6 +99,17 @@ describe("GetFeatureById (integration)", () => {
       callTool(getHandle().client, "gpf_get_feature_by_id", {
         typename: "INVALID:type",
         feature_id: "nonexistent",
+      }),
+    );
+  }, INTEGRATION_CONFIG.timeout);
+
+  it("should return an error for when trying to combine `geometry_extra` with a `result_type` other than `request`", async () => {
+    await expectToolCallToThrow(
+      callTool(getHandle().client, "gpf_get_feature_by_id", {
+        typename: featureRef.typename,
+        feature_id: featureRef.feature_id,
+        geometry_extra: ["centroid"],
+        result_type: "http_post_request"
       }),
     );
   }, INTEGRATION_CONFIG.timeout);

@@ -248,7 +248,7 @@ export async function executeQueryFeatures(input: GpfQueryFeaturesInput) {
   }
 
   if (isGetFeaturesQuery) {
-    return attachFeatureRefs(featureCollection, input.typename);
+    return attachFeatureRefs(featureCollection, input.typename, input.geometry_extra);
   } else {
     return {
       numberMatched: getMatchedFeatureCount(featureCollection),
