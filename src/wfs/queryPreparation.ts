@@ -19,7 +19,7 @@ import {
 import { getSpatialFilter } from "./spatialFilter.js";
 
 import type {
-  GpfGetOrCountFeatureInput,
+  GpfGetOrCountFeaturesInput,
   OrderByClause,
   WhereClause,
 } from "./schema.js";
@@ -183,7 +183,7 @@ function compileOrderByClause(featureType: Collection, geometryProperty: Collect
  * @returns Compiled query parts used by request builders.
  */
 export function compileQueryParts(
-  input: GpfGetOrCountFeatureInput,
+  input: GpfGetOrCountFeaturesInput,
   featureType: Collection,
   resolvedGeometryRef?: ResolvedFeatureGeometryRef,
 ): CompiledQuery {

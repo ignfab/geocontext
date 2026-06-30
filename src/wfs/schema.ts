@@ -228,7 +228,7 @@ export const gpfCountFeaturesPublishedInputSchema = generatePublishedInputSchema
 
 // --- Hybrid `gpf_get_features` / `gpf_count_features` schema ---
 
-export type GpfGetOrCountFeatureInput = GpfGetFeaturesInput | GpfCountFeaturesInput
+export type GpfGetOrCountFeaturesInput = GpfGetFeaturesInput | GpfCountFeaturesInput
 
 // --- `gpf_get_feature_by_id` ---
 
