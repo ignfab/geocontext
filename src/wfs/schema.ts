@@ -152,13 +152,16 @@ function assertSpatialFilterExclusion(input : Record<string, unknown>, ctx : z.R
 
 // --- Shared GPF types ---
 
+export type WhereClause = z.infer<typeof whereClauseSchema>;
+
+export type OrderByClause = z.infer<typeof orderBySchema>;
+
 export type SpatialFilter =
-  | ({ operator: "bbox" } & NonNullable<GpfGetFeaturesInput["bbox_filter"]>)
-  | ({ operator: "intersects_point" } & NonNullable<GpfGetFeaturesInput["intersects_point_filter"]>)
-  | ({ operator: "dwithin_point" } & NonNullable<GpfGetFeaturesInput["dwithin_point_filter"]>)
-  | ({ operator: "intersects_feature" } & NonNullable<GpfGetFeaturesInput["intersects_feature_filter"]>)
-  | ({ operator: "travel_time" } & NonNullable<GpfGetFeaturesInput["travel_time_filter"]>);
-export type WhereClause = NonNullable<GpfGetFeaturesInput["where"]>[number];
+  | ({ operator: "bbox" } & z.infer<typeof bboxFilterSchema>)
+  | ({ operator: "intersects_point" } & z.infer<typeof intersectsPointFilterSchema>)
+  | ({ operator: "dwithin_point" } & z.infer<typeof dwithinPointFilterSchema>)
+  | ({ operator: "intersects_feature" } & z.infer<typeof intersectsFeatureFilterSchema>)
+  | ({ operator: "travel_time" } & z.infer<typeof travelTimeFilterSchema>);
 
 // --- `gpf_count_features`
 
@@ -218,7 +221,6 @@ export const gpfGetFeaturesInputSchema = gpfGetFeaturesInputObjectSchema.superRe
 // --- `gpf_get_features` Types ---
 
 export type GpfGetFeaturesInput = z.infer<typeof gpfGetFeaturesInputSchema>;
-export type OrderByClause = NonNullable<GpfGetFeaturesInput["order_by"]>[number];
 
 // --- `gpf_get_features` Published Schema ---
 
