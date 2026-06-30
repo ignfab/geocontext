@@ -84,7 +84,7 @@ class GpfCountFeaturesTool extends BaseTool<GpfCountFeaturesInput> {
       input: validatedInput
     });
 
-    return executeGetOrCountFeatures(validatedInput, true);
+    return executeGetOrCountFeatures(validatedInput);
   }
 }
 

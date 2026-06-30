@@ -223,7 +223,9 @@ export function compileQueryParts(
     fragments.push(compileWhereClause(featureType, geometryProperty, clause));
   }
 
-  const sortBy = input.order_by && input.order_by.length > 0
+  const isGetFeaturesQuery = "limit" in input
+
+  const sortBy = isGetFeaturesQuery && input.order_by && input.order_by.length > 0
     ? input.order_by.map((clause) => compileOrderByClause(featureType, geometryProperty, clause)).join(",")
     : undefined;
 

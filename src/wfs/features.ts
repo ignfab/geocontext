@@ -212,7 +212,8 @@ export async function prepareGetOrCountFeaturesRequest(
 // --- Execution ---
 
 /**
- * Executes the structured WFS search flow for `result_type="results"`.
+ * Executes the structured WFS flow for both the `gpf_get_features` results mode
+ * and the `gpf_count_features` count mode.
  *
  * This function prepares the request, executes it against the live WFS, then
  * either extracts a hit count or attaches `feature_ref` metadata to the result
@@ -221,14 +222,16 @@ export async function prepareGetOrCountFeaturesRequest(
  * @param input Normalized tool input.
  * @returns Either a hit-count payload or a transformed FeatureCollection.
  */
-export async function executeGetOrCountFeatures(input: GpfGetOrCountFeatureInput, onlyCount: boolean) {
+export async function executeGetOrCountFeatures(input: GpfGetOrCountFeatureInput) {
   const { compiled, request } = await prepareGetOrCountFeaturesRequest(input);
 
   let featureCollection: WfsFeatureCollectionResponse;
 
+  const isGetFeaturesQuery = "limit" in input
+
   try {
     logger.debug(
-      `[${onlyCount ? "gpf_count_features" : "gpf_get_features"}] POST ${request.url}?${new URLSearchParams(request.query).toString()}`,
+      `[${isGetFeaturesQuery ? "gpf_get_features" : "gpf_count_features"}] POST ${request.url}?${new URLSearchParams(request.query).toString()}`,
     );
     featureCollection = await wfsClient.fetchFeatureCollection(request);
   } catch (error: unknown) {
@@ -244,11 +247,11 @@ export async function executeGetOrCountFeatures(input: GpfGetOrCountFeatureInput
     throw error;
   }
 
-  if (onlyCount) {
+  if (isGetFeaturesQuery) {
+    return attachFeatureRefs(featureCollection, input.typename);
+  } else {
     return {
       numberMatched: getMatchedFeatureCount(featureCollection),
     };
   }
-
-  return attachFeatureRefs(featureCollection, input.typename);
 }
