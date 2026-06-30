@@ -14,9 +14,10 @@ import {
 import logger from "../logger.js";
 
 /**
- * MCP tool exposing structured GPF feature search.
+ * MCP tool returning the number of GPF features matching a query.
  *
- * Duplicate of GpfGetFeaturesTool but only returns the number of hits.
+ * Counting counterpart of GpfGetFeaturesTool: same filters, but returns only
+ * the match count via the shared WFS execution path.
  */
 
 // --- Tool ---
