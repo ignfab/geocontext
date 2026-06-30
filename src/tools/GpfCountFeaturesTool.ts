@@ -45,7 +45,7 @@ class GpfCountFeaturesTool extends BaseTool<GpfCountFeaturesInput> {
   }
 
   /**
-   * Formats compact responses  into `structuredContent`.
+   * Formats the count response into `structuredContent`.
    *
    * @param data Raw execution result returned by the tool implementation.
    * @returns An MCP success response.
