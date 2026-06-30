@@ -205,7 +205,7 @@ export type GpfGetFeaturesInput = z.infer<typeof gpfGetFeaturesInputSchema>;
 
 export const gpfGetFeaturesPublishedInputSchema = generatePublishedInputSchema(gpfGetFeaturesInputObjectSchema);
 
-// --- `gpf_count_features`
+// --- `gpf_count_features` ---
 
 export const gpfCountFeaturesInputObjectSchema = gpfTypenameInputSchema
   .merge(gpfWhereFilterInputSchema)
