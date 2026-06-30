@@ -104,7 +104,7 @@ export const gpfGetFeatureByIdHttpGetUrlOutputSchema = wfsHttpGetUrlOutputSchema
 
 // --- Shared GPF Inputs ---
 
-const gpfUnkownTypenameInputSchema = z.object({
+const gpfTypenameInputSchema = z.object({
   typename: z
     .string()
     .trim()
@@ -162,7 +162,7 @@ export type WhereClause = NonNullable<GpfGetFeaturesInput["where"]>[number];
 
 // --- `gpf_count_features`
 
-export const gpfCountFeaturesInputObjectSchema = gpfUnkownTypenameInputSchema
+export const gpfCountFeaturesInputObjectSchema = gpfTypenameInputSchema
   .merge(gpfWhereFilterInputSchema)
   .merge(gpfSpatialFilterInputSchema)
   .strict();
@@ -208,7 +208,7 @@ export const gpfGetFeaturesInputObjectSchema = z.object({
     .optional()
     .describe("Liste ordonnée des critères de tri."),
 })
-  .merge(gpfUnkownTypenameInputSchema)
+  .merge(gpfTypenameInputSchema)
   .merge(gpfWhereFilterInputSchema)
   .merge(gpfSpatialFilterInputSchema)
   .strict();
@@ -236,6 +236,8 @@ export const gpfGetFeatureByIdInputSchema = z.object({
     .trim()
     .min(1, "le nom du type ne doit pas être vide")
     .describe("Nom exact du type GPF à interroger, par exemple `ADMINEXPRESS-COG.LATEST:commune`."),
+  // The description is not exactly the same as in gpfTypenameInputSchema because the
+  // MCP should only call getFeatureById using a previously-obtained feature_ref.
   feature_id: z
     .string()
     .trim()
