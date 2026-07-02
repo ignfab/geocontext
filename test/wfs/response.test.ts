@@ -44,7 +44,7 @@ describe("wfs_engine/response", () => {
       expect(features[0]).toEqual({
         id: "commune.1",
         properties: { code_insee: "94080" },
-        geometry: null,
+        geometry_extra: null,
         feature_ref: { typename: null, feature_id: "commune.1" },
       });
     });
@@ -62,8 +62,67 @@ describe("wfs_engine/response", () => {
       expect(features[0]).toEqual({
         id: 42,
         properties: { name: "test" },
-        geometry: null,
+        geometry_extra: null,
       });
+    });
+
+    it("should return a GeometryCollection with bbox when only bbox is requested", () => {
+      const result = transformFeatureCollectionResponse({
+        type: "FeatureCollection",
+        features: [
+          {
+            id: "commune.1",
+            geometry: {
+              type: "Polygon",
+              coordinates: [[[2.3, 48.8], [2.4, 48.8], [2.4, 48.9], [2.3, 48.9], [2.3, 48.8]]],
+            },
+            geometry_name: "geometrie",
+            properties: { code_insee: "94080" },
+          },
+        ],
+      }, ["bbox"]);
+
+      const features = getFeatures(result);
+
+      expect(features[0].geometry_extra).toStrictEqual({
+        bbox: {
+          west: 2.3,
+          south: 48.8,
+          east: 2.4,
+          north: 48.9,
+        },
+      });
+    });
+
+    it("should return centroid and bbox in geometry_extra when requested", () => {
+      const result = transformFeatureCollectionResponse({
+        type: "FeatureCollection",
+        features: [
+          {
+            id: "commune.1",
+            geometry: {
+              type: "Polygon",
+              coordinates: [[[2.3, 48.8], [2.4, 48.8], [2.4, 48.9], [2.3, 48.9], [2.3, 48.8]]],
+            },
+            geometry_name: "geometrie",
+            properties: { code_insee: "94080" },
+          },
+        ],
+      }, ["centroid", "bbox"]);
+
+      const features = getFeatures(result);
+      expect(features[0].geometry_extra).toBeDefined();
+      expect(features[0].geometry_extra).toMatchObject({
+        bbox: {
+          west: 2.3,
+          south: 48.8,
+          east: 2.4,
+          north: 48.9,
+        },
+      });
+      const geometryExtraCentroid = features[0].geometry_extra as { centroid?: { lon: number; lat: number } };
+      expect(geometryExtraCentroid.centroid?.lon).toBeCloseTo(2.35);
+      expect(geometryExtraCentroid.centroid?.lat).toBeCloseTo(48.85);
     });
   });
 

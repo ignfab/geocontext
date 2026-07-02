@@ -7,6 +7,46 @@
  */
 
 import type { WfsFeatureCollectionResponse } from "./types.js";
+import { centroid } from "@turf/centroid";
+import { bbox } from "@turf/bbox";
+import { AllGeoJSON } from "@turf/helpers";
+
+
+function isGeoJson(value: unknown): value is AllGeoJSON {
+  return typeof value === "object" && value !== null;
+}
+
+function deriveGeometry(geometry: unknown, geometry_extra: string[] = []) {
+  if (geometry_extra.length == 0 || !isGeoJson(geometry)) {
+    return null;
+  }
+
+  const ret : Record<string, unknown> = {}
+
+  if (geometry_extra.includes("centroid")) {
+    try {
+      const centr = centroid(geometry).geometry.coordinates
+      ret.centroid = {
+        lon: centr[0],
+        lat: centr[1],
+      }
+    } catch {}
+  }
+
+  if (geometry_extra.includes("bbox")) {
+    try {
+      const bb = bbox(geometry);
+      ret.bbox = {
+        west: bb[0],
+        south: bb[1],
+        east: bb[2],
+        north: bb[3],
+      }
+    } catch {}
+  }
+
+  return ret;
+}
 
 // --- Response Types ---
 
@@ -72,14 +112,15 @@ export function getMatchedFeatureCount(featureCollection: WfsFeatureCollectionRe
 // --- Response Transformation ---
 
 /**
- * Removes raw geometry payloads from a FeatureCollection, keeps GeoJSON validity by forcing
- * `geometry: null`, and exposes lightweight `feature_ref` objects reusable by follow-up requests.
+ * Replaces raw geometry payloads from a FeatureCollection by the kind specified by `geometry_extra`
+ * and exposes lightweight `feature_ref` objects reusable by follow-up requests.
  *
  * @param featureCollection Raw FeatureCollection returned by the WFS endpoint.
- * @returns A transformed FeatureCollection with raw geometry fields removed, `geometry: null`, and optional `feature_ref` metadata.
+ * @returns A transformed FeatureCollection with raw geometry fields removed and optional `feature_ref` metadata.
  */
 export function transformFeatureCollectionResponse(
   featureCollection: GenericFeatureCollection,
+  geometry_extra: string[] = [],
 ): TransformedFeatureCollection {
   if (!Array.isArray(featureCollection.features)) {
     return featureCollection;
@@ -90,7 +131,7 @@ export function transformFeatureCollectionResponse(
 
     const nextFeature: Record<string, unknown> = {
       ...rest,
-      geometry: null,
+      geometry_extra: deriveGeometry(_geometry, geometry_extra),
     };
 
     if (typeof feature.id === "string") {
@@ -114,10 +155,11 @@ export function transformFeatureCollectionResponse(
  *
  * @param featureCollection Raw FeatureCollection returned by the WFS endpoint.
  * @param typename Typename of the queried layer.
+ * @param geometry_extra List of extra geometry data to include for each feature.
  * @returns A transformed FeatureCollection whose `feature_ref` objects carry the exact typename.
  */
-export function attachFeatureRefs(featureCollection: GenericFeatureCollection, typename: string) {
-  const transformed = transformFeatureCollectionResponse(featureCollection);
+export function attachFeatureRefs(featureCollection: GenericFeatureCollection, typename: string, geometry_extra: string[] = []) {
+  const transformed = transformFeatureCollectionResponse(featureCollection, geometry_extra);
   if (!Array.isArray(transformed.features)) {
     return transformed;
   }

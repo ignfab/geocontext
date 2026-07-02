@@ -66,11 +66,20 @@ describe("Test GpfGetFeatureByIdTool", () => {
           minLength: 1,
           description: "Identifiant GPF exact de l'objet à récupérer, par exemple `commune.8952`.",
         },
+        geometry_extra: {
+          type: "array",
+          items: {
+            enum: ["centroid", "bbox"],
+            type: "string",
+          },
+          default: [],
+          description: "Éléments de géométrie à renvoyer pour `result_type=results`. Peut inclure `centroid` et `bbox`, aucun par défaut.",
+        },
         result_type: {
           type: "string",
           enum: ["results", "http_post_request", "http_get_url"],
           default: "results",
-          description: "`results` renvoie une FeatureCollection normalisée avec exactement un objet. `http_post_request` renvoie une requête POST robuste à exécuter directement. `http_get_url` renvoie l'URL GET équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant.",
+          description: "`results` renvoie une FeatureCollection normalisée avec exactement un objet et le choix de `geometry_extra` en guise d'information géométrique. `http_post_request` renvoie une requête POST robuste à exécuter directement. `http_get_url` renvoie l'URL GET équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant.",
         },
         select: {
           type: "array",
@@ -79,7 +88,7 @@ describe("Test GpfGetFeatureByIdTool", () => {
             minLength: 1,
           },
           minItems: 1,
-          description: "Liste des propriétés non géométriques à renvoyer. Quand `result_type=\"http_post_request\"` ou `result_type=\"http_get_url\"`, la géométrie est automatiquement ajoutée.",
+          description: "Liste des propriétés non géométriques à renvoyer. Utiliser `gpf_wfs_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`.",
         },
       },
       required: ["typename", "feature_id"],
@@ -208,12 +217,71 @@ describe("Test GpfGetFeatureByIdTool", () => {
     expect(results.numberMatched).toEqual(1);
     expect(results.numberReturned).toEqual(1);
     expect(results.features).toHaveLength(1);
-    expect(results.features[0].geometry).toBeNull();
     expect(results.features[0].feature_ref).toEqual({
       typename: "ADMINEXPRESS-COG.LATEST:commune",
       feature_id: "commune.1",
     });
     expect(results.features[0].geometry_name).toBeUndefined();
+  });
+
+  it("should include the bbox when asked in geometry_extra", async () => {
+    const tool = new GpfGetFeatureByIdTool();
+    const requests: Array<{ url: string; query: Record<string, string> }> = [];
+    mockGetFeatureType.mockResolvedValue(polygonFeatureType);
+    mockFetchJSONPost.mockImplementation(async (url, _body) => {
+      const [baseUrl, queryString = ""] = url.split("?");
+      requests.push({
+        url: baseUrl,
+        query: Object.fromEntries(new URLSearchParams(queryString).entries()),
+      });
+
+      return {
+        type: "FeatureCollection",
+        totalFeatures: 1,
+        features: [
+          {
+            type: "Feature",
+            id: "commune.1",
+            geometry: {
+              type: "Polygon",
+              coordinates: [[[2.3, 48.8], [2.4, 48.8], [2.4, 48.9], [2.3, 48.9], [2.3, 48.8]]],
+            },
+            geometry_name: "geometrie",
+            properties: {
+              code_insee: "01001",
+            },
+          },
+        ],
+      };
+    });
+
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_get_feature_by_id",
+        arguments: {
+          typename: "ADMINEXPRESS-COG.LATEST:commune",
+          feature_id: "commune.1",
+          select: ["code_insee"],
+          geometry_extra: ["bbox"],
+        },
+      },
+    });
+
+    expect(response.isError).toBeUndefined();
+    expect(requests).toHaveLength(1);
+    expect(requests[0].query.propertyName).toEqual("code_insee,geometrie");
+    const textContent = response.content[0];
+    if (textContent.type !== "text") {
+      throw new Error("expected text content");
+    }
+    const results = JSON.parse(textContent.text);
+    expect(results.features[0].geometry_extra).toBeDefined();
+    expect(results.features[0].geometry_extra?.bbox).toStrictEqual({
+      west: 2.3,
+      south: 48.8,
+      east: 2.4,
+      north: 48.9
+    });
   });
 
   it("should fail clearly when the feature is missing", async () => {
@@ -360,6 +428,38 @@ describe("Test GpfGetFeatureByIdTool", () => {
           name: "result_type",
           code: "invalid_enum_value",
           detail: expect.stringContaining("http_post_request"),
+        }),
+      ]),
+    });
+  });
+
+  it("should reject geometry_extra with http_get_url result_type", async () => {
+    const tool = new GpfGetFeatureByIdTool();
+
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_get_feature_by_id",
+        arguments: {
+          typename: "ADMINEXPRESS-COG.LATEST:commune",
+          feature_id: "commune.1",
+          geometry_extra: ["bbox"],
+          result_type: "http_get_url",
+        },
+      },
+    });
+
+    expect(response.isError).toBe(true);
+    const textContent = response.content[0];
+    if (textContent.type !== "text") {
+      throw new Error("expected text content");
+    }
+    expect(textContent.text).toContain("geometry_extra");
+    expect(response.structuredContent).toMatchObject({
+      type: "urn:geocontext:problem:invalid-tool-params",
+      errors: expect.arrayContaining([
+        expect.objectContaining({
+          name: "geometry_extra",
+          code: "custom",
         }),
       ]),
     });
