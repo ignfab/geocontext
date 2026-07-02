@@ -1747,13 +1747,35 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
 
 </details>
 
-### Sortie
+### Schéma de sortie
 
-Aucun `outputSchema` unique n'est exposé. La sortie est gérée par la sérialisation par défaut du framework ou par un formatage de réponse spécifique.
+| Champ | Type | Requis | Description |
+| --- | --- | --- | --- |
+| `numberMatched` | number | oui | Le nombre d'objets correspondant à la requête. |
+
+<details>
+<summary>Schéma de sortie brut</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "numberMatched": {
+      "type": "number",
+      "description": "Le nombre d'objets correspondant à la requête."
+    }
+  },
+  "required": [
+    "numberMatched"
+  ]
+}
+```
+
+</details>
 
 ### Réponse MCP
 
 | Cas | `content` | `structuredContent` | Relation entre `content` et `structuredContent` |
 | --- | --- | --- | --- |
-| Succès | oui | non | `content[0].text` contient la réponse stringifiée ; aucun `structuredContent` n'est ajouté. |
+| Succès | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
 | Erreur | oui | oui | `content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`. |

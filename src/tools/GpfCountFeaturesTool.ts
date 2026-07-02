@@ -40,6 +40,7 @@ class GpfCountFeaturesTool extends BaseTool<GpfCountFeaturesInput> {
     "**OBLIGATOIRE : toujours appeler `gpf_describe_type` avant ce tool, sauf si `gpf_describe_type` a déjà été appelé pour ce même typename dans la conversation en cours.**",
     "Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiques à chaque typename et diffèrent systématiquement des conventions habituelles (ex : pas de nom_officiel, navigabilite sans accent, etc.). Toute tentative sans appel préalable à `gpf_describe_type` **provoquera une erreur.**",
   ].join("\n");
+  protected outputSchemaShape = gpfCountFeaturesOutputSchema;
 
   // The framework requires a plain Zod object here to publish a compatible
   // input schema. Cross-field runtime validation is applied in `execute`.
