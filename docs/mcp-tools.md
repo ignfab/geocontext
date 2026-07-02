@@ -1092,12 +1092,12 @@ Lecture d’objets GPF
 
 ```
 Interroge un type GPF et renvoie des résultats structurés (propriétés attributaires ; les géométries ne sont pas incluses). Pour obtenir une couche cartographiable, utiliser `gpf_get_features_layer`.
-Utiliser `select` pour choisir les propriétés, `where` pour filtrer, `order_by` pour trier et un filtre spatial dédié (`bbox_filter`, `intersects_point_filter`, `dwithin_point_filter`, `intersects_feature_filter` ou `travel_time_filter`) pour le spatial.
+Utiliser `select` pour choisir les propriétés, `where` pour filtrer, `order_by` pour trier et un filtre spatial dédié (`bbox_filter`, `intersects_point_filter`, `dwithin_point_filter`, `intersects_feature_filter`, `adjacent_feature_filter` ou `travel_time_filter`) pour le spatial.
 Exemple attributaire : `where=[{ property: "code_insee", operator: "eq", value: "75056" }]`.
 Exemple bbox : `bbox_filter={ west: 2.1, south: 48.7, east: 2.5, north: 48.9 }`.
 Exemple point dans géométrie : `intersects_point_filter={ lon: 2.35, lat: 48.85 }`.
 Exemple distance : `dwithin_point_filter={ lon: 2.35, lat: 48.85, distance_m: 500 }`.
-Exemple réutilisation : `intersects_feature_filter={ typename, feature_id }` avec `typename` et `feature_id` issus d'une `feature_ref`.
+Exemple réutilisation : `intersects_feature_filter={ typename, feature_id }` ou bien `adjacent_feature_filter={ feature_id }` avec `typename` et `feature_id` issus d'une `feature_ref`.
 Exemple temps de trajet : `travel_time_filter={ lon: 2.35, lat: 48.85, minutes: 15, profile: "pedestrian" }` pour les objets atteignables en 15 minutes à pied depuis ce point.
 ⚠️ Quand `typename` et `intersects_feature_filter.typename` sont identiques, utiliser `gpf_get_feature_by_id` pour récupérer exactement l'objet ciblé.
 **OBLIGATOIRE : toujours appeler `gpf_describe_type` avant ce tool, sauf si `gpf_describe_type` a déjà été appelé pour ce même typename dans la conversation en cours.**
@@ -1108,9 +1108,10 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
 
 | Champ | Type | Requis | Description |
 | --- | --- | --- | --- |
+| `adjacent_feature_filter` | object | non | Filtre spatial par adjacence avec un objet GPF de référence. Exclusif avec les autres filtres spatiaux. |
 | `bbox_filter` | object | non | Filtre spatial par boîte englobante. Exclusif avec les autres filtres spatiaux. |
 | `dwithin_point_filter` | object | non | Filtre spatial par distance à un point. Exclusif avec les autres filtres spatiaux. |
-| `intersects_feature_filter` | object | non | Filtre spatial par intersection avec un feature GPF de référence. Exclusif avec les autres filtres spatiaux. |
+| `intersects_feature_filter` | object | non | Filtre spatial par intersection avec un objet GPF de référence. Exclusif avec les autres filtres spatiaux. |
 | `intersects_point_filter` | object | non | Filtre spatial par intersection avec un point. Exclusif avec les autres filtres spatiaux. |
 | `limit` | integer | non | Nombre maximum d'objets à renvoyer. Valeur par défaut : 100. Maximum : 5000. Valeur par défaut : 100. |
 | `order_by` | array | non | Liste ordonnée des critères de tri. |
@@ -1285,12 +1286,12 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
         "typename": {
           "type": "string",
           "minLength": 1,
-          "description": "Type GPF du feature de référence."
+          "description": "Type GPF de l'objet de référence."
         },
         "feature_id": {
           "type": "string",
           "minLength": 1,
-          "description": "Identifiant du feature de référence."
+          "description": "Identifiant de l'objet de référence."
         }
       },
       "required": [
@@ -1298,7 +1299,22 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
         "feature_id"
       ],
       "additionalProperties": false,
-      "description": "Filtre spatial par intersection avec un feature GPF de référence. Exclusif avec les autres filtres spatiaux."
+      "description": "Filtre spatial par intersection avec un objet GPF de référence. Exclusif avec les autres filtres spatiaux."
+    },
+    "adjacent_feature_filter": {
+      "type": "object",
+      "properties": {
+        "feature_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Identifiant de l'objet de référence."
+        }
+      },
+      "required": [
+        "feature_id"
+      ],
+      "additionalProperties": false,
+      "description": "Filtre spatial par adjacence avec un objet GPF de référence. Exclusif avec les autres filtres spatiaux."
     },
     "travel_time_filter": {
       "type": "object",
@@ -1422,7 +1438,7 @@ Couche cartographiable d’objets GPF
 ```
 Interroge un type GPF et renvoie une **URL de couche cartographiable** (`data_url`) : une URL opaque, à passer telle quelle à un outil d'affichage cartographique (MCP Carto, ...). L'ouvrir renvoie une FeatureCollection GeoJSON avec les géométries complètes.
 À utiliser dès qu'il faut **afficher / cartographier** des objets GPF. Pour des attributs sans géométrie, utiliser `gpf_get_features`.
-Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, `where` pour filtrer, `order_by` pour trier et un filtre spatial dédié (`bbox_filter`, `intersects_point_filter`, `dwithin_point_filter`, `intersects_feature_filter` ou `travel_time_filter`) pour le spatial.
+Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, `where` pour filtrer, `order_by` pour trier et un filtre spatial dédié (`bbox_filter`, `intersects_point_filter`, `dwithin_point_filter`, `intersects_feature_filter`, `adjacent_feature_filter` ou `travel_time_filter`) pour le spatial.
 **OBLIGATOIRE : toujours appeler `gpf_describe_type` avant ce tool, sauf si `gpf_describe_type` a déjà été appelé pour ce même typename dans la conversation en cours.** Les noms de propriétés ne peuvent pas être devinés.
 ```
 
@@ -1430,9 +1446,10 @@ Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, 
 
 | Champ | Type | Requis | Description |
 | --- | --- | --- | --- |
+| `adjacent_feature_filter` | object | non | Filtre spatial par adjacence avec un objet GPF de référence. Exclusif avec les autres filtres spatiaux. |
 | `bbox_filter` | object | non | Filtre spatial par boîte englobante. Exclusif avec les autres filtres spatiaux. |
 | `dwithin_point_filter` | object | non | Filtre spatial par distance à un point. Exclusif avec les autres filtres spatiaux. |
-| `intersects_feature_filter` | object | non | Filtre spatial par intersection avec un feature GPF de référence. Exclusif avec les autres filtres spatiaux. |
+| `intersects_feature_filter` | object | non | Filtre spatial par intersection avec un objet GPF de référence. Exclusif avec les autres filtres spatiaux. |
 | `intersects_point_filter` | object | non | Filtre spatial par intersection avec un point. Exclusif avec les autres filtres spatiaux. |
 | `limit` | integer | non | Nombre maximum d'objets à cartographier. Valeur par défaut : 5000 (plafond du service). Réduire pour alléger la carte. Maximum : 5000. Une requête produisant plus de 5000 objets sera tronquée. Valeur par défaut : 5000. |
 | `order_by` | array | non | Liste ordonnée des critères de tri. |
@@ -1606,12 +1623,12 @@ Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, 
         "typename": {
           "type": "string",
           "minLength": 1,
-          "description": "Type GPF du feature de référence."
+          "description": "Type GPF de l'objet de référence."
         },
         "feature_id": {
           "type": "string",
           "minLength": 1,
-          "description": "Identifiant du feature de référence."
+          "description": "Identifiant de l'objet de référence."
         }
       },
       "required": [
@@ -1619,7 +1636,22 @@ Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, 
         "feature_id"
       ],
       "additionalProperties": false,
-      "description": "Filtre spatial par intersection avec un feature GPF de référence. Exclusif avec les autres filtres spatiaux."
+      "description": "Filtre spatial par intersection avec un objet GPF de référence. Exclusif avec les autres filtres spatiaux."
+    },
+    "adjacent_feature_filter": {
+      "type": "object",
+      "properties": {
+        "feature_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Identifiant de l'objet de référence."
+        }
+      },
+      "required": [
+        "feature_id"
+      ],
+      "additionalProperties": false,
+      "description": "Filtre spatial par adjacence avec un objet GPF de référence. Exclusif avec les autres filtres spatiaux."
     },
     "travel_time_filter": {
       "type": "object",
@@ -1753,7 +1785,7 @@ Décompte d’objets GPF
 
 ```
 Interroge un type GPF et renvoie le nombre de résultats obtenus.
-Utiliser `where` pour filtrer et un filtre spatial dédié (`bbox_filter`, `intersects_point_filter`, `dwithin_point_filter`, `intersects_feature_filter` ou `travel_time_filter`) pour le spatial.
+Utiliser `where` pour filtrer et un filtre spatial dédié (`bbox_filter`, `intersects_point_filter`, `dwithin_point_filter`, `intersects_feature_filter`, `adjacent_feature_filter` ou `travel_time_filter`) pour le spatial.
 Exemple attributaire : `where=[{ property: "code_insee", operator: "eq", value: "75056" }]`.
 Exemple bbox : `bbox_filter={ west: 2.1, south: 48.7, east: 2.5, north: 48.9 }`.
 Exemple point dans géométrie : `intersects_point_filter={ lon: 2.35, lat: 48.85 }`.
@@ -1769,9 +1801,10 @@ Les noms de propriétés utilisés dans `where` **ne peuvent pas être devinés*
 
 | Champ | Type | Requis | Description |
 | --- | --- | --- | --- |
+| `adjacent_feature_filter` | object | non | Filtre spatial par adjacence avec un objet GPF de référence. Exclusif avec les autres filtres spatiaux. |
 | `bbox_filter` | object | non | Filtre spatial par boîte englobante. Exclusif avec les autres filtres spatiaux. |
 | `dwithin_point_filter` | object | non | Filtre spatial par distance à un point. Exclusif avec les autres filtres spatiaux. |
-| `intersects_feature_filter` | object | non | Filtre spatial par intersection avec un feature GPF de référence. Exclusif avec les autres filtres spatiaux. |
+| `intersects_feature_filter` | object | non | Filtre spatial par intersection avec un objet GPF de référence. Exclusif avec les autres filtres spatiaux. |
 | `intersects_point_filter` | object | non | Filtre spatial par intersection avec un point. Exclusif avec les autres filtres spatiaux. |
 | `travel_time_filter` | object | non | Filtre spatial par temps de trajet depuis un point (`profile` voiture ou piéton). Exclusif avec les autres filtres spatiaux. |
 | `typename` | string | oui | Nom exact du type GPF à interroger de la forme `prefixe:nom`. Utiliser `gpf_search_types` pour trouver un `typename` valide. |
@@ -1933,12 +1966,12 @@ Les noms de propriétés utilisés dans `where` **ne peuvent pas être devinés*
         "typename": {
           "type": "string",
           "minLength": 1,
-          "description": "Type GPF du feature de référence."
+          "description": "Type GPF de l'objet de référence."
         },
         "feature_id": {
           "type": "string",
           "minLength": 1,
-          "description": "Identifiant du feature de référence."
+          "description": "Identifiant de l'objet de référence."
         }
       },
       "required": [
@@ -1946,7 +1979,22 @@ Les noms de propriétés utilisés dans `where` **ne peuvent pas être devinés*
         "feature_id"
       ],
       "additionalProperties": false,
-      "description": "Filtre spatial par intersection avec un feature GPF de référence. Exclusif avec les autres filtres spatiaux."
+      "description": "Filtre spatial par intersection avec un objet GPF de référence. Exclusif avec les autres filtres spatiaux."
+    },
+    "adjacent_feature_filter": {
+      "type": "object",
+      "properties": {
+        "feature_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Identifiant de l'objet de référence."
+        }
+      },
+      "required": [
+        "feature_id"
+      ],
+      "additionalProperties": false,
+      "description": "Filtre spatial par adjacence avec un objet GPF de référence. Exclusif avec les autres filtres spatiaux."
     },
     "travel_time_filter": {
       "type": "object",
