@@ -16,6 +16,7 @@ import {
   gpfGetFeaturesInputObjectSchema,
   type GpfGetFeaturesInput,
   gpfGetFeaturesPublishedInputSchema,
+  GPF_SPATIAL_FILTER_DOCNAMES,
 } from "../wfs/schema.js";
 import logger from "../logger.js";
 
@@ -34,7 +35,7 @@ class GpfGetFeaturesTool extends BaseTool<GpfGetFeaturesInput> {
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
   description = [
     "Interroge un type GPF et renvoie des résultats structurés.",
-    "Utiliser `select` pour choisir les propriétés, `where` pour filtrer, `order_by` pour trier et un filtre spatial dédié (`bbox_filter`, `intersects_point_filter`, `dwithin_point_filter`, `intersects_feature_filter` ou `travel_time_filter`) pour le spatial. Avec `result_type=\"http_post_request\"` ou `result_type=\"http_get_url\"`, la géométrie est automatiquement ajoutée aux propriétés sélectionnées pour garantir une requête cartographiable.",
+    `Utiliser \`select\` pour choisir les propriétés, \`where\` pour filtrer, \`order_by\` pour trier et un filtre spatial dédié (${GPF_SPATIAL_FILTER_DOCNAMES}) pour le spatial. Avec \`result_type="http_post_request"\` ou \`result_type="http_get_url"\`, la géométrie est automatiquement ajoutée aux propriétés sélectionnées pour garantir une requête cartographiable.`,
     "Exemple attributaire : `where=[{ property: \"code_insee\", operator: \"eq\", value: \"75056\" }]`.",
     "Exemple bbox : `bbox_filter={ west: 2.1, south: 48.7, east: 2.5, north: 48.9 }`.",
     "Exemple point dans géométrie : `intersects_point_filter={ lon: 2.35, lat: 48.85 }`.",

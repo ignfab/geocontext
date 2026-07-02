@@ -26,6 +26,10 @@ export const GPF_GET_FEATURES_SPATIAL_FILTER_KEYS = [
   "intersects_feature_filter",
   "travel_time_filter",
 ] as const;
+export const GPF_SPATIAL_FILTER_DOCNAMES = GPF_GET_FEATURES_SPATIAL_FILTER_KEYS
+  .map((name) => `\`${name}\``)
+  .join(", ")
+  .replace(/, ([^,]*)$/, ' ou $1')
 
 // --- Shared Clauses ---
 
