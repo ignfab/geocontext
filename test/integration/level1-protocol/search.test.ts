@@ -1,5 +1,5 @@
 /**
- * Integration test: WFS search types tool with real API calls.
+ * Integration test: search types tool with real API calls.
  */
 
 import { describe, it, expect } from "vitest";
@@ -8,7 +8,7 @@ import { withMcpServer } from "../helpers/level1-fixtures.js";
 import { expectNonEmptyResults, expectToolCallToThrow } from "../helpers/level1-assertions.js";
 import { INTEGRATION_CONFIG } from "../config/shared.js";
 
-interface WfsSearchResult {
+interface SearchResult {
   results: Array<{
     id: string;
     title: string;
@@ -17,11 +17,11 @@ interface WfsSearchResult {
   }>;
 }
 
-describe("WFS Search Types (integration)", () => {
+describe("GPF Search Types (integration)", () => {
   const { getHandle } = withMcpServer();
 
   it("should find 'batiment' types", async () => {
-    const result = await callTool<WfsSearchResult>(getHandle().client, "gpf_wfs_search_types", {
+    const result = await callTool<SearchResult>(getHandle().client, "gpf_search_types", {
       query: "bâtiment",
     });
 
@@ -32,7 +32,7 @@ describe("WFS Search Types (integration)", () => {
   }, INTEGRATION_CONFIG.timeout);
 
   it("should find cadastral parcel types", async () => {
-    const result = await callTool<WfsSearchResult>(getHandle().client, "gpf_wfs_search_types", {
+    const result = await callTool<SearchResult>(getHandle().client, "gpf_search_types", {
       query: "parcelle cadastrale",
     });
 
@@ -44,6 +44,6 @@ describe("WFS Search Types (integration)", () => {
   }, INTEGRATION_CONFIG.timeout);
 
   it("should return an error for empty query", async () => {
-    await expectToolCallToThrow(callTool(getHandle().client, "gpf_wfs_search_types", { query: "" }));
+    await expectToolCallToThrow(callTool(getHandle().client, "gpf_search_types", { query: "" }));
   }, INTEGRATION_CONFIG.timeout);
 });

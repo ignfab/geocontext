@@ -8,7 +8,7 @@
  */
 
 import type { Collection, CollectionProperty } from "@ignfab/gpf-schema-store";
-import type { GpfWfsGetFeaturesInput } from "./schema.js";
+import type { GpfGetFeaturesInput } from "./schema.js";
 
 // --- Property Listing ---
 
@@ -65,7 +65,7 @@ function getPropertyOrThrow(featureType: Collection, propertyName: string) {
   if (!property) {
     throw new Error(
       `La propriété '${propertyName}' n'existe pas pour '${featureType.id}'. ` +
-      `Appelle \`gpf_wfs_describe_type\` pour obtenir la liste des propriétés disponibles.`,
+      `Appelle \`gpf_describe_type\` pour obtenir la liste des propriétés disponibles.`,
     );
   }
   return property;
@@ -128,7 +128,7 @@ export function validateSelectProperty(featureType: Collection, geometryProperty
 export function buildSelectList(
   featureType: Collection,
   geometryProperty: CollectionProperty,
-  input: GpfWfsGetFeaturesInput,
+  input: GpfGetFeaturesInput,
 ) {
   // If `select` is specified, only the requested properties are returned
   // after validation against the embedded catalog.

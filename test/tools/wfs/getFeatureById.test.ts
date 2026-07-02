@@ -22,10 +22,10 @@ vi.doMock("../../../src/helpers/http.js", () => ({
   ServiceResponseError,
 }));
 
-const { default: GpfWfsGetFeatureByIdTool } = await import("../../../src/tools/GpfWfsGetFeatureByIdTool");
+const { default: GpfGetFeatureByIdTool } = await import("../../../src/tools/GpfGetFeatureByIdTool");
 
-describe("Test GpfWfsGetFeatureByIdTool", () => {
-  class InvalidSuccessPayloadTool extends GpfWfsGetFeatureByIdTool {
+describe("Test GpfGetFeatureByIdTool", () => {
+  class InvalidSuccessPayloadTool extends GpfGetFeatureByIdTool {
     async execute() {
       return { unexpected: true } as never;
     }
@@ -51,26 +51,26 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
   });
 
   it("should expose an MCP definition with explicit HTTP result types", () => {
-    const tool = new GpfWfsGetFeatureByIdTool();
-    expect(tool.toolDefinition.title).toEqual("Lecture d’un objet WFS par identifiant");
+    const tool = new GpfGetFeatureByIdTool();
+    expect(tool.toolDefinition.title).toEqual("Lecture d’un objet GPF par identifiant");
     expect(tool.toolDefinition.inputSchema).toEqual({
       type: "object",
       properties: {
         typename: {
           type: "string",
           minLength: 1,
-          description: "Nom exact du type WFS à interroger, par exemple `ADMINEXPRESS-COG.LATEST:commune`.",
+          description: "Nom exact du type GPF à interroger, par exemple `ADMINEXPRESS-COG.LATEST:commune`.",
         },
         feature_id: {
           type: "string",
           minLength: 1,
-          description: "Identifiant WFS exact de l'objet à récupérer, par exemple `commune.8952`.",
+          description: "Identifiant GPF exact de l'objet à récupérer, par exemple `commune.8952`.",
         },
         result_type: {
           type: "string",
           enum: ["results", "http_post_request", "http_get_url"],
           default: "results",
-          description: "`results` renvoie une FeatureCollection normalisée avec exactement un objet. `http_post_request` renvoie une requête POST WFS robuste à exécuter directement. `http_get_url` renvoie l'URL GET WFS équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant.",
+          description: "`results` renvoie une FeatureCollection normalisée avec exactement un objet. `http_post_request` renvoie une requête POST robuste à exécuter directement. `http_get_url` renvoie l'URL GET équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant.",
         },
         select: {
           type: "array",
@@ -89,12 +89,12 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
   });
 
   it("should return text content and structuredContent for http_post_request", async () => {
-    const tool = new GpfWfsGetFeatureByIdTool();
+    const tool = new GpfGetFeatureByIdTool();
     mockGetFeatureType.mockResolvedValue(polygonFeatureType);
 
     const response = await tool.toolCall({
       params: {
-        name: "gpf_wfs_get_feature_by_id",
+        name: "gpf_get_feature_by_id",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
           feature_id: "commune.1",
@@ -127,12 +127,12 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
   });
 
   it("should return text content and structuredContent for http_get_url", async () => {
-    const tool = new GpfWfsGetFeatureByIdTool();
+    const tool = new GpfGetFeatureByIdTool();
     mockGetFeatureType.mockResolvedValue(polygonFeatureType);
 
     const response = await tool.toolCall({
       params: {
-        name: "gpf_wfs_get_feature_by_id",
+        name: "gpf_get_feature_by_id",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
           feature_id: "commune.1",
@@ -158,7 +158,7 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
   });
 
   it("should return exactly one transformed feature for results", async () => {
-    const tool = new GpfWfsGetFeatureByIdTool();
+    const tool = new GpfGetFeatureByIdTool();
     const requests: Array<{ url: string; query: Record<string, string> }> = [];
     mockGetFeatureType.mockResolvedValue(polygonFeatureType);
     mockFetchJSONPost.mockImplementation(async (url, _body) => {
@@ -187,7 +187,7 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
 
     const response = await tool.toolCall({
       params: {
-        name: "gpf_wfs_get_feature_by_id",
+        name: "gpf_get_feature_by_id",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
           feature_id: "commune.1",
@@ -217,13 +217,13 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
   });
 
   it("should fail clearly when the feature is missing", async () => {
-    const tool = new GpfWfsGetFeatureByIdTool();
+    const tool = new GpfGetFeatureByIdTool();
     mockGetFeatureType.mockResolvedValue(polygonFeatureType);
     mockFetchJSONPost.mockResolvedValue({ type: "FeatureCollection", features: [], totalFeatures: 0 });
 
     const response = await tool.toolCall({
       params: {
-        name: "gpf_wfs_get_feature_by_id",
+        name: "gpf_get_feature_by_id",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
           feature_id: "commune.404",
@@ -244,7 +244,7 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
   });
 
   it("should fail clearly when multiple features are returned", async () => {
-    const tool = new GpfWfsGetFeatureByIdTool();
+    const tool = new GpfGetFeatureByIdTool();
     mockGetFeatureType.mockResolvedValue(polygonFeatureType);
     mockFetchJSONPost.mockResolvedValue({
       type: "FeatureCollection",
@@ -257,7 +257,7 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
 
     const response = await tool.toolCall({
       params: {
-        name: "gpf_wfs_get_feature_by_id",
+        name: "gpf_get_feature_by_id",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
           feature_id: "commune.1",
@@ -277,7 +277,7 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
   });
 
   it("should fail clearly when the returned feature id mismatches", async () => {
-    const tool = new GpfWfsGetFeatureByIdTool();
+    const tool = new GpfGetFeatureByIdTool();
     mockGetFeatureType.mockResolvedValue(polygonFeatureType);
     mockFetchJSONPost.mockResolvedValue({
       type: "FeatureCollection",
@@ -289,7 +289,7 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
 
     const response = await tool.toolCall({
       params: {
-        name: "gpf_wfs_get_feature_by_id",
+        name: "gpf_get_feature_by_id",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
           feature_id: "commune.1",
@@ -309,10 +309,10 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
   });
 
   it("should reject invalid result_type values such as hits", async () => {
-    const tool = new GpfWfsGetFeatureByIdTool();
+    const tool = new GpfGetFeatureByIdTool();
     const response = await tool.toolCall({
       params: {
-        name: "gpf_wfs_get_feature_by_id",
+        name: "gpf_get_feature_by_id",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
           feature_id: "commune.1",
@@ -340,10 +340,10 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
   });
 
   it("should reject legacy request result_type", async () => {
-    const tool = new GpfWfsGetFeatureByIdTool();
+    const tool = new GpfGetFeatureByIdTool();
     const response = await tool.toolCall({
       params: {
-        name: "gpf_wfs_get_feature_by_id",
+        name: "gpf_get_feature_by_id",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
           feature_id: "commune.1",
@@ -370,7 +370,7 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
 
     const response = await tool.toolCall({
       params: {
-        name: "gpf_wfs_get_feature_by_id",
+        name: "gpf_get_feature_by_id",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
           feature_id: "commune.1",
@@ -387,7 +387,7 @@ describe("Test GpfWfsGetFeatureByIdTool", () => {
     expect(textContent.text).toContain("FeatureCollection");
     expect(response.structuredContent).toMatchObject({
       type: "urn:geocontext:problem:execution-error",
-      detail: expect.stringContaining("gpf_wfs_get_feature_by_id"),
+      detail: expect.stringContaining("gpf_get_feature_by_id"),
     });
   });
 });

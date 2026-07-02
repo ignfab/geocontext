@@ -12,7 +12,7 @@ import logger from "../logger.js";
 
 // --- Schema ---
 
-const gpfWfsDescribeTypeInputSchema = z.object({
+const gpfDescribeTypeInputSchema = z.object({
   typename: z
     .string()
     .trim()
@@ -22,9 +22,9 @@ const gpfWfsDescribeTypeInputSchema = z.object({
 
 // --- Types ---
 
-type GpfWfsDescribeTypeInput = z.infer<typeof gpfWfsDescribeTypeInputSchema>;
+type GpfDescribeTypeInput = z.infer<typeof gpfDescribeTypeInputSchema>;
 
-const gpfWfsPropertySchema = z.object({
+const gpfPropertySchema = z.object({
   name: z.string().describe("Le nom de la propriété."),
   type: z.string().describe("Le type de la propriété."),
   title: z.string().describe("Le titre lisible de la propriété.").optional(),
@@ -33,30 +33,30 @@ const gpfWfsPropertySchema = z.object({
   defaultCrs: z.string().describe("Le système de coordonnées par défaut si la propriété est géométrique.").optional(),
 });
 
-const gpfWfsDescribeTypeOutputSchema = z.object({
-  id: z.string().describe("L'identifiant complet du type WFS."),
-  namespace: z.string().describe("L'espace de nommage du type WFS."),
-  name: z.string().describe("Le nom court du type WFS."),
-  title: z.string().describe("Le titre lisible du type WFS."),
-  description: z.string().describe("La description du type WFS."),
-  properties: z.array(gpfWfsPropertySchema).describe("La liste des propriétés du type WFS."),
+const gpfDescribeTypeOutputSchema = z.object({
+  id: z.string().describe("L'identifiant complet du type GPF."),
+  namespace: z.string().describe("L'espace de nommage du type GPF."),
+  name: z.string().describe("Le nom court du type GPF."),
+  title: z.string().describe("Le titre lisible du type GPF."),
+  description: z.string().describe("La description du type GPF."),
+  properties: z.array(gpfPropertySchema).describe("La liste des propriétés du type GPF."),
 });
 
 // --- Tool ---
 
-class GpfWfsDescribeTypeTool extends BaseTool<GpfWfsDescribeTypeInput> {
-  name = "gpf_wfs_describe_type";
-  title = "Description d’un type WFS";
+class GpfDescribeTypeTool extends BaseTool<GpfDescribeTypeInput> {
+  name = "gpf_describe_type";
+  title = "Description d’un type GPF";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
   description = [
-    "Renvoie le schéma détaillé d'un type WFS à partir de son identifiant (`typename`) : identifiants, description et liste des propriétés.",
-    "Utiliser ce tool après `gpf_wfs_search_types` pour inspecter les propriétés disponibles avant d'appeler `gpf_wfs_get_features`.",
+    "Renvoie le schéma détaillé d'un type GPF à partir de son identifiant (`typename`) : identifiants, description et liste des propriétés.",
+    "Utiliser ce tool après `gpf_search_types` pour inspecter les propriétés disponibles avant d'appeler `gpf_get_features`.",
     "La sortie inclut notamment le type des propriétés, leur description, leurs valeurs possibles (`enum`) lorsqu'elles existent",
     "**IMPORTANT : Appel fortement recommandé si les noms exacts des propriétés ne sont pas connus : un nom de propriété incorrect provoque une erreur**."
   ].join("\n");
-  protected outputSchemaShape = gpfWfsDescribeTypeOutputSchema;
+  protected outputSchemaShape = gpfDescribeTypeOutputSchema;
 
-  schema = gpfWfsDescribeTypeInputSchema;
+  schema = gpfDescribeTypeInputSchema;
 
   /**
    * Loads the detailed schema description for one WFS typename.
@@ -64,7 +64,7 @@ class GpfWfsDescribeTypeTool extends BaseTool<GpfWfsDescribeTypeInput> {
    * @param input Normalized tool input.
    * @returns The detailed feature type description from the embedded catalog.
    */
-  async execute(input: GpfWfsDescribeTypeInput) {
+  async execute(input: GpfDescribeTypeInput) {
     logger.info(`[tool] execute ${this.name} ...`, {
       input: input
     });
@@ -74,9 +74,9 @@ class GpfWfsDescribeTypeTool extends BaseTool<GpfWfsDescribeTypeInput> {
       return featureType;
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : String(e);
-      throw new Error(`${message}. Utiliser gpf_wfs_search_types pour trouver un type valide.`);
+      throw new Error(`${message}. Utiliser gpf_search_types pour trouver un type valide.`);
     }
   }
 }
 
-export default GpfWfsDescribeTypeTool;
+export default GpfDescribeTypeTool;

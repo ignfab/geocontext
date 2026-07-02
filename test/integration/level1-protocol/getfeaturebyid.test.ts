@@ -1,8 +1,8 @@
 /**
- * Integration test: WFS GetFeatureById tool with real API calls.
+ * Integration test: GetFeatureById tool with real API calls.
  *
  * This test first calls adminexpress to get a valid feature_ref,
- * then uses gpf_wfs_get_feature_by_id to retrieve it.
+ * then uses gpf_get_feature_by_id to retrieve it.
  */
 
 import { describe, it, expect } from "vitest";
@@ -45,7 +45,7 @@ interface GetFeatureByIdResult {
   numberMatched?: number;
 }
 
-describe("WFS GetFeatureById (integration)", () => {
+describe("GetFeatureById (integration)", () => {
   let featureRef: { typename: string; feature_id: string };
 
   const { getHandle } = withMcpServer({
@@ -63,7 +63,7 @@ describe("WFS GetFeatureById (integration)", () => {
   });
 
   it("should retrieve a feature by typename and feature_id", async () => {
-    const result = await callTool<GetFeatureByIdResult>(getHandle().client, "gpf_wfs_get_feature_by_id", {
+    const result = await callTool<GetFeatureByIdResult>(getHandle().client, "gpf_get_feature_by_id", {
       typename: featureRef.typename,
       feature_id: featureRef.feature_id,
     });
@@ -76,7 +76,7 @@ describe("WFS GetFeatureById (integration)", () => {
 
   it("should return an error for invalid typename", async () => {
     await expectToolCallToThrow(
-      callTool(getHandle().client, "gpf_wfs_get_feature_by_id", {
+      callTool(getHandle().client, "gpf_get_feature_by_id", {
         typename: "INVALID:type",
         feature_id: "nonexistent",
       }),

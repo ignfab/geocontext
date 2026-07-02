@@ -11,7 +11,7 @@ import logger from "../logger.js";
 
 // --- Schema ---
 
-const gpfWfsSearchTypesInputSchema = z.object({
+const gpfSearchTypesInputSchema = z.object({
   query: z
     .string()
     .trim()
@@ -28,35 +28,35 @@ const gpfWfsSearchTypesInputSchema = z.object({
 
 // --- Types ---
 
-type GpfWfsSearchTypesInput = z.infer<typeof gpfWfsSearchTypesInputSchema>;
+type GpfSearchTypesInput = z.infer<typeof gpfSearchTypesInputSchema>;
 
-const gpfWfsSearchTypeResultSchema = z.object({
-  id: z.string().describe("L'identifiant complet du type WFS."),
-  title: z.string().describe("Le titre lisible du type WFS."),
-  description: z.string().describe("La description du type WFS."),
+const gpfSearchTypeResultSchema = z.object({
+  id: z.string().describe("L'identifiant complet du type GPF."),
+  title: z.string().describe("Le titre lisible du type GPF."),
+  description: z.string().describe("La description du type GPF."),
   score: z.number().describe("Le score de pertinence de la recherche.").optional(),
 });
 
-const gpfWfsSearchTypesOutputSchema = z.object({
-  results: z.array(gpfWfsSearchTypeResultSchema).describe("La liste ordonnée des types WFS trouvés."),
+const gpfSearchTypesOutputSchema = z.object({
+  results: z.array(gpfSearchTypeResultSchema).describe("La liste ordonnée des types GPF trouvés."),
 });
 
 // --- Tool ---
 
-class GpfWfsSearchTypesTool extends BaseTool<GpfWfsSearchTypesInput> {
-  name = "gpf_wfs_search_types";
-  title = "Recherche de types WFS";
+class GpfSearchTypesTool extends BaseTool<GpfSearchTypesInput> {
+  name = "gpf_search_types";
+  title = "Recherche de types GPF";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
   description = [
-    "Recherche des types WFS de la Géoplateforme (GPF) à partir de mots-clés afin de trouver un identifiant de type (`typename`) valide.",
+    "Recherche des types de la Géoplateforme (GPF) à partir de mots-clés afin de trouver un identifiant de type (`typename`) valide.",
     "La recherche est textuelle (mini-search) et retourne une liste ordonnée de candidats avec leur identifiant, leur titre, leur description et un score de pertinence éventuel.",
     "Le paramètre `max_results` permet d'élargir le nombre de candidats retournés (10 par défaut).",
-    "**Important** : Utiliser ce tool avant `gpf_wfs_describe_type` ou `gpf_wfs_get_features` lorsque le nom exact du type n'est pas connu.",
+    "**Important** : Utiliser ce tool avant `gpf_describe_type` ou `gpf_get_features` lorsque le nom exact du type n'est pas connu.",
     "**Important** : Privilégier des termes métier en français pour la recherche."
   ].join("\n");
-  protected outputSchemaShape = gpfWfsSearchTypesOutputSchema;
+  protected outputSchemaShape = gpfSearchTypesOutputSchema;
 
-  schema = gpfWfsSearchTypesInputSchema;
+  schema = gpfSearchTypesInputSchema;
 
   /**
    * Searches the embedded WFS type catalog from a free-text query.
@@ -64,7 +64,7 @@ class GpfWfsSearchTypesTool extends BaseTool<GpfWfsSearchTypesInput> {
    * @param input Normalized tool input.
    * @returns The ordered search results, optionally enriched with relevance scores.
    */
-  async execute(input: GpfWfsSearchTypesInput) {
+  async execute(input: GpfSearchTypesInput) {
     logger.info(`[tool] execute ${this.name} ...`, {
       input: input
     });
@@ -82,4 +82,4 @@ class GpfWfsSearchTypesTool extends BaseTool<GpfWfsSearchTypesInput> {
   }
 }
 
-export default GpfWfsSearchTypesTool;
+export default GpfSearchTypesTool;

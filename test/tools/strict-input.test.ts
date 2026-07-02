@@ -5,10 +5,10 @@ import AltitudeTool from "../../src/tools/AltitudeTool";
 import AssietteSupTool from "../../src/tools/AssietteSupTool";
 import CadastreTool from "../../src/tools/CadastreTool";
 import GeocodeTool from "../../src/tools/GeocodeTool";
-import GpfWfsDescribeTypeTool from "../../src/tools/GpfWfsDescribeTypeTool";
-import GpfWfsGetFeatureByIdTool from "../../src/tools/GpfWfsGetFeatureByIdTool";
-import GpfWfsGetFeaturesTool from "../../src/tools/GpfWfsGetFeaturesTool";
-import GpfWfsSearchTypesTool from "../../src/tools/GpfWfsSearchTypesTool";
+import GpfDescribeTypeTool from "../../src/tools/GpfDescribeTypeTool";
+import GpfGetFeatureByIdTool from "../../src/tools/GpfGetFeatureByIdTool";
+import GpfGetFeaturesTool from "../../src/tools/GpfGetFeaturesTool";
+import GpfSearchTypesTool from "../../src/tools/GpfSearchTypesTool";
 import UrbanismeTool from "../../src/tools/UrbanismeTool";
 
 const strictInputCases = [
@@ -38,26 +38,26 @@ const strictInputCases = [
     validArguments: { text: "10 rue de la Paix Paris" },
   },
   {
-    label: "GpfWfsDescribeTypeTool",
-    tool: new GpfWfsDescribeTypeTool(),
+    label: "GpfDescribeTypeTool",
+    tool: new GpfDescribeTypeTool(),
     validArguments: { typename: "BDTOPO_V3:batiment" },
   },
   {
-    label: "GpfWfsGetFeatureByIdTool",
-    tool: new GpfWfsGetFeatureByIdTool(),
+    label: "GpfGetFeatureByIdTool",
+    tool: new GpfGetFeatureByIdTool(),
     validArguments: {
       typename: "BDTOPO_V3:batiment",
       feature_id: "batiment.1",
     },
   },
   {
-    label: "GpfWfsGetFeaturesTool",
-    tool: new GpfWfsGetFeaturesTool(),
+    label: "GpfGetFeaturesTool",
+    tool: new GpfGetFeaturesTool(),
     validArguments: { typename: "BDTOPO_V3:batiment" },
   },
   {
-    label: "GpfWfsSearchTypesTool",
-    tool: new GpfWfsSearchTypesTool(),
+    label: "GpfSearchTypesTool",
+    tool: new GpfSearchTypesTool(),
     validArguments: { query: "batiment" },
   },
   {

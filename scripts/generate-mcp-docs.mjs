@@ -16,10 +16,10 @@ const toolDisplayOrder = [
   "cadastre",
   "urbanisme",
   "assiette_sup",
-  "gpf_wfs_search_types",
-  "gpf_wfs_describe_type",
-  "gpf_wfs_get_feature_by_id",
-  "gpf_wfs_get_features",
+  "gpf_search_types",
+  "gpf_describe_type",
+  "gpf_get_feature_by_id",
+  "gpf_get_features",
 ];
 
 /**
@@ -192,7 +192,7 @@ export function renderResponseContractSection(definition) {
     relation: "`content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`.",
   };
 
-  if (definition.name === "gpf_wfs_get_features") {
+  if (definition.name === "gpf_get_features") {
     return [
       "### Réponse MCP",
       "",
@@ -226,7 +226,7 @@ export function renderResponseContractSection(definition) {
     ].join("\n");
   }
 
-  if (definition.name === "gpf_wfs_get_feature_by_id") {
+  if (definition.name === "gpf_get_feature_by_id") {
     return [
       "### Réponse MCP",
       "",

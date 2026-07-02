@@ -38,21 +38,21 @@
 
 ```text
 💬 Je vais d'abord rechercher les informations nécessaires :
-   les coordonnées de Vincennes et le type WFS pour les bâtiments.
+   les coordonnées de Vincennes et le type GPF pour les bâtiments.
 🔧 Appel outil: geocode({'text': 'Vincennes'})
-🔧 Appel outil: gpf_wfs_search_types({'query': 'bâtiment hauteur'})
+🔧 Appel outil: gpf_search_types({'query': 'bâtiment hauteur'})
 
-💬 Parfait ! J'ai trouvé le type WFS BDTOPO_V3:batiment.
+💬 Parfait ! J'ai trouvé le type GPF BDTOPO_V3:batiment.
    Je vais maintenant récupérer le schéma de ce type pour connaître
    les propriétés exactes, notamment la hauteur et le code INSEE de Vincennes.
-🔧 Appel outil: gpf_wfs_describe_type({'typename': 'BDTOPO_V3:batiment'})
+🔧 Appel outil: gpf_describe_type({'typename': 'BDTOPO_V3:batiment'})
 🔧 Appel outil: adminexpress({'lon': 2.437785,'lat': 48.847279})
 
 💬 J'ai toutes les informations nécessaires.
    La commune de Vincennes a le feature_id commune.33667.
    Je vais maintenant compter les bâtiments de plus de 20 mètres
    de hauteur sur cette commune.
-🔧 Appel outil: gpf_wfs_get_features({
+🔧 Appel outil: gpf_get_features({
   'typename': 'BDTOPO_V3:batiment',
   'result_type': 'hits',
   'where': [
@@ -190,10 +190,10 @@ Les fonctionnalités correspondent aux outils MCP documentés dans [`docs/mcp-to
 | Récupérer le cadastre               | `cadastre`                  | [WFS](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/diffusion/wfs/) + [PARCELLAIRE-EXPRESS](https://cartes.gouv.fr/rechercher-une-donnee/dataset/IGNF_PARCELLAIRE-EXPRESS-PCI) | Parcelle cadastrale             |
 | Récupérer les documents d'urbanisme | `urbanisme`                 | [WFS](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/diffusion/wfs/) + [données GPU](https://www.geoportail-urbanisme.gouv.fr/)                                                 | PLU, POS, CC                    |
 | Récupérer les servitudes            | `assiette_sup`              | [WFS](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/diffusion/wfs/) + [données GPU](https://www.geoportail-urbanisme.gouv.fr/)                                                 | SUP autour d'un lieu            |
-| Trouver une couche WFS              | `gpf_wfs_search_types`      | [gpf-schema-store](https://github.com/ignfab/gpf-schema-store)                                                                                                                                                               | Trouver la table des bâtiments  |
-| Décrire une couche WFS              | `gpf_wfs_describe_type`     | [gpf-schema-store](https://github.com/ignfab/gpf-schema-store)                                                                                                                                                               | Lister les champs disponibles   |
-| Interroger une couche WFS           | `gpf_wfs_get_features`      | [WFS](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/diffusion/wfs/)                                                                                                            | Extraire ou compter des objets  |
-| Récupérer un objet par identifiant  | `gpf_wfs_get_feature_by_id` | [WFS](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/diffusion/wfs/)                                                                                                            | Charger une commune précise     |
+| Trouver une couche GPF              | `gpf_search_types`      | [gpf-schema-store](https://github.com/ignfab/gpf-schema-store)                                                                                                                                                               | Trouver la table des bâtiments  |
+| Décrire une couche GPF              | `gpf_describe_type`     | [gpf-schema-store](https://github.com/ignfab/gpf-schema-store)                                                                                                                                                               | Lister les champs disponibles   |
+| Interroger une couche GPF           | `gpf_get_features`      | [WFS](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/diffusion/wfs/)                                                                                                            | Extraire ou compter des objets  |
+| Récupérer un objet par identifiant  | `gpf_get_feature_by_id` | [WFS](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/diffusion/wfs/)                                                                                                            | Charger une commune précise     |
 
 ## Architecture en bref
 
@@ -264,7 +264,7 @@ Merci de **fournir la question type** pour laquelle vous souhaiteriez que le MCP
 - [mcp-framework](https://mcp-framework.com) : **cadre de développement du MCP** 
 - [@ignfab/gpf-schema-store](https://www.npmjs.com/package/@ignfab/gpf-schema-store) : **couche sémantique** / **catalogue de schémas embarqué** (en attendant [OGC API - Features - schema](https://docs.ogc.org/is/23-058r2/23-058r2.html))
     - [@camptocamp/ogc-client](https://camptocamp.github.io/ogc-client/#/) : **exploration WFS** (ex. : parsing [GetCapabilities](https://data.geopf.fr/wfs?request=GetCapabilities&version=2.0.0&service=WFS))
-    - [MiniSearch](https://github.com/lucaong/minisearch) : **recherche par mot-clé** (`gpf_wfs_search_types`)
+    - [MiniSearch](https://github.com/lucaong/minisearch) : **recherche par mot-clé** (`gpf_search_types`)
 - [jsts](https://bjornharrtell.github.io/jsts/) : **traitements géométriques** (ex. : tri des réponses par distance au point recherché).
 - [turfjs/distance](https://turfjs.org/docs/api/distance) : **calculs de distance** avec la [formule de Haversine](https://en.wikipedia.org/wiki/Haversine_formula).
 

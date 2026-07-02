@@ -17,30 +17,30 @@ import {
   toWfsHttpPostRequestPayload,
 } from "../wfs/request.js";
 import {
-  gpfWfsGetFeatureByIdHttpGetUrlOutputSchema,
-  gpfWfsGetFeatureByIdHttpPostRequestOutputSchema,
-  gpfWfsGetFeatureByIdInputSchema,
-  type GpfWfsGetFeatureByIdInput,
-  gpfWfsGetFeatureByIdPublishedInputSchema,
+  gpfGetFeatureByIdHttpGetUrlOutputSchema,
+  gpfGetFeatureByIdHttpPostRequestOutputSchema,
+  gpfGetFeatureByIdInputSchema,
+  type GpfGetFeatureByIdInput,
+  gpfGetFeatureByIdPublishedInputSchema,
 } from "../wfs/schema.js";
 import logger from "../logger.js";
 
 // --- Tool ---
 
-class GpfWfsGetFeatureByIdTool extends BaseTool<GpfWfsGetFeatureByIdInput> {
-  name = "gpf_wfs_get_feature_by_id";
-  title = "Lecture d’un objet WFS par identifiant";
+class GpfGetFeatureByIdTool extends BaseTool<GpfGetFeatureByIdInput> {
+  name = "gpf_get_feature_by_id";
+  title = "Lecture d’un objet GPF par identifiant";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
   description = [
-    "Récupère exactement un objet WFS à partir de `typename` et `feature_id`, sans filtre attributaire ni spatial.",
-    "Ce tool est le chemin robuste quand vous disposez déjà d'une `feature_ref { typename, feature_id }` issue d'un autre tool (`adminexpress`, `cadastre`, `urbanisme`, `assiette_sup`, `gpf_wfs_get_features`).",
+    "Récupère exactement un objet GPF à partir de `typename` et `feature_id`, sans filtre attributaire ni spatial.",
+    "Ce tool est le chemin robuste quand vous disposez déjà d'une `feature_ref { typename, feature_id }` issue d'un autre tool (`adminexpress`, `cadastre`, `urbanisme`, `assiette_sup`, `gpf_get_features`).",
     "Le contrat garantit une cardinalité stricte : 0 résultat ou plusieurs résultats provoquent une erreur explicite.",
-    "Utiliser `result_type=\"http_post_request\"` pour récupérer une requête WFS POST robuste, ou `result_type=\"http_get_url\"` pour récupérer l'URL GET WFS équivalente et l'utiliser ou la visualiser dans un outil la supportant."
+    "Utiliser `result_type=\"http_post_request\"` pour récupérer une requête POST robuste, ou `result_type=\"http_get_url\"` pour récupérer l'URL GET équivalente et l'utiliser ou la visualiser dans un outil la supportant."
   ].join("\n");
 
   // `schema` remains the runtime validation source, while `inputSchema`
   // publishes the MCP-facing variant expected by clients.
-  schema = gpfWfsGetFeatureByIdInputSchema;
+  schema = gpfGetFeatureByIdInputSchema;
 
   /**
    * Exposes an input schema variant that stays compatible with most MCP integrations.
@@ -48,7 +48,7 @@ class GpfWfsGetFeatureByIdTool extends BaseTool<GpfWfsGetFeatureByIdInput> {
    * @returns The published input schema exposed through the MCP tool definition.
    */
   get inputSchema() {
-    return gpfWfsGetFeatureByIdPublishedInputSchema;
+    return gpfGetFeatureByIdPublishedInputSchema;
   }
 
   /**
@@ -69,7 +69,7 @@ class GpfWfsGetFeatureByIdTool extends BaseTool<GpfWfsGetFeatureByIdInput> {
       "result_type" in data &&
       data.result_type === "http_post_request"
     ) {
-      const payload = gpfWfsGetFeatureByIdHttpPostRequestOutputSchema.parse(data);
+      const payload = gpfGetFeatureByIdHttpPostRequestOutputSchema.parse(data);
 
       return {
         content: [{ type: "text" as const, text: JSON.stringify(payload) }],
@@ -83,7 +83,7 @@ class GpfWfsGetFeatureByIdTool extends BaseTool<GpfWfsGetFeatureByIdInput> {
       "result_type" in data &&
       data.result_type === "http_get_url"
     ) {
-      const payload = gpfWfsGetFeatureByIdHttpGetUrlOutputSchema.parse(data);
+      const payload = gpfGetFeatureByIdHttpGetUrlOutputSchema.parse(data);
 
       return {
         content: [{ type: "text" as const, text: JSON.stringify(payload) }],
@@ -104,7 +104,7 @@ class GpfWfsGetFeatureByIdTool extends BaseTool<GpfWfsGetFeatureByIdInput> {
     }
 
     throw new Error(
-      "Réponse interne inattendue pour gpf_wfs_get_feature_by_id : le résultat devrait être une requête HTTP WFS, une URL GET WFS ou une FeatureCollection.",
+      "Réponse interne inattendue pour gpf_get_feature_by_id : le résultat devrait être une requête HTTP, une URL GET ou une FeatureCollection.",
     );
   }
 
@@ -115,7 +115,7 @@ class GpfWfsGetFeatureByIdTool extends BaseTool<GpfWfsGetFeatureByIdInput> {
    * @param input Normalized tool input.
    * @returns Either an HTTP preview payload or a transformed FeatureCollection containing one feature.
    */
-  async execute(input: GpfWfsGetFeatureByIdInput) {
+  async execute(input: GpfGetFeatureByIdInput) {
     logger.info(`[tool] execute ${this.name} ...`, {
       input: input
     });
@@ -142,4 +142,4 @@ class GpfWfsGetFeatureByIdTool extends BaseTool<GpfWfsGetFeatureByIdInput> {
   }
 }
 
-export default GpfWfsGetFeatureByIdTool;
+export default GpfGetFeatureByIdTool;

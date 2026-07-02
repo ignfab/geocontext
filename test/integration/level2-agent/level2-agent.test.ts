@@ -46,14 +46,14 @@ const mcpScenarios = [
     toolMode: "mcp",
   },
   {
-    testName: "should mention building-related WFS tables",
+    testName: "should mention building-related GPF tables",
     userInput: "Dans quelle table peut-on trouver des informations sur les bâtiments?",
     expectedResponseFragments: [
       "bdtopo_v3:batiment",
       "cadastralparcels.parcellaire_express:batiment",
     ],
     toolMode: "mcp",
-    requiredToolCalls: ["gpf_wfs_search_types"],
+    requiredToolCalls: ["gpf_search_types"],
   },
   {
     testName: "should chain geocode and altitude tools to answer the question",
@@ -70,13 +70,13 @@ const mcpScenarios = [
     userInput: "Combien de lycées sont situés à 2km du chateau de vincennes?",
     expectedResponseFragments: ["14", "lycées"],
     toolMode: "mcp",
-    requiredToolCalls: ["geocode", "gpf_wfs_search_types", "gpf_wfs_describe_type", "gpf_wfs_get_features"],
+    requiredToolCalls: ["geocode", "gpf_search_types", "gpf_describe_type", "gpf_get_features"],
   },
   {
     testName: "should find about 1 741 batiments in the commune of Saint Mandé",
     userInput: "Combien y a t il de batiments sur la commune de saint mandé?",
     toolMode: "mcp",
-    requiredToolCalls: ["geocode", "gpf_wfs_search_types", "gpf_wfs_describe_type", "gpf_wfs_get_features"],
+    requiredToolCalls: ["geocode", "gpf_search_types", "gpf_describe_type", "gpf_get_features"],
     expectedResponseFragments: ["batiments"],
     assertScenarioResult: ({ normalizedFinalMessage }) => {
       expect(containsNumberInRange(normalizedFinalMessage, 1700, 1800)).toBe(true);
@@ -86,7 +86,7 @@ const mcpScenarios = [
     testName: "should find 19 batiments of more than 30 meters in Angouleme",
     userInput: "Combien y a t il de batiments de plus de 30 mètres sur la commune d'Angoulême?",
     toolMode: "mcp",
-    requiredToolCalls: ["geocode", "gpf_wfs_search_types", "gpf_wfs_describe_type", "gpf_wfs_get_features"],
+    requiredToolCalls: ["geocode", "gpf_search_types", "gpf_describe_type", "gpf_get_features"],
     // assuming that it won't often change and that the number is correct at the moment of writing
     // (switch to assertScenarioResult with a range if needed in the future)
     expectedResponseFragments: ["19", "batiments"] 
