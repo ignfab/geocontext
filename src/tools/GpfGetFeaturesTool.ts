@@ -33,7 +33,7 @@ class GpfGetFeaturesTool extends BaseTool<GpfGetFeaturesInput> {
     "Exemple bbox : `bbox_filter={ west: 2.1, south: 48.7, east: 2.5, north: 48.9 }`.",
     "Exemple point dans géométrie : `intersects_point_filter={ lon: 2.35, lat: 48.85 }`.",
     "Exemple distance : `dwithin_point_filter={ lon: 2.35, lat: 48.85, distance_m: 500 }`.",
-    "Exemple réutilisation : `intersects_feature_filter={ typename, feature_id }` avec `typename` et `feature_id` issus d'une `feature_ref`.",
+    "Exemple réutilisation : `intersects_feature_filter={ typename, feature_id }` ou bien `adjacent_feature_filter={ typename, feature_id }` avec `typename` et `feature_id` issus d'une `feature_ref`.",
     "Exemple temps de trajet : `travel_time_filter={ lon: 2.35, lat: 48.85, minutes: 15, profile: \"pedestrian\" }` pour les objets atteignables en 15 minutes à pied depuis ce point.",
     "⚠️ Quand `typename` et `intersects_feature_filter.typename` sont identiques, utiliser `gpf_get_feature_by_id` pour récupérer exactement l'objet ciblé.",
     "**OBLIGATOIRE : toujours appeler `gpf_describe_type` avant ce tool, sauf si `gpf_describe_type` a déjà été appelé pour ce même typename dans la conversation en cours.**",

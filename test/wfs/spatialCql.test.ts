@@ -6,6 +6,7 @@ import {
   compileDwithinSpatialFilter,
   compileIntersectsFeatureSpatialFilter,
 } from "../../src/wfs/spatialCql";
+import { geometryToEwkt } from "../../src/wfs/geometry.js"
 
 import type { CollectionProperty } from "@ignfab/gpf-schema-store";
 import type { SpatialFilter } from "../../src/wfs/schema";
@@ -130,17 +131,33 @@ describe("compileDwithinSpatialFilter", () => {
 
 describe("compileIntersectsFeatureSpatialFilter", () => {
   it("should compile an intersects_feature filter with EWKT geometry", () => {
-    const ewkt = "SRID=4326;MULTIPOLYGON(((2 48,2.2 48,2.2 48.2,2 48)))";
+    const geometry = {
+      type: "MultiPolygon",
+      coordinates: [[[[2.0, 48.0], [2.2, 48.0], [2.2, 48.2], [2.0, 48.0]]]]
+    }
+    const resolvedGeometry = {
+      geometry_ewkt: geometryToEwkt(geometry),
+      geometry_raw: geometry
+    };
+    expect(resolvedGeometry.geometry_ewkt).toEqual("SRID=4326;MULTIPOLYGON(((2 48,2.2 48,2.2 48.2,2 48)))");
 
-    const result = compileIntersectsFeatureSpatialFilter(geometryProperty, ewkt);
+    const result = compileIntersectsFeatureSpatialFilter(geometryProperty, resolvedGeometry);
 
     expect(result).toEqual("INTERSECTS(the_geom,SRID=4326;MULTIPOLYGON(((2 48,2.2 48,2.2 48.2,2 48))))");
   });
 
   it("should compile with a POINT EWKT", () => {
-    const ewkt = "SRID=4326;POINT(2.3522 48.8566)";
+    const geometry = {
+      type: "Point",
+      coordinates: [2.3522, 48.8566]
+    }
+    const resolvedGeometry = {
+      geometry_ewkt: geometryToEwkt(geometry),
+      geometry_raw: geometry
+    };
+    expect(resolvedGeometry.geometry_ewkt).toEqual("SRID=4326;POINT(2.3522 48.8566)");
 
-    const result = compileIntersectsFeatureSpatialFilter(geometryProperty, ewkt);
+    const result = compileIntersectsFeatureSpatialFilter(geometryProperty, resolvedGeometry);
 
     expect(result).toEqual("INTERSECTS(the_geom,SRID=4326;POINT(2.3522 48.8566))");
   });

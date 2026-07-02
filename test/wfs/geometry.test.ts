@@ -95,12 +95,12 @@ describe("geometryToEwkt", () => {
   it("should throw for an unsupported geometry type", () => {
     expect(() =>
       geometryToEwkt({ type: "GeometryCollection", coordinates: [] }),
-    ).toThrow("Le type de géométrie 'GeometryCollection' n'est pas supporté pour `intersects_feature`.");
+    ).toThrow("Le type de géométrie 'GeometryCollection' n'est pas supporté pour `intersects_feature` et `adjacent_feature`.");
   });
 
   it("should throw for a completely unknown type", () => {
     expect(() =>
       geometryToEwkt({ type: "CustomType", coordinates: null }),
-    ).toThrow("Le type de géométrie 'CustomType' n'est pas supporté pour `intersects_feature`.");
+    ).toThrow("Le type de géométrie 'CustomType' n'est pas supporté pour `intersects_feature` et `adjacent_feature`.");
   });
 });

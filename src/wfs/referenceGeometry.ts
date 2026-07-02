@@ -89,5 +89,8 @@ export async function resolveFeatureGeometryEwkt(
     );
   }
 
-  return { geometry_ewkt: geometryToEwkt(referenceFeature.geometry) };
+  return { 
+    geometry_raw: referenceFeature.geometry,
+    geometry_ewkt: geometryToEwkt(referenceFeature.geometry),
+  };
 }

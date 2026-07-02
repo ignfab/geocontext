@@ -13,6 +13,7 @@ const FILTER_KEY_TO_OPERATOR = {
   intersects_point_filter: "intersects_point",
   dwithin_point_filter: "dwithin_point",
   intersects_feature_filter: "intersects_feature",
+  adjacent_feature_filter: "adjacent_feature",
   travel_time_filter: "travel_time",
 } as const satisfies Record<(typeof GPF_GET_FEATURES_SPATIAL_FILTER_KEYS)[number], string>;
 

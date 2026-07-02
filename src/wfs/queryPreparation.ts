@@ -35,7 +35,9 @@ import {
   compileBboxSpatialFilter,
   compileDwithinSpatialFilter,
   compileIntersectsFeatureSpatialFilter,
+  compileAdjacentFeatureSpatialFilter,
   compileIntersectsPointSpatialFilter,
+  ResolvedFeatureGeometryRef,
 } from "./spatialCql.js";
 
 // --- Re-exports ---
@@ -43,6 +45,7 @@ import {
 export { geometryToEwkt } from "./geometry.js";
 export { validateSelectProperty, getGeometryProperty } from "./properties.js";
 export { getSpatialFilter } from "./spatialFilter.js";
+export { GeometryLike, ResolvedFeatureGeometryRef } from "./spatialCql.js";
 
 // --- Internal Constants ---
 
@@ -58,10 +61,6 @@ type OrderedComparisonClause = Extract<ReturnType<typeof normalizeWhereClause>, 
 type InClause = Extract<ReturnType<typeof normalizeWhereClause>, { operator: "in" }>;
 
 // --- Public Types ---
-
-export type ResolvedFeatureGeometryRef = {
-  geometry_ewkt: string;
-};
 
 export type CompiledQuery = {
   geometryProperty: CollectionProperty;
@@ -134,7 +133,7 @@ function compileWhereClause(featureType: Collection, geometryProperty: Collectio
     featureType,
     geometryProperty,
     clause.property,
-    "La propriété '{property}' est géométrique. Utiliser un filtre spatial dédié (`bbox_filter`, `intersects_point_filter`, `dwithin_point_filter`, `intersects_feature_filter` ou `travel_time_filter`)."
+    "La propriété '{property}' est géométrique. Utiliser un filtre spatial dédié (`bbox_filter`, `intersects_point_filter`, `dwithin_point_filter`, `intersects_feature_filter`, `adjacent_feature_filter` ou `travel_time_filter`)."
   );
   const normalized = normalizeWhereClause(property, clause);
 
@@ -174,12 +173,23 @@ function compileOrderByClause(featureType: Collection, geometryProperty: Collect
 
 // --- Query Compilation ---
 
+function resolvedGeometry(
+  operator : string,
+  geometryKind: string,
+  resolvedGeometryRef? : ResolvedFeatureGeometryRef,
+) : ResolvedFeatureGeometryRef {
+  if (!resolvedGeometryRef) {
+    throw new Error(`Le filtre spatial \`${operator}\` exige la résolution préalable de la géométrie ${geometryKind}.`);
+  }
+  return resolvedGeometryRef
+}
+
 /**
  * Compiles normalized tool input into query fragments ready to be turned into a WFS request.
  *
  * @param input Normalized tool input.
  * @param featureType Feature type definition loaded from the embedded catalog.
- * @param resolvedGeometryRef Optional resolved reference geometry for `intersects_feature`.
+ * @param resolvedGeometryRef Optional resolved reference geometry for `intersects_feature` and `adjacent_feature`.
  * @returns Compiled query parts used by request builders.
  */
 export function compileQueryParts(
@@ -190,6 +200,7 @@ export function compileQueryParts(
   const geometryProperty = getGeometryProperty(featureType);
   const spatialFilter = getSpatialFilter(input);
   const fragments: string[] = [];
+  let resolved : ResolvedFeatureGeometryRef;
 
   // Keep the spatial predicate first: the GeoPlateforme GeoServer is sensitive
   // to filter ordering and may reject equivalent filters when attributes come first.
@@ -205,16 +216,16 @@ export function compileQueryParts(
         fragments.push(compileDwithinSpatialFilter(geometryProperty, spatialFilter));
         break;
       case "intersects_feature":
-        if (!resolvedGeometryRef) {
-          throw new Error("Le filtre spatial `intersects_feature` exige la résolution préalable de la géométrie de référence.");
-        }
-        fragments.push(compileIntersectsFeatureSpatialFilter(geometryProperty, resolvedGeometryRef.geometry_ewkt));
+        resolved = resolvedGeometry(spatialFilter.operator, "de référence", resolvedGeometryRef)
+        fragments.push(compileIntersectsFeatureSpatialFilter(geometryProperty, resolved));
+        break;
+      case "adjacent_feature":
+        resolved = resolvedGeometry(spatialFilter.operator, "de référence", resolvedGeometryRef)
+        fragments.push(compileAdjacentFeatureSpatialFilter(geometryProperty, resolved));
         break;
       case "travel_time":
-        if (!resolvedGeometryRef) {
-          throw new Error("Le filtre spatial `travel_time` exige la résolution préalable de la géométrie d'isochrone.");
-        }
-        fragments.push(compileIntersectsFeatureSpatialFilter(geometryProperty, resolvedGeometryRef.geometry_ewkt));
+        resolved = resolvedGeometry(spatialFilter.operator, "d'isochrone", resolvedGeometryRef)
+        fragments.push(compileIntersectsFeatureSpatialFilter(geometryProperty, resolved));
         break;
     }
   }

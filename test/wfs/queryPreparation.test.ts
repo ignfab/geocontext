@@ -86,6 +86,16 @@ describe("gpfGetFeatures/queryPreparation", () => {
       },
     }, featureType, {
       geometry_ewkt: "SRID=4326;MULTIPOLYGON(((2 48,2.2 48,2.2 48.2,2 48,2 48)))",
+      geometry_raw: {
+        type: "MultiPolygon",
+        coordinates: [[
+          [2,   48  ],
+          [2.2, 48  ],
+          [2.2, 48.2],
+          [2,   48.2],
+          [2,   48  ],
+        ]]
+      }
     });
 
     expect(compiled.cqlFilter).toEqual("INTERSECTS(geometrie,SRID=4326;MULTIPOLYGON(((2 48,2.2 48,2.2 48.2,2 48,2 48))))");
@@ -102,6 +112,15 @@ describe("gpfGetFeatures/queryPreparation", () => {
       },
     }, featureType, {
       geometry_ewkt: "SRID=4326;POLYGON((2 48,2.2 48,2.2 48.2,2 48))",
+      geometry_raw: {
+        type: "MultiPolygon",
+        coordinates: [[
+          [2,   48  ],
+          [2.2, 48  ],
+          [2.2, 48.2],
+          [2,   48  ],
+        ]]
+      }
     });
 
     expect(compiled.cqlFilter).toEqual("INTERSECTS(geometrie,SRID=4326;POLYGON((2 48,2.2 48,2.2 48.2,2 48)))");
