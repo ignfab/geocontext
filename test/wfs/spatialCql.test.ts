@@ -6,7 +6,6 @@ import {
   compileDwithinSpatialFilter,
   compileIntersectsFeatureSpatialFilter,
 } from "../../src/wfs/spatialCql";
-import { geometryToEwkt } from "../../src/wfs/geometry.js"
 
 import type { SpatialFilter } from "../../src/wfs/schema";
 
