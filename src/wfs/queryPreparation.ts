@@ -37,7 +37,7 @@ import {
   compileIntersectsFeatureSpatialFilter,
   compileAdjacentFeatureSpatialFilter,
   compileIntersectsPointSpatialFilter,
-  ResolvedFeatureGeometryRef,
+  type ResolvedFeatureGeometryRef,
 } from "./spatialCql.js";
 
 // --- Re-exports ---
@@ -45,7 +45,7 @@ import {
 export { geometryToEwkt } from "./geometry.js";
 export { validateSelectProperty, getGeometryProperty } from "./properties.js";
 export { getSpatialFilter } from "./spatialFilter.js";
-export { GeometryLike, ResolvedFeatureGeometryRef } from "./spatialCql.js";
+export type { GeometryLike, ResolvedFeatureGeometryRef } from "./spatialCql.js";
 
 // --- Internal Constants ---
 
