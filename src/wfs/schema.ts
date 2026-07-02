@@ -66,9 +66,8 @@ const intersectsFeatureFilterSchema = z.object({
 }).strict().describe("Filtre les objets dont la géométrie intersecte celle d'un objet GPF de référence.");
 
 const adjacentFeatureFilterSchema = z.object({
-  typename: z.string().trim().min(1).describe("Type GPF de l'objet de référence."),
   feature_id: z.string().trim().min(1).describe("Identifiant de l'objet de référence."),
-}).strict().describe("Filtre les objets adjacents à un objet GPF de référence. Deux objets sont adjacents si leurs géométries partagent au moins un point, mais aucun point intérieur.");
+}).strict().describe("Filtre les objets adjacents à un objet GPF de référence, partageant le même `typename`.");
 
 const travelTimeFilterSchema = z.object({
   lon: lonSchema.describe("Longitude du point de départ en WGS84 `lon/lat`."),

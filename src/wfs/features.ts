@@ -104,15 +104,17 @@ async function resolveFeatureFilterGeometry(
     return undefined;
   }
 
-  const referenceFeatureType = await wfsClient.getFeatureType(spatialFilter.typename);
+  const typename = spatialFilter.operator == "intersects_feature" ? spatialFilter.typename : input.typename;
+
+  const referenceFeatureType = await wfsClient.getFeatureType(typename);
   const referenceGeometryProperty = getGeometryProperty(referenceFeatureType);
   const featureCollection = await fetchFeatureById({
-    typename: spatialFilter.typename,
+    typename: typename,
     feature_id: spatialFilter.feature_id,
     propertyName: referenceGeometryProperty.name,
   });
   const referenceFeature = requireSingleFeatureById(featureCollection, {
-    typename: spatialFilter.typename,
+    typename: typename,
     feature_id: spatialFilter.feature_id,
   });
 
