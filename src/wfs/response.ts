@@ -17,19 +17,19 @@ function isGeoJson(value: unknown): value is AllGeoJSON {
 }
 
 function deriveGeometry(geometry: unknown, geometry_extra: string[] = []) {
-  if (geometry_extra.length == 0 || !isGeoJson(geometry)) {
+  if (geometry_extra.length === 0 || !isGeoJson(geometry)) {
     return null;
   }
 
-  const ret : Record<string, unknown> = {}
+  const ret : Record<string, unknown> = {};
 
   if (geometry_extra.includes("centroid")) {
     try {
-      const centr = centroid(geometry).geometry.coordinates
+      const centr = centroid(geometry).geometry.coordinates;
       ret.centroid = {
         lon: centr[0],
         lat: centr[1],
-      }
+      };
     } catch {}
   }
 
@@ -41,7 +41,7 @@ function deriveGeometry(geometry: unknown, geometry_extra: string[] = []) {
         south: bb[1],
         east: bb[2],
         north: bb[3],
-      }
+      };
     } catch {}
   }
 

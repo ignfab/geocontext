@@ -24,7 +24,7 @@ export const GPF_GET_FEATURES_SPATIAL_FILTER_KEYS = [
   "intersects_point_filter",
   "dwithin_point_filter",
   "intersects_feature_filter",
-  "travel_time_filter",
+  "travel_time_filter"
 ] as const;
 export const GPF_SPATIAL_FILTER_DOCNAMES = GPF_GET_FEATURES_SPATIAL_FILTER_KEYS
   .map((name) => `\`${name}\``)
@@ -172,12 +172,12 @@ type GeometryExtraRefinementInput = {
 };
 
 function assertGeometryExtraQuery(input: GeometryExtraRefinementInput, ctx: z.RefinementCtx) {
-  if (input.geometry_extra.length > 0 && input.result_type != "results") {
+  if (input.geometry_extra.length > 0 && input.result_type !== "results") {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["geometry_extra"],
       message: "`geometry_extra` ne peut être utilisé qu'avec `result_type=results`. Dans les cas `http_post_request` et `http_get_url`, la géométrie complète est renvoyée par la requête."
-    })
+    });
   }
 }
 
@@ -229,7 +229,7 @@ export const gpfGetFeaturesInputObjectSchema = gpfTypenameInputSchema
 
 export const gpfGetFeaturesInputSchema = gpfGetFeaturesInputObjectSchema
   .superRefine(assertSpatialFilterExclusion)
-  .superRefine(assertGeometryExtraQuery)
+  .superRefine(assertGeometryExtraQuery);
 
 // --- `gpf_get_features` Types ---
 
@@ -295,7 +295,7 @@ export const gpfGetFeatureByIdInputObjectSchema = z.object({
   .strict();
 
 export const gpfGetFeatureByIdInputSchema = gpfGetFeatureByIdInputObjectSchema
-  .superRefine(assertGeometryExtraQuery)
+  .superRefine(assertGeometryExtraQuery);
 
 export type GpfGetFeatureByIdInput = z.infer<typeof gpfGetFeatureByIdInputSchema>;
 

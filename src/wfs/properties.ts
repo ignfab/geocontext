@@ -119,6 +119,7 @@ export function validateSelectProperty(featureType: Collection, geometryProperty
  * - when `select` is omitted and `result_type` is `results`, every non-geometric property is returned
  * - when `select` is provided, each property is validated against the embedded catalog
  * - when `result_type` is an HTTP preview mode, the geometry column is appended to the requested selection
+ * - when `result_type` is `results` and `geometry_extra` is non-empty, the geometry column is also appended so centroid/bbox can be derived
  *
  * @param featureType Feature type definition loaded from the embedded catalog.
  * @param geometryProperty Geometry property already resolved for the feature type.
@@ -156,7 +157,7 @@ export function buildSelectList(
       .filter((property: CollectionProperty) => !property.defaultCrs)
       .map((property: CollectionProperty) => property.name);
 
-    if ((input.geometry_extra ?? []).length > 0) {
+    if (shouldIncludeGeometry) {
       return [...nonGeometryProperties, geometryProperty.name];
     }
 
