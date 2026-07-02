@@ -115,7 +115,6 @@ describe("gpfGetFeatures/queryPreparation", () => {
     const compiled = compileQueryParts({
       ...baseInput,
       adjacent_feature_filter: {
-        typename: "ADMINEXPRESS-COG.LATEST:commune",
         feature_id: "commune.1",
       },
     }, featureType, multipolygon_example);
