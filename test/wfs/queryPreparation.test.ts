@@ -77,6 +77,27 @@ describe("gpfGetFeatures/queryPreparation", () => {
     expect(dwithin.cqlFilter).toEqual("DWITHIN(geometrie,SRID=4326;POINT(2.3522 48.8566),250,meters)");
   });
 
+  const multipolygon_example1 = {
+    type: "MultiPolygon",
+    coordinates: [[[
+      [2,   48  ],
+      [2.2, 48  ],
+      [2.2, 48.2],
+      [2,   48.2],
+      [2,   48  ],
+    ]]]
+  }
+
+  const multipolygon_example2 = {
+    type: "MultiPolygon",
+    coordinates: [[[
+      [2,   48  ],
+      [2.2, 48  ],
+      [2.2, 48.2],
+      [2,   48  ],
+    ]]]
+  }
+
   it("should compile intersects_feature with resolved geometry", () => {
     const compiled = compileQueryParts({
       ...baseInput,
@@ -85,20 +106,25 @@ describe("gpfGetFeatures/queryPreparation", () => {
         feature_id: "commune.1",
       },
     }, featureType, {
-      geometry_ewkt: "SRID=4326;MULTIPOLYGON(((2 48,2.2 48,2.2 48.2,2 48,2 48)))",
-      geometry_raw: {
-        type: "MultiPolygon",
-        coordinates: [[
-          [2,   48  ],
-          [2.2, 48  ],
-          [2.2, 48.2],
-          [2,   48.2],
-          [2,   48  ],
-        ]]
-      }
+      geometry_ewkt: geometryToEwkt(multipolygon_example1),
+      geometry_raw: multipolygon_example1
     });
 
-    expect(compiled.cqlFilter).toEqual("INTERSECTS(geometrie,SRID=4326;MULTIPOLYGON(((2 48,2.2 48,2.2 48.2,2 48,2 48))))");
+    expect(compiled.cqlFilter).toEqual("INTERSECTS(geometrie,SRID=4326;MULTIPOLYGON(((2 48,2.2 48,2.2 48.2,2 48.2,2 48))))");
+  });
+
+  it("should compile adjacent_feature with resolved geometry", () => {
+    const compiled = compileQueryParts({
+      ...baseInput,
+      adjacent_feature_filter: {
+        feature_id: "commune.1",
+      },
+    }, featureType, {
+      geometry_ewkt: geometryToEwkt(multipolygon_example1),
+      geometry_raw: multipolygon_example1
+    });
+
+    expect(compiled.cqlFilter).toEqual("INTERSECTS(geometrie,SRID=4326;MULTIPOLYGON(((2 48,2.2 48,2.2 48.2,2 48.2,2 48)))) AND NOT INTERSECTS(geometrie,SRID=4326;POINT(2.1 48.1))");
   });
 
   it("should compile travel_time with resolved isochrone geometry", () => {
@@ -112,15 +138,7 @@ describe("gpfGetFeatures/queryPreparation", () => {
       },
     }, featureType, {
       geometry_ewkt: "SRID=4326;POLYGON((2 48,2.2 48,2.2 48.2,2 48))",
-      geometry_raw: {
-        type: "MultiPolygon",
-        coordinates: [[
-          [2,   48  ],
-          [2.2, 48  ],
-          [2.2, 48.2],
-          [2,   48  ],
-        ]]
-      }
+      geometry_raw: multipolygon_example2
     });
 
     expect(compiled.cqlFilter).toEqual("INTERSECTS(geometrie,SRID=4326;POLYGON((2 48,2.2 48,2.2 48.2,2 48)))");

@@ -634,7 +634,25 @@ describe("Test GpfGetFeaturesTool", () => {
     expect(results.features[0].geometry_name).toBeUndefined();
   });
 
-  it("should resolve intersects_feature from MultiPoint references", async () => {
+  it.each([
+    { 
+      name: "intersects_feature",
+      filter: {
+        intersects_feature_filter: {
+          typename: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:localisant",
+          feature_id: "localisant.1",
+        }
+      }
+    },
+    {
+      name: "adjacent_feature",
+      filter: {
+        adjacent_feature_filter: {
+          feature_id: "localisant.1",
+        }
+      }
+    }
+  ])("should resolve $name from MultiPoint references", async ({name, filter}) => {
     const tool = new GpfGetFeaturesTool();
     mockFeatureTypes({
       [polygonFeatureType.id]: polygonFeatureType,
@@ -658,10 +676,7 @@ describe("Test GpfGetFeaturesTool", () => {
         name: "gpf_get_features",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
-          intersects_feature_filter: {
-            typename: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:localisant",
-            feature_id: "localisant.1",
-          },
+          ...filter,
           result_type: "http_post_request",
         },
       },
@@ -677,7 +692,25 @@ describe("Test GpfGetFeaturesTool", () => {
     expect(payload.http_post_request.body).toContain("MULTIPOINT");
   });
 
-  it("should report missing reference features clearly for intersects_feature", async () => {
+  it.each([
+    { 
+      name: "intersects_feature",
+      filter: {
+        intersects_feature_filter: {
+          typename: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:localisant",
+          feature_id: "localisant.404",
+        }
+      }
+    },
+    {
+      name: "adjacent_feature",
+      filter: {
+        adjacent_feature_filter: {
+          feature_id: "localisant.404",
+        }
+      }
+    }
+    ])("should report missing reference features clearly for $name", async ({name, filter}) => {
     const tool = new GpfGetFeaturesTool();
     mockFeatureTypes({
       [polygonFeatureType.id]: polygonFeatureType,
@@ -694,10 +727,7 @@ describe("Test GpfGetFeaturesTool", () => {
         name: "gpf_get_features",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
-          intersects_feature_filter: {
-            typename: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:localisant",
-            feature_id: "localisant.404",
-          },
+          ...filter,
         },
       },
     });
@@ -714,7 +744,7 @@ describe("Test GpfGetFeaturesTool", () => {
     });
   });
 
-  it("should reject intersects_feature on the same typename and guide to by-id tool", async () => {
+  it("should reject intersects_feature on the same typename and guide to by-id tool or adjacent_feature_filter", async () => {
     const tool = new GpfGetFeaturesTool();
     const requests = captureRequests(featureCollection);
 
@@ -737,6 +767,7 @@ describe("Test GpfGetFeaturesTool", () => {
       throw new Error("expected text content");
     }
     expect(textContent.text).toContain("gpf_get_feature_by_id");
+    expect(textContent.text).toContain("adjacent_feature");
     expect(textContent.text).toContain("intersects_feature");
     expect(response.structuredContent).toMatchObject({
       type: "urn:geocontext:problem:execution-error",
