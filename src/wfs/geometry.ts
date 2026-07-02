@@ -2,7 +2,7 @@
  * GeoJSON geometry serialization helpers for the structured WFS engine.
  *
  * This module converts GeoJSON-like geometries to EWKT so they can be reused
- * in spatial CQL predicates such as `intersects_feature`.
+ * in spatial CQL predicates such as `intersects_feature` or `adjacent_feature`.
  */
 
 // --- Coordinate Serialization ---
@@ -42,6 +42,6 @@ export function geometryToEwkt(geometry: { type: string; coordinates: unknown })
     case "MultiPolygon":
       return `SRID=4326;MULTIPOLYGON(${(geometry.coordinates as [number, number][][][]).map((polygon) => `(${polygon.map((ring) => `(${ring.map(positionToWkt).join(",")})`).join(",")})`).join(",")})`;
     default:
-      throw new Error(`Le type de géométrie '${geometry.type}' n'est pas supporté pour \`intersects_feature\`.`);
+      throw new Error(`Le type de géométrie '${geometry.type}' n'est pas supporté pour \`intersects_feature\` et \`adjacent_feature\`.`);
   }
 }
