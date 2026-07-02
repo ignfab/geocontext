@@ -8,7 +8,7 @@
  */
 
 import { GPF_WFS_URL } from "./catalog.js";
-import type { GpfGetOrCountFeaturesInput } from "./schema.js";
+import type { GpfQueryFeaturesInput } from "./schema.js";
 
 // --- Transport Types ---
 
@@ -126,7 +126,7 @@ export function buildGetUrl(url: string, query: Record<string, string>, cqlFilte
  * @returns A POST request split into base URL, query-string parameters, encoded body, and optional GET variant.
  */
 export function buildMainRequest(
-  input: GpfGetOrCountFeaturesInput,
+  input: GpfQueryFeaturesInput,
   compiled: { cqlFilter?: string; propertyName?: string; sortBy?: string },
 ): CompiledRequest {
   const query: Record<string, string> = {

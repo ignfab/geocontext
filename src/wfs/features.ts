@@ -30,7 +30,7 @@ import {
   type CompiledRequest,
 } from "./request.js";
 import { attachFeatureRefs } from "./response.js";
-import type { GpfGetOrCountFeaturesInput } from "./schema.js";
+import type { GpfQueryFeaturesInput } from "./schema.js";
 
 // --- Types ---
 
@@ -59,7 +59,7 @@ type GeometryLike = {
  * @param input Normalized tool input.
  */
 export function ensureIntersectsFeatureTargetsOtherTypename(
-  input: GpfGetOrCountFeaturesInput,
+  input: GpfQueryFeaturesInput,
 ) {
   const spatialFilter = getSpatialFilter(input);
   if (
@@ -100,7 +100,7 @@ function isGeometryLike(value: unknown): value is GeometryLike {
  * @returns The resolved reference geometry, or `undefined` when no reference feature is needed.
  */
 export async function resolveIntersectsFeatureGeometry(
-  input: GpfGetOrCountFeaturesInput,
+  input: GpfQueryFeaturesInput,
 ): Promise<ResolvedFeatureGeometryRef | undefined> {
   const spatialFilter = getSpatialFilter(input);
   if (!spatialFilter || spatialFilter.operator !== "intersects_feature") {
@@ -138,7 +138,7 @@ export async function resolveIntersectsFeatureGeometry(
  * @returns The resolved isochrone geometry, or `undefined` when no travel-time filter is requested.
  */
 export async function resolveTravelTimeGeometry(
-  input: GpfGetOrCountFeaturesInput,
+  input: GpfQueryFeaturesInput,
 ): Promise<ResolvedFeatureGeometryRef | undefined> {
   const spatialFilter = getSpatialFilter(input);
   if (!spatialFilter || spatialFilter.operator !== "travel_time") {
@@ -164,7 +164,7 @@ export async function resolveTravelTimeGeometry(
  * @returns The resolved geometry, or `undefined` when the selected filter is already self-contained.
  */
 export async function resolveSpatialFilterGeometry(
-  input: GpfGetOrCountFeaturesInput,
+  input: GpfQueryFeaturesInput,
 ): Promise<ResolvedFeatureGeometryRef | undefined> {
   const spatialFilter = getSpatialFilter(input);
 
@@ -190,8 +190,8 @@ export async function resolveSpatialFilterGeometry(
  * @param input Normalized tool input.
  * @returns The compiled query fragments and final WFS request.
  */
-export async function prepareGetOrCountFeaturesRequest(
-  input: GpfGetOrCountFeaturesInput
+export async function prepareQueryFeaturesRequest(
+  input: GpfQueryFeaturesInput
 ): Promise<PreparedGetFeaturesRequest> {
   // TODO: Assess if this guard does not prevent legitimate use cases.
   ensureIntersectsFeatureTargetsOtherTypename(input);
@@ -222,8 +222,8 @@ export async function prepareGetOrCountFeaturesRequest(
  * @param input Normalized tool input.
  * @returns Either a hit-count payload or a transformed FeatureCollection.
  */
-export async function executeGetOrCountFeatures(input: GpfGetOrCountFeaturesInput) {
-  const { compiled, request } = await prepareGetOrCountFeaturesRequest(input);
+export async function executeQueryFeatures(input: GpfQueryFeaturesInput) {
+  const { compiled, request } = await prepareQueryFeaturesRequest(input);
 
   let featureCollection: WfsFeatureCollectionResponse;
 

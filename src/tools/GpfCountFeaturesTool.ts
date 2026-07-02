@@ -2,7 +2,7 @@ import BaseTool from "./BaseTool.js";
 
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import {
-  executeGetOrCountFeatures,
+  executeQueryFeatures,
 } from "../wfs/features.js";
 import {
   gpfCountFeaturesOutputSchema,
@@ -94,7 +94,7 @@ class GpfCountFeaturesTool extends BaseTool<GpfCountFeaturesInput> {
       input: validatedInput
     });
 
-    return executeGetOrCountFeatures(validatedInput);
+    return executeQueryFeatures(validatedInput);
   }
 }
 

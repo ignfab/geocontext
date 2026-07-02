@@ -2,8 +2,8 @@ import BaseTool from "./BaseTool.js";
 
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import {
-  executeGetOrCountFeatures,
-  prepareGetOrCountFeaturesRequest,
+  executeQueryFeatures,
+  prepareQueryFeaturesRequest,
 } from "../wfs/features.js";
 import {
   toWfsHttpGetUrlPayload,
@@ -116,13 +116,13 @@ class GpfGetFeaturesTool extends BaseTool<GpfGetFeaturesInput> {
     });
 
     if (validatedInput.result_type === "http_post_request" || validatedInput.result_type === "http_get_url") {
-      const { request } = await prepareGetOrCountFeaturesRequest(validatedInput);
+      const { request } = await prepareQueryFeaturesRequest(validatedInput);
       return validatedInput.result_type === "http_post_request"
         ? toWfsHttpPostRequestPayload(request)
         : toWfsHttpGetUrlPayload(request);
     }
 
-    return executeGetOrCountFeatures(validatedInput);
+    return executeQueryFeatures(validatedInput);
   }
 }
 
