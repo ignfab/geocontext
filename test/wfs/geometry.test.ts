@@ -97,7 +97,7 @@ describe("geometryToEwkt", () => {
   it("should throw for an unsupported geometry type", () => {
     expect(() =>
       geometryToEwkt({ type: "GeometryCollection", geometries: [] }),
-    ).toThrow("Le type de géométrie 'GeometryCollection' n'est pas supporté pour `intersects_feature`.");
+    ).toThrow("Le type de géométrie 'GeometryCollection' n'est pas supporté pour `intersects_feature` et `adjacent_feature`.");
   });
 });
 

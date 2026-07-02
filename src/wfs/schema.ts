@@ -87,9 +87,14 @@ const dwithinPointFilterSchema = z.object({
 }).strict().describe("Filtre les objets situés à une distance maximale d'un point.");
 
 const intersectsFeatureFilterSchema = z.object({
-  typename: z.string().trim().min(1).describe("Type GPF du feature de référence."),
-  feature_id: z.string().trim().min(1).describe("Identifiant du feature de référence."),
+  typename: z.string().trim().min(1).describe("Type GPF de l'objet de référence."),
+  feature_id: z.string().trim().min(1).describe("Identifiant de l'objet de référence."),
 }).strict().describe("Filtre les objets dont la géométrie intersecte celle d'un objet GPF de référence.");
+
+const adjacentFeatureFilterSchema = z.object({
+  typename: z.string().trim().min(1).describe("Type GPF de l'objet de référence."),
+  feature_id: z.string().trim().min(1).describe("Identifiant de l'objet de référence."),
+}).strict().describe("Filtre les objets adjacents à un objet GPF de référence. Deux objets sont adjacents si leurs géométries partagent au moins un point, mais aucun point intérieur.");
 
 const travelTimeFilterSchema = z.object({
   lon: lonSchema.describe("Longitude du point de départ en WGS84 `lon/lat`."),
@@ -135,7 +140,10 @@ const gpfSpatialFilterInputSchema = z.object({
     .describe("Filtre spatial par distance à un point. Exclusif avec les autres filtres spatiaux."),
   intersects_feature_filter: intersectsFeatureFilterSchema
     .optional()
-    .describe("Filtre spatial par intersection avec un feature GPF de référence. Exclusif avec les autres filtres spatiaux."),
+    .describe("Filtre spatial par intersection avec un objet GPF de référence. Exclusif avec les autres filtres spatiaux."),
+  adjacent_feature_filter: adjacentFeatureFilterSchema
+    .optional()
+    .describe("Filtre spatial par adjacence avec un objet GPF de référence. Exclusif avec les autres filtres spatiaux."),
   travel_time_filter: travelTimeFilterSchema
     .optional()
     .describe("Filtre spatial par temps de trajet depuis un point (`profile` voiture ou piéton). Exclusif avec les autres filtres spatiaux."),

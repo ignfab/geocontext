@@ -29,6 +29,7 @@ function spatialFilterToGeometry(spatialFilter: SpatialFilter, resolvedGeometryR
       const point = [spatialFilter.lon, spatialFilter.lat];
       return { type: "Point", coordinates: point };
     }
+    case "adjacent_feature":
     case "intersects_feature":
     case "travel_time":
       return resolvedGeometryRef!;
@@ -44,6 +45,7 @@ function spatialFilterToCentroid(spatialFilter: SpatialFilter, resolvedGeometryR
     case "intersects_point": {
       return { type: "Point", coordinates: [spatialFilter.lon, spatialFilter.lat] };
     }
+    case "adjacent_feature":
     case "intersects_feature":
     case "travel_time":
     case "bbox":
@@ -96,9 +98,11 @@ function intersection3DWithSpatialFilter(geom: Geometry, spatialFilter: SpatialF
   switch (spatialFilter.operator) {
     case "dwithin_point" :
       return geo; // By definition, if "geo" is within the spatial filter, their intersection is geo.
+    case "adjacent_feature":
     case "intersects_point": {
-      return null; // The intersection is a point, so its interior is null;
+      return null; // The intersection is either a line (adjacent_feature) or a point (intersects_point), so its interior is null;
     }
+    case "adjacent_feature":
     case "intersects_feature":
     case "travel_time": {
       const spatialFilterGeometry = spatialFilterToGeometry(spatialFilter, resolvedGeometryRef)
