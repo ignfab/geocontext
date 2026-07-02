@@ -4,7 +4,7 @@
  * This module centralizes:
  * - shared schema fragments reused by WFS tools
  * - public tool input schemas and inferred input types
- * - compact output schemas used for `hits` and HTTP preview responses
+ * - compact output schemas used for HTTP preview responses
  */
 
 import { z } from "zod";
@@ -102,40 +102,25 @@ export const gpfGetFeaturesHttpGetUrlOutputSchema = wfsHttpGetUrlOutputSchema;
 export const gpfGetFeatureByIdHttpPostRequestOutputSchema = wfsHttpPostRequestOutputSchema;
 export const gpfGetFeatureByIdHttpGetUrlOutputSchema = wfsHttpGetUrlOutputSchema;
 
-// --- `gpf_get_features` ---
+// --- Shared GPF Inputs ---
 
-export const gpfGetFeaturesInputObjectSchema = z.object({
+const gpfTypenameInputSchema = z.object({
   typename: z
     .string()
     .trim()
     .min(1, "le nom du type ne doit pas être vide")
-    .describe("Nom exact du type GPF à interroger, par exemple `BDTOPO_V3:batiment`. Utiliser `gpf_search_types` pour trouver un `typename` valide."),
-  limit: z
-    .number()
-    .int()
-    .min(1)
-    .max(MAX_LIMIT)
-    .default(DEFAULT_LIMIT)
-    .describe(`Nombre maximum d'objets à renvoyer. Valeur par défaut : ${DEFAULT_LIMIT}. Maximum : ${MAX_LIMIT}.`),
-  result_type: z
-    .enum(["results", "hits", "http_post_request", "http_get_url"])
-    .default("results")
-    .describe("`results` renvoie une FeatureCollection avec les propriétés attributaires uniquement — **les géométries ne sont pas incluses**, ce mode ne peut donc pas être utilisé directement pour cartographier. `hits` renvoie uniquement le nombre total d'objets correspondant à la requête. `http_post_request` renvoie une requête POST robuste à exécuter directement. `http_get_url` renvoie l'URL GET équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant. Avec `http_post_request` ou `http_get_url`, la géométrie est automatiquement ajoutée aux propriétés du `select` pour garantir l'affichage cartographique."),
-  select: z
-    .array(z.string().trim().min(1))
-    .min(1)
-    .optional()
-    .describe("Liste des propriétés non géométriques à renvoyer pour chaque objet. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`."),
-  order_by: z
-    .array(orderBySchema)
-    .min(1)
-    .optional()
-    .describe("Liste ordonnée des critères de tri."),
+    .describe("Nom exact du type GPF à interroger, par exemple `BDTOPO_V3:batiment`. Utiliser `gpf_search_types` pour trouver un `typename` valide.")
+})
+
+const gpfWhereFilterInputSchema = z.object({
   where: z
     .array(whereClauseSchema)
     .min(1)
     .optional()
-    .describe("Clauses de filtre attributaire, combinées avec `AND`."),
+    .describe("Clauses de filtre attributaire, combinées avec `AND`.")
+})
+
+const gpfSpatialFilterInputSchema = z.object({
   bbox_filter: bboxFilterSchema
     .optional()
     .describe("Filtre spatial par boîte englobante. Exclusif avec les autres filtres spatiaux."),
@@ -151,9 +136,9 @@ export const gpfGetFeaturesInputObjectSchema = z.object({
   travel_time_filter: travelTimeFilterSchema
     .optional()
     .describe("Filtre spatial par temps de trajet depuis un point (`profile` voiture ou piéton). Exclusif avec les autres filtres spatiaux."),
-}).strict();
+})
 
-export const gpfGetFeaturesInputSchema = gpfGetFeaturesInputObjectSchema.superRefine((input, ctx) => {
+function assertSpatialFilterExclusion(input : Record<string, unknown>, ctx : z.RefinementCtx) {
   const usedSpatialFilters = GPF_GET_FEATURES_SPATIAL_FILTER_KEYS.filter((key) => input[key] !== undefined);
 
   if (usedSpatialFilters.length > 1) {
@@ -163,30 +148,89 @@ export const gpfGetFeaturesInputSchema = gpfGetFeaturesInputObjectSchema.superRe
       message: `Un seul filtre spatial est autorisé (${usedSpatialFilters.join(", ")} fournis).`,
     });
   }
-});
+}
+
+// --- Shared GPF types ---
+
+export type WhereClause = z.infer<typeof whereClauseSchema>;
+
+export type OrderByClause = z.infer<typeof orderBySchema>;
+
+export type SpatialFilter =
+  | ({ operator: "bbox" } & z.infer<typeof bboxFilterSchema>)
+  | ({ operator: "intersects_point" } & z.infer<typeof intersectsPointFilterSchema>)
+  | ({ operator: "dwithin_point" } & z.infer<typeof dwithinPointFilterSchema>)
+  | ({ operator: "intersects_feature" } & z.infer<typeof intersectsFeatureFilterSchema>)
+  | ({ operator: "travel_time" } & z.infer<typeof travelTimeFilterSchema>);
+
+// --- `gpf_get_features` ---
+
+export const gpfGetFeaturesInputObjectSchema = gpfTypenameInputSchema
+  .merge(z.object({
+    select: z
+    .array(z.string().trim().min(1))
+    .min(1)
+    .optional()
+    .describe("Liste des propriétés non géométriques à renvoyer pour chaque objet. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`."),
+  }))
+  .merge(gpfWhereFilterInputSchema)
+  .merge(gpfSpatialFilterInputSchema)
+  .merge(z.object({
+  limit: z
+    .number()
+    .int()
+    .min(1)
+    .max(MAX_LIMIT)
+    .default(DEFAULT_LIMIT)
+    .describe(`Nombre maximum d'objets à renvoyer. Valeur par défaut : ${DEFAULT_LIMIT}. Maximum : ${MAX_LIMIT}.`),
+  result_type: z
+    .enum(["results", "http_post_request", "http_get_url"])
+    .default("results")
+    .describe("`results` renvoie une FeatureCollection avec les propriétés attributaires uniquement — **les géométries ne sont pas incluses**, ce mode ne peut donc pas être utilisé directement pour cartographier. `http_post_request` renvoie une requête POST robuste à exécuter directement. `http_get_url` renvoie l'URL GET équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant. Avec `http_post_request` ou `http_get_url`, la géométrie est automatiquement ajoutée aux propriétés du `select` pour garantir l'affichage cartographique."),
+  order_by: z
+    .array(orderBySchema)
+    .min(1)
+    .optional()
+    .describe("Liste ordonnée des critères de tri."),
+}))
+  .strict();
+
+export const gpfGetFeaturesInputSchema = gpfGetFeaturesInputObjectSchema.superRefine(assertSpatialFilterExclusion);
 
 // --- `gpf_get_features` Types ---
 
 export type GpfGetFeaturesInput = z.infer<typeof gpfGetFeaturesInputSchema>;
-export type SpatialFilter =
-  | ({ operator: "bbox" } & NonNullable<GpfGetFeaturesInput["bbox_filter"]>)
-  | ({ operator: "intersects_point" } & NonNullable<GpfGetFeaturesInput["intersects_point_filter"]>)
-  | ({ operator: "dwithin_point" } & NonNullable<GpfGetFeaturesInput["dwithin_point_filter"]>)
-  | ({ operator: "intersects_feature" } & NonNullable<GpfGetFeaturesInput["intersects_feature_filter"]>)
-  | ({ operator: "travel_time" } & NonNullable<GpfGetFeaturesInput["travel_time_filter"]>);
-export type WhereClause = NonNullable<GpfGetFeaturesInput["where"]>[number];
-export type OrderByClause = NonNullable<GpfGetFeaturesInput["order_by"]>[number];
-
-// --- `gpf_get_features` Outputs ---
-
-export const gpfGetFeaturesHitsOutputSchema = z.object({
-  result_type: z.literal("hits").describe("Indique que la réponse contient uniquement un comptage."),
-  totalFeatures: z.number().describe("Le nombre total d'objets correspondant à la requête."),
-});
 
 // --- `gpf_get_features` Published Schema ---
 
 export const gpfGetFeaturesPublishedInputSchema = generatePublishedInputSchema(gpfGetFeaturesInputObjectSchema);
+
+// --- `gpf_count_features` ---
+
+export const gpfCountFeaturesInputObjectSchema = gpfTypenameInputSchema
+  .merge(gpfWhereFilterInputSchema)
+  .merge(gpfSpatialFilterInputSchema)
+  .strict();
+
+export const gpfCountFeaturesInputSchema = gpfCountFeaturesInputObjectSchema.superRefine(assertSpatialFilterExclusion);
+
+// --- `gpf_count_features` Outputs ---
+
+export const gpfCountFeaturesOutputSchema = z.object({
+  numberMatched: z.number().describe("Le nombre d'objets correspondant à la requête."),
+});
+
+// --- `gpf_count_features` Types ---
+
+export type GpfCountFeaturesInput = z.infer<typeof gpfCountFeaturesInputSchema>;
+
+// --- `gpf_count_features` Published Schema ---
+
+export const gpfCountFeaturesPublishedInputSchema = generatePublishedInputSchema(gpfCountFeaturesInputObjectSchema);
+
+// --- Hybrid `gpf_get_features` / `gpf_count_features` schema ---
+
+export type GpfGetOrCountFeaturesInput = GpfGetFeaturesInput | GpfCountFeaturesInput
 
 // --- `gpf_get_feature_by_id` ---
 
@@ -196,6 +240,8 @@ export const gpfGetFeatureByIdInputSchema = z.object({
     .trim()
     .min(1, "le nom du type ne doit pas être vide")
     .describe("Nom exact du type GPF à interroger, par exemple `ADMINEXPRESS-COG.LATEST:commune`."),
+  // The description is not exactly the same as in gpfTypenameInputSchema because the
+  // MCP should only call getFeatureById using a previously-obtained feature_ref.
   feature_id: z
     .string()
     .trim()

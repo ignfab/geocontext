@@ -132,7 +132,6 @@ describe("generate-mcp-docs helpers", () => {
     });
 
     expect(markdown).toContain('| Succès `result_type="results"` | oui | non | `content[0].text` est la FeatureCollection stringifiée ; aucun `structuredContent` n\'est ajouté dans ce mode. |');
-    expect(markdown).toContain('| Succès `result_type="hits"` | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |');
     expect(markdown).toContain('| Succès `result_type="http_post_request"` | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |');
     expect(markdown).toContain('| Succès `result_type="http_get_url"` | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |');
   });

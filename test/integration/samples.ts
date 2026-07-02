@@ -23,4 +23,5 @@ export const EXPECTED_TOOL_NAMES = [
   "gpf_describe_type",
   "gpf_get_features",
   "gpf_get_feature_by_id",
+  "gpf_count_features",
 ] as const;

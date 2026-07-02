@@ -52,9 +52,8 @@
    La commune de Vincennes a le feature_id commune.33667.
    Je vais maintenant compter les bâtiments de plus de 20 mètres
    de hauteur sur cette commune.
-🔧 Appel outil: gpf_get_features({
+🔧 Appel outil: gpf_count_features({
   'typename': 'BDTOPO_V3:batiment',
-  'result_type': 'hits',
   'where': [
     {
       'property': 'hauteur',

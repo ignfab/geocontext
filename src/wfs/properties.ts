@@ -154,7 +154,7 @@ export function buildSelectList(
       .map((property: CollectionProperty) => property.name);
   }
 
-  // If `select` is omitted and `result_type` is `hits` or an HTTP preview mode,
+  // If `select` is omitted and `result_type` is an HTTP preview mode,
   // do not send any `propertyName` selection.
   return [];
 }
