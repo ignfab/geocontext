@@ -16,7 +16,7 @@ interface CountFeatures {
   numberMatched: number;
 }
 
-describe("GetFeatures (integration)", () => {
+describe("CountFeatures (integration)", () => {
   const { getHandle } = withMcpServer();
 
   it("should query BDTOPO_V3:plan_d_eau with bbox filter (around Lac du Bourget)", async () => {
@@ -35,7 +35,7 @@ describe("GetFeatures (integration)", () => {
 
   it("should return an error for invalid typename", async () => {
     await expectToolCallToThrow(
-      callTool(getHandle().client, "gpf_get_features", {
+      callTool(getHandle().client, "gpf_count_features", {
         typename: "INVALID:type",
       }),
     );
