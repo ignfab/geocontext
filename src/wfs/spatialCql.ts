@@ -36,47 +36,49 @@ type GeoJSONMultiPoint = { type: "MultiPoint", coordinates: number[][] }
 function findInnerPoints(geometry: GeometryLike) : GeoJSONPoint | GeoJSONMultiPoint {
   let ret: GeoJSONMultiPoint;
   switch (geometry.type) {
-    case "Point":
-      return geometry as GeoJSONPoint;
-    case "MultiPoint":
-      ret = geometry as GeoJSONMultiPoint;
-      break;
-    case "LineString":
-      const jtsline = (new GeoJSONReader(new GeometryFactory())).read(geometry);
-      const linepoint = InteriorPointArea.getInteriorPoint(jtsline)
+    case "LineString": {
+      const jts = (new GeoJSONReader(new GeometryFactory())).read(geometry);
+      const point = InteriorPointArea.getInteriorPoint(jts)
       return {
         type: "Point",
-        coordinates: [linepoint.x, linepoint.y]
+        coordinates: [point.x, point.y]
       };
-    case "MultiLineString":
-      const multilinecoords = geometry.coordinates as [number, number][][]
+    }
+    case "MultiLineString": {
+      const coords = geometry.coordinates as [number, number][][]
       ret = {
         type: "MultiPoint",
-        coordinates: multilinecoords.map(linecoords => (findInnerPoints({
+        coordinates: coords.map(linecoords => (findInnerPoints({
           type: "LineString",
           coordinates: linecoords,
         }) as GeoJSONPoint).coordinates)
       };
       break;
-    case "Polygon":
-      const jtspolygon = (new GeoJSONReader(new GeometryFactory())).read(geometry);
-      const polygonpoint = InteriorPointArea.getInteriorPoint(jtspolygon)
+    }
+    case "Polygon": {
+      const jts = (new GeoJSONReader(new GeometryFactory())).read(geometry);
+      const point = InteriorPointArea.getInteriorPoint(jts)
       return {
         type: "Point",
-        coordinates: [polygonpoint.x, polygonpoint.y]
+        coordinates: [point.x, point.y]
       };
-    case "MultiPolygon":
-      const multipolygoncoords = geometry.coordinates as [number, number][][]
+    }
+    case "MultiPolygon": {
+      const coords = geometry.coordinates as [number, number][][][]
       ret = {
         type: "MultiPoint",
-        coordinates: multipolygoncoords.map(polygoncoords => (findInnerPoints({
+        coordinates: coords.map(polygoncoords => (findInnerPoints({
           type: "Polygon",
           coordinates: polygoncoords,
         }) as GeoJSONPoint).coordinates)
       };
       break;
+    }
+    // Do not accept Point or MultiPoint geometries as "inner point" cannot be defined in 0D
+    case "Point":
+    case "MultiPoint":
     default:
-      throw new Error(`Le type de géométrie '${geometry.type}' n'est pas supporté pour \`intersects_feature\` et \`adjacent_feature\`.`);
+      throw new Error(`Le type de géométrie '${geometry.type}' n'est pas supporté pour \`adjacent_feature\`.`);
   }
   if (ret.coordinates.length == 1) {
     return {
