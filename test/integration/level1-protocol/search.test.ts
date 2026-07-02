@@ -17,7 +17,7 @@ interface SearchResult {
   }>;
 }
 
-describe(" Search Types (integration)", () => {
+describe("GPF Search Types (integration)", () => {
   const { getHandle } = withMcpServer();
 
   it("should find 'batiment' types", async () => {
