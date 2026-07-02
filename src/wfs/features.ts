@@ -62,7 +62,7 @@ export function ensureIntersectsFeatureTargetsOtherTypename(
     throw new Error(
       "Le filtre `intersects_feature` ne peut pas être utilisé sur le même `typename`. " +
         "Utiliser `gpf_get_feature_by_id` avec `{ typename, feature_id: intersects_feature_filter.feature_id }` pour cibler exactement un objet. " +
-        "Alternativement, utiliser le filtre `adjacent_feature` pour obtenir les objets adjacents.",
+        "Alternativement, utiliser le filtre `adjacent_feature_filter` pour obtenir les objets adjacents.",
     );
   }
 }
