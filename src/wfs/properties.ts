@@ -119,6 +119,7 @@ export function validateSelectProperty(featureType: Collection, geometryProperty
  * - when `select` is omitted and `result_type` is `results`, every non-geometric property is returned
  * - when `select` is provided, each property is validated against the embedded catalog
  * - when `result_type` is an HTTP preview mode, the geometry column is appended to the requested selection
+ * - when `result_type` is `results` and `spatial_extras` is non-empty, the geometry column is also appended so elements of GPF_GET_FEATURES_SPATIAL_EXTRAS (bbox, centroid, ...) can be derived
  *
  * @param featureType Feature type definition loaded from the embedded catalog.
  * @param geometryProperty Geometry property already resolved for the feature type.
@@ -130,6 +131,10 @@ export function buildSelectList(
   geometryProperty: CollectionProperty,
   input: GpfGetFeaturesInput,
 ) {
+  const shouldIncludeGeometry =
+    (input.result_type === "http_post_request" || input.result_type === "http_get_url") ||
+    (input.result_type === "results" && (input.spatial_extras ?? []).length > 0);
+
   // If `select` is specified, only the requested properties are returned
   // after validation against the embedded catalog.
   if (input.select && input.select.length > 0) {
@@ -137,9 +142,8 @@ export function buildSelectList(
       validateSelectProperty(featureType, geometryProperty, propertyName),
     );
 
-    // For HTTP preview modes, also include the geometry column so the compiled
-    // request stays directly usable for mapping/debugging.
-    if (input.result_type === "http_post_request" || input.result_type === "http_get_url") {
+    // Include geometry when requested by output mode or by spatial_extras.
+    if (shouldIncludeGeometry) {
       return [...selectedProperties, geometryProperty.name];
     }
 
@@ -149,12 +153,18 @@ export function buildSelectList(
   // If `select` is omitted and `result_type="results"`, return every
   // non-geometric property from the feature type.
   if (input.result_type === "results") {
-    return featureType.properties
+    const nonGeometryProperties = featureType.properties
       .filter((property: CollectionProperty) => !property.defaultCrs)
       .map((property: CollectionProperty) => property.name);
+
+    if (shouldIncludeGeometry) {
+      return [...nonGeometryProperties, geometryProperty.name];
+    }
+
+    return nonGeometryProperties;
   }
 
-  // If `select` is omitted and `result_type` is `hits` or an HTTP preview mode,
+  // If `select` is omitted and `result_type` is an HTTP preview mode,
   // do not send any `propertyName` selection.
   return [];
 }

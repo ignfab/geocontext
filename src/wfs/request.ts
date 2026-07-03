@@ -8,7 +8,7 @@
  */
 
 import { GPF_WFS_URL } from "./catalog.js";
-import type { GpfGetFeaturesInput } from "./schema.js";
+import type { GpfQueryFeaturesInput } from "./schema.js";
 
 // --- Transport Types ---
 
@@ -119,14 +119,14 @@ export function buildGetUrl(url: string, query: Record<string, string>, cqlFilte
 // --- Public Builders ---
 
 /**
- * Builds the main WFS GetFeature request from normalized tool input and compiled query parts.
+ * Builds the main WFS GetFeature or CountFeature request from normalized tool input and compiled query parts.
  *
  * @param input Normalized tool input.
  * @param compiled Compiled query fragments produced from the input and feature type.
  * @returns A POST request split into base URL, query-string parameters, encoded body, and optional GET variant.
  */
 export function buildMainRequest(
-  input: GpfGetFeaturesInput,
+  input: GpfQueryFeaturesInput,
   compiled: { cqlFilter?: string; propertyName?: string; sortBy?: string },
 ): CompiledRequest {
   const query: Record<string, string> = {
@@ -136,10 +136,10 @@ export function buildMainRequest(
     typeNames: input.typename,
     outputFormat: "application/json",
     exceptions: "application/json",
-    count: input.result_type === "hits" ? "1" : String(input.limit),
+    count: "limit" in input ? String(input.limit) : "1"
   };
 
-  if (compiled.propertyName && input.result_type !== "hits") {
+  if (compiled.propertyName) {
     query.propertyName = compiled.propertyName;
   }
   if (compiled.sortBy) {

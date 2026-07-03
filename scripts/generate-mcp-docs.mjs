@@ -20,6 +20,7 @@ const toolDisplayOrder = [
   "gpf_describe_type",
   "gpf_get_feature_by_id",
   "gpf_get_features",
+  "gpf_count_features"
 ];
 
 /**
@@ -202,12 +203,6 @@ export function renderResponseContractSection(definition) {
           content: "oui",
           structuredContent: "non",
           relation: "`content[0].text` est la FeatureCollection stringifiée ; aucun `structuredContent` n'est ajouté dans ce mode.",
-        },
-        {
-          caseName: 'Succès `result_type="hits"`',
-          content: "oui",
-          structuredContent: "oui",
-          relation: "`content[0].text` est `JSON.stringify(structuredContent)`.",
         },
         {
           caseName: 'Succès `result_type="http_post_request"`',

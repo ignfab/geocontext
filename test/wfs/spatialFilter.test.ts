@@ -10,6 +10,7 @@ const baseInput: GpfGetFeaturesInput = {
   typename: "ADMINEXPRESS-COG.LATEST:commune",
   limit: 100,
   result_type: "results",
+  spatial_extras: [],
 };
 
 describe("getSpatialFilter", () => {

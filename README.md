@@ -52,9 +52,8 @@
    La commune de Vincennes a le feature_id commune.33667.
    Je vais maintenant compter les bâtiments de plus de 20 mètres
    de hauteur sur cette commune.
-🔧 Appel outil: gpf_get_features({
+🔧 Appel outil: gpf_count_features({
   'typename': 'BDTOPO_V3:batiment',
-  'result_type': 'hits',
   'where': [
     {
       'property': 'hauteur',
@@ -192,7 +191,8 @@ Les fonctionnalités correspondent aux outils MCP documentés dans [`docs/mcp-to
 | Récupérer les servitudes            | `assiette_sup`              | [WFS](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/diffusion/wfs/) + [données GPU](https://www.geoportail-urbanisme.gouv.fr/)                                                 | SUP autour d'un lieu            |
 | Trouver une couche GPF              | `gpf_search_types`      | [gpf-schema-store](https://github.com/ignfab/gpf-schema-store)                                                                                                                                                               | Trouver la table des bâtiments  |
 | Décrire une couche GPF              | `gpf_describe_type`     | [gpf-schema-store](https://github.com/ignfab/gpf-schema-store)                                                                                                                                                               | Lister les champs disponibles   |
-| Interroger une couche GPF           | `gpf_get_features`      | [WFS](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/diffusion/wfs/)                                                                                                            | Extraire ou compter des objets  |
+| Interroger une couche GPF           | `gpf_get_features`      | [WFS](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/diffusion/wfs/)                                                                                                            | Extraire des objets             |
+| Compter les objets d'une couche GPF | `gpf_count_features`    | [WFS](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/diffusion/wfs/)                                                                                                            | Compter les bâtiments d'une zone |
 | Récupérer un objet par identifiant  | `gpf_get_feature_by_id` | [WFS](https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/diffusion/wfs/)                                                                                                            | Charger une commune précise     |
 
 ## Architecture en bref
