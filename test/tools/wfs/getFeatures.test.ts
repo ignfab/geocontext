@@ -663,14 +663,7 @@ describe("Test GpfGetFeaturesTool", () => {
       throw new Error("expected text content");
     }
     const results = JSON.parse(textContent.text);
-    expect(results.features[0].geometry_extra).toStrictEqual({
-      bbox: {
-        west: 2.3,
-        south: 48.8,
-        east: 2.4,
-        north: 48.9
-      },
-    });
+    expect(results.features[0].bbox).toStrictEqual([2.3, 48.8, 2.4, 48.9]);
     expect(results.features[0].feature_ref).toEqual({
       typename: "ADMINEXPRESS-COG.LATEST:commune",
       feature_id: "commune.1",

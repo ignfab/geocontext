@@ -275,13 +275,9 @@ describe("Test GpfGetFeatureByIdTool", () => {
       throw new Error("expected text content");
     }
     const results = JSON.parse(textContent.text);
-    expect(results.features[0].geometry_extra).toBeDefined();
-    expect(results.features[0].geometry_extra?.bbox).toStrictEqual({
-      west: 2.3,
-      south: 48.8,
-      east: 2.4,
-      north: 48.9
-    });
+    expect(results.features[0].bbox).toBeDefined();
+    expect(results.features[0].bbox).toStrictEqual([2.3, 48.8, 2.4, 48.9]);
+    expect(results.features[0].centroid).toBeUndefined();
   });
 
   it("should fail clearly when the feature is missing", async () => {

@@ -13,16 +13,17 @@ import { AllGeoJSON } from "@turf/helpers";
 
 
 function deriveGeometry(geometry: unknown, geometry_extra: string[] = []) {
+  const ret : Record<string, unknown> = {};
+
   if (geometry_extra.length === 0) {
-    return null;
+    return ret;
   }
 
   const geo = geometry as AllGeoJSON;
-  const ret : Record<string, unknown> = {};
 
   if (geometry_extra.includes("centroid")) {
     try {
-      const centr = centroid(geo).geometry.coordinates;
+      const centr : GeoJSON.Position = centroid(geo).geometry.coordinates;
       ret.centroid = {
         lon: centr[0],
         lat: centr[1],
@@ -34,13 +35,8 @@ function deriveGeometry(geometry: unknown, geometry_extra: string[] = []) {
 
   if (geometry_extra.includes("bbox")) {
     try {
-      const bb = bbox(geo);
-      ret.bbox = {
-        west: bb[0],
-        south: bb[1],
-        east: bb[2],
-        north: bb[3],
-      };
+      const bb : GeoJSON.BBox = bbox(geo);
+      ret.bbox = bb;
     } catch {
       ret.bbox = null
     }
@@ -132,7 +128,8 @@ export function transformFeatureCollectionResponse(
 
     const nextFeature: Record<string, unknown> = {
       ...rest,
-      geometry_extra: deriveGeometry(_geometry, geometry_extra),
+      geometry: null,
+      ...deriveGeometry(_geometry, geometry_extra),
     };
 
     if (typeof feature.id === "string") {

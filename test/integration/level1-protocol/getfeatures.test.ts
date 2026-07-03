@@ -19,11 +19,13 @@ interface GetFeaturesResult {
     type: string;
     id: string;
     properties: Record<string, unknown>;
-    geometry_extra?: Record<string, unknown>;
+    geometry: null;
     feature_ref?: {
       typename: string;
       feature_id: string;
     };
+    bbox?: GeoJSON.BBox;
+    centroid?: { lon: number, lat: number };
   }>;
   totalFeatures?: number;
   numberMatched?: number;
@@ -68,9 +70,8 @@ describe("GetFeatures (integration)", () => {
     expectFeatureCollectionWithFeatures(result);
 
     const first = result.features[0];
-    expect(first.geometry_extra).toBeDefined();
-    expect(first.geometry_extra?.bbox).toBeDefined();
-    let bbox = (first.geometry_extra as { bbox?: { west?: number } } | undefined)?.bbox
-    expect(bbox?.west).toBe(2.22421717);
+    expect(first.bbox).toBeDefined();
+    expect((first.bbox as GeoJSON.BBox)[0]).toBeCloseTo(2.22421717);
+    expect(first.centroid).toBeUndefined();
   }, INTEGRATION_CONFIG.timeout);
 });

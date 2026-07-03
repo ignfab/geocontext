@@ -35,11 +35,13 @@ interface GetFeatureByIdResult {
     type: string;
     id: string;
     properties: Record<string, unknown>;
-    geometry_extra?: Record<string, unknown>;
+    geometry: null;
     feature_ref?: {
       typename: string;
       feature_id: string;
     };
+    bbox?: GeoJSON.BBox;
+    centroid?: { lon: number, lat: number };
   }>;
   totalFeatures?: number;
   numberMatched?: number;
@@ -72,7 +74,8 @@ describe("GetFeatureById (integration)", () => {
     expect(result.features.length).toBe(1);
     expect(result.features[0].id).toBeDefined();
     expect(result.features[0].properties).toBeDefined();
-    expect(result.features[0].geometry_extra).toBeDefined();
+    expect(result.features[0].bbox).toBeUndefined();
+    expect(result.features[0].centroid).toBeUndefined();
   }, INTEGRATION_CONFIG.timeout);
 
   it("should retrieve a centroid and a bbox", async () => {
@@ -86,11 +89,10 @@ describe("GetFeatureById (integration)", () => {
     expect(result.features.length).toBe(1);
     expect(result.features[0].id).toBeDefined();
     expect(result.features[0].properties).toBeDefined();
-    expect(result.features[0].geometry_extra).toBeDefined();
-    const centroid = result.features[0].geometry_extra?.centroid as ({lon: number, lat: number} | undefined)
-    expect(centroid?.lon).toBeCloseTo(2.382778372262143);
-    expect(centroid?.lat).toBeCloseTo(48.8518070503727);
-    expect(result.features[0].geometry_extra?.bbox).toBeDefined();
+    expect(result.features[0].bbox).toBeDefined();
+    expect(result.features[0].centroid).toBeDefined();
+    expect(result.features[0].centroid?.lon).toBeCloseTo(2.382778372262143);
+    expect(result.features[0].centroid?.lat).toBeCloseTo(48.8518070503727);
   }, INTEGRATION_CONFIG.timeout);
 
   it("should return an error for invalid typename", async () => {

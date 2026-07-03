@@ -44,7 +44,7 @@ describe("wfs_engine/response", () => {
       expect(features[0]).toEqual({
         id: "commune.1",
         properties: { code_insee: "94080" },
-        geometry_extra: null,
+        geometry: null,
         feature_ref: { typename: null, feature_id: "commune.1" },
       });
     });
@@ -62,7 +62,7 @@ describe("wfs_engine/response", () => {
       expect(features[0]).toEqual({
         id: 42,
         properties: { name: "test" },
-        geometry_extra: null,
+        geometry: null,
       });
     });
 
@@ -84,14 +84,7 @@ describe("wfs_engine/response", () => {
 
       const features = getFeatures(result);
 
-      expect(features[0].geometry_extra).toStrictEqual({
-        bbox: {
-          west: 2.3,
-          south: 48.8,
-          east: 2.4,
-          north: 48.9,
-        },
-      });
+      expect(features[0].bbox).toStrictEqual([2.3, 48.8, 2.4, 48.9]);
     });
 
     it("should return centroid and bbox in geometry_extra when requested", () => {
@@ -111,18 +104,10 @@ describe("wfs_engine/response", () => {
       }, ["centroid", "bbox"]);
 
       const features = getFeatures(result);
-      expect(features[0].geometry_extra).toBeDefined();
-      expect(features[0].geometry_extra).toMatchObject({
-        bbox: {
-          west: 2.3,
-          south: 48.8,
-          east: 2.4,
-          north: 48.9,
-        },
-      });
-      const geometryExtraCentroid = features[0].geometry_extra as { centroid?: { lon: number; lat: number } };
-      expect(geometryExtraCentroid.centroid?.lon).toBeCloseTo(2.35);
-      expect(geometryExtraCentroid.centroid?.lat).toBeCloseTo(48.85);
+      expect(features[0].bbox).toStrictEqual([2.3, 48.8, 2.4, 48.9]);
+      const features0centroid = features[0] as { centroid?: { lon: number; lat: number } };
+      expect(features0centroid.centroid?.lon).toBeCloseTo(2.35);
+      expect(features0centroid.centroid?.lat).toBeCloseTo(48.85);
     });
   });
 
