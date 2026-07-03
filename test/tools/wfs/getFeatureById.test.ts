@@ -91,9 +91,24 @@ describe("Test GpfGetFeatureByIdTool", () => {
     });
   });
 
-  it("should return text content and structuredContent for http_post_request", async () => {
+  it("should return text content and structuredContent for selected properties", async () => {
     const tool = new GpfGetFeatureByIdTool();
     mockGetFeatureType.mockResolvedValue(polygonFeatureType);
+    mockFetchJSONPost.mockResolvedValue({
+      type: "FeatureCollection",
+      totalFeatures: 1,
+      numberMatched: 1,
+      numberReturned: 1,
+      timeStamp: "2026-01-01T00:00:00.000Z",
+      features: [
+        {
+          type: "Feature",
+          id: "commune.1",
+          geometry: { type: "MultiPolygon", coordinates: [] },
+          properties: { code_insee: "01001" },
+        },
+      ],
+    });
 
     const response = await tool.toolCall({
       params: {
@@ -101,7 +116,6 @@ describe("Test GpfGetFeatureByIdTool", () => {
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
           feature_id: "commune.1",
-          result_type: "http_post_request",
           select: ["code_insee"],
         },
       },
@@ -114,14 +128,12 @@ describe("Test GpfGetFeatureByIdTool", () => {
     }
     const payload = JSON.parse(textContent.text);
     expect(payload).toEqual(response.structuredContent);
-    expect(payload.result_type).toEqual("http_post_request");
-    expect(payload.http_get_url).toBeUndefined();
-    expect(payload.http_post_request).toMatchObject({
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: "",
+    expect(payload.features).toHaveLength(1);
+    expect(payload.features[0].feature_ref).toEqual({
+      typename: "ADMINEXPRESS-COG.LATEST:commune",
+      feature_id: "commune.1",
     });
-    const url = new URL(payload.http_post_request.url);
+    const url = new URL(payload.collection_url);
     expect(url.searchParams.get("featureID")).toEqual("commune.1");
     expect(url.searchParams.get("typeNames")).toEqual("ADMINEXPRESS-COG.LATEST:commune");
     expect(url.searchParams.get("exceptions")).toEqual("application/json");
@@ -129,36 +141,6 @@ describe("Test GpfGetFeatureByIdTool", () => {
     expect(url.searchParams.get("count")).toEqual("2");
   });
 
-  it("should return text content and structuredContent for http_get_url", async () => {
-    const tool = new GpfGetFeatureByIdTool();
-    mockGetFeatureType.mockResolvedValue(polygonFeatureType);
-
-    const response = await tool.toolCall({
-      params: {
-        name: "gpf_get_feature_by_id",
-        arguments: {
-          typename: "ADMINEXPRESS-COG.LATEST:commune",
-          feature_id: "commune.1",
-          result_type: "http_get_url",
-          select: ["code_insee"],
-        },
-      },
-    });
-
-    expect(response.isError).toBeUndefined();
-    const textContent = response.content[0];
-    if (textContent.type !== "text") {
-      throw new Error("expected text content");
-    }
-    const payload = JSON.parse(textContent.text);
-    expect(payload).toEqual(response.structuredContent);
-    expect(payload.result_type).toEqual("http_get_url");
-    expect(payload.http_post_request).toBeUndefined();
-    const url = new URL(payload.http_get_url);
-    expect(url.searchParams.get("featureID")).toEqual("commune.1");
-    expect(url.searchParams.get("typeNames")).toEqual("ADMINEXPRESS-COG.LATEST:commune");
-    expect(url.searchParams.get("propertyName")).toEqual("code_insee,geometrie");
-  });
 
   it("should return exactly one transformed feature for results", async () => {
     const tool = new GpfGetFeatureByIdTool();
@@ -173,6 +155,9 @@ describe("Test GpfGetFeatureByIdTool", () => {
       return {
       type: "FeatureCollection",
       totalFeatures: 1,
+      numberMatched: 1,
+      numberReturned: 1,
+      timeStamp: "2026-01-01T00:00:00.000Z",
       features: [
         {
           type: "Feature",

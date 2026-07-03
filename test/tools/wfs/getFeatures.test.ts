@@ -85,6 +85,9 @@ describe("Test GpfGetFeaturesTool", () => {
       };
     }>;
     totalFeatures: number;
+    numberMatched: number;
+    numberReturned: number;
+    timeStamp: string;
   } = {
     type: "FeatureCollection",
     features: [
@@ -98,6 +101,9 @@ describe("Test GpfGetFeaturesTool", () => {
       },
     ],
     totalFeatures: 34877,
+    numberMatched: 34877,
+    numberReturned: 1,
+    timeStamp: "2026-01-01T00:00:00.000Z",
   };
 
   function mockFeatureTypes(featureTypes: Record<string, Collection>) {
@@ -184,7 +190,13 @@ describe("Test GpfGetFeaturesTool", () => {
     expect(tool.toolDefinition.inputSchema.properties?.where).toMatchObject({
       type: "array",
     });
-    expect(tool.toolDefinition.outputSchema).toBeUndefined();
+    expect(tool.toolDefinition.outputSchema).toMatchObject({
+      type: "object",
+      properties: expect.objectContaining({
+        collection_url: expect.objectContaining({ type: "string" }),
+        features: expect.objectContaining({ type: "array" }),
+      }),
+    });
   });
 
   it("should publish an LLM-compatible input schema without composition keywords", () => {
@@ -210,12 +222,12 @@ describe("Test GpfGetFeaturesTool", () => {
     });
   });
 
-  it("should return a FeatureCollection without structuredContent for results", () => {
+  it("should return a FeatureCollection with structuredContent for results", () => {
     const tool = new RespondableGpfGetFeaturesTool();
     const response = tool.respond(featureCollection as never);
 
     expect("isError" in response).toBe(false);
-    expect(response.structuredContent).toBeUndefined();
+    expect(response.structuredContent).toEqual(featureCollection);
     expect(response.content[0]).toMatchObject({
       type: "text",
     });
@@ -232,6 +244,7 @@ describe("Test GpfGetFeaturesTool", () => {
   it("should return text content and structuredContent", async () => {
     const tool = new GpfGetFeaturesTool();
     mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
+    captureRequests(featureCollection);
 
     const response = await tool.toolCall({
       params: {
@@ -266,13 +279,13 @@ describe("Test GpfGetFeaturesTool", () => {
     const tool = new GpfGetFeaturesTool();
     mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
     const isochroneUrls = captureIsochroneRequests();
+    captureRequests(featureCollection);
 
     const response = await tool.toolCall({
       params: {
         name: "gpf_get_features",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
-          result_type: "http_post_request",
           travel_time_filter: {
             lon: 2.337306,
             lat: 48.849319,
@@ -290,16 +303,11 @@ describe("Test GpfGetFeaturesTool", () => {
     expect(isochroneUrl.searchParams.get("costType")).toEqual("time");
     expect(isochroneUrl.searchParams.get("costValue")).toEqual("15");
     expect(isochroneUrl.searchParams.get("profile")).toEqual("pedestrian");
-
-    const textContent = response.content[0];
-    if (textContent.type !== "text") {
-      throw new Error("expected text content");
-    }
-    const payload = JSON.parse(textContent.text);
-    expect(new URLSearchParams(payload.http_post_request.body).get("cql_filter")).toEqual(
+    expect(mockFetchJSONPost).toHaveBeenCalledTimes(1);
+    const sentBody = mockFetchJSONPost.mock.calls[0]?.[1] ?? "";
+    expect(new URLSearchParams(sentBody).get("cql_filter")).toEqual(
       "INTERSECTS(geometrie,SRID=4326;POLYGON((2 48,2.2 48,2.2 48.2,2 48)))",
     );
-    expect(mockFetchJSONPost).not.toHaveBeenCalled();
   });
 
   it("should return isError=true for invalid input", async () => {
@@ -383,7 +391,7 @@ describe("Test GpfGetFeaturesTool", () => {
         name: "gpf_get_features",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
-          cql_filter: "code_insee = '01001'",
+          result_type: "http_get_url",
         },
       },
     });
@@ -399,8 +407,8 @@ describe("Test GpfGetFeaturesTool", () => {
       errors: expect.arrayContaining([
         expect.objectContaining({
           code: "unknown_parameter",
-          name: "cql_filter",
-          detail: expect.stringContaining("cql_filter"),
+          name: "result_type",
+          detail: expect.stringContaining("result_type"),
         }),
       ]),
     });
@@ -575,6 +583,9 @@ describe("Test GpfGetFeaturesTool", () => {
         },
       ],
       totalFeatures: 1,
+      numberMatched: 1,
+      numberReturned: 1,
+      timeStamp: "2026-01-01T00:00:00.000Z",
     });
 
     const response = await tool.toolCall({
@@ -618,6 +629,9 @@ describe("Test GpfGetFeaturesTool", () => {
         },
       ],
       totalFeatures: 1,
+      numberMatched: 1,
+      numberReturned: 1,
+      timeStamp: "2026-01-01T00:00:00.000Z",
     });
 
     const response = await tool.toolCall({
@@ -629,19 +643,19 @@ describe("Test GpfGetFeaturesTool", () => {
             typename: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:localisant",
             feature_id: "localisant.1",
           },
-          result_type: "http_post_request",
         },
       },
     });
 
     expect(response.isError).toBeUndefined();
-    expect(requests).toHaveLength(1);
+    expect(requests).toHaveLength(2);
     const textContent = response.content[0];
     if (textContent.type !== "text") {
       throw new Error("expected text content");
     }
     const payload = JSON.parse(textContent.text);
-    expect(payload.http_post_request.body).toContain("MULTIPOINT");
+    expect(payload.features).toHaveLength(1);
+    expect(requests[1].body).toContain("MULTIPOINT");
   });
 
   it("should report missing reference features clearly for intersects_feature", async () => {

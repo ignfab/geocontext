@@ -130,6 +130,10 @@ describe("generate-mcp-docs helpers", () => {
     const markdown = renderResponseContractSection({
       name: "gpf_get_features",
     });
+
+    expect(markdown).toContain("### Réponse MCP");
+    expect(markdown).toContain("| Succès | oui |");
+    expect(markdown).not.toContain("result_type");
   });
 
   it("should document shared MCP annotations", async () => {
