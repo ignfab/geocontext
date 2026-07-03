@@ -25,7 +25,6 @@ describe("gpfGetFeatures/queryPreparation", () => {
   const baseInput: GpfGetFeaturesInput = {
     typename: "ADMINEXPRESS-COG.LATEST:commune",
     limit: 100,
-    result_type: "results",
     spatial_extras: []
   };
 
@@ -113,16 +112,6 @@ describe("gpfGetFeatures/queryPreparation", () => {
       ...baseInput,
       select: ["geometrie"],
     }, featureType)).toThrow("`select` accepte uniquement");
-  });
-
-  it("should append geometry to propertyName for HTTP preview modes when select is provided", () => {
-    const compiled = compileQueryParts({
-      ...baseInput,
-      result_type: "http_post_request",
-      select: ["code_insee", "population"],
-    }, featureType);
-
-    expect(compiled.propertyName).toEqual("code_insee,population,geometrie");
   });
 
   it("should build sortBy from structured order_by", () => {

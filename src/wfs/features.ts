@@ -27,21 +27,11 @@ import { getMatchedFeatureCount } from "./response.js";
 import type { WfsFeatureCollectionResponse } from "./types.js";
 import {
   buildMainRequest,
-  type CompiledRequest,
 } from "./request.js";
 import { attachFeatureRefs } from "./response.js";
 import type { GpfQueryFeaturesInput } from "./schema.js";
 
 // --- Types ---
-
-/**
- * Prepared request context returned once the `get_features` input has been
- * validated, compiled, and assembled into a live WFS request.
- */
-export type PreparedGetFeaturesRequest = {
-  compiled: CompiledQuery;
-  request: CompiledRequest;
-};
 
 type GeometryLike = {
   type: string;
@@ -192,7 +182,7 @@ export async function resolveSpatialFilterGeometry(
  */
 export async function prepareQueryFeaturesRequest(
   input: GpfQueryFeaturesInput
-): Promise<PreparedGetFeaturesRequest> {
+): Promise<CompiledQuery> {
   // TODO: Assess if this guard does not prevent legitimate use cases.
   ensureIntersectsFeatureTargetsOtherTypename(input);
   // Get the feature type definition from the embedded catalog to access
@@ -203,10 +193,8 @@ export async function prepareQueryFeaturesRequest(
   // Compile query fragments from the normalized input, feature type, and
   // optional resolved reference geometry.
   const compiled = compileQueryParts(input, featureType, resolvedGeometryRef);
-  // Assemble the final WFS request from the compiled fragments.
-  const request = buildMainRequest(input, compiled);
 
-  return { compiled, request };
+  return compiled;
 }
 
 // --- Execution ---
@@ -223,7 +211,8 @@ export async function prepareQueryFeaturesRequest(
  * @returns Either a hit-count payload or a transformed FeatureCollection.
  */
 export async function executeQueryFeatures(input: GpfQueryFeaturesInput) {
-  const { compiled, request } = await prepareQueryFeaturesRequest(input);
+  const compiled = await prepareQueryFeaturesRequest(input);
+  const request = buildMainRequest(input, compiled);
 
   let featureCollection: WfsFeatureCollectionResponse;
 
@@ -246,6 +235,10 @@ export async function executeQueryFeatures(input: GpfQueryFeaturesInput) {
     }
     throw error;
   }
+
+  const compiledWithGeometry = { ...compiled, propertyName: compiled.propertyNamesWithGeom };
+  const requestWithGeometry = buildMainRequest(input, compiledWithGeometry)
+  featureCollection.collection_url = requestWithGeometry.get_url; // TODO: replace with API URL
 
   if (isGetFeaturesQuery) {
     return attachFeatureRefs(featureCollection, input.typename, input.spatial_extras);

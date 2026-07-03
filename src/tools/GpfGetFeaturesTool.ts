@@ -3,20 +3,14 @@ import BaseTool from "./BaseTool.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import {
   executeQueryFeatures,
-  prepareQueryFeaturesRequest,
 } from "../wfs/features.js";
 import {
-  toWfsHttpGetUrlPayload,
-  toWfsHttpPostRequestPayload,
-} from "../wfs/request.js";
-import {
-  gpfGetFeaturesHttpGetUrlOutputSchema,
-  gpfGetFeaturesHttpPostRequestOutputSchema,
   gpfGetFeaturesInputSchema,
   gpfGetFeaturesInputObjectSchema,
   type GpfGetFeaturesInput,
   gpfGetFeaturesPublishedInputSchema,
   GPF_SPATIAL_FILTER_DOCNAMES,
+  getFeaturesOutputSchema,
 } from "../wfs/schema.js";
 import logger from "../logger.js";
 
@@ -35,7 +29,7 @@ class GpfGetFeaturesTool extends BaseTool<GpfGetFeaturesInput> {
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
   description = [
     "Interroge un type GPF et renvoie des résultats structurés.",
-    `Utiliser \`select\` pour choisir les propriétés, \`where\` pour filtrer, \`order_by\` pour trier et un filtre spatial dédié (${GPF_SPATIAL_FILTER_DOCNAMES}) pour le spatial. Avec \`result_type="http_post_request"\` ou \`result_type="http_get_url"\`, la géométrie est automatiquement ajoutée aux propriétés sélectionnées pour garantir une requête cartographiable.`,
+    `Utiliser \`select\` pour choisir les propriétés, \`where\` pour filtrer, \`order_by\` pour trier et un filtre spatial dédié (${GPF_SPATIAL_FILTER_DOCNAMES}) pour le spatial.`,
     "Exemple attributaire : `where=[{ property: \"code_insee\", operator: \"eq\", value: \"75056\" }]`.",
     "Exemple bbox : `bbox_filter={ west: 2.1, south: 48.7, east: 2.5, north: 48.9 }`.",
     "Exemple point dans géométrie : `intersects_point_filter={ lon: 2.35, lat: 48.85 }`.",
@@ -45,7 +39,9 @@ class GpfGetFeaturesTool extends BaseTool<GpfGetFeaturesInput> {
     "⚠️ Quand `typename` et `intersects_feature_filter.typename` sont identiques, utiliser `gpf_get_feature_by_id` pour récupérer exactement l'objet ciblé.",
     "**OBLIGATOIRE : toujours appeler `gpf_describe_type` avant ce tool, sauf si `gpf_describe_type` a déjà été appelé pour ce même typename dans la conversation en cours.**",
     "Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiques à chaque typename et diffèrent systématiquement des conventions habituelles (ex : pas de nom_officiel, navigabilite sans accent, etc.). Toute tentative sans appel préalable à `gpf_describe_type` **provoquera une erreur.**",
+    "Pour télécharger le fichier GeoJSON contenant la géométrie des objets, utilisez le lien renvoyé dans le champ `collection_url`",
   ].join("\n");
+  protected outputSchemaShape = getFeaturesOutputSchema;
 
   // The framework requires a plain Zod object here to publish a compatible
   // input schema. Cross-field runtime validation is applied in `execute`.
@@ -61,7 +57,7 @@ class GpfGetFeaturesTool extends BaseTool<GpfGetFeaturesInput> {
   }
 
   /**
-   * Formats compact responses (`http_post_request`, `http_get_url`) into `structuredContent`.
+   * Formats compact responses into `structuredContent`.
    * Full result sets are still delegated to the framework default behavior.
    *
    * @param data Raw execution result returned by the tool implementation.
@@ -71,28 +67,12 @@ class GpfGetFeaturesTool extends BaseTool<GpfGetFeaturesInput> {
     if (
       typeof data === "object" &&
       data !== null &&
-      "result_type" in data &&
-      data.result_type === "http_post_request"
+      "type" in data &&
+      data.type === "FeatureCollection"
     ) {
-      const payload = gpfGetFeaturesHttpPostRequestOutputSchema.parse(data);
-
       return {
-        content: [{ type: "text" as const, text: JSON.stringify(payload) }],
-        structuredContent: payload,
-      };
-    }
-
-    if (
-      typeof data === "object" &&
-      data !== null &&
-      "result_type" in data &&
-      data.result_type === "http_get_url"
-    ) {
-      const payload = gpfGetFeaturesHttpGetUrlOutputSchema.parse(data);
-
-      return {
-        content: [{ type: "text" as const, text: JSON.stringify(payload) }],
-        structuredContent: payload,
+        content: [{ type: "text" as const, text: JSON.stringify(data) }],
+        structuredContent: data as Record<string, unknown>,
       };
     }
 
@@ -114,13 +94,6 @@ class GpfGetFeaturesTool extends BaseTool<GpfGetFeaturesInput> {
     logger.info(`[tool] execute ${this.name} ...`, {
       input: validatedInput
     });
-
-    if (validatedInput.result_type === "http_post_request" || validatedInput.result_type === "http_get_url") {
-      const { request } = await prepareQueryFeaturesRequest(validatedInput);
-      return validatedInput.result_type === "http_post_request"
-        ? toWfsHttpPostRequestPayload(request)
-        : toWfsHttpGetUrlPayload(request);
-    }
 
     return executeQueryFeatures(validatedInput);
   }

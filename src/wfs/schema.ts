@@ -10,7 +10,7 @@
 import { z } from "zod";
 
 import { generatePublishedInputSchema } from "../helpers/jsonSchema.js";
-import { lonSchema, latSchema } from "../helpers/schemas.js";
+import { featureRefSchema, lonSchema, latSchema } from "../helpers/schemas.js";
 import { TRAVEL_TIME_MAX_MINUTES, TRAVEL_TIME_PROFILES } from "../gpf/navigation.js";
 
 // --- Shared Constants ---
@@ -91,30 +91,6 @@ const travelTimeFilterSchema = z.object({
     .describe("Mode de déplacement utilisé pour calculer l'isochrone (`car` ou `pedestrian`)."),
 }).strict().describe("Filtre les objets situés dans une zone atteignable en un temps donné depuis un point.");
 
-// --- Shared Compact Outputs ---
-
-const wfsHttpPostRequestOutputSchema = z.object({
-  result_type: z.literal("http_post_request").describe("Indique que la réponse contient une requête POST robuste à exécuter par un client HTTP."),
-  http_post_request: z.object({
-    method: z.literal("POST").describe("Méthode HTTP à utiliser."),
-    url: z.string().url().describe("L'URL de la requête."),
-    headers: z.object({
-      "Content-Type": z.literal("application/x-www-form-urlencoded").describe("Type de contenu du corps POST."),
-    }).strict().describe("En-têtes HTTP à envoyer avec la requête POST."),
-    body: z.string().describe("Corps de la requête POST, encodé en `application/x-www-form-urlencoded`."),
-  }).strict().describe("Requête HTTP POST complète à utiliser pour appeler directement le service pourvoyeur."),
-});
-
-const wfsHttpGetUrlOutputSchema = z.object({
-  result_type: z.literal("http_get_url").describe("Indique que la réponse contient l'URL GET équivalente."),
-  http_get_url: z.string().url().describe("URL GET complète avec tous les paramètres. Utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant; pour une exécution HTTP robuste, préférer `http_post_request` car l'URL renvoyée ici peut être trop longue."),
-});
-
-export const gpfGetFeaturesHttpPostRequestOutputSchema = wfsHttpPostRequestOutputSchema;
-export const gpfGetFeaturesHttpGetUrlOutputSchema = wfsHttpGetUrlOutputSchema;
-export const gpfGetFeatureByIdHttpPostRequestOutputSchema = wfsHttpPostRequestOutputSchema;
-export const gpfGetFeatureByIdHttpGetUrlOutputSchema = wfsHttpGetUrlOutputSchema;
-
 // --- Shared GPF Inputs ---
 
 const gpfTypenameInputSchema = z.object({
@@ -171,20 +147,26 @@ function assertSpatialFilterExclusion(input : Record<string, unknown>, ctx : z.R
   }
 }
 
-type GeometryExtraRefinementInput = {
-  spatial_extras: z.output<typeof gpfGetFeaturesInputObjectSchema>["spatial_extras"];
-  result_type: z.output<typeof gpfGetFeaturesInputObjectSchema>["result_type"];
-};
+// --- Shared GPF outputs ---
 
-function assertGeometryExtraQuery(input: GeometryExtraRefinementInput, ctx: z.RefinementCtx) {
-  if (input.spatial_extras.length > 0 && input.result_type !== "results") {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["spatial_extras"],
-      message: "`spatial_extras` ne peut être utilisé qu'avec `result_type=results`. Dans les cas `http_post_request` et `http_get_url`, la géométrie complète est renvoyée par la requête."
-    });
-  }
-}
+const featureResultSchema = z
+  .object({
+    type: z.literal("Feature").describe("Le type GeoJSON."),
+    id: z.string().describe("L'identifiant de l'objet."),
+    feature_ref: featureRefSchema.describe("Référence GPF réutilisable, notamment avec `gpf_get_features` et `intersects_feature_filter`."),
+    properties: z.object({}).catchall(z.unknown()).describe("Les attributs de l'objet."), // in the catchall
+    geometry: z.null().describe("La géométrie de l'objet, non incluse. Celle-ci est accessible au lien `collection_url`."),
+  })
+  .catchall(z.unknown());
+
+const featureCollectionCommonSchema = z.object({
+  type: z.literal("FeatureCollection").describe("Le type GeoJSON."),
+  totalFeatures: z.number().describe("Le nombre de résultats correspondant à la requête sur le serveur."),
+  numberMatched: z.number().describe("Le nombre de résultats correspondant à la requête sur le serveur."), // FIXME: put the right definition
+  numberReturned: z.number().describe("Le nombre de résultats renvoyés, au maximum `limit`"),
+  timeStamp: z.date().describe("La date et l'heure de la requête."),
+  collection_url: z.string().url().describe("Le lien vers le GeoJSON qui inclut les géométries."),
+});
 
 // --- Shared GPF types ---
 
@@ -207,7 +189,7 @@ export const gpfGetFeaturesInputObjectSchema = gpfTypenameInputSchema
     .array(z.string().trim().min(1))
     .min(1)
     .optional()
-    .describe("Liste des propriétés non géométriques à renvoyer pour chaque objet. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`."),
+    .describe("Liste des attributs (à l'exception de la géométrie) à renvoyer pour chaque objet. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`."),
   }))
   .merge(gpfWhereFilterInputSchema)
   .merge(gpfSpatialFilterInputSchema)
@@ -219,10 +201,6 @@ export const gpfGetFeaturesInputObjectSchema = gpfTypenameInputSchema
     .max(MAX_LIMIT)
     .default(DEFAULT_LIMIT)
     .describe(`Nombre maximum d'objets à renvoyer. Valeur par défaut : ${DEFAULT_LIMIT}. Maximum : ${MAX_LIMIT}.`),
-  result_type: z
-    .enum(["results", "http_post_request", "http_get_url"])
-    .default("results")
-    .describe("`results` renvoie une FeatureCollection avec les propriétés attributaires uniquement — **les géométries ne sont pas incluses**, ce mode ne peut donc pas être utilisé directement pour cartographier. `http_post_request` renvoie une requête POST robuste à exécuter directement. `http_get_url` renvoie l'URL GET équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant. Avec `http_post_request` ou `http_get_url`, la géométrie est automatiquement ajoutée aux propriétés du `select` pour garantir l'affichage cartographique."),
   order_by: z
     .array(orderBySchema)
     .min(1)
@@ -234,7 +212,12 @@ export const gpfGetFeaturesInputObjectSchema = gpfTypenameInputSchema
 
 export const gpfGetFeaturesInputSchema = gpfGetFeaturesInputObjectSchema
   .superRefine(assertSpatialFilterExclusion)
-  .superRefine(assertGeometryExtraQuery);
+
+export const getFeaturesOutputSchema = featureCollectionCommonSchema
+  .merge(z.object({
+    features: z.array(featureResultSchema).describe("La liste des objets correspondant à la requête."),
+  })
+);
 
 // --- `gpf_get_features` Types ---
 
@@ -286,21 +269,24 @@ export const gpfGetFeatureByIdInputObjectSchema = z.object({
     .trim()
     .min(1, "le feature_id ne doit pas être vide")
     .describe("Identifiant GPF exact de l'objet à récupérer, par exemple `commune.8952`."),
-  result_type: z
-    .enum(["results", "http_post_request", "http_get_url"])
-    .default("results")
-    .describe("`results` renvoie une FeatureCollection normalisée avec exactement un objet et le choix de `spatial_extras` en guise d'information géométrique. `http_post_request` renvoie une requête POST robuste à exécuter directement. `http_get_url` renvoie l'URL GET équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant."),
   select: z
     .array(z.string().trim().min(1))
     .min(1)
     .optional()
-    .describe("Liste des propriétés non géométriques à renvoyer. Utiliser `gpf_wfs_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`."),
+    .describe("Liste des attributs (à l'exception de la géométrie) à renvoyer.  Utiliser `gpf_wfs_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`."),
 })
   .merge(gpfGeometryExtraInputSchema)
   .strict();
 
-export const gpfGetFeatureByIdInputSchema = gpfGetFeatureByIdInputObjectSchema
-  .superRefine(assertGeometryExtraQuery);
+export const gpfGetFeatureByIdInputSchema = gpfGetFeatureByIdInputObjectSchema;
+
+export const getFeatureByIdOutputSchema = featureCollectionCommonSchema
+  .merge(z.object({
+    features: z.array(featureResultSchema).max(1).describe("La liste avec l'objet exact de la requête."),
+  })
+);
+
+// --- `gpf_get_feature_by_id` Types ---
 
 export type GpfGetFeatureByIdInput = z.infer<typeof gpfGetFeatureByIdInputSchema>;
 

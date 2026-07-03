@@ -133,7 +133,7 @@ export function requireSingleFeatureById(
 // --- Results Execution ---
 
 /**
- * Executes the structured WFS by-id flow for `result_type="results"`.
+ * Executes the structured WFS by-id flow for.
  *
  * This function:
  * - loads the feature type from the embedded catalog
@@ -166,12 +166,20 @@ export async function executeGetFeatureById(
   });
   const firstFeature = requireSingleFeatureById(featureCollection, input);
 
+  const propertyNameWithGeometry = buildPropertyName(featureType, {
+    includeGeometry: true,
+    select: input.select,
+  });
+  const requestWithGeometry = buildGetFeatureByIdRequest(input.typename, input.feature_id, propertyNameWithGeometry);
+  const url = requestWithGeometry.get_url // TODO: replace with API URL
+
   const singleFeatureCollection = {
     ...featureCollection,
     features: [firstFeature],
     totalFeatures: 1,
     numberReturned: 1,
     numberMatched: 1,
+    collection_url: url,
   };
 
   return attachFeatureRefs(singleFeatureCollection, input.typename, input.spatial_extras);

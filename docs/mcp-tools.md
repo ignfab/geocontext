@@ -1092,7 +1092,7 @@ Lecture d’un objet GPF par identifiant
 Récupère exactement un objet GPF à partir de `typename` et `feature_id`, sans filtre attributaire ni spatial.
 Ce tool est le chemin robuste quand vous disposez déjà d'une `feature_ref { typename, feature_id }` issue d'un autre tool (`adminexpress`, `cadastre`, `urbanisme`, `assiette_sup`, `gpf_get_features`).
 Le contrat garantit une cardinalité stricte : 0 résultat ou plusieurs résultats provoquent une erreur explicite.
-Utiliser `result_type="http_post_request"` pour récupérer une requête POST robuste, ou `result_type="http_get_url"` pour récupérer l'URL GET équivalente et l'utiliser ou la visualiser dans un outil la supportant.
+Pour télécharger le fichier GeoJSON contenant la géométrie de l'objet, utilisez le lien renvoyé dans le champ `collection_url`
 ```
 
 ### Schéma d’entrée
@@ -1100,8 +1100,7 @@ Utiliser `result_type="http_post_request"` pour récupérer une requête POST ro
 | Champ | Type | Requis | Description |
 | --- | --- | --- | --- |
 | `feature_id` | string | oui | Identifiant GPF exact de l'objet à récupérer, par exemple `commune.8952`. |
-| `result_type` | string (enum) | non | `results` renvoie une FeatureCollection normalisée avec exactement un objet et le choix de `spatial_extras` en guise d'information géométrique. `http_post_request` renvoie une requête POST robuste à exécuter directement. `http_get_url` renvoie l'URL GET équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant. Valeurs : results, http_post_request, http_get_url. Valeur par défaut : results. |
-| `select` | array | non | Liste des propriétés non géométriques à renvoyer. Utiliser `gpf_wfs_describe_type` pour connaître les noms exacts disponibles. Exemple : `["code_insee", "nom_officiel"]`. |
+| `select` | array | non | Liste des attributs (à l'exception de la géométrie) à renvoyer.  Utiliser `gpf_wfs_describe_type` pour connaître les noms exacts disponibles. Exemple : `["code_insee", "nom_officiel"]`. |
 | `spatial_extras` | array | non | Éléments calculés depuis la géométrie à renvoyer pour `result_type=results`. Peut inclure `centroid` et `bbox`, aucun par défaut. Valeur par défaut : []. |
 | `typename` | string | oui | Nom exact du type GPF à interroger, par exemple `ADMINEXPRESS-COG.LATEST:commune`. |
 
@@ -1122,16 +1121,6 @@ Utiliser `result_type="http_post_request"` pour récupérer une requête POST ro
       "minLength": 1,
       "description": "Identifiant GPF exact de l'objet à récupérer, par exemple `commune.8952`."
     },
-    "result_type": {
-      "type": "string",
-      "enum": [
-        "results",
-        "http_post_request",
-        "http_get_url"
-      ],
-      "default": "results",
-      "description": "`results` renvoie une FeatureCollection normalisée avec exactement un objet et le choix de `spatial_extras` en guise d'information géométrique. `http_post_request` renvoie une requête POST robuste à exécuter directement. `http_get_url` renvoie l'URL GET équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant."
-    },
     "select": {
       "type": "array",
       "items": {
@@ -1139,7 +1128,7 @@ Utiliser `result_type="http_post_request"` pour récupérer une requête POST ro
         "minLength": 1
       },
       "minItems": 1,
-      "description": "Liste des propriétés non géométriques à renvoyer. Utiliser `gpf_wfs_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`."
+      "description": "Liste des attributs (à l'exception de la géométrie) à renvoyer.  Utiliser `gpf_wfs_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`."
     },
     "spatial_extras": {
       "type": "array",
@@ -1165,17 +1154,121 @@ Utiliser `result_type="http_post_request"` pour récupérer une requête POST ro
 
 </details>
 
-### Sortie
+### Schéma de sortie
 
-Aucun `outputSchema` unique n'est exposé. La sortie dépend de `result_type` (`results`, `http_post_request`, `http_get_url`).
+| Champ | Type | Requis | Description |
+| --- | --- | --- | --- |
+| `collection_url` | string | oui | Le lien vers le GeoJSON qui inclut les géométries. |
+| `features` | array | oui | La liste avec l'objet exact de la requête. |
+| `numberMatched` | number | oui | Le nombre de résultats correspondant à la requête sur le serveur. |
+| `numberReturned` | number | oui | Le nombre de résultats renvoyés, au maximum `limit` |
+| `timeStamp` | string | oui | La date et l'heure de la requête. |
+| `totalFeatures` | number | oui | Le nombre de résultats correspondant à la requête sur le serveur. |
+| `type` | string | oui | Le type GeoJSON. |
+
+<details>
+<summary>Schéma de sortie brut</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "description": "Le type GeoJSON."
+    },
+    "totalFeatures": {
+      "type": "number",
+      "description": "Le nombre de résultats correspondant à la requête sur le serveur."
+    },
+    "numberMatched": {
+      "type": "number",
+      "description": "Le nombre de résultats correspondant à la requête sur le serveur."
+    },
+    "numberReturned": {
+      "type": "number",
+      "description": "Le nombre de résultats renvoyés, au maximum `limit`"
+    },
+    "timeStamp": {
+      "type": "string",
+      "description": "La date et l'heure de la requête."
+    },
+    "collection_url": {
+      "type": "string",
+      "description": "Le lien vers le GeoJSON qui inclut les géométries.",
+      "format": "uri"
+    },
+    "features": {
+      "type": "array",
+      "description": "La liste avec l'objet exact de la requête.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Le type GeoJSON."
+          },
+          "id": {
+            "type": "string",
+            "description": "L'identifiant de l'objet."
+          },
+          "feature_ref": {
+            "type": "object",
+            "description": "Référence GPF réutilisable, notamment avec `gpf_get_features` et `intersects_feature_filter`.",
+            "properties": {
+              "typename": {
+                "type": "string",
+                "description": "Le `typename` GPF réutilisable pour une requête ultérieure."
+              },
+              "feature_id": {
+                "type": "string",
+                "description": "L'identifiant GPF réutilisable du feature."
+              }
+            },
+            "required": [
+              "typename",
+              "feature_id"
+            ]
+          },
+          "properties": {
+            "type": "object",
+            "description": "Les attributs de l'objet.",
+            "properties": {}
+          },
+          "geometry": {
+            "type": "null",
+            "description": "La géométrie de l'objet, non incluse. Celle-ci est accessible au lien `collection_url`."
+          }
+        },
+        "required": [
+          "type",
+          "id",
+          "feature_ref",
+          "properties",
+          "geometry"
+        ]
+      }
+    }
+  },
+  "required": [
+    "type",
+    "totalFeatures",
+    "numberMatched",
+    "numberReturned",
+    "timeStamp",
+    "collection_url",
+    "features"
+  ]
+}
+```
+
+</details>
 
 ### Réponse MCP
 
 | Cas | `content` | `structuredContent` | Relation entre `content` et `structuredContent` |
 | --- | --- | --- | --- |
-| Succès `result_type="results"` | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
-| Succès `result_type="http_post_request"` | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
-| Succès `result_type="http_get_url"` | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
+| Succès | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
 | Erreur | oui | oui | `content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`. |
 
 ## `gpf_get_features`
@@ -1190,7 +1283,7 @@ Lecture d’objets GPF
 
 ```
 Interroge un type GPF et renvoie des résultats structurés.
-Utiliser `select` pour choisir les propriétés, `where` pour filtrer, `order_by` pour trier et un filtre spatial dédié (`bbox_filter`, `intersects_point_filter`, `dwithin_point_filter`, `intersects_feature_filter` ou `travel_time_filter`) pour le spatial. Avec `result_type="http_post_request"` ou `result_type="http_get_url"`, la géométrie est automatiquement ajoutée aux propriétés sélectionnées pour garantir une requête cartographiable.
+Utiliser `select` pour choisir les propriétés, `where` pour filtrer, `order_by` pour trier et un filtre spatial dédié (`bbox_filter`, `intersects_point_filter`, `dwithin_point_filter`, `intersects_feature_filter` ou `travel_time_filter`) pour le spatial.
 Exemple attributaire : `where=[{ property: "code_insee", operator: "eq", value: "75056" }]`.
 Exemple bbox : `bbox_filter={ west: 2.1, south: 48.7, east: 2.5, north: 48.9 }`.
 Exemple point dans géométrie : `intersects_point_filter={ lon: 2.35, lat: 48.85 }`.
@@ -1200,6 +1293,7 @@ Exemple temps de trajet : `travel_time_filter={ lon: 2.35, lat: 48.85, minutes: 
 ⚠️ Quand `typename` et `intersects_feature_filter.typename` sont identiques, utiliser `gpf_get_feature_by_id` pour récupérer exactement l'objet ciblé.
 **OBLIGATOIRE : toujours appeler `gpf_describe_type` avant ce tool, sauf si `gpf_describe_type` a déjà été appelé pour ce même typename dans la conversation en cours.**
 Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiques à chaque typename et diffèrent systématiquement des conventions habituelles (ex : pas de nom_officiel, navigabilite sans accent, etc.). Toute tentative sans appel préalable à `gpf_describe_type` **provoquera une erreur.**
+Pour télécharger le fichier GeoJSON contenant la géométrie des objets, utilisez le lien renvoyé dans le champ `collection_url`
 ```
 
 ### Schéma d’entrée
@@ -1212,8 +1306,7 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
 | `intersects_point_filter` | object | non | Filtre spatial par intersection avec un point. Exclusif avec les autres filtres spatiaux. |
 | `limit` | integer | non | Nombre maximum d'objets à renvoyer. Valeur par défaut : 100. Maximum : 5000. Valeur par défaut : 100. |
 | `order_by` | array | non | Liste ordonnée des critères de tri. |
-| `result_type` | string (enum) | non | `results` renvoie une FeatureCollection avec les propriétés attributaires uniquement — **les géométries ne sont pas incluses**, ce mode ne peut donc pas être utilisé directement pour cartographier. `http_post_request` renvoie une requête POST robuste à exécuter directement. `http_get_url` renvoie l'URL GET équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant. Avec `http_post_request` ou `http_get_url`, la géométrie est automatiquement ajoutée aux propriétés du `select` pour garantir l'affichage cartographique. Valeurs : results, http_post_request, http_get_url. Valeur par défaut : results. |
-| `select` | array | non | Liste des propriétés non géométriques à renvoyer pour chaque objet. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles. Exemple : `["code_insee", "nom_officiel"]`. |
+| `select` | array | non | Liste des attributs (à l'exception de la géométrie) à renvoyer pour chaque objet. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles. Exemple : `["code_insee", "nom_officiel"]`. |
 | `spatial_extras` | array | non | Éléments calculés depuis la géométrie à renvoyer pour `result_type=results`. Peut inclure `centroid` et `bbox`, aucun par défaut. Valeur par défaut : []. |
 | `travel_time_filter` | object | non | Filtre spatial par temps de trajet depuis un point (`profile` voiture ou piéton). Exclusif avec les autres filtres spatiaux. |
 | `typename` | string | oui | Nom exact du type GPF à interroger, par exemple `BDTOPO_V3:batiment`. Utiliser `gpf_search_types` pour trouver un `typename` valide. |
@@ -1238,7 +1331,7 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
         "minLength": 1
       },
       "minItems": 1,
-      "description": "Liste des propriétés non géométriques à renvoyer pour chaque objet. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`."
+      "description": "Liste des attributs (à l'exception de la géométrie) à renvoyer pour chaque objet. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`."
     },
     "where": {
       "type": "array",
@@ -1443,16 +1536,6 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
       "default": 100,
       "description": "Nombre maximum d'objets à renvoyer. Valeur par défaut : 100. Maximum : 5000."
     },
-    "result_type": {
-      "type": "string",
-      "enum": [
-        "results",
-        "http_post_request",
-        "http_get_url"
-      ],
-      "default": "results",
-      "description": "`results` renvoie une FeatureCollection avec les propriétés attributaires uniquement — **les géométries ne sont pas incluses**, ce mode ne peut donc pas être utilisé directement pour cartographier. `http_post_request` renvoie une requête POST robuste à exécuter directement. `http_get_url` renvoie l'URL GET équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant. Avec `http_post_request` ou `http_get_url`, la géométrie est automatiquement ajoutée aux propriétés du `select` pour garantir l'affichage cartographique."
-    },
     "order_by": {
       "type": "array",
       "items": {
@@ -1505,17 +1588,121 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
 
 </details>
 
-### Sortie
+### Schéma de sortie
 
-Aucun `outputSchema` unique n'est exposé. La sortie dépend de `result_type` (`results`, `http_post_request`, `http_get_url`).
+| Champ | Type | Requis | Description |
+| --- | --- | --- | --- |
+| `collection_url` | string | oui | Le lien vers le GeoJSON qui inclut les géométries. |
+| `features` | array | oui | La liste des objets correspondant à la requête. |
+| `numberMatched` | number | oui | Le nombre de résultats correspondant à la requête sur le serveur. |
+| `numberReturned` | number | oui | Le nombre de résultats renvoyés, au maximum `limit` |
+| `timeStamp` | string | oui | La date et l'heure de la requête. |
+| `totalFeatures` | number | oui | Le nombre de résultats correspondant à la requête sur le serveur. |
+| `type` | string | oui | Le type GeoJSON. |
+
+<details>
+<summary>Schéma de sortie brut</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "description": "Le type GeoJSON."
+    },
+    "totalFeatures": {
+      "type": "number",
+      "description": "Le nombre de résultats correspondant à la requête sur le serveur."
+    },
+    "numberMatched": {
+      "type": "number",
+      "description": "Le nombre de résultats correspondant à la requête sur le serveur."
+    },
+    "numberReturned": {
+      "type": "number",
+      "description": "Le nombre de résultats renvoyés, au maximum `limit`"
+    },
+    "timeStamp": {
+      "type": "string",
+      "description": "La date et l'heure de la requête."
+    },
+    "collection_url": {
+      "type": "string",
+      "description": "Le lien vers le GeoJSON qui inclut les géométries.",
+      "format": "uri"
+    },
+    "features": {
+      "type": "array",
+      "description": "La liste des objets correspondant à la requête.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Le type GeoJSON."
+          },
+          "id": {
+            "type": "string",
+            "description": "L'identifiant de l'objet."
+          },
+          "feature_ref": {
+            "type": "object",
+            "description": "Référence GPF réutilisable, notamment avec `gpf_get_features` et `intersects_feature_filter`.",
+            "properties": {
+              "typename": {
+                "type": "string",
+                "description": "Le `typename` GPF réutilisable pour une requête ultérieure."
+              },
+              "feature_id": {
+                "type": "string",
+                "description": "L'identifiant GPF réutilisable du feature."
+              }
+            },
+            "required": [
+              "typename",
+              "feature_id"
+            ]
+          },
+          "properties": {
+            "type": "object",
+            "description": "Les attributs de l'objet.",
+            "properties": {}
+          },
+          "geometry": {
+            "type": "null",
+            "description": "La géométrie de l'objet, non incluse. Celle-ci est accessible au lien `collection_url`."
+          }
+        },
+        "required": [
+          "type",
+          "id",
+          "feature_ref",
+          "properties",
+          "geometry"
+        ]
+      }
+    }
+  },
+  "required": [
+    "type",
+    "totalFeatures",
+    "numberMatched",
+    "numberReturned",
+    "timeStamp",
+    "collection_url",
+    "features"
+  ]
+}
+```
+
+</details>
 
 ### Réponse MCP
 
 | Cas | `content` | `structuredContent` | Relation entre `content` et `structuredContent` |
 | --- | --- | --- | --- |
-| Succès `result_type="results"` | oui | non | `content[0].text` est la FeatureCollection stringifiée ; aucun `structuredContent` n'est ajouté dans ce mode. |
-| Succès `result_type="http_post_request"` | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
-| Succès `result_type="http_get_url"` | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
+| Succès | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
 | Erreur | oui | oui | `content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`. |
 
 ## `gpf_count_features`

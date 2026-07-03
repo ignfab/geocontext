@@ -23,65 +23,6 @@ export type CompiledRequest = WfsRequestTransport & {
   get_url: string;
 };
 
-export type WfsHttpPostRequestPayload = {
-  result_type: "http_post_request";
-  http_post_request: {
-    method: "POST";
-    url: string;
-    headers: { "Content-Type": "application/x-www-form-urlencoded" };
-    body: string;
-  };
-};
-
-export type WfsHttpGetUrlPayload = {
-  result_type: "http_get_url";
-  http_get_url: string;
-};
-
-// --- Request Payload Mapping ---
-
-/**
- * Builds a full URL from base endpoint and query parameters.
- *
- * @param url Base WFS endpoint URL.
- * @param query Query-string parameters sent with the request.
- * @returns URL with encoded query-string parameters.
- */
-function buildUrlWithQuery(url: string, query: Record<string, string>) {
-  return `${url}?${new URLSearchParams(query).toString()}`;
-}
-
-/**
- * Maps a compiled WFS request to the compact MCP POST payload.
- *
- * @param request Compiled request ready to be executed against the WFS service.
- * @returns A normalized POST payload exposed by MCP tools.
- */
-export function toWfsHttpPostRequestPayload(request: CompiledRequest): WfsHttpPostRequestPayload {
-  return {
-    result_type: "http_post_request",
-    http_post_request: {
-      method: request.method,
-      url: buildUrlWithQuery(request.url, request.query),
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: request.body,
-    },
-  };
-}
-
-/**
- * Maps a compiled WFS request to the compact MCP GET URL payload.
- *
- * @param request Compiled request ready to be serialized as an equivalent GET URL.
- * @returns A normalized GET URL payload exposed by MCP tools.
- */
-export function toWfsHttpGetUrlPayload(request: CompiledRequest): WfsHttpGetUrlPayload {
-  return {
-    result_type: "http_get_url",
-    http_get_url: request.get_url,
-  };
-}
-
 // --- Request Assembly Helpers ---
 
 /**
@@ -100,8 +41,7 @@ function buildBody(cqlFilter?: string) {
 /**
  * Builds the equivalent GET URL variant of the request.
  *
- * Consumers should prefer `http_post_request` for robust direct WFS execution
- * when this URL is very long or contains a large `cql_filter`.
+ * TODO: replace this by the API URL
  *
  * @param url Base WFS endpoint URL.
  * @param query Query-string parameters sent with the request.

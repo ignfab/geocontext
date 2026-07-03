@@ -193,62 +193,6 @@ export function renderResponseContractSection(definition) {
     relation: "`content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`.",
   };
 
-  if (definition.name === "gpf_get_features") {
-    return [
-      "### Réponse MCP",
-      "",
-      renderResponseContractTable([
-        {
-          caseName: 'Succès `result_type="results"`',
-          content: "oui",
-          structuredContent: "non",
-          relation: "`content[0].text` est la FeatureCollection stringifiée ; aucun `structuredContent` n'est ajouté dans ce mode.",
-        },
-        {
-          caseName: 'Succès `result_type="http_post_request"`',
-          content: "oui",
-          structuredContent: "oui",
-          relation: "`content[0].text` est `JSON.stringify(structuredContent)`.",
-        },
-        {
-          caseName: 'Succès `result_type="http_get_url"`',
-          content: "oui",
-          structuredContent: "oui",
-          relation: "`content[0].text` est `JSON.stringify(structuredContent)`.",
-        },
-        errorRow,
-      ]),
-    ].join("\n");
-  }
-
-  if (definition.name === "gpf_get_feature_by_id") {
-    return [
-      "### Réponse MCP",
-      "",
-      renderResponseContractTable([
-        {
-          caseName: 'Succès `result_type="results"`',
-          content: "oui",
-          structuredContent: "oui",
-          relation: "`content[0].text` est `JSON.stringify(structuredContent)`.",
-        },
-        {
-          caseName: 'Succès `result_type="http_post_request"`',
-          content: "oui",
-          structuredContent: "oui",
-          relation: "`content[0].text` est `JSON.stringify(structuredContent)`.",
-        },
-        {
-          caseName: 'Succès `result_type="http_get_url"`',
-          content: "oui",
-          structuredContent: "oui",
-          relation: "`content[0].text` est `JSON.stringify(structuredContent)`.",
-        },
-        errorRow,
-      ]),
-    ].join("\n");
-  }
-
   return [
     "### Réponse MCP",
     "",
@@ -286,13 +230,7 @@ export function renderOutputSection(definition) {
     ].join("\n");
   }
 
-  const modes =
-    definition.inputSchema?.properties?.result_type?.enum?.map((value) => `\`${String(value)}\``) ??
-    [];
-
-  const note = modes.length
-    ? `Aucun \`outputSchema\` unique n'est exposé. La sortie dépend de \`result_type\` (${modes.join(", ")}).`
-    : "Aucun `outputSchema` unique n'est exposé. La sortie est gérée par la sérialisation par défaut du framework ou par un formatage de réponse spécifique.";
+  const note = "Aucun `outputSchema` unique n'est exposé. La sortie est gérée par la sérialisation par défaut du framework ou par un formatage de réponse spécifique.";
 
   return ["### Sortie", "", note].join("\n");
 }

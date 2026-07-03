@@ -9,20 +9,13 @@
 import BaseTool from "./BaseTool.js";
 
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
-import { buildPropertyName, executeGetFeatureById } from "../wfs/byId.js";
-import { wfsClient } from "../wfs/execution.js";
+import { executeGetFeatureById } from "../wfs/byId.js";
 import {
-  buildGetFeatureByIdRequest,
-  toWfsHttpGetUrlPayload,
-  toWfsHttpPostRequestPayload,
-} from "../wfs/request.js";
-import {
-  gpfGetFeatureByIdHttpGetUrlOutputSchema,
-  gpfGetFeatureByIdHttpPostRequestOutputSchema,
   gpfGetFeatureByIdInputObjectSchema,
   gpfGetFeatureByIdInputSchema,
   type GpfGetFeatureByIdInput,
   gpfGetFeatureByIdPublishedInputSchema,
+  getFeatureByIdOutputSchema,
 } from "../wfs/schema.js";
 import logger from "../logger.js";
 
@@ -36,8 +29,9 @@ class GpfGetFeatureByIdTool extends BaseTool<GpfGetFeatureByIdInput> {
     "Récupère exactement un objet GPF à partir de `typename` et `feature_id`, sans filtre attributaire ni spatial.",
     "Ce tool est le chemin robuste quand vous disposez déjà d'une `feature_ref { typename, feature_id }` issue d'un autre tool (`adminexpress`, `cadastre`, `urbanisme`, `assiette_sup`, `gpf_get_features`).",
     "Le contrat garantit une cardinalité stricte : 0 résultat ou plusieurs résultats provoquent une erreur explicite.",
-    "Utiliser `result_type=\"http_post_request\"` pour récupérer une requête POST robuste, ou `result_type=\"http_get_url\"` pour récupérer l'URL GET équivalente et l'utiliser ou la visualiser dans un outil la supportant."
+    "Pour télécharger le fichier GeoJSON contenant la géométrie de l'objet, utilisez le lien renvoyé dans le champ `collection_url`",
   ].join("\n");
+  protected outputSchemaShape = getFeatureByIdOutputSchema;
 
   // `schema` remains the runtime validation source, while `inputSchema`
   // publishes the MCP-facing variant expected by clients.
@@ -55,7 +49,7 @@ class GpfGetFeatureByIdTool extends BaseTool<GpfGetFeatureByIdInput> {
   }
 
   /**
-   * Formats compact responses (`http_post_request`, `http_get_url`, `results`) into `structuredContent`.
+   * Formats compact responses into `structuredContent`.
    *
    * We intentionally do not expose a single `outputSchemaShape` for the tool as
    * a whole: the `results` path returns a generic FeatureCollection whose
@@ -69,34 +63,6 @@ class GpfGetFeatureByIdTool extends BaseTool<GpfGetFeatureByIdInput> {
     if (
       typeof data === "object" &&
       data !== null &&
-      "result_type" in data &&
-      data.result_type === "http_post_request"
-    ) {
-      const payload = gpfGetFeatureByIdHttpPostRequestOutputSchema.parse(data);
-
-      return {
-        content: [{ type: "text" as const, text: JSON.stringify(payload) }],
-        structuredContent: payload,
-      };
-    }
-
-    if (
-      typeof data === "object" &&
-      data !== null &&
-      "result_type" in data &&
-      data.result_type === "http_get_url"
-    ) {
-      const payload = gpfGetFeatureByIdHttpGetUrlOutputSchema.parse(data);
-
-      return {
-        content: [{ type: "text" as const, text: JSON.stringify(payload) }],
-        structuredContent: payload,
-      };
-    }
-
-    if (
-      typeof data === "object" &&
-      data !== null &&
       "type" in data &&
       data.type === "FeatureCollection"
     ) {
@@ -107,7 +73,7 @@ class GpfGetFeatureByIdTool extends BaseTool<GpfGetFeatureByIdInput> {
     }
 
     throw new Error(
-      "Réponse interne inattendue pour gpf_get_feature_by_id : le résultat devrait être une requête HTTP, une URL GET ou une FeatureCollection.",
+      "Réponse interne inattendue pour gpf_get_feature_by_id : le résultat devrait être une FeatureCollection.",
     );
   }
 
@@ -123,21 +89,6 @@ class GpfGetFeatureByIdTool extends BaseTool<GpfGetFeatureByIdInput> {
     logger.info(`[tool] execute ${this.name} ...`, {
       input: validatedInput
     });
-
-    if (validatedInput.result_type === "http_post_request" || validatedInput.result_type === "http_get_url") {
-      // HTTP preview modes are handled here because they return a preview payload,
-      // not the actual by-id WFS result.
-      const featureType = await wfsClient.getFeatureType(validatedInput.typename);
-      const propertyName = buildPropertyName(featureType, {
-        includeGeometry: true,
-        select: validatedInput.select,
-      });
-      const request = buildGetFeatureByIdRequest(validatedInput.typename, validatedInput.feature_id, propertyName);
-      return validatedInput.result_type === "http_post_request"
-        ? toWfsHttpPostRequestPayload(request)
-        : toWfsHttpGetUrlPayload(request);
-    }
-
     return executeGetFeatureById({
       typename: input.typename,
       feature_id: input.feature_id,
