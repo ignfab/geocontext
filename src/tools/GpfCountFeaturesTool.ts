@@ -37,8 +37,8 @@ class GpfCountFeaturesTool extends BaseTool<GpfCountFeaturesInput> {
     "Exemple réutilisation : `intersects_feature_filter={ typename, feature_id }` avec `typename` et `feature_id` issus d'une `feature_ref`.",
     "Exemple temps de trajet : `travel_time_filter={ lon: 2.35, lat: 48.85, minutes: 15, profile: \"pedestrian\" }` pour les objets atteignables en 15 minutes à pied depuis ce point.",
     "⚠️ Quand `typename` et `intersects_feature_filter.typename` sont identiques, utiliser `gpf_get_feature_by_id` pour récupérer exactement l'objet ciblé.",
-    "**OBLIGATOIRE : toujours appeler `gpf_describe_type` avant ce tool, sauf si `gpf_describe_type` a déjà été appelé pour ce même typename dans la conversation en cours.**",
-    "Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiques à chaque typename et diffèrent systématiquement des conventions habituelles (ex : pas de nom_officiel, navigabilite sans accent, etc.). Toute tentative sans appel préalable à `gpf_describe_type` **provoquera une erreur.**",
+    "**OBLIGATOIRE dès que `where` est utilisé : toujours appeler `gpf_describe_type` avant ce tool, sauf si `gpf_describe_type` a déjà été appelé pour ce même typename dans la conversation en cours.** Un comptage par `typename` et filtre spatial seul (sans `where`) ne référence aucun nom de propriété et ne nécessite pas cet appel préalable.",
+    "Les noms de propriétés utilisés dans `where` **ne peuvent pas être devinés** : ils sont spécifiques à chaque typename et diffèrent systématiquement des conventions habituelles (ex : pas de nom_officiel, navigabilite sans accent, etc.). Toute clause `where` sans appel préalable à `gpf_describe_type` **provoquera une erreur.**",
   ].join("\n");
   protected outputSchemaShape = gpfCountFeaturesOutputSchema;
 
