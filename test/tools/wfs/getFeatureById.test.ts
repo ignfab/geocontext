@@ -73,7 +73,7 @@ describe("Test GpfGetFeatureByIdTool", () => {
             type: "string",
           },
           default: [],
-          description: "Éléments calculés depuis la géométrie pour `result_type=results`. Peut inclure `centroid` et `bbox`, aucun par défaut.",
+          description: "Éléments calculés depuis la géométrie à renvoyer pour `result_type=results`. Peut inclure `centroid` et `bbox`, aucun par défaut.",
         },
         result_type: {
           type: "string",
