@@ -82,7 +82,7 @@ describe("GetFeatureById (integration)", () => {
     const result = await callTool<GetFeatureByIdResult>(getHandle().client, "gpf_get_feature_by_id", {
       typename: featureRef.typename,
       feature_id: featureRef.feature_id,
-      geometry_extra: ["centroid", "bbox"]
+      spatial_extras: ["centroid", "bbox"]
     });
 
     expectFeatureCollectionWithFeatures(result, 1);
@@ -104,12 +104,12 @@ describe("GetFeatureById (integration)", () => {
     );
   }, INTEGRATION_CONFIG.timeout);
 
-  it("should return an error for when trying to combine `geometry_extra` with a `result_type` other than `request`", async () => {
+  it("should return an error for when trying to combine `spatial_extras` with a `result_type` other than `request`", async () => {
     await expectToolCallToThrow(
       callTool(getHandle().client, "gpf_get_feature_by_id", {
         typename: featureRef.typename,
         feature_id: featureRef.feature_id,
-        geometry_extra: ["centroid"],
+        spatial_extras: ["centroid"],
         result_type: "http_post_request"
       }),
     );

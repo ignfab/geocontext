@@ -30,10 +30,15 @@ export const GPF_SPATIAL_FILTER_DOCNAMES = GPF_GET_FEATURES_SPATIAL_FILTER_KEYS
   .map((name) => `\`${name}\``)
   .join(", ")
   .replace(/, ([^,]*)$/, ' ou $1')
-export const GPF_GET_FEATURES_GEOMETRY_EXTRA = [
+
+export const GPF_GET_FEATURES_SPATIAL_EXTRAS = [
   "centroid",
   "bbox"
 ] as const;
+export const GPF_SPATIAL_EXTRAS_DOCNAMES = GPF_GET_FEATURES_SPATIAL_EXTRAS
+  .map((name) => `\`${name}\``)
+  .join(", ")
+  .replace(/, ([^,]*)$/, ' et $1')
 
 // --- Shared Clauses ---
 
@@ -147,11 +152,11 @@ const gpfSpatialFilterInputSchema = z.object({
 })
 
 const gpfGeometryExtraInputSchema = z.object({
-  geometry_extra: z
-    .array(z.enum(GPF_GET_FEATURES_GEOMETRY_EXTRA))
+  spatial_extras: z
+    .array(z.enum(GPF_GET_FEATURES_SPATIAL_EXTRAS))
     .default([])
     .transform((val) => [...new Set(val)])
-    .describe("Éléments de géométrie à renvoyer pour `result_type=results`. Peut inclure `centroid` et `bbox`, aucun par défaut."),
+    .describe(`Éléments calculés depuis la géométrie à renvoyer pour \`result_type=results\`. Peut inclure ${GPF_SPATIAL_EXTRAS_DOCNAMES}, aucun par défaut.`),
 })
 
 function assertSpatialFilterExclusion(input : Record<string, unknown>, ctx : z.RefinementCtx) {
@@ -167,16 +172,16 @@ function assertSpatialFilterExclusion(input : Record<string, unknown>, ctx : z.R
 }
 
 type GeometryExtraRefinementInput = {
-  geometry_extra: z.output<typeof gpfGetFeaturesInputObjectSchema>["geometry_extra"];
+  spatial_extras: z.output<typeof gpfGetFeaturesInputObjectSchema>["spatial_extras"];
   result_type: z.output<typeof gpfGetFeaturesInputObjectSchema>["result_type"];
 };
 
 function assertGeometryExtraQuery(input: GeometryExtraRefinementInput, ctx: z.RefinementCtx) {
-  if (input.geometry_extra.length > 0 && input.result_type !== "results") {
+  if (input.spatial_extras.length > 0 && input.result_type !== "results") {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      path: ["geometry_extra"],
-      message: "`geometry_extra` ne peut être utilisé qu'avec `result_type=results`. Dans les cas `http_post_request` et `http_get_url`, la géométrie complète est renvoyée par la requête."
+      path: ["spatial_extras"],
+      message: "`spatial_extras` ne peut être utilisé qu'avec `result_type=results`. Dans les cas `http_post_request` et `http_get_url`, la géométrie complète est renvoyée par la requête."
     });
   }
 }
@@ -284,7 +289,7 @@ export const gpfGetFeatureByIdInputObjectSchema = z.object({
   result_type: z
     .enum(["results", "http_post_request", "http_get_url"])
     .default("results")
-    .describe("`results` renvoie une FeatureCollection normalisée avec exactement un objet et le choix de `geometry_extra` en guise d'information géométrique. `http_post_request` renvoie une requête POST robuste à exécuter directement. `http_get_url` renvoie l'URL GET équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant."),
+    .describe("`results` renvoie une FeatureCollection normalisée avec exactement un objet et le choix de `spatial_extras` en guise d'information géométrique. `http_post_request` renvoie une requête POST robuste à exécuter directement. `http_get_url` renvoie l'URL GET équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant."),
   select: z
     .array(z.string().trim().min(1))
     .min(1)

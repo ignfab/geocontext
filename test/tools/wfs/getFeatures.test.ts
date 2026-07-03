@@ -412,7 +412,7 @@ describe("Test GpfGetFeaturesTool", () => {
     });
   });
 
-  it("should reject geometry_extra with http_get_url result_type", async () => {
+  it("should reject spatial_extras with http_get_url result_type", async () => {
     const tool = new GpfGetFeaturesTool();
     const response = await tool.toolCall({
       params: {
@@ -420,7 +420,7 @@ describe("Test GpfGetFeaturesTool", () => {
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
           result_type: "http_get_url",
-          geometry_extra: ["bbox"],
+          spatial_extras: ["bbox"],
         },
       },
     });
@@ -430,12 +430,12 @@ describe("Test GpfGetFeaturesTool", () => {
     if (textContent.type !== "text") {
       throw new Error("expected text content");
     }
-    expect(textContent.text).toContain("geometry_extra");
+    expect(textContent.text).toContain("spatial_extras");
     expect(response.structuredContent).toMatchObject({
       type: "urn:geocontext:problem:invalid-tool-params",
       errors: expect.arrayContaining([
         expect.objectContaining({
-          name: "geometry_extra",
+          name: "spatial_extras",
           code: "custom",
         }),
       ]),
@@ -623,7 +623,7 @@ describe("Test GpfGetFeaturesTool", () => {
     expect(results.features[0].geometry_name).toBeUndefined();
   });
 
-  it("should include the bbox when asked in geometry_extra", async () => {
+  it("should include the bbox when asked in spatial_extras", async () => {
     const tool = new GpfGetFeaturesTool();
     mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
     const requests = captureRequests({
@@ -649,7 +649,7 @@ describe("Test GpfGetFeaturesTool", () => {
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
           select: ["code_insee"],
-          geometry_extra: ["bbox"],
+          spatial_extras: ["bbox"],
           limit: 1,
         },
       },

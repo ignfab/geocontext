@@ -58,12 +58,12 @@ describe("GetFeatures (integration)", () => {
     );
   }, INTEGRATION_CONFIG.timeout);
 
-  it("should include the bbox when asked in geometry_extra", async () => {
+  it("should include the bbox when asked in spatial_extras", async () => {
     const result = await callTool<GetFeaturesResult>(getHandle().client, "gpf_get_features", {
       typename: "BDTOPO_V3:commune",
       where: [{ property: "code_insee", operator: "eq", value: "75056" }],
       select: ["code_insee", "nom_officiel"],
-      geometry_extra: ["bbox"],
+      spatial_extras: ["bbox"],
       limit: 1,
     });
 

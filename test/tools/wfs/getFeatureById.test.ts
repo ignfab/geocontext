@@ -66,20 +66,20 @@ describe("Test GpfGetFeatureByIdTool", () => {
           minLength: 1,
           description: "Identifiant GPF exact de l'objet à récupérer, par exemple `commune.8952`.",
         },
-        geometry_extra: {
+        spatial_extras: {
           type: "array",
           items: {
             enum: ["centroid", "bbox"],
             type: "string",
           },
           default: [],
-          description: "Éléments de géométrie à renvoyer pour `result_type=results`. Peut inclure `centroid` et `bbox`, aucun par défaut.",
+          description: "Éléments calculés depuis la géométrie pour `result_type=results`. Peut inclure `centroid` et `bbox`, aucun par défaut.",
         },
         result_type: {
           type: "string",
           enum: ["results", "http_post_request", "http_get_url"],
           default: "results",
-          description: "`results` renvoie une FeatureCollection normalisée avec exactement un objet et le choix de `geometry_extra` en guise d'information géométrique. `http_post_request` renvoie une requête POST robuste à exécuter directement. `http_get_url` renvoie l'URL GET équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant.",
+          description: "`results` renvoie une FeatureCollection normalisée avec exactement un objet et le choix de `spatial_extras` en guise d'information géométrique. `http_post_request` renvoie une requête POST robuste à exécuter directement. `http_get_url` renvoie l'URL GET équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant.",
         },
         select: {
           type: "array",
@@ -224,7 +224,7 @@ describe("Test GpfGetFeatureByIdTool", () => {
     expect(results.features[0].geometry_name).toBeUndefined();
   });
 
-  it("should include the bbox when asked in geometry_extra", async () => {
+  it("should include the bbox when asked in spatial_extras", async () => {
     const tool = new GpfGetFeatureByIdTool();
     const requests: Array<{ url: string; query: Record<string, string> }> = [];
     mockGetFeatureType.mockResolvedValue(polygonFeatureType);
@@ -262,7 +262,7 @@ describe("Test GpfGetFeatureByIdTool", () => {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
           feature_id: "commune.1",
           select: ["code_insee"],
-          geometry_extra: ["bbox"],
+          spatial_extras: ["bbox"],
         },
       },
     });
@@ -429,7 +429,7 @@ describe("Test GpfGetFeatureByIdTool", () => {
     });
   });
 
-  it("should reject geometry_extra with http_get_url result_type", async () => {
+  it("should reject spatial_extras with http_get_url result_type", async () => {
     const tool = new GpfGetFeatureByIdTool();
 
     const response = await tool.toolCall({
@@ -438,7 +438,7 @@ describe("Test GpfGetFeatureByIdTool", () => {
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
           feature_id: "commune.1",
-          geometry_extra: ["bbox"],
+          spatial_extras: ["bbox"],
           result_type: "http_get_url",
         },
       },
@@ -449,12 +449,12 @@ describe("Test GpfGetFeatureByIdTool", () => {
     if (textContent.type !== "text") {
       throw new Error("expected text content");
     }
-    expect(textContent.text).toContain("geometry_extra");
+    expect(textContent.text).toContain("spatial_extras");
     expect(response.structuredContent).toMatchObject({
       type: "urn:geocontext:problem:invalid-tool-params",
       errors: expect.arrayContaining([
         expect.objectContaining({
-          name: "geometry_extra",
+          name: "spatial_extras",
           code: "custom",
         }),
       ]),

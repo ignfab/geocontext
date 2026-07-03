@@ -142,7 +142,7 @@ class GpfGetFeatureByIdTool extends BaseTool<GpfGetFeatureByIdInput> {
       typename: input.typename,
       feature_id: input.feature_id,
       select: input.select,
-      geometry_extra: validatedInput.geometry_extra,
+      spatial_extras: validatedInput.spatial_extras,
     });
   }
 }

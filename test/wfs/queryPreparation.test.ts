@@ -26,7 +26,7 @@ describe("gpfGetFeatures/queryPreparation", () => {
     typename: "ADMINEXPRESS-COG.LATEST:commune",
     limit: 100,
     result_type: "results",
-    geometry_extra: []
+    spatial_extras: []
   };
 
   it("should compile where clauses", () => {

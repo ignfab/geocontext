@@ -87,7 +87,7 @@ describe("wfs_engine/response", () => {
       expect(features[0].bbox).toStrictEqual([2.3, 48.8, 2.4, 48.9]);
     });
 
-    it("should return centroid and bbox in geometry_extra when requested", () => {
+    it("should return centroid and bbox in spatial_extras when requested", () => {
       const result = transformFeatureCollectionResponse({
         type: "FeatureCollection",
         features: [

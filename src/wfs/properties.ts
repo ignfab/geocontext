@@ -119,7 +119,7 @@ export function validateSelectProperty(featureType: Collection, geometryProperty
  * - when `select` is omitted and `result_type` is `results`, every non-geometric property is returned
  * - when `select` is provided, each property is validated against the embedded catalog
  * - when `result_type` is an HTTP preview mode, the geometry column is appended to the requested selection
- * - when `result_type` is `results` and `geometry_extra` is non-empty, the geometry column is also appended so centroid/bbox can be derived
+ * - when `result_type` is `results` and `spatial_extras` is non-empty, the geometry column is also appended so elements of GPF_GET_FEATURES_SPATIAL_EXTRAS (bbox, centroid, ...) can be derived
  *
  * @param featureType Feature type definition loaded from the embedded catalog.
  * @param geometryProperty Geometry property already resolved for the feature type.
@@ -133,7 +133,7 @@ export function buildSelectList(
 ) {
   const shouldIncludeGeometry =
     (input.result_type === "http_post_request" || input.result_type === "http_get_url") ||
-    (input.result_type === "results" && (input.geometry_extra ?? []).length > 0);
+    (input.result_type === "results" && (input.spatial_extras ?? []).length > 0);
 
   // If `select` is specified, only the requested properties are returned
   // after validation against the embedded catalog.
@@ -142,7 +142,7 @@ export function buildSelectList(
       validateSelectProperty(featureType, geometryProperty, propertyName),
     );
 
-    // Include geometry when requested by output mode or by geometry_extra.
+    // Include geometry when requested by output mode or by spatial_extras.
     if (shouldIncludeGeometry) {
       return [...selectedProperties, geometryProperty.name];
     }
