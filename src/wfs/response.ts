@@ -12,37 +12,38 @@ import { bbox } from "@turf/bbox";
 import { AllGeoJSON } from "@turf/helpers";
 
 
-function isGeoJson(value: unknown): value is AllGeoJSON {
-  return typeof value === "object" && value !== null;
-}
-
 function deriveGeometry(geometry: unknown, geometry_extra: string[] = []) {
-  if (geometry_extra.length === 0 || !isGeoJson(geometry)) {
+  if (geometry_extra.length === 0) {
     return null;
   }
 
+  const geo = geometry as AllGeoJSON;
   const ret : Record<string, unknown> = {};
 
   if (geometry_extra.includes("centroid")) {
     try {
-      const centr = centroid(geometry).geometry.coordinates;
+      const centr = centroid(geo).geometry.coordinates;
       ret.centroid = {
         lon: centr[0],
         lat: centr[1],
       };
-    } catch {}
+    } catch {
+      ret.centroid = null
+    }
   }
 
   if (geometry_extra.includes("bbox")) {
     try {
-      const bb = bbox(geometry);
+      const bb = bbox(geo);
       ret.bbox = {
         west: bb[0],
         south: bb[1],
         east: bb[2],
         north: bb[3],
       };
-    } catch {}
+    } catch {
+      ret.bbox = null
+    }
   }
 
   return ret;
