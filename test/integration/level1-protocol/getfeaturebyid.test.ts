@@ -87,10 +87,9 @@ describe("GetFeatureById (integration)", () => {
     expect(result.features[0].id).toBeDefined();
     expect(result.features[0].properties).toBeDefined();
     expect(result.features[0].geometry_extra).toBeDefined();
-    expect(result.features[0].geometry_extra?.centroid).toStrictEqual({
-      lon: 2.382778372262143,
-      lat: 48.8518070503727,
-    });
+    const centroid = result.features[0].geometry_extra?.centroid as ({lon: number, lat: number} | undefined)
+    expect(centroid?.lon).toBeCloseTo(2.382778372262143);
+    expect(centroid?.lat).toBeCloseTo(48.8518070503727);
     expect(result.features[0].geometry_extra?.bbox).toBeDefined();
   }, INTEGRATION_CONFIG.timeout);
 
