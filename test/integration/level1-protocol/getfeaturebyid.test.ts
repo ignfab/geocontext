@@ -35,11 +35,13 @@ interface GetFeatureByIdResult {
     type: string;
     id: string;
     properties: Record<string, unknown>;
-    geometry?: unknown;
+    geometry: null;
     feature_ref?: {
       typename: string;
       feature_id: string;
     };
+    bbox?: GeoJSON.BBox;
+    centroid?: { lon: number, lat: number };
   }>;
   totalFeatures?: number;
   numberMatched?: number;
@@ -72,6 +74,25 @@ describe("GetFeatureById (integration)", () => {
     expect(result.features.length).toBe(1);
     expect(result.features[0].id).toBeDefined();
     expect(result.features[0].properties).toBeDefined();
+    expect(result.features[0].bbox).toBeUndefined();
+    expect(result.features[0].centroid).toBeUndefined();
+  }, INTEGRATION_CONFIG.timeout);
+
+  it("should retrieve a centroid and a bbox", async () => {
+    const result = await callTool<GetFeatureByIdResult>(getHandle().client, "gpf_get_feature_by_id", {
+      typename: featureRef.typename,
+      feature_id: featureRef.feature_id,
+      spatial_extras: ["centroid", "bbox"]
+    });
+
+    expectFeatureCollectionWithFeatures(result, 1);
+    expect(result.features.length).toBe(1);
+    expect(result.features[0].id).toBeDefined();
+    expect(result.features[0].properties).toBeDefined();
+    expect(result.features[0].bbox).toBeDefined();
+    expect(result.features[0].centroid).toBeDefined();
+    expect(result.features[0].centroid?.lon).toBeCloseTo(2.382778372262143);
+    expect(result.features[0].centroid?.lat).toBeCloseTo(48.8518070503727);
   }, INTEGRATION_CONFIG.timeout);
 
   it("should return an error for invalid typename", async () => {
@@ -79,6 +100,17 @@ describe("GetFeatureById (integration)", () => {
       callTool(getHandle().client, "gpf_get_feature_by_id", {
         typename: "INVALID:type",
         feature_id: "nonexistent",
+      }),
+    );
+  }, INTEGRATION_CONFIG.timeout);
+
+  it("should return an error for when trying to combine `spatial_extras` with a `result_type` other than `request`", async () => {
+    await expectToolCallToThrow(
+      callTool(getHandle().client, "gpf_get_feature_by_id", {
+        typename: featureRef.typename,
+        feature_id: featureRef.feature_id,
+        spatial_extras: ["centroid"],
+        result_type: "http_post_request"
       }),
     );
   }, INTEGRATION_CONFIG.timeout);

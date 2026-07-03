@@ -1100,8 +1100,9 @@ Utiliser `result_type="http_post_request"` pour récupérer une requête POST ro
 | Champ | Type | Requis | Description |
 | --- | --- | --- | --- |
 | `feature_id` | string | oui | Identifiant GPF exact de l'objet à récupérer, par exemple `commune.8952`. |
-| `result_type` | string (enum) | non | `results` renvoie une FeatureCollection normalisée avec exactement un objet. `http_post_request` renvoie une requête POST robuste à exécuter directement. `http_get_url` renvoie l'URL GET équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant. Valeurs : results, http_post_request, http_get_url. Valeur par défaut : results. |
-| `select` | array | non | Liste des propriétés non géométriques à renvoyer. Quand `result_type="http_post_request"` ou `result_type="http_get_url"`, la géométrie est automatiquement ajoutée. |
+| `result_type` | string (enum) | non | `results` renvoie une FeatureCollection normalisée avec exactement un objet et le choix de `spatial_extras` en guise d'information géométrique. `http_post_request` renvoie une requête POST robuste à exécuter directement. `http_get_url` renvoie l'URL GET équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant. Valeurs : results, http_post_request, http_get_url. Valeur par défaut : results. |
+| `select` | array | non | Liste des propriétés non géométriques à renvoyer. Utiliser `gpf_wfs_describe_type` pour connaître les noms exacts disponibles. Exemple : `["code_insee", "nom_officiel"]`. |
+| `spatial_extras` | array | non | Éléments calculés depuis la géométrie à renvoyer pour `result_type=results`. Peut inclure `centroid` et `bbox`, aucun par défaut. Valeur par défaut : []. |
 | `typename` | string | oui | Nom exact du type GPF à interroger, par exemple `ADMINEXPRESS-COG.LATEST:commune`. |
 
 <details>
@@ -1129,7 +1130,7 @@ Utiliser `result_type="http_post_request"` pour récupérer une requête POST ro
         "http_get_url"
       ],
       "default": "results",
-      "description": "`results` renvoie une FeatureCollection normalisée avec exactement un objet. `http_post_request` renvoie une requête POST robuste à exécuter directement. `http_get_url` renvoie l'URL GET équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant."
+      "description": "`results` renvoie une FeatureCollection normalisée avec exactement un objet et le choix de `spatial_extras` en guise d'information géométrique. `http_post_request` renvoie une requête POST robuste à exécuter directement. `http_get_url` renvoie l'URL GET équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant."
     },
     "select": {
       "type": "array",
@@ -1138,7 +1139,19 @@ Utiliser `result_type="http_post_request"` pour récupérer une requête POST ro
         "minLength": 1
       },
       "minItems": 1,
-      "description": "Liste des propriétés non géométriques à renvoyer. Quand `result_type=\"http_post_request\"` ou `result_type=\"http_get_url\"`, la géométrie est automatiquement ajoutée."
+      "description": "Liste des propriétés non géométriques à renvoyer. Utiliser `gpf_wfs_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`."
+    },
+    "spatial_extras": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "centroid",
+          "bbox"
+        ]
+      },
+      "default": [],
+      "description": "Éléments calculés depuis la géométrie à renvoyer pour `result_type=results`. Peut inclure `centroid` et `bbox`, aucun par défaut."
     }
   },
   "required": [
@@ -1201,6 +1214,7 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
 | `order_by` | array | non | Liste ordonnée des critères de tri. |
 | `result_type` | string (enum) | non | `results` renvoie une FeatureCollection avec les propriétés attributaires uniquement — **les géométries ne sont pas incluses**, ce mode ne peut donc pas être utilisé directement pour cartographier. `http_post_request` renvoie une requête POST robuste à exécuter directement. `http_get_url` renvoie l'URL GET équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant. Avec `http_post_request` ou `http_get_url`, la géométrie est automatiquement ajoutée aux propriétés du `select` pour garantir l'affichage cartographique. Valeurs : results, http_post_request, http_get_url. Valeur par défaut : results. |
 | `select` | array | non | Liste des propriétés non géométriques à renvoyer pour chaque objet. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles. Exemple : `["code_insee", "nom_officiel"]`. |
+| `spatial_extras` | array | non | Éléments calculés depuis la géométrie à renvoyer pour `result_type=results`. Peut inclure `centroid` et `bbox`, aucun par défaut. Valeur par défaut : []. |
 | `travel_time_filter` | object | non | Filtre spatial par temps de trajet depuis un point (`profile` voiture ou piéton). Exclusif avec les autres filtres spatiaux. |
 | `typename` | string | oui | Nom exact du type GPF à interroger, par exemple `BDTOPO_V3:batiment`. Utiliser `gpf_search_types` pour trouver un `typename` valide. |
 | `where` | array | non | Clauses de filtre attributaire, combinées avec `AND`. |
@@ -1467,6 +1481,18 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
       },
       "minItems": 1,
       "description": "Liste ordonnée des critères de tri."
+    },
+    "spatial_extras": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "centroid",
+          "bbox"
+        ]
+      },
+      "default": [],
+      "description": "Éléments calculés depuis la géométrie à renvoyer pour `result_type=results`. Peut inclure `centroid` et `bbox`, aucun par défaut."
     }
   },
   "required": [

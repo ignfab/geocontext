@@ -65,6 +65,50 @@ describe("wfs_engine/response", () => {
         geometry: null,
       });
     });
+
+    it("should return a GeometryCollection with bbox when only bbox is requested", () => {
+      const result = transformFeatureCollectionResponse({
+        type: "FeatureCollection",
+        features: [
+          {
+            id: "commune.1",
+            geometry: {
+              type: "Polygon",
+              coordinates: [[[2.3, 48.8], [2.4, 48.8], [2.4, 48.9], [2.3, 48.9], [2.3, 48.8]]],
+            },
+            geometry_name: "geometrie",
+            properties: { code_insee: "94080" },
+          },
+        ],
+      }, ["bbox"]);
+
+      const features = getFeatures(result);
+
+      expect(features[0].bbox).toStrictEqual([2.3, 48.8, 2.4, 48.9]);
+    });
+
+    it("should return centroid and bbox in spatial_extras when requested", () => {
+      const result = transformFeatureCollectionResponse({
+        type: "FeatureCollection",
+        features: [
+          {
+            id: "commune.1",
+            geometry: {
+              type: "Polygon",
+              coordinates: [[[2.3, 48.8], [2.4, 48.8], [2.4, 48.9], [2.3, 48.9], [2.3, 48.8]]],
+            },
+            geometry_name: "geometrie",
+            properties: { code_insee: "94080" },
+          },
+        ],
+      }, ["centroid", "bbox"]);
+
+      const features = getFeatures(result);
+      expect(features[0].bbox).toStrictEqual([2.3, 48.8, 2.4, 48.9]);
+      const features0centroid = features[0] as { centroid?: { lon: number; lat: number } };
+      expect(features0centroid.centroid?.lon).toBeCloseTo(2.35);
+      expect(features0centroid.centroid?.lat).toBeCloseTo(48.85);
+    });
   });
 
   // --- attachFeatureRefs ---

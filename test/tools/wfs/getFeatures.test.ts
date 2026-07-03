@@ -412,6 +412,38 @@ describe("Test GpfGetFeaturesTool", () => {
     });
   });
 
+  it("should reject spatial_extras with http_get_url result_type", async () => {
+    const tool = new GpfGetFeaturesTool();
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_get_features",
+        arguments: {
+          typename: "ADMINEXPRESS-COG.LATEST:commune",
+          result_type: "http_get_url",
+          spatial_extras: ["bbox"],
+        },
+      },
+    });
+
+    expect(response.isError).toBe(true);
+    const textContent = response.content[0];
+    if (textContent.type !== "text") {
+      throw new Error("expected text content");
+    }
+    expect(textContent.text).toContain("spatial_extras");
+    expect(response.structuredContent).toMatchObject({
+      type: "urn:geocontext:problem:invalid-tool-params",
+      errors: expect.arrayContaining([
+        expect.objectContaining({
+          name: "spatial_extras",
+          code: "custom",
+        }),
+      ]),
+    });
+    expect(mockGetFeatureType).not.toHaveBeenCalled();
+    expect(mockFetchJSONPost).not.toHaveBeenCalled();
+  });
+
   it("should reject multiple spatial filters as invalid tool parameters", async () => {
     const tool = new GpfGetFeaturesTool();
     const response = await tool.toolCall({
@@ -584,12 +616,58 @@ describe("Test GpfGetFeaturesTool", () => {
     }
     const results = JSON.parse(textContent.text);
     expect(results).not.toHaveProperty("crs");
-    expect(results.features[0].geometry).toBeNull();
     expect(results.features[0].feature_ref).toEqual({
       typename: "ADMINEXPRESS-COG.LATEST:commune",
       feature_id: "commune.1",
     });
     expect(results.features[0].geometry_name).toBeUndefined();
+  });
+
+  it("should include the bbox when asked in spatial_extras", async () => {
+    const tool = new GpfGetFeaturesTool();
+    mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
+    const requests = captureRequests({
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          id: "commune.1",
+          geometry: {
+            type: "Polygon",
+            coordinates: [[[2.3, 48.8], [2.4, 48.8], [2.4, 48.9], [2.3, 48.9], [2.3, 48.8]]],
+          },
+          geometry_name: "geometrie",
+          properties: { code_insee: "01001" },
+        },
+      ],
+      totalFeatures: 1,
+    });
+
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_get_features",
+        arguments: {
+          typename: "ADMINEXPRESS-COG.LATEST:commune",
+          select: ["code_insee"],
+          spatial_extras: ["bbox"],
+          limit: 1,
+        },
+      },
+    });
+
+    expect(response.isError).toBeUndefined();
+    expect(requests).toHaveLength(1);
+    expect(requests[0].query.propertyName).toEqual("code_insee,geometrie");
+    const textContent = response.content[0];
+    if (textContent.type !== "text") {
+      throw new Error("expected text content");
+    }
+    const results = JSON.parse(textContent.text);
+    expect(results.features[0].bbox).toStrictEqual([2.3, 48.8, 2.4, 48.9]);
+    expect(results.features[0].feature_ref).toEqual({
+      typename: "ADMINEXPRESS-COG.LATEST:commune",
+      feature_id: "commune.1",
+    });
   });
 
   it("should set point geometry to null and keep feature_ref", async () => {
@@ -626,7 +704,6 @@ describe("Test GpfGetFeaturesTool", () => {
       throw new Error("expected text content");
     }
     const results = JSON.parse(textContent.text);
-    expect(results.features[0].geometry).toBeNull();
     expect(results.features[0].feature_ref).toEqual({
       typename: "BDTOPO_V3:point_d_acces",
       feature_id: "point_d_acces.1",

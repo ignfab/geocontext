@@ -19,11 +19,13 @@ interface GetFeaturesResult {
     type: string;
     id: string;
     properties: Record<string, unknown>;
-    geometry?: unknown;
+    geometry: null;
     feature_ref?: {
       typename: string;
       feature_id: string;
     };
+    bbox?: GeoJSON.BBox;
+    centroid?: { lon: number, lat: number };
   }>;
   totalFeatures?: number;
   numberMatched?: number;
@@ -54,5 +56,22 @@ describe("GetFeatures (integration)", () => {
         limit: 1,
       }),
     );
+  }, INTEGRATION_CONFIG.timeout);
+
+  it("should include the bbox when asked in spatial_extras", async () => {
+    const result = await callTool<GetFeaturesResult>(getHandle().client, "gpf_get_features", {
+      typename: "BDTOPO_V3:commune",
+      where: [{ property: "code_insee", operator: "eq", value: "75056" }],
+      select: ["code_insee", "nom_officiel"],
+      spatial_extras: ["bbox"],
+      limit: 1,
+    });
+
+    expectFeatureCollectionWithFeatures(result);
+
+    const first = result.features[0];
+    expect(first.bbox).toBeDefined();
+    expect((first.bbox as GeoJSON.BBox)[0]).toBeCloseTo(2.22421717);
+    expect(first.centroid).toBeUndefined();
   }, INTEGRATION_CONFIG.timeout);
 });
