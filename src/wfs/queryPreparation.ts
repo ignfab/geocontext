@@ -67,6 +67,7 @@ export type CompiledQuery = {
   geometryProperty: CollectionProperty;
   cqlFilter?: string;
   propertyName?: string;
+  propertyNamesWithGeom?: string;
   sortBy?: string;
 };
 
@@ -229,12 +230,16 @@ export function compileQueryParts(
     ? input.order_by.map((clause) => compileOrderByClause(featureType, geometryProperty, clause)).join(",")
     : undefined;
 
-  const propertyNames = isGetFeaturesQuery ? buildSelectList(featureType, geometryProperty, input) : [];
+  const propertyNames = isGetFeaturesQuery ? buildSelectList(featureType, geometryProperty, input) : {
+    selection: [],
+    withGeometry: [],
+  };
 
   return {
     geometryProperty,
     cqlFilter: fragments.length > 0 ? fragments.join(" AND ") : undefined,
-    propertyName: propertyNames.length > 0 ? propertyNames.join(",") : undefined,
+    propertyName: propertyNames.selection.length > 0 ? propertyNames.selection.join(",") : undefined,
+    propertyNamesWithGeom: propertyNames.withGeometry.length > 0 ? propertyNames.withGeometry.join(",") : undefined,
     sortBy,
   };
 }

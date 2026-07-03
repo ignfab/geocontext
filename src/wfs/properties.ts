@@ -113,58 +113,42 @@ export function validateSelectProperty(featureType: Collection, geometryProperty
 // --- Property Selection ---
 
 /**
- * Builds the list of property names to return according to `select` and `result_type`.
+ * Builds the list of property names to return according to `select`.
  *
  * Note that:
- * - when `select` is omitted and `result_type` is `results`, every non-geometric property is returned
+ * - when `select` is omitted, every non-geometric property is returned
  * - when `select` is provided, each property is validated against the embedded catalog
- * - when `result_type` is an HTTP preview mode, the geometry column is appended to the requested selection
- * - when `result_type` is `results` and `spatial_extras` is non-empty, the geometry column is also appended so elements of GPF_GET_FEATURES_SPATIAL_EXTRAS (bbox, centroid, ...) can be derived
  *
  * @param featureType Feature type definition loaded from the embedded catalog.
  * @param geometryProperty Geometry property already resolved for the feature type.
  * @param input Normalized tool input.
- * @returns The list of property names to expose in the WFS `propertyName` parameter.
+ * @returns The list of property names to expose in the WFS `propertyName` parameter, and the same list including the geometry
  */
 export function buildSelectList(
   featureType: Collection,
   geometryProperty: CollectionProperty,
   input: GpfGetFeaturesInput,
 ) {
-  const shouldIncludeGeometry =
-    (input.result_type === "http_post_request" || input.result_type === "http_get_url") ||
-    (input.result_type === "results" && (input.spatial_extras ?? []).length > 0);
-
-  // If `select` is specified, only the requested properties are returned
-  // after validation against the embedded catalog.
-  if (input.select && input.select.length > 0) {
-    const selectedProperties = input.select.map((propertyName) =>
+  const shouldIncludeGeometry = (input.spatial_extras ?? []).length > 0;
+  const hasExplicitSelect = Boolean(input.select && input.select.length > 0);
+  const baseSelection = hasExplicitSelect
+    ? input.select!.map((propertyName) =>
       validateSelectProperty(featureType, geometryProperty, propertyName),
-    );
-
-    // Include geometry when requested by output mode or by spatial_extras.
-    if (shouldIncludeGeometry) {
-      return [...selectedProperties, geometryProperty.name];
-    }
-
-    return selectedProperties;
-  }
-
-  // If `select` is omitted and `result_type="results"`, return every
-  // non-geometric property from the feature type.
-  if (input.result_type === "results") {
-    const nonGeometryProperties = featureType.properties
+    )
+    : featureType.properties
       .filter((property: CollectionProperty) => !property.defaultCrs)
       .map((property: CollectionProperty) => property.name);
 
-    if (shouldIncludeGeometry) {
-      return [...nonGeometryProperties, geometryProperty.name];
-    }
+  const selection = shouldIncludeGeometry
+    ? [...baseSelection, geometryProperty.name]
+    : baseSelection;
 
-    return nonGeometryProperties;
-  }
+  const withGeometry = hasExplicitSelect || shouldIncludeGeometry
+    ? [...baseSelection, geometryProperty.name]
+    : []; // empty list means include everything
 
-  // If `select` is omitted and `result_type` is an HTTP preview mode,
-  // do not send any `propertyName` selection.
-  return [];
+  return {
+    selection,
+    withGeometry,
+  };
 }
