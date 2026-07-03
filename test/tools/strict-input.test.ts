@@ -5,6 +5,7 @@ import AltitudeTool from "../../src/tools/AltitudeTool";
 import AssietteSupTool from "../../src/tools/AssietteSupTool";
 import CadastreTool from "../../src/tools/CadastreTool";
 import GeocodeTool from "../../src/tools/GeocodeTool";
+import GpfCountFeaturesTool from "../../src/tools/GpfCountFeaturesTool";
 import GpfDescribeTypeTool from "../../src/tools/GpfDescribeTypeTool";
 import GpfGetFeatureByIdTool from "../../src/tools/GpfGetFeatureByIdTool";
 import GpfGetFeaturesTool from "../../src/tools/GpfGetFeaturesTool";
@@ -36,6 +37,11 @@ const strictInputCases = [
     label: "GeocodeTool",
     tool: new GeocodeTool(),
     validArguments: { text: "10 rue de la Paix Paris" },
+  },
+  {
+    label: "GpfCountFeaturesTool",
+    tool: new GpfCountFeaturesTool(),
+    validArguments: { typename: "BDTOPO_V3:batiment" },
   },
   {
     label: "GpfDescribeTypeTool",
