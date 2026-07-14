@@ -107,15 +107,29 @@ function isDateProperty(property: CollectionProperty) {
 
 // --- Scalar Parsing ---
 
+// Signed decimal literal, without scientific notation or hex/binary/octal prefixes.
+// `Number()` alone is too permissive for CQL: Number("")===0, Number("0x1F")===31,
+// Number("1e3")===1000. Requiring this pattern before Number() rejects empty/blank,
+// hex and scientific inputs so a malformed value fails with a clear French error
+// instead of silently compiling to a confidently-wrong CQL literal.
+// Scientific notation is intentionally out of scope: GeoServer CQL expects plain
+// decimal literals. To support it later, widen this pattern — the Number()->String()
+// rewrite already normalizes e.g. "1e3" to "1000".
+const DECIMAL_PATTERN = /^-?(?:\d+\.?\d*|\.\d+)$/;
+
 /**
- * Parses a serialized numeric value and rejects non-finite numbers.
+ * Parses a serialized numeric value and rejects non-decimal or non-finite numbers.
  *
  * @param value Serialized numeric value.
  * @param message Error message to throw when parsing fails.
  * @returns The parsed numeric value.
  */
 function parseNumericString(value: string, message: string) {
-  const parsed = Number(value);
+  const trimmed = value.trim();
+  if (!DECIMAL_PATTERN.test(trimmed)) {
+    throw new Error(message);
+  }
+  const parsed = Number(trimmed);
   if (!Number.isFinite(parsed)) {
     throw new Error(message);
   }
@@ -123,14 +137,18 @@ function parseNumericString(value: string, message: string) {
 }
 
 /**
- * Parses a serialized integer value and rejects non-integer numbers.
+ * Parses a serialized integer value and rejects non-decimal or non-integer numbers.
  *
  * @param value Serialized integer value.
  * @param message Error message to throw when parsing fails.
  * @returns The parsed integer value.
  */
 function parseIntegerString(value: string, message: string) {
-  const parsed = Number(value);
+  const trimmed = value.trim();
+  if (!DECIMAL_PATTERN.test(trimmed)) {
+    throw new Error(message);
+  }
+  const parsed = Number(trimmed);
   if (!Number.isInteger(parsed)) {
     throw new Error(message);
   }
