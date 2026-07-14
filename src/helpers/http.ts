@@ -213,6 +213,133 @@ function getHttpTimeoutMs(): number {
   return getEnv().HTTP_TIMEOUT * 1000;
 }
 
+// --- Size-Bounded Transport ---
+
+/**
+ * Raised when an upstream response body exceeds the caller-provided byte cap.
+ * Used by the proxy to bound network + memory + downstream parse cost without
+ * relying on an upstream `Content-Length` (WFS responses are often chunked).
+ */
+export class ResponseTooLargeError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ResponseTooLargeError";
+  }
+}
+
+/**
+ * Executes a POST request and reads the response body **by chunks**, aborting as
+ * soon as the accumulated size exceeds `maxBytes`. Unlike `fetchJSONPost`, this
+ * bounds memory before the whole body is buffered and does not JSON-parse: it
+ * returns the raw text so the caller decides how to parse it.
+ *
+ * The timeout is an explicit parameter (not read from env) so the same fetch
+ * path can serve the LLM tools (`HTTP_TIMEOUT`) and the proxy
+ * (`PROXY_UPSTREAM_TIMEOUT`).
+ *
+ * @param url Target URL.
+ * @param body Encoded request body.
+ * @param headers Additional request headers.
+ * @param timeoutMs Wall-clock timeout in milliseconds.
+ * @param maxBytes Maximum number of body bytes to accept before aborting.
+ * @returns The raw response text, guaranteed to be atw most `maxBytes` bytes.
+ */
+export async function fetchTextPostWithLimit(
+  url: string,
+  body: string,
+  headers: RequestHeaders,
+  timeoutMs: number,
+  maxBytes: number,
+): Promise<string> {
+  logger.info(`[HTTP] POST ${url} (bounded, max ${maxBytes} bytes) ...`);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      ...buildFetchOptions("POST", body, headers),
+      signal: controller.signal,
+    });
+
+    if (!response.body) {
+      if (!response.ok) {
+        throw new ServiceResponseError(
+          `Erreur HTTP du service (${buildResponseLabel(response.status, response.statusText)}): ${UNKNOWN_UPSTREAM_DETAIL}`,
+          { http: { status: response.status, statusText: response.statusText } },
+        );
+      }
+      return "";
+    }
+
+    const chunks: Buffer[] = [];
+    let total = 0;
+    // node-fetch exposes the body as a Node Readable stream (async-iterable of Buffers).
+    for await (const chunk of response.body as AsyncIterable<Buffer>) {
+      total += chunk.length;
+      if (total > maxBytes) {
+        controller.abort();
+        throw new ResponseTooLargeError(
+          `La réponse du service distant dépasse la taille maximale autorisée (${maxBytes} octets).`,
+        );
+      }
+      chunks.push(chunk);
+    }
+
+    const text = Buffer.concat(chunks).toString("utf8");
+
+    // Preserve the upstream HTTP status: a non-2xx must not be handed back as a
+    // valid body (a 400/500 whose body happens to look like a FeatureCollection
+    // would otherwise be served to Carto as a real layer). Route it through the
+    // same structured XML/JSON error extraction as the JSON path — it always
+    // throws for a non-ok response, yielding a ServiceResponseError that carries
+    // the real status + WFS detail.
+    if (!response.ok) {
+      const contentType = (response.headers.get("content-type") ?? "").toLowerCase();
+      const errorContext = buildResponseContext(
+        { status: response.status, statusText: response.statusText, ok: false, headers: response.headers, text: async () => text },
+        text,
+        contentType,
+      );
+      if (errorContext.looksLikeXml) {
+        handleXmlResponse(errorContext); // always throws
+      }
+      let json: unknown;
+      try {
+        json = JSON.parse(text);
+      } catch {
+        json = undefined;
+      }
+      const serviceError = extractJsonServiceError(json ?? previewBody(text) ?? UNKNOWN_UPSTREAM_DETAIL);
+      throw buildServiceResponseError(
+        errorContext,
+        `Erreur HTTP du service (${errorContext.responseLabel}): ${serviceError.detail}`,
+        { code: serviceError.code, detail: serviceError.detail },
+      );
+    }
+
+    return text;
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new ServiceResponseError(
+        `Délai d'attente dépassé pour le service distant (${timeoutMs} ms).`,
+        {
+          http: {
+            status: UPSTREAM_TIMEOUT_STATUS,
+            statusText: UPSTREAM_TIMEOUT_STATUS_TEXT,
+          },
+          service: {
+            code: UPSTREAM_TIMEOUT_CODE,
+            detail: `Le service distant n'a pas répondu dans le délai imparti (${timeoutMs} ms).`,
+          },
+        },
+      );
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 // --- Response Parsing ---
 
 /**

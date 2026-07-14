@@ -23,6 +23,7 @@
 | `LOG_FORMAT`                 | Le format d'écriture des logs : "json" ou "simple".                                                                                                                                                                                                                                               | "simple"                                         |
 | `LOG_LEVEL`                  | Le niveau d'écriture des logs : ["error", "info", ou "debug"](https://github.com/winstonjs/winston#logging-levels)                                                                                                                                                                                | "debug"                                          |
 | `PROXY_URL_SECRET`           | Clé symétrique (32 octets, en hexadécimal) utilisée pour chiffrer les URLs opaques du proxy WFS. **Obligatoire en mode `http`**, inutile en `stdio`. Voir [Génération de `PROXY_URL_SECRET`](#génération-de-proxy_url_secret).                                                                     | Aucune                                           |
+| `PROXY_MAX_RESPONSE_BYTES`   | Taille maximale, en octets, d'une réponse GeoJSON servie par le proxy WFS. Au-delà, la réponse est interrompue et une erreur est renvoyée (garde-fou réseau et rendu cartographique). Pour l'affichage, préférer les variantes cartographiques généralisées (moins volumineuses).                 | `26214400` (25 Mio)                              |
 
 ## Génération de `PROXY_URL_SECRET`
 

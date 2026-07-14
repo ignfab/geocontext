@@ -11,7 +11,14 @@ vi.mock("node-fetch", async () => {
     };
 });
 
-import { fetchJSONGet, fetchJSONPost, parseJsonResponse } from "../../src/helpers/http.js";
+import {
+    fetchJSONGet,
+    fetchJSONPost,
+    fetchTextPostWithLimit,
+    parseJsonResponse,
+    ResponseTooLargeError,
+    ServiceResponseError,
+} from "../../src/helpers/http.js";
 
 const fetchMock = vi.mocked(fetch);
 
@@ -424,6 +431,86 @@ describe("Test HTTP helpers", () => {
         });
         await vi.advanceTimersByTimeAsync(2000);
         await pendingRequest;
+    });
+
+    // --- fetchTextPostWithLimit (size-bounded proxy fetch) ---
+
+    // Builds a response whose `body` yields the given chunks as an async iterable,
+    // mirroring node-fetch's Node Readable stream.
+    function createStreamResponse(
+        chunks: string[],
+        { status = 200, statusText = "OK", contentType = "application/json" }: { status?: number; statusText?: string; contentType?: string } = {},
+    ) {
+        return {
+            status,
+            statusText,
+            ok: status >= 200 && status < 300,
+            headers: { get: (name: string) => (name.toLowerCase() === "content-type" ? contentType : null) },
+            body: (async function* () {
+                for (const chunk of chunks) {
+                    yield Buffer.from(chunk, "utf8");
+                }
+            })(),
+        };
+    }
+
+    it("returns the full body when under the byte cap", async () => {
+        fetchMock.mockResolvedValue(createStreamResponse(["{\"ok\"", ":true}"]) as unknown as Awaited<ReturnType<typeof fetch>>);
+
+        const text = await fetchTextPostWithLimit("https://example.test", "", {}, 1000, 1024);
+        expect(text).toBe('{"ok":true}');
+    });
+
+    it("aborts with ResponseTooLargeError when the body exceeds the byte cap", async () => {
+        // Three 10-byte chunks = 30 bytes total; cap at 15 bytes trips on the 2nd chunk.
+        fetchMock.mockResolvedValue(
+            createStreamResponse(["0123456789", "0123456789", "0123456789"]) as unknown as Awaited<ReturnType<typeof fetch>>,
+        );
+
+        await expect(
+            fetchTextPostWithLimit("https://example.test", "", {}, 1000, 15),
+        ).rejects.toBeInstanceOf(ResponseTooLargeError);
+    });
+
+    it("throws ServiceResponseError with the upstream status on a non-2xx (XML error body)", async () => {
+        const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<ows:ExceptionReport xmlns:ows="http://www.opengis.net/ows/1.1">
+  <ows:Exception exceptionCode="InvalidParameterValue">
+    <ows:ExceptionText>Illegal property name: geom</ows:ExceptionText>
+  </ows:Exception>
+</ows:ExceptionReport>`;
+        fetchMock.mockResolvedValue(
+            createStreamResponse([xml], { status: 400, statusText: "Bad Request", contentType: "application/xml" }) as unknown as Awaited<ReturnType<typeof fetch>>,
+        );
+
+        await expect(
+            fetchTextPostWithLimit("https://example.test", "", {}, 1000, 1024),
+        ).rejects.toMatchObject({
+            name: "ServiceResponseError",
+            httpStatus: 400,
+        });
+    });
+
+    it("rejects a non-2xx even when the body looks like a FeatureCollection", async () => {
+        // The dangerous case: a 400 whose body would pass a naive shape check.
+        // The HTTP status must win — it must NOT be handed back as a valid layer.
+        const body = JSON.stringify({ type: "FeatureCollection", features: [] });
+        fetchMock.mockResolvedValue(
+            createStreamResponse([body], { status: 400, statusText: "Bad Request" }) as unknown as Awaited<ReturnType<typeof fetch>>,
+        );
+
+        await expect(
+            fetchTextPostWithLimit("https://example.test", "", {}, 1000, 1024),
+        ).rejects.toBeInstanceOf(ServiceResponseError);
+    });
+
+    it("accepts a body exactly at the byte cap (inclusive boundary)", async () => {
+        fetchMock.mockResolvedValue(createStreamResponse(["0123456789"]) as unknown as Awaited<ReturnType<typeof fetch>>);
+
+        // 10 bytes, cap 10 -> total > maxBytes is false, accepted.
+        await expect(
+            fetchTextPostWithLimit("https://example.test", "", {}, 1000, 10),
+        ).resolves.toBe("0123456789");
     });
 
 });

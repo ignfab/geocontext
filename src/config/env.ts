@@ -136,6 +136,12 @@ const envSchema = z.object({
         .transform(parseProxyUrlSecret)
         .pipe(z.instanceof(Buffer).optional())
         .optional(),
+    // Maximum size, in bytes, of a proxy WFS response body. The proxy reads the
+    // response by chunks and aborts past this cap (network + memory + OpenLayers
+    // parse/render guard). Default 25 MiB — comfortably fits a dense generalized
+    // carto layer (e.g. 5000 CARTO-PE communes ≈ 5.8 MB) while rejecting
+    // full-resolution monsters (5000 full-res communes ≈ 95 MB).
+    PROXY_MAX_RESPONSE_BYTES: z.preprocess(emptyToUndefined, positiveIntegerSchema.default(25 * 1024 * 1024)),
 }).superRefine((env, ctx) => {
     // The proxy (and its layer tool) only exist in http mode, so the secret is
     // required there and irrelevant in stdio.

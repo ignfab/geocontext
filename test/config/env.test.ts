@@ -21,9 +21,27 @@ describe("parseEnv", () => {
       GPF_GEOCODE_RATE_LIMIT: 50,
       GPF_ALTI_RATE_LIMIT: 50,
       GPF_NAVIGATION_RATE_LIMIT: 5,
+      PROXY_MAX_RESPONSE_BYTES: 25 * 1024 * 1024,
     });
     expect(env).not.toHaveProperty("HTTP_CORS_ALLOWED_ORIGINS");
     expect(env).not.toHaveProperty("GPF_WFS_MINISEARCH_OPTIONS");
+  });
+
+  it("should override PROXY_MAX_RESPONSE_BYTES from the environment", () => {
+    const env = parseEnv({ PROXY_MAX_RESPONSE_BYTES: "5242880" });
+    expect(env.PROXY_MAX_RESPONSE_BYTES).toBe(5242880);
+  });
+
+  it.each(["0", "-1", "3.14", "abc"])(
+    "should reject an invalid PROXY_MAX_RESPONSE_BYTES (%s)",
+    (bad) => {
+      expect(() => parseEnv({ PROXY_MAX_RESPONSE_BYTES: bad })).toThrow(/Invalid environment configuration/);
+    },
+  );
+
+  it("should fall back to the PROXY_MAX_RESPONSE_BYTES default on empty/blank", () => {
+    expect(parseEnv({ PROXY_MAX_RESPONSE_BYTES: "" }).PROXY_MAX_RESPONSE_BYTES).toBe(25 * 1024 * 1024);
+    expect(parseEnv({ PROXY_MAX_RESPONSE_BYTES: "  " }).PROXY_MAX_RESPONSE_BYTES).toBe(25 * 1024 * 1024);
   });
 
   it("should treat empty/whitespace strings as undefined (fallback to defaults)", () => {
