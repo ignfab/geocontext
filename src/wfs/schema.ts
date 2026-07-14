@@ -294,7 +294,7 @@ export const gpfGetFeatureByIdInputObjectSchema = z.object({
     .array(z.string().trim().min(1))
     .min(1)
     .optional()
-    .describe("Liste des propriétés non géométriques à renvoyer. Utiliser `gpf_wfs_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`."),
+    .describe("Liste des propriétés non géométriques à renvoyer. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`."),
 })
   .merge(gpfGeometryExtraInputSchema)
   .strict();
