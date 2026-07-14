@@ -50,12 +50,42 @@ describe("parseEnv", () => {
       GPF_GEOCODE_RATE_LIMIT: "20",
       GPF_ALTI_RATE_LIMIT: "100",
       GPF_NAVIGATION_RATE_LIMIT: "5",
+      PROXY_URL_SECRET: "a".repeat(64), // 32 bytes as hex
     });
     expect(env.TRANSPORT_TYPE).toBe("http");
     expect(env.HTTP_PORT).toBe(8080);
     expect(env.HTTP_TIMEOUT).toBe(30);
     expect(env.GPF_WFS_RATE_LIMIT).toBe(10);
     expect(env.GPF_NAVIGATION_RATE_LIMIT).toBe(5);
+  });
+
+  // --- PROXY_URL_SECRET (required only in http mode) ---
+
+  it("should require PROXY_URL_SECRET in http mode", () => {
+    expect(() => parseEnv({ TRANSPORT_TYPE: "http" })).toThrow(/PROXY_URL_SECRET/);
+  });
+
+  it("should not require PROXY_URL_SECRET in stdio mode", () => {
+    const env = parseEnv({ TRANSPORT_TYPE: "stdio" });
+    expect(env).not.toHaveProperty("PROXY_URL_SECRET");
+  });
+
+  it("should decode a 32-byte PROXY_URL_SECRET to a Buffer", () => {
+    const env = parseEnv({ TRANSPORT_TYPE: "http", PROXY_URL_SECRET: "a".repeat(64) });
+    expect(Buffer.isBuffer(env.PROXY_URL_SECRET)).toBe(true);
+    expect((env.PROXY_URL_SECRET as Buffer).length).toBe(32);
+  });
+
+  it("should reject a PROXY_URL_SECRET that is hex but not 32 bytes", () => {
+    expect(() =>
+      parseEnv({ TRANSPORT_TYPE: "http", PROXY_URL_SECRET: "abcd" }),
+    ).toThrow(/hex characters/);
+  });
+
+  it("should reject a PROXY_URL_SECRET that is 64 chars but not hex", () => {
+    expect(() =>
+      parseEnv({ TRANSPORT_TYPE: "http", PROXY_URL_SECRET: "z".repeat(64) }),
+    ).toThrow(/hex characters/);
   });
 
   // --- CORS ---

@@ -22,6 +22,39 @@ function parseJsonEnvValue(val: string, ctx: z.RefinementCtx): unknown {
     }
 }
 
+/** Expected byte length of the proxy URL symmetric key (AES-256). */
+const PROXY_URL_SECRET_BYTES = 32;
+
+/** A 32-byte key encoded as 64 hex characters. Generate with `openssl rand -hex 32`. */
+const PROXY_URL_SECRET_HEX = new RegExp(`^[0-9a-fA-F]{${PROXY_URL_SECRET_BYTES * 2}}$`);
+
+/**
+ * Decodes the proxy URL secret from a strict 64-character hex string into a
+ * 32-byte Buffer. Returns `undefined` for an empty value; adds a Zod issue and
+ * returns `z.NEVER` when the value is not exactly 64 hex characters.
+ *
+ * A single explicit encoding (hex) is required rather than guessing among
+ * encodings: the key is a random 32-byte value provisioned as a k8s Secret
+ * (e.g. `openssl rand -hex 32`), so there is no human-typed value to be lenient
+ * about, and a strict regex rejects malformed input instead of silently
+ * truncating (as `Buffer.from(x, "hex")` would).
+ */
+function parseProxyUrlSecret(val: string, ctx: z.RefinementCtx): Buffer | undefined {
+    if (val === "") {
+        return undefined;
+    }
+
+    if (!PROXY_URL_SECRET_HEX.test(val)) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Expected a ${PROXY_URL_SECRET_BYTES}-byte key as ${PROXY_URL_SECRET_BYTES * 2} hex characters (e.g. \`openssl rand -hex ${PROXY_URL_SECRET_BYTES}\`).`,
+        });
+        return z.NEVER as unknown as undefined;
+    }
+
+    return Buffer.from(val, "hex");
+}
+
 // --- Reusable Schemas ---
 
 const portSchema = z.coerce
@@ -94,6 +127,25 @@ const envSchema = z.object({
         .transform(parseJsonEnvValue)
         .pipe(z.record(z.string(), z.unknown()).optional())
         .optional(),
+    // Stateless WFS proxy (only used in http transport)
+    // Symmetric key for the opaque proxy URL token. Decoded to a 32-byte Buffer.
+    // Required only in http mode (enforced by the superRefine below).
+    PROXY_URL_SECRET: z
+        .string()
+        .trim()
+        .transform(parseProxyUrlSecret)
+        .pipe(z.instanceof(Buffer).optional())
+        .optional(),
+}).superRefine((env, ctx) => {
+    // The proxy (and its layer tool) only exist in http mode, so the secret is
+    // required there and irrelevant in stdio.
+    if (env.TRANSPORT_TYPE === "http" && env.PROXY_URL_SECRET === undefined) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["PROXY_URL_SECRET"],
+            message: "PROXY_URL_SECRET is required in http transport mode (used to sign the proxy layer URL).",
+        });
+    }
 });
 
 // --- Parsing ---

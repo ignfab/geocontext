@@ -13,6 +13,11 @@ services:
       - HTTPS_PROXY
       - HTTP_HOST=0.0.0.0
       - HTTP_MCP_ENDPOINT=${HTTP_MCP_ENDPOINT:-/mcp}
+      - TRANSPORT_TYPE=http
+      # Required in http mode: 32-byte hex key for the opaque proxy URLs.
+      # Provide it in your shell or .env; never commit a real value here.
+      # Generate with: openssl rand -hex 32.
+      - PROXY_URL_SECRET=${PROXY_URL_SECRET:?PROXY_URL_SECRET is required (openssl rand -hex 32)}
     ports:
     - ${HTTP_PORT:-3000}:3000
     deploy:
