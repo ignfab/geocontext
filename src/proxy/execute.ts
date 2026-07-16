@@ -1,6 +1,10 @@
 /**
  * Proxy-side WFS execution engine.
  *
+ * `runGeometryFeatureQuery` (entry point) compiles and runs the layer query;
+ * `resolveReferenceGeometry` (internal helper) resolves the reference geometry
+ * for `intersects_feature` / `travel_time` filters.
+ *
  * Unlike the LLM-facing `executeQueryFeatures` (which strips geometry to `null`
  * via `attachFeatureRefs` to save tokens), the proxy needs the OPPOSITE: a
  * FeatureCollection with FULL geometry, because MCP Carto renders it on a map.
@@ -11,14 +15,13 @@
  *   touching `buildSelectList` (which stays coupled to the LLM `result_type`);
  * - returns the RAW FeatureCollection, never `attachFeatureRefs`;
  * - runs against an INJECTED WfsClient, so it is fully testable without network
- *   and lets the HTTP layer (commit 3) supply a size-bounded, rate-limited client.
+ *   and lets the HTTP layer supply a size-bounded, rate-limited client.
  */
 
 import type { Collection, CollectionProperty } from "@ignfab/gpf-schema-store";
 
 import {
   buildGetFeatureByIdRequest,
-  buildGetUrl,
   buildMainRequest,
   type CompiledRequest,
 } from "../wfs/request.js";
@@ -30,6 +33,7 @@ import {
   type ResolvedFeatureGeometryRef,
 } from "../wfs/queryPreparation.js";
 import { requireSingleFeatureById } from "../wfs/byId.js";
+import { ServiceResponseError } from "../helpers/http.js";
 import type {
   WfsFeatureCollectionResponse,
   WfsFeatureResponse,
@@ -46,6 +50,24 @@ import type { GpfGetFeaturesInput } from "../wfs/schema.js";
 export type WfsClientLike = {
   getFeatureType(typename: string): Promise<Collection>;
   fetchFeatureCollection(request: CompiledRequest): Promise<WfsFeatureCollectionResponse>;
+};
+
+/**
+ * Resolves the isochrone geometry for a `travel_time` filter (EWKT). Injected by
+ * the HTTP layer (backed by the navigation/isochrone service). Required, because
+ * `travel_time` is part of the `gpf_get_features` query contract the proxy must
+ * honour — it is not an optional capability. The engine stays isochrone-agnostic
+ * (pure, network-free, testable), exactly as it is for `wfsClient`.
+ */
+export type TravelTimeResolver = (input: GpfGetFeaturesInput) => Promise<ResolvedFeatureGeometryRef>;
+
+/**
+ * Dependencies injected into {@link runGeometryFeatureQuery}.
+ */
+export type GeometryFeatureQueryDeps = {
+  wfsClient: WfsClientLike;
+  /** Isochrone resolver, invoked only for `travel_time` filters. */
+  resolveTravelTime: TravelTimeResolver;
 };
 
 // --- Internal Helpers ---
@@ -91,9 +113,6 @@ function isGeometryLike(value: unknown): value is { type: string; coordinates: u
  * using the injected client (a second upstream call). Returns `undefined` when
  * the input does not use `intersects_feature`.
  *
- * `travel_time` is intentionally NOT resolved here: it depends on the isochrone
- * service and is wired in a later commit alongside the concrete proxy client.
- *
  * DIVERGENCE FROM THE LLM PATH: the MCP flow rejects a same-typename
  * `intersects_feature` (`ensureIntersectsFeatureTargetsOtherTypename`) to steer
  * the model toward `gpf_get_feature_by_id` for a single object. That is an
@@ -101,19 +120,31 @@ function isGeometryLike(value: unknown): value is { type: string; coordinates: u
  * plus its same-type neighbours" is a legitimate cartographic request, so the
  * proxy deliberately allows it and does not reuse that guard.
  *
+ * Assumes at most one spatial filter (enforced upstream by the layer schema's
+ * `assertSpatialFilterExclusion`): `getSpatialFilter` returns the first filter in
+ * key order, so a same-input combination would silently ignore the others.
+ *
  * @param input Normalized layer query input.
  * @param wfsClient Injected WFS client.
  * @returns The resolved reference geometry as EWKT, or `undefined`.
  */
 async function resolveReferenceGeometry(
   input: GpfGetFeaturesInput,
-  wfsClient: WfsClientLike,
+  deps: GeometryFeatureQueryDeps,
 ): Promise<ResolvedFeatureGeometryRef | undefined> {
   const spatialFilter = getSpatialFilter(input);
+
+  // travel_time is resolved by the injected isochrone resolver, up front, so
+  // compileQueryParts never sees an unresolved ref (symmetric to intersects_feature).
+  if (spatialFilter?.operator === "travel_time") {
+    return deps.resolveTravelTime(input);
+  }
+
   if (!spatialFilter || spatialFilter.operator !== "intersects_feature") {
     return undefined;
   }
 
+  const { wfsClient } = deps;
   const referenceFeatureType = await wfsClient.getFeatureType(spatialFilter.typename);
   const referenceGeometryProperty = getGeometryProperty(referenceFeatureType);
   const request = buildGetFeatureByIdRequest(
@@ -148,28 +179,19 @@ async function resolveReferenceGeometry(
  *
  * @param input Validated layer query input (same shape as `gpf_get_features`
  *   minus `result_type`/`spatial_extras`).
- * @param wfsClient Injected WFS client (catalog lookup + request execution).
+ * @param deps Injected WFS client (catalog + execution) and isochrone resolver
+ *   (always required; invoked only for `travel_time` filters).
  * @returns The raw WFS FeatureCollection, geometry preserved.
  */
 export async function runGeometryFeatureQuery(
   input: GpfGetFeaturesInput,
-  wfsClient: WfsClientLike,
+  deps: GeometryFeatureQueryDeps,
 ): Promise<WfsFeatureCollectionResponse> {
-  // `travel_time` needs the isochrone service (navigationIsochroneClient), which
-  // is not injected into this engine yet. Without it, compileQueryParts would
-  // throw a confusing "geometry not pre-resolved" error. Fail explicitly here
-  // until the isochrone resolver is injected alongside the concrete proxy client.
-  // TODO(commit 3): inject the isochrone resolver and remove this guard.
-  if (getSpatialFilter(input)?.operator === "travel_time") {
-    throw new Error(
-      "Le filtre `travel_time_filter` n'est pas encore supporté par le proxy cartographique.",
-    );
-  }
-
+  const { wfsClient } = deps;
   const featureType: Collection = await wfsClient.getFeatureType(input.typename);
   const geometryProperty = getGeometryProperty(featureType);
 
-  const resolvedGeometryRef = await resolveReferenceGeometry(input, wfsClient);
+  const resolvedGeometryRef = await resolveReferenceGeometry(input, deps);
   const compiled = compileQueryParts(input, featureType, resolvedGeometryRef);
 
   const request = buildMainRequest(input, {
@@ -179,11 +201,30 @@ export async function runGeometryFeatureQuery(
   });
 
   // Request WGS84 lon/lat, matching the convention the /gpf modules already
-  // consume. Add it to the query and regenerate get_url so both stay consistent.
+  // consume. Set it on request.query, which the proxy transport serializes into
+  // the fetch URL; request.get_url is not read on this path, so it is left as is.
   request.query.srsName = "EPSG:4326";
-  request.get_url = buildGetUrl(request.url, request.query, compiled.cqlFilter);
 
-  const featureCollection = await wfsClient.fetchFeatureCollection(request);
+  let featureCollection: WfsFeatureCollectionResponse;
+  try {
+    featureCollection = await wfsClient.fetchFeatureCollection(request);
+  } catch (error: unknown) {
+    // Catalog desync: the proxy forces the embedded catalog's geometry column into
+    // the request (ensureGeometrySelected), so if the live WFS uses a different geom
+    // name for this type it rejects it as "Illegal property name". Rewrite it into a
+    // clear diagnostic (mirrors the LLM path's executeQueryFeatures) rather than
+    // letting the raw upstream string surface to Carto as an opaque 502.
+    if (
+      error instanceof ServiceResponseError &&
+      error.serviceCode === "InvalidParameterValue" &&
+      error.serviceDetail === `Illegal property name: ${geometryProperty.name}`
+    ) {
+      throw new Error(
+        `Le champ géométrique '${geometryProperty.name}' issu du catalogue embarqué est rejeté par le WFS live pour '${input.typename}'. Le catalogue embarqué est probablement désynchronisé. Détail : ${error.message}`,
+      );
+    }
+    throw error;
+  }
 
   // Validate the response shape before serving it as a map layer. The proxy fetch
   // path returns raw text with no schema check (unlike the LLM path's

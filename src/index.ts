@@ -7,11 +7,29 @@ import { getEnv } from "./config/env.js";
 
 
 // --- Entry Point ---
+//
+// This is the MCP server entry point (stdio or http). The stateless WFS proxy
+// runs as a SEPARATE process/image with its own entry point (src/proxy/index.ts),
+// so the two can be deployed and scaled independently. They only share the
+// PROXY_URL_SECRET (the MCP layer tool encodes the token, the proxy decodes it).
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 async function main() {
   const env = getEnv();
+
+  // In http mode the MCP exposes the layer tool, which encodes proxy URLs, so it
+  // needs the shared secret and the public base URL up front. In stdio (local
+  // npx) neither is required.
+  if (env.TRANSPORT_TYPE === "http") {
+    if (!env.PROXY_URL_SECRET) {
+      throw new Error("PROXY_URL_SECRET is required in http mode (the layer tool signs proxy URLs).");
+    }
+    if (!env.PROXY_PUBLIC_BASE_URL) {
+      throw new Error("PROXY_PUBLIC_BASE_URL is required in http mode (used to build the layer data_url).");
+    }
+  }
+
   const transport = buildTransport(env);
   const version = getVersion();
 

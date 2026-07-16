@@ -1,10 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Collection } from "@ignfab/gpf-schema-store";
 
-import { runGeometryFeatureQuery, type WfsClientLike } from "../../src/proxy/execute";
+import { runGeometryFeatureQuery, type WfsClientLike, type TravelTimeResolver } from "../../src/proxy/execute";
 import type { CompiledRequest } from "../../src/wfs/request";
 import type { WfsFeatureCollectionResponse } from "../../src/wfs/types";
 import type { GpfGetFeaturesInput } from "../../src/wfs/schema";
+import { ServiceResponseError } from "../../src/helpers/http";
 
 // --- Test catalog ---
 
@@ -84,11 +85,18 @@ function makeClient(overrides?: {
   return { client, requests };
 }
 
+// A resolver stub for the non-travel_time cases: `resolveTravelTime` is a required
+// dependency, but these queries must never invoke it — so this throws if they do,
+// turning an accidental travel_time path into a loud test failure.
+const unexpectedResolveTravelTime: TravelTimeResolver = () => {
+  throw new Error("resolveTravelTime should not be called for a non-travel_time query");
+};
+
 describe("proxy/execute · runGeometryFeatureQuery", () => {
   it("returns the RAW FeatureCollection with geometry preserved", async () => {
     const { client } = makeClient();
 
-    const result = await runGeometryFeatureQuery(baseInput, client);
+    const result = await runGeometryFeatureQuery(baseInput, { wfsClient: client, resolveTravelTime: unexpectedResolveTravelTime });
 
     // Geometry, crs and geometry_name must survive (opposite of the LLM trim path).
     expect(result.features?.[0]?.geometry).toEqual(collectionWithGeometry.features?.[0]?.geometry);
@@ -100,7 +108,7 @@ describe("proxy/execute · runGeometryFeatureQuery", () => {
   it("forces the geometry column into propertyName when `select` is given", async () => {
     const { client, requests } = makeClient();
 
-    await runGeometryFeatureQuery({ ...baseInput, select: ["code_insee"] }, client);
+    await runGeometryFeatureQuery({ ...baseInput, select: ["code_insee"] }, { wfsClient: client, resolveTravelTime: unexpectedResolveTravelTime });
 
     const propertyName = requests[0].query.propertyName;
     expect(propertyName).toBeDefined();
@@ -112,16 +120,17 @@ describe("proxy/execute · runGeometryFeatureQuery", () => {
   it("requests WGS84 EPSG:4326 (lon/lat convention)", async () => {
     const { client, requests } = makeClient();
 
-    await runGeometryFeatureQuery(baseInput, client);
+    await runGeometryFeatureQuery(baseInput, { wfsClient: client, resolveTravelTime: unexpectedResolveTravelTime });
 
+    // srsName lands on request.query, which the proxy transport serializes into the
+    // fetch URL. request.get_url is not read on this path, so it is not asserted.
     expect(requests[0].query.srsName).toBe("EPSG:4326");
-    expect(requests[0].get_url).toContain("srsName");
   });
 
   it("includes the geometry column alongside all non-geometry props when no `select` is given", async () => {
     const { client, requests } = makeClient();
 
-    await runGeometryFeatureQuery(baseInput, client);
+    await runGeometryFeatureQuery(baseInput, { wfsClient: client, resolveTravelTime: unexpectedResolveTravelTime });
 
     // With result_type "results" and no select, compileQueryParts materializes the
     // non-geometry columns; the runner then appends the geometry column.
@@ -138,7 +147,7 @@ describe("proxy/execute · runGeometryFeatureQuery", () => {
     ["a missing type", { features: [] }],
   ])("rejects an off-contract response (%s) instead of serving it as a layer", async (_label, badResponse) => {
     const { client } = makeClient({ responses: [badResponse as unknown as WfsFeatureCollectionResponse] });
-    await expect(runGeometryFeatureQuery(baseInput, client)).rejects.toThrow(/FeatureCollection GeoJSON exploitable/);
+    await expect(runGeometryFeatureQuery(baseInput, { wfsClient: client, resolveTravelTime: unexpectedResolveTravelTime })).rejects.toThrow(/FeatureCollection GeoJSON exploitable/);
   });
 
   it("allows a same-typename intersects_feature (diverges from the LLM path)", async () => {
@@ -171,24 +180,29 @@ describe("proxy/execute · runGeometryFeatureQuery", () => {
       },
     };
 
-    const result = await runGeometryFeatureQuery(input, client);
+    const result = await runGeometryFeatureQuery(input, { wfsClient: client, resolveTravelTime: unexpectedResolveTravelTime });
 
     expect(client.fetchFeatureCollection).toHaveBeenCalledTimes(2);
     expect(requests[1].body).toContain("INTERSECTS");
     expect(result.type).toBe("FeatureCollection");
   });
 
-  it("fails explicitly for travel_time_filter (isochrone resolver not wired yet)", async () => {
-    // Guard until commit 3 injects the isochrone resolver; without it the request
-    // would otherwise fail deep inside compileQueryParts with a confusing message.
-    const { client } = makeClient();
+  it("resolves travel_time_filter via the injected isochrone resolver", async () => {
+    const { client, requests } = makeClient();
+    const resolveTravelTime = vi.fn(async () => ({
+      geometry_ewkt: "SRID=4326;POLYGON((2 48,2.2 48,2.2 48.2,2 48))",
+    }));
     const input: GpfGetFeaturesInput = {
       ...baseInput,
       travel_time_filter: { lon: 2.35, lat: 48.85, minutes: 15, profile: "pedestrian" },
     };
-    await expect(runGeometryFeatureQuery(input, client)).rejects.toThrow(/travel_time_filter/);
-    // The guard must fire before any upstream call.
-    expect(client.fetchFeatureCollection).not.toHaveBeenCalled();
+
+    const result = await runGeometryFeatureQuery(input, { wfsClient: client, resolveTravelTime });
+
+    expect(resolveTravelTime).toHaveBeenCalledOnce();
+    // The compiled main request carries an INTERSECTS predicate built from the isochrone.
+    expect(requests[0].body).toContain("INTERSECTS");
+    expect(result.type).toBe("FeatureCollection");
   });
 
   it("resolves the reference geometry for intersects_feature (a second upstream call)", async () => {
@@ -222,7 +236,7 @@ describe("proxy/execute · runGeometryFeatureQuery", () => {
       },
     };
 
-    const result = await runGeometryFeatureQuery(input, client);
+    const result = await runGeometryFeatureQuery(input, { wfsClient: client, resolveTravelTime: unexpectedResolveTravelTime });
 
     // Two upstream fetches: reference-by-id, then the main query.
     expect(client.fetchFeatureCollection).toHaveBeenCalledTimes(2);
@@ -232,5 +246,43 @@ describe("proxy/execute · runGeometryFeatureQuery", () => {
     // The main request carries an INTERSECTS predicate compiled from the resolved geometry.
     expect(requests[1].body).toContain("INTERSECTS");
     expect(result.features?.[0]?.geometry).not.toBeNull();
+  });
+
+  it("rewrites an 'Illegal property name: <geom>' upstream error into a catalog-desync diagnostic", async () => {
+    // The proxy forces the embedded catalog's geometry column into the request, so a
+    // live WFS that uses a different geom name for this type rejects it. That opaque
+    // upstream string must become a clear "catalogue désynchronisé" message.
+    const client: WfsClientLike = {
+      getFeatureType: vi.fn(async () => communeType),
+      fetchFeatureCollection: vi.fn(async () => {
+        throw new ServiceResponseError("Illegal property name: geometrie", {
+          http: { status: 400, statusText: "Bad Request" },
+          service: { code: "InvalidParameterValue", detail: "Illegal property name: geometrie" },
+        });
+      }),
+    };
+
+    await expect(
+      runGeometryFeatureQuery(baseInput, { wfsClient: client, resolveTravelTime: unexpectedResolveTravelTime }),
+    ).rejects.toThrow(/catalogue embarqué est probablement désynchronisé/);
+  });
+
+  it("rethrows an unrelated ServiceResponseError unchanged (not a desync)", async () => {
+    const upstream = new ServiceResponseError("boom", {
+      http: { status: 502, statusText: "Bad Gateway" },
+      service: { code: "SomethingElse", detail: "not a geometry issue" },
+    });
+    const client: WfsClientLike = {
+      getFeatureType: vi.fn(async () => communeType),
+      fetchFeatureCollection: vi.fn(async () => {
+        throw upstream;
+      }),
+    };
+
+    // Must propagate as-is (same instance), so server.ts maps it to 502 — not be
+    // swallowed by the desync branch nor rewritten.
+    await expect(
+      runGeometryFeatureQuery(baseInput, { wfsClient: client, resolveTravelTime: unexpectedResolveTravelTime }),
+    ).rejects.toBe(upstream);
   });
 });

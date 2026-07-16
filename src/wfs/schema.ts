@@ -244,6 +244,25 @@ export type GpfGetFeaturesInput = z.infer<typeof gpfGetFeaturesInputSchema>;
 
 export const gpfGetFeaturesPublishedInputSchema = generatePublishedInputSchema(gpfGetFeaturesInputObjectSchema);
 
+// --- `gpf_get_features_layer` (proxy) ---
+
+// The stateless proxy carries the same query surface as `gpf_get_features` MINUS
+// the LLM-only knobs `result_type` (the proxy always returns full-geometry
+// GeoJSON) and `spatial_extras`. Derived from the object schema so the fragments
+// stay defined once; the transform re-injects the defaults those two fields would
+// have, so the parsed value is a valid `GpfGetFeaturesInput` for the engine.
+export const gpfGetFeaturesLayerInputSchema = gpfGetFeaturesInputObjectSchema
+  .omit({ result_type: true, spatial_extras: true })
+  .strict()
+  .transform((value): GpfGetFeaturesInput => ({
+    ...value,
+    result_type: "results",
+    spatial_extras: [],
+  }))
+  .superRefine((value, ctx) => assertSpatialFilterExclusion(value, ctx));
+
+export type GpfGetFeaturesLayerInput = z.input<typeof gpfGetFeaturesLayerInputSchema>;
+
 // --- `gpf_count_features` ---
 
 export const gpfCountFeaturesInputObjectSchema = gpfTypenameInputSchema

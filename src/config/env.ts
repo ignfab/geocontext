@@ -129,7 +129,9 @@ const envSchema = z.object({
         .optional(),
     // Stateless WFS proxy (only used in http transport)
     // Symmetric key for the opaque proxy URL token. Decoded to a 32-byte Buffer.
-    // Required only in http mode (enforced by the superRefine below).
+    // Optional at the schema level; presence is required PER ENTRY POINT
+    // (src/index.ts requires it in http mode; src/proxy/index.ts always requires
+    // it), not by a global superRefine — see the note after the schema.
     PROXY_URL_SECRET: z
         .string()
         .trim()
@@ -142,17 +144,38 @@ const envSchema = z.object({
     // carto layer (e.g. 5000 CARTO-PE communes ≈ 5.8 MB) while rejecting
     // full-resolution monsters (5000 full-res communes ≈ 95 MB).
     PROXY_MAX_RESPONSE_BYTES: z.preprocess(emptyToUndefined, positiveIntegerSchema.default(25 * 1024 * 1024)),
-}).superRefine((env, ctx) => {
-    // The proxy (and its layer tool) only exist in http mode, so the secret is
-    // required there and irrelevant in stdio.
-    if (env.TRANSPORT_TYPE === "http" && env.PROXY_URL_SECRET === undefined) {
-        ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ["PROXY_URL_SECRET"],
-            message: "PROXY_URL_SECRET is required in http transport mode (used to sign the proxy layer URL).",
-        });
-    }
+    // Listen port for the proxy HTTP server (separate from the MCP HTTP port).
+    PROXY_PORT: z.preprocess(emptyToUndefined, portSchema.default(3002)),
+    // Path the proxy serves the layer endpoint on.
+    PROXY_ENDPOINT: z.preprocess(
+        emptyToUndefined,
+        z
+            .string()
+            .trim()
+            .regex(/^\/(?!\/)[^?#]*$/, "Expected a path like /api/v1/proxy-wfs, without query or fragment")
+            .default("/api/v1/proxy-wfs"),
+    ),
+    // Externally reachable base URL of the proxy, used to build the absolute
+    // data_url handed to Carto. Behind an ingress this differs from the bind
+    // host/port, so it is provided explicitly.
+    PROXY_PUBLIC_BASE_URL: z.preprocess(emptyToUndefined, z.string().url().optional()),
+    // The proxy serves public, stateless GeoJSON, so its endpoint is opened to any
+    // origin (Access-Control-Allow-Origin: *) in server.ts — no allowlist to configure.
+    // Dedicated upstream WFS rate limit for the proxy, separate from GPF_WFS_RATE_LIMIT.
+    // Both counters hit the same IGN service, so split one allowance across them.
+    GPF_WFS_PROXY_RATE_LIMIT: z.preprocess(emptyToUndefined, positiveIntegerSchema.default(10)),
+    // Dedicated isochrone rate limit for the proxy's travel_time leg, separate from
+    // GPF_NAVIGATION_RATE_LIMIT. Both counters hit the same IGN service, so split one
+    // allowance across them.
+    GPF_NAVIGATION_PROXY_RATE_LIMIT: z.preprocess(emptyToUndefined, positiveIntegerSchema.default(5)),
+    // Upstream timeout (seconds) for the proxy's WFS AND isochrone calls, shorter than
+    // HTTP_TIMEOUT so a 2-call intersects_feature/travel_time stays under the
+    // browser/Carto fetch timeout.
+    PROXY_UPSTREAM_TIMEOUT: z.preprocess(emptyToUndefined, positiveNumberSchema.default(10)),
 });
+// PROXY_URL_SECRET is validated PER ENTRY POINT (src/index.ts requires it in http
+// mode; src/proxy/index.ts always requires it), not by a global superRefine —
+// the two processes have different requirements.
 
 // --- Parsing ---
 
