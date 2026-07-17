@@ -97,7 +97,7 @@ const gpfTypenameInputSchema = z.object({
     .string()
     .trim()
     .min(1, "le nom du type ne doit pas être vide")
-    .describe("Nom exact du type GPF à interroger, par exemple `BDTOPO_V3:batiment`. Utiliser `gpf_search_types` pour trouver un `typename` valide.")
+    .describe("Nom exact du type GPF à interroger de la forme `prefixe:nom`. Utiliser `gpf_search_types` pour trouver un `typename` valide.")
 })
 
 const gpfWhereFilterInputSchema = z.object({

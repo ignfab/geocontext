@@ -76,7 +76,7 @@ const mcpScenarios = [
     testName: "should find about 1 741 batiments in the commune of Saint Mandé",
     userInput: "Combien y a t il de batiments sur la commune de saint mandé?",
     toolMode: "mcp",
-    requiredToolCalls: ["geocode", "gpf_search_types", "gpf_describe_type", "gpf_get_features"],
+    requiredToolCalls: ["geocode", "gpf_search_types", "gpf_count_features"],
     expectedResponseFragments: ["batiments"],
     assertScenarioResult: ({ normalizedFinalMessage }) => {
       expect(containsNumberInRange(normalizedFinalMessage, 1700, 1800)).toBe(true);
@@ -86,7 +86,7 @@ const mcpScenarios = [
     testName: "should find 19 batiments of more than 30 meters in Angouleme",
     userInput: "Combien y a t il de batiments de plus de 30 mètres sur la commune d'Angoulême?",
     toolMode: "mcp",
-    requiredToolCalls: ["geocode", "gpf_search_types", "gpf_describe_type", "gpf_get_features"],
+    requiredToolCalls: ["geocode", "gpf_search_types", "gpf_describe_type", "gpf_count_features"],
     // assuming that it won't often change and that the number is correct at the moment of writing
     // (switch to assertScenarioResult with a range if needed in the future)
     expectedResponseFragments: ["19", "batiments"] 

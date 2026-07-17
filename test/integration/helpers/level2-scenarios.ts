@@ -82,6 +82,29 @@ export async function runLevel2Scenario(
     callbacks: toolCallTracker ? [toolCallTracker] : undefined,
   });
 
+  // DEBUG: show only the LLM's own output — its text and the tool calls it made
+  // (name + args) — skipping tool RESULTS and the human turn. Printed BEFORE any
+  // assertion so a failing check does not hide what the agent actually did.
+  // TODO: remove once the level2 count scenarios are diagnosed.
+  console.log(`\n===== [${scenario.testName}] agent trace =====`);
+  for (const message of result.messages) {
+    // Only AI (LLM) turns; skip HumanMessage and ToolMessage (results).
+    if (message.getType?.() !== "ai") {
+      continue;
+    }
+    const text = typeof message.content === "string"
+      ? message.content
+      : JSON.stringify(message.content);
+    if (text.trim()) {
+      console.log(`[llm] ${text.trim()}`);
+    }
+    const toolCalls = (message as { tool_calls?: { name: string; args: unknown }[] }).tool_calls ?? [];
+    for (const call of toolCalls) {
+      console.log(`[tool call] ${call.name}(${JSON.stringify(call.args)})`);
+    }
+  }
+  console.log(`===== [${scenario.testName}] end trace =====\n`);
+
   const normalizedFinalMessage = expectNormalizedFinalMessageContainsAll(
     result.messages,
     scenario.expectedResponseFragments,
