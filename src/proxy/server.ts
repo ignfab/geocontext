@@ -15,8 +15,13 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import logger from "../logger.js";
 import { getEnv } from "../config/env.js";
 import { GPF_WFS_URL } from "../wfs/catalog.js";
-import { gpfGetFeaturesLayerInputSchema } from "../wfs/schema.js";
-import { runGeometryFeatureQuery } from "./execute.js";
+import {
+  gpfGetFeaturesLayerInputSchema,
+  gpfGetFeatureByIdLayerInputObjectSchema,
+  PROXY_TOKEN_KIND,
+} from "../wfs/schema.js";
+import { runGeometryFeatureQuery, runGeometryFeatureByIdQuery } from "./execute.js";
+import { FeatureNotFoundError, FeatureCardinalityError } from "../wfs/byId.js";
 import { getProxyWfsClient, resolveProxyTravelTime } from "./transport.js";
 import {
   decodeToken,
@@ -47,6 +52,16 @@ function toHttpError(error: unknown): HttpError {
   }
   if (error instanceof ResponseTooLargeError) {
     return { status: 413, detail: error.message };
+  }
+  if (error instanceof FeatureNotFoundError) {
+    // Client asked for a feature_id that does not exist: a genuine not-found.
+    // Fixed FR message; the internal detail (typename/id) is logged, not leaked.
+    return { status: 404, detail: "Objet introuvable pour cet identifiant." };
+  }
+  if (error instanceof FeatureCardinalityError) {
+    // The client request was valid but the upstream WFS broke the single-feature
+    // contract (duplicate / id mismatch / unusable body): an upstream anomaly.
+    return { status: 502, detail: "Le service WFS a renvoyé une réponse incohérente pour cet objet." };
   }
   if (error instanceof ServiceResponseError) {
     const upstream = error.httpStatus ?? 502;
@@ -89,6 +104,19 @@ function sendJsonError(res: ServerResponse, status: number, detail: string): voi
   res.end(body);
 }
 
+/**
+ * Narrows a decoded token to a discriminated `{ kind, ...payload }` shape. The
+ * decoded value is untrusted (it only passed GCM authentication, not schema
+ * validation), so reject anything that is not a plain object carrying a `kind`
+ * as a malformed token — mapped to a clean 400, never mis-dispatched.
+ */
+function asDiscriminatedToken(params: unknown): { kind: unknown; [key: string]: unknown } {
+  if (typeof params !== "object" || params === null || !("kind" in params)) {
+    throw new ProxyTokenMalformedError("Proxy token is missing its `kind` discriminant.");
+  }
+  return params as { kind: unknown; [key: string]: unknown };
+}
+
 // --- Request handling ---
 
 async function handleLayerRequest(url: URL, res: ServerResponse): Promise<void> {
@@ -111,11 +139,27 @@ async function handleLayerRequest(url: URL, res: ServerResponse): Promise<void> 
   let featureCollection: unknown;
   try {
     const params = decodeToken(token, env.PROXY_URL_SECRET);
-    const input = gpfGetFeaturesLayerInputSchema.parse(params);
-    featureCollection = await runGeometryFeatureQuery(input, {
-      wfsClient: getProxyWfsClient(),
-      resolveTravelTime: resolveProxyTravelTime,
-    });
+
+    // Dispatch on the token's `kind` discriminant (stamped by the producer tool),
+    // then strip it so the strict per-kind schema accepts the remaining payload.
+    // An unknown/missing kind fails cleanly as a 400 (malformed), never silently
+    // mis-dispatched to the query path.
+    const { kind, ...payload } = asDiscriminatedToken(params);
+
+    if (kind === PROXY_TOKEN_KIND.byId) {
+      const input = gpfGetFeatureByIdLayerInputObjectSchema.parse(payload);
+      featureCollection = await runGeometryFeatureByIdQuery(input, {
+        wfsClient: getProxyWfsClient(),
+      });
+    } else if (kind === PROXY_TOKEN_KIND.query) {
+      const input = gpfGetFeaturesLayerInputSchema.parse(payload);
+      featureCollection = await runGeometryFeatureQuery(input, {
+        wfsClient: getProxyWfsClient(),
+        resolveTravelTime: resolveProxyTravelTime,
+      });
+    } else {
+      throw new ProxyTokenMalformedError(`Unknown proxy token kind: ${String(kind)}.`);
+    }
   } catch (error) {
     const { status, detail } = toHttpError(error);
     // Log the REAL error message server-side (the client detail is a fixed, generic

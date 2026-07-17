@@ -5,12 +5,16 @@ import request from "supertest";
 
 import { encodeToken } from "../../src/proxy/token";
 import { resetEnv } from "../../src/config/env";
+import { PROXY_TOKEN_KIND } from "../../src/wfs/schema";
+import { FeatureNotFoundError, FeatureCardinalityError } from "../../src/wfs/byId";
 import { ServiceResponseError, ResponseTooLargeError } from "../../src/helpers/http";
 
 // Mock the proxy engine + transport so the server is exercised WITHOUT network.
 const runGeometryFeatureQuery = vi.fn();
+const runGeometryFeatureByIdQuery = vi.fn();
 vi.mock("../../src/proxy/execute", () => ({
   runGeometryFeatureQuery: (...args: unknown[]) => runGeometryFeatureQuery(...args),
+  runGeometryFeatureByIdQuery: (...args: unknown[]) => runGeometryFeatureByIdQuery(...args),
 }));
 vi.mock("../../src/proxy/transport", () => ({
   getProxyWfsClient: () => ({}),
@@ -32,7 +36,16 @@ const SAMPLE_COLLECTION = {
 };
 
 function validToken() {
-  return encodeToken({ typename: "BDTOPO_V3:batiment", limit: 100 }, KEY);
+  return encodeToken({ kind: PROXY_TOKEN_KIND.query, typename: "BDTOPO_V3:batiment", limit: 100 }, KEY);
+}
+
+function validByIdToken() {
+  return encodeToken({
+    kind: PROXY_TOKEN_KIND.byId,
+    typename: "BDTOPO_V3:batiment",
+    feature_id: "batiment.1",
+    select: ["hauteur"],
+  }, KEY);
 }
 
 beforeAll(async () => {
@@ -59,6 +72,7 @@ afterAll(async () => {
 
 beforeEach(() => {
   runGeometryFeatureQuery.mockReset();
+  runGeometryFeatureByIdQuery.mockReset();
 });
 
 describe("proxy/server", () => {
@@ -139,10 +153,63 @@ describe("proxy/server", () => {
   });
 
   it("400 when the decoded params fail schema validation", async () => {
-    // Encodes a payload the layer schema rejects (empty typename).
-    const badToken = encodeToken({ typename: "", limit: 100 }, KEY);
+    // Encodes a query-kind payload the layer schema rejects (empty typename).
+    const badToken = encodeToken({ kind: PROXY_TOKEN_KIND.query, typename: "", limit: 100 }, KEY);
     const res = await request(baseUrl).get(ENDPOINT).query({ q: badToken });
     expect(res.status).toBe(400);
+  });
+
+  it("400 when the token carries no `kind` discriminant", async () => {
+    // A token minted without a kind must be rejected as malformed, never
+    // silently dispatched to a query path.
+    const untagged = encodeToken({ typename: "BDTOPO_V3:batiment", limit: 100 }, KEY);
+    const res = await request(baseUrl).get(ENDPOINT).query({ q: untagged });
+    expect(res.status).toBe(400);
+    expect(runGeometryFeatureQuery).not.toHaveBeenCalled();
+    expect(runGeometryFeatureByIdQuery).not.toHaveBeenCalled();
+  });
+
+  it("dispatches a by-id token to the single-feature engine", async () => {
+    runGeometryFeatureByIdQuery.mockResolvedValue(SAMPLE_COLLECTION);
+
+    const res = await request(baseUrl).get(ENDPOINT).query({ q: validByIdToken() });
+
+    expect(res.status).toBe(200);
+    expect(res.headers["content-type"]).toContain("application/geo+json");
+    expect(JSON.parse(res.text)).toEqual(SAMPLE_COLLECTION);
+    expect(runGeometryFeatureByIdQuery).toHaveBeenCalledOnce();
+    expect(runGeometryFeatureQuery).not.toHaveBeenCalled();
+    // The `kind` discriminant is stripped before the engine call — it receives the
+    // strict { typename, feature_id, select? } payload only.
+    const [input] = runGeometryFeatureByIdQuery.mock.calls[0];
+    expect(input).toEqual({
+      typename: "BDTOPO_V3:batiment",
+      feature_id: "batiment.1",
+      select: ["hauteur"],
+    });
+  });
+
+  it("404 when the by-id feature is absent (FeatureNotFoundError)", async () => {
+    runGeometryFeatureByIdQuery.mockRejectedValue(
+      new FeatureNotFoundError("Le feature 'batiment.404' est introuvable dans 'BDTOPO_V3:batiment'."),
+    );
+
+    const res = await request(baseUrl).get(ENDPOINT).query({ q: validByIdToken() });
+
+    expect(res.status).toBe(404);
+    expect(res.body).toHaveProperty("error", true);
+    expect(res.body.type).toBeUndefined(); // not a GeoJSON-shaped body
+  });
+
+  it("502 when the by-id result breaks cardinality (FeatureCardinalityError)", async () => {
+    runGeometryFeatureByIdQuery.mockRejectedValue(
+      new FeatureCardinalityError("… devrait être unique, mais 2 objets ont été retournés."),
+    );
+
+    const res = await request(baseUrl).get(ENDPOINT).query({ q: validByIdToken() });
+
+    expect(res.status).toBe(502);
+    expect(res.body).toHaveProperty("error", true);
   });
 
   it("404 on an unknown path", async () => {

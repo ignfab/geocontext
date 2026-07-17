@@ -118,7 +118,6 @@ describe("proxy/transport · resolveProxyTravelTime", () => {
   const travelTimeInput: GpfGetFeaturesInput = {
     typename: "BDTOPO_V3:batiment",
     limit: 100,
-    result_type: "results",
     spatial_extras: [],
     travel_time_filter: { lon: 2.35, lat: 48.85, minutes: 15, profile: "pedestrian" },
   };
@@ -153,7 +152,6 @@ describe("proxy/transport · resolveProxyTravelTime", () => {
     const noFilter: GpfGetFeaturesInput = {
       typename: "BDTOPO_V3:batiment",
       limit: 100,
-      result_type: "results",
       spatial_extras: [],
     };
     await expect(resolveProxyTravelTime(noFilter)).rejects.toThrow(/travel_time/);

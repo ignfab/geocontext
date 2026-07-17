@@ -50,7 +50,7 @@ describe("Test GpfGetFeatureByIdTool", () => {
     mockFetchJSONPost.mockReset();
   });
 
-  it("should expose an MCP definition with explicit HTTP result types", () => {
+  it("should expose an MCP definition without a result_type knob", () => {
     const tool = new GpfGetFeatureByIdTool();
     expect(tool.toolDefinition.title).toEqual("Lecture d’un objet GPF par identifiant");
     expect(tool.toolDefinition.inputSchema).toEqual({
@@ -73,13 +73,7 @@ describe("Test GpfGetFeatureByIdTool", () => {
             type: "string",
           },
           default: [],
-          description: "Éléments calculés depuis la géométrie à renvoyer pour `result_type=results`. Peut inclure `centroid` et `bbox`, aucun par défaut.",
-        },
-        result_type: {
-          type: "string",
-          enum: ["results", "http_post_request", "http_get_url"],
-          default: "results",
-          description: "`results` renvoie une FeatureCollection normalisée avec exactement un objet et le choix de `spatial_extras` en guise d'information géométrique. `http_post_request` renvoie une requête POST robuste à exécuter directement. `http_get_url` renvoie l'URL GET équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant.",
+          description: "Éléments calculés depuis la géométrie à renvoyer pour chaque objet. Peut inclure `centroid` et `bbox`, aucun par défaut.",
         },
         select: {
           type: "array",
@@ -95,75 +89,6 @@ describe("Test GpfGetFeatureByIdTool", () => {
       additionalProperties: false,
       $schema: "http://json-schema.org/draft-07/schema#",
     });
-  });
-
-  it("should return text content and structuredContent for http_post_request", async () => {
-    const tool = new GpfGetFeatureByIdTool();
-    mockGetFeatureType.mockResolvedValue(polygonFeatureType);
-
-    const response = await tool.toolCall({
-      params: {
-        name: "gpf_get_feature_by_id",
-        arguments: {
-          typename: "ADMINEXPRESS-COG.LATEST:commune",
-          feature_id: "commune.1",
-          result_type: "http_post_request",
-          select: ["code_insee"],
-        },
-      },
-    });
-
-    expect(response.isError).toBeUndefined();
-    const textContent = response.content[0];
-    if (textContent.type !== "text") {
-      throw new Error("expected text content");
-    }
-    const payload = JSON.parse(textContent.text);
-    expect(payload).toEqual(response.structuredContent);
-    expect(payload.result_type).toEqual("http_post_request");
-    expect(payload.http_get_url).toBeUndefined();
-    expect(payload.http_post_request).toMatchObject({
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: "",
-    });
-    const url = new URL(payload.http_post_request.url);
-    expect(url.searchParams.get("featureID")).toEqual("commune.1");
-    expect(url.searchParams.get("typeNames")).toEqual("ADMINEXPRESS-COG.LATEST:commune");
-    expect(url.searchParams.get("exceptions")).toEqual("application/json");
-    expect(url.searchParams.get("propertyName")).toEqual("code_insee,geometrie");
-    expect(url.searchParams.get("count")).toEqual("2");
-  });
-
-  it("should return text content and structuredContent for http_get_url", async () => {
-    const tool = new GpfGetFeatureByIdTool();
-    mockGetFeatureType.mockResolvedValue(polygonFeatureType);
-
-    const response = await tool.toolCall({
-      params: {
-        name: "gpf_get_feature_by_id",
-        arguments: {
-          typename: "ADMINEXPRESS-COG.LATEST:commune",
-          feature_id: "commune.1",
-          result_type: "http_get_url",
-          select: ["code_insee"],
-        },
-      },
-    });
-
-    expect(response.isError).toBeUndefined();
-    const textContent = response.content[0];
-    if (textContent.type !== "text") {
-      throw new Error("expected text content");
-    }
-    const payload = JSON.parse(textContent.text);
-    expect(payload).toEqual(response.structuredContent);
-    expect(payload.result_type).toEqual("http_get_url");
-    expect(payload.http_post_request).toBeUndefined();
-    const url = new URL(payload.http_get_url);
-    expect(url.searchParams.get("featureID")).toEqual("commune.1");
-    expect(url.searchParams.get("typeNames")).toEqual("ADMINEXPRESS-COG.LATEST:commune");
-    expect(url.searchParams.get("propertyName")).toEqual("code_insee,geometrie");
   });
 
   it("should return exactly one transformed feature for results", async () => {
@@ -303,7 +228,10 @@ describe("Test GpfGetFeatureByIdTool", () => {
     expect(textContent.text).toContain("est introuvable");
     expect(textContent.text).toContain("commune.404");
     expect(response.structuredContent).toMatchObject({
-      type: "urn:geocontext:problem:execution-error",
+      type: "urn:geocontext:problem:feature-not-found",
+      errors: expect.arrayContaining([
+        expect.objectContaining({ code: "feature_not_found" }),
+      ]),
     });
   });
 
@@ -336,7 +264,10 @@ describe("Test GpfGetFeatureByIdTool", () => {
     }
     expect(textContent.text).toContain("devrait être unique");
     expect(response.structuredContent).toMatchObject({
-      type: "urn:geocontext:problem:execution-error",
+      type: "urn:geocontext:problem:feature-cardinality",
+      errors: expect.arrayContaining([
+        expect.objectContaining({ code: "feature_cardinality" }),
+      ]),
     });
   });
 
@@ -368,11 +299,14 @@ describe("Test GpfGetFeatureByIdTool", () => {
     }
     expect(textContent.text).toContain("au lieu de");
     expect(response.structuredContent).toMatchObject({
-      type: "urn:geocontext:problem:execution-error",
+      type: "urn:geocontext:problem:feature-cardinality",
+      errors: expect.arrayContaining([
+        expect.objectContaining({ code: "feature_cardinality" }),
+      ]),
     });
   });
 
-  it("should reject invalid result_type values such as hits", async () => {
+  it("should reject an unknown result_type parameter", async () => {
     const tool = new GpfGetFeatureByIdTool();
     const response = await tool.toolCall({
       params: {
@@ -380,11 +314,13 @@ describe("Test GpfGetFeatureByIdTool", () => {
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
           feature_id: "commune.1",
-          result_type: "hits",
+          result_type: "http_post_request",
         },
       },
     });
 
+    // `result_type` no longer exists on the schema; under `.strict()` a stray
+    // value is rejected as an unknown parameter.
     expect(response.isError).toBe(true);
     const textContent = response.content[0];
     if (textContent.type !== "text") {
@@ -396,66 +332,7 @@ describe("Test GpfGetFeatureByIdTool", () => {
       errors: expect.arrayContaining([
         expect.objectContaining({
           name: "result_type",
-          code: "invalid_enum_value",
-          detail: expect.stringContaining("results"),
-        }),
-      ]),
-    });
-  });
-
-  it("should reject legacy request result_type", async () => {
-    const tool = new GpfGetFeatureByIdTool();
-    const response = await tool.toolCall({
-      params: {
-        name: "gpf_get_feature_by_id",
-        arguments: {
-          typename: "ADMINEXPRESS-COG.LATEST:commune",
-          feature_id: "commune.1",
-          result_type: "request",
-        },
-      },
-    });
-
-    expect(response.isError).toBe(true);
-    expect(response.structuredContent).toMatchObject({
-      type: "urn:geocontext:problem:invalid-tool-params",
-      errors: expect.arrayContaining([
-        expect.objectContaining({
-          name: "result_type",
-          code: "invalid_enum_value",
-          detail: expect.stringContaining("http_post_request"),
-        }),
-      ]),
-    });
-  });
-
-  it("should reject spatial_extras with http_get_url result_type", async () => {
-    const tool = new GpfGetFeatureByIdTool();
-
-    const response = await tool.toolCall({
-      params: {
-        name: "gpf_get_feature_by_id",
-        arguments: {
-          typename: "ADMINEXPRESS-COG.LATEST:commune",
-          feature_id: "commune.1",
-          spatial_extras: ["bbox"],
-          result_type: "http_get_url",
-        },
-      },
-    });
-
-    expect(response.isError).toBe(true);
-    const textContent = response.content[0];
-    if (textContent.type !== "text") {
-      throw new Error("expected text content");
-    }
-    expect(textContent.text).toContain("spatial_extras");
-    expect(response.structuredContent).toMatchObject({
-      type: "urn:geocontext:problem:invalid-tool-params",
-      errors: expect.arrayContaining([
-        expect.objectContaining({
-          name: "spatial_extras",
-          code: "custom",
+          code: "unknown_parameter",
         }),
       ]),
     });

@@ -18,9 +18,11 @@ const toolDisplayOrder = [
   "assiette_sup",
   "gpf_search_types",
   "gpf_describe_type",
-  "gpf_get_feature_by_id",
   "gpf_get_features",
-  "gpf_count_features"
+  "gpf_get_features_layer",
+  "gpf_count_features",
+  "gpf_get_feature_by_id",
+  "gpf_get_feature_by_id_layer",
 ];
 
 /**
@@ -199,22 +201,10 @@ export function renderResponseContractSection(definition) {
       "",
       renderResponseContractTable([
         {
-          caseName: 'Succès `result_type="results"`',
+          caseName: "Succès",
           content: "oui",
           structuredContent: "non",
-          relation: "`content[0].text` est la FeatureCollection stringifiée ; aucun `structuredContent` n'est ajouté dans ce mode.",
-        },
-        {
-          caseName: 'Succès `result_type="http_post_request"`',
-          content: "oui",
-          structuredContent: "oui",
-          relation: "`content[0].text` est `JSON.stringify(structuredContent)`.",
-        },
-        {
-          caseName: 'Succès `result_type="http_get_url"`',
-          content: "oui",
-          structuredContent: "oui",
-          relation: "`content[0].text` est `JSON.stringify(structuredContent)`.",
+          relation: "`content[0].text` est la FeatureCollection stringifiée (propriétés attributaires uniquement) ; aucun `structuredContent` n'est ajouté.",
         },
         errorRow,
       ]),
@@ -227,22 +217,10 @@ export function renderResponseContractSection(definition) {
       "",
       renderResponseContractTable([
         {
-          caseName: 'Succès `result_type="results"`',
+          caseName: "Succès",
           content: "oui",
           structuredContent: "oui",
-          relation: "`content[0].text` est `JSON.stringify(structuredContent)`.",
-        },
-        {
-          caseName: 'Succès `result_type="http_post_request"`',
-          content: "oui",
-          structuredContent: "oui",
-          relation: "`content[0].text` est `JSON.stringify(structuredContent)`.",
-        },
-        {
-          caseName: 'Succès `result_type="http_get_url"`',
-          content: "oui",
-          structuredContent: "oui",
-          relation: "`content[0].text` est `JSON.stringify(structuredContent)`.",
+          relation: "`content[0].text` est la FeatureCollection stringifiée, également exposée dans `structuredContent`.",
         },
         errorRow,
       ]),

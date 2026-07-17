@@ -9,6 +9,12 @@
 import { ZodError } from "zod";
 
 import { ServiceResponseError } from "../helpers/http.js";
+import {
+  ProxyTokenMalformedError,
+  ProxyTokenTamperedError,
+  ProxyTokenTooLargeError,
+} from "../proxy/token.js";
+import { FeatureNotFoundError, FeatureCardinalityError } from "../wfs/byId.js";
 import { installZodErrorMapFr } from "./zodErrorMapFr.js";
 
 // Install the FR Zod error map at module load so the very first parse in the
@@ -38,6 +44,8 @@ export type ToolErrorPayload = {
 type ClassifiedToolError =
   | { kind: "invalid_tool_params"; error: ZodError }
   | { kind: "upstream"; error: ServiceResponseError }
+  | { kind: "proxy_token"; error: ProxyTokenMalformedError | ProxyTokenTamperedError | ProxyTokenTooLargeError }
+  | { kind: "feature_cardinality"; error: FeatureNotFoundError | FeatureCardinalityError }
   | { kind: "execution"; error: unknown };
 
 // --- Problem Type Constants ---
@@ -49,6 +57,9 @@ const INVALID_TOOL_PARAMS_TYPE = "urn:geocontext:problem:invalid-tool-params";
 const UPSTREAM_INVALID_REQUEST_TYPE = "urn:geocontext:problem:upstream-invalid-request";
 const UPSTREAM_ERROR_TYPE = "urn:geocontext:problem:upstream-error";
 const EXECUTION_ERROR_TYPE = "urn:geocontext:problem:execution-error";
+const PROXY_URL_ERROR_TYPE = "urn:geocontext:problem:proxy-url-error";
+const FEATURE_NOT_FOUND_TYPE = "urn:geocontext:problem:feature-not-found";
+const FEATURE_CARDINALITY_TYPE = "urn:geocontext:problem:feature-cardinality";
 
 // --- Shared Helpers ---
 
@@ -171,6 +182,62 @@ function buildUpstreamProblem(error: ServiceResponseError): ToolErrorPayload {
 }
 
 /**
+ * Maps a proxy URL-token error to a FR problem payload.
+ *
+ * `token.ts` is a low-level codec with EN messages; the FR wording lives here so
+ * translation happens once at the tool boundary, like the rest of the project.
+ *
+ * @param error Typed proxy-token error thrown by the codec.
+ * @returns A normalized proxy-URL problem payload.
+ */
+function buildProxyTokenProblem(
+  error: ProxyTokenMalformedError | ProxyTokenTamperedError | ProxyTokenTooLargeError,
+): ToolErrorPayload {
+  const detail = error instanceof ProxyTokenTooLargeError
+    ? "La requête est trop volumineuse pour être encodée dans une URL de couche. Réduire le filtre `where` ou le nombre de propriétés `select`."
+    : "Impossible de produire l'URL de couche cartographique.";
+
+  return {
+    type: PROXY_URL_ERROR_TYPE,
+    title: "Erreur de génération de l’URL de couche",
+    detail,
+    errors: [
+      {
+        code: error instanceof ProxyTokenTooLargeError ? "proxy_url_too_large" : "proxy_url_error",
+        detail,
+      },
+    ],
+  };
+}
+
+/**
+ * Maps a by-id cardinality error to a FR problem payload. These errors already
+ * carry FR, caller-safe messages (they name the requested typename/feature_id,
+ * not upstream internals), so the message is surfaced as-is with a stable code.
+ *
+ * @param error Typed by-id cardinality error.
+ * @returns A normalized problem payload.
+ */
+function buildFeatureCardinalityProblem(
+  error: FeatureNotFoundError | FeatureCardinalityError,
+): ToolErrorPayload {
+  const isNotFound = error instanceof FeatureNotFoundError;
+  const detail = error.message.trim();
+
+  return {
+    type: isNotFound ? FEATURE_NOT_FOUND_TYPE : FEATURE_CARDINALITY_TYPE,
+    title: isNotFound ? "Objet introuvable" : "Réponse incohérente du service amont",
+    detail,
+    errors: [
+      {
+        code: isNotFound ? "feature_not_found" : "feature_cardinality",
+        detail,
+      },
+    ],
+  };
+}
+
+/**
  * Maps unknown runtime errors to one of the normalization categories.
  *
  * @param error Unknown runtime error.
@@ -182,6 +249,16 @@ function classifyToolError(error: unknown): ClassifiedToolError {
   }
   if (error instanceof ServiceResponseError) {
     return { kind: "upstream", error };
+  }
+  if (
+    error instanceof ProxyTokenTooLargeError ||
+    error instanceof ProxyTokenMalformedError ||
+    error instanceof ProxyTokenTamperedError
+  ) {
+    return { kind: "proxy_token", error };
+  }
+  if (error instanceof FeatureNotFoundError || error instanceof FeatureCardinalityError) {
+    return { kind: "feature_cardinality", error };
   }
   return { kind: "execution", error };
 }
@@ -236,6 +313,10 @@ export function normalizeToolError(error: unknown): ToolErrorPayload {
     }
     case "upstream":
       return buildUpstreamProblem(classifiedError.error);
+    case "proxy_token":
+      return buildProxyTokenProblem(classifiedError.error);
+    case "feature_cardinality":
+      return buildFeatureCardinalityProblem(classifiedError.error);
     case "execution":
       return buildExecutionProblem(classifiedError.error);
   }

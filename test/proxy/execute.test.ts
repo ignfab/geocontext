@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Collection } from "@ignfab/gpf-schema-store";
 
-import { runGeometryFeatureQuery, type WfsClientLike, type TravelTimeResolver } from "../../src/proxy/execute";
+import { runGeometryFeatureQuery, runGeometryFeatureByIdQuery, type WfsClientLike, type TravelTimeResolver } from "../../src/proxy/execute";
 import type { CompiledRequest } from "../../src/wfs/request";
 import type { WfsFeatureCollectionResponse } from "../../src/wfs/types";
 import type { GpfGetFeaturesInput } from "../../src/wfs/schema";
@@ -54,7 +54,6 @@ const collectionWithGeometry: WfsFeatureCollectionResponse = {
 const baseInput: GpfGetFeaturesInput = {
   typename: "ADMINEXPRESS-COG.LATEST:commune",
   limit: 100,
-  result_type: "results",
   spatial_extras: [],
 };
 
@@ -132,8 +131,8 @@ describe("proxy/execute · runGeometryFeatureQuery", () => {
 
     await runGeometryFeatureQuery(baseInput, { wfsClient: client, resolveTravelTime: unexpectedResolveTravelTime });
 
-    // With result_type "results" and no select, compileQueryParts materializes the
-    // non-geometry columns; the runner then appends the geometry column.
+    // With no select, compileQueryParts materializes the non-geometry columns;
+    // the runner then appends the geometry column.
     const columns = requests[0].query.propertyName!.split(",");
     expect(columns).toContain("code_insee");
     expect(columns).toContain("population");
@@ -284,5 +283,105 @@ describe("proxy/execute · runGeometryFeatureQuery", () => {
     await expect(
       runGeometryFeatureQuery(baseInput, { wfsClient: client, resolveTravelTime: unexpectedResolveTravelTime }),
     ).rejects.toBe(upstream);
+  });
+});
+
+describe("proxy/execute · runGeometryFeatureByIdQuery", () => {
+  const byIdInput = { typename: "ADMINEXPRESS-COG.LATEST:commune", feature_id: "commune.1" };
+
+  it("returns the RAW single-feature collection with geometry preserved", async () => {
+    const { client, requests } = makeClient();
+
+    const result = await runGeometryFeatureByIdQuery(byIdInput, { wfsClient: client });
+
+    expect(result.type).toBe("FeatureCollection");
+    expect(result.features).toHaveLength(1);
+    expect(result.features?.[0]?.geometry).toBeTruthy();
+    expect(result.numberReturned).toBe(1);
+
+    // No `propertyName` is sent (WFS returns all props incl. geometry); srsName is
+    // forced to WGS84 like the query path.
+    expect(requests).toHaveLength(1);
+    expect(requests[0].query.propertyName).toBeUndefined();
+    expect(requests[0].query.featureID).toBe("commune.1");
+    expect(requests[0].query.srsName).toBe("EPSG:4326");
+  });
+
+  it("validates select and appends the geometry column to propertyName", async () => {
+    const { client, requests } = makeClient();
+
+    await runGeometryFeatureByIdQuery(
+      { ...byIdInput, select: ["code_insee"] },
+      { wfsClient: client },
+    );
+
+    expect(requests).toHaveLength(1);
+    expect(requests[0].query.propertyName).toBe("code_insee,geometrie");
+  });
+
+  it("rejects an unknown selected property before calling the WFS", async () => {
+    const { client, requests } = makeClient();
+
+    await expect(
+      runGeometryFeatureByIdQuery(
+        { ...byIdInput, select: ["propriete_inconnue"] },
+        { wfsClient: client },
+      ),
+    ).rejects.toThrow(/n'existe pas/);
+
+    expect(requests).toHaveLength(0);
+  });
+
+  it("rejects the geometry property in select before calling the WFS", async () => {
+    const { client, requests } = makeClient();
+
+    await expect(
+      runGeometryFeatureByIdQuery(
+        { ...byIdInput, select: ["geometrie"] },
+        { wfsClient: client },
+      ),
+    ).rejects.toThrow(/non géométriques/);
+
+    expect(requests).toHaveLength(0);
+  });
+
+  it("throws a clear cardinality error when the feature is not found (0 results)", async () => {
+    const empty: WfsFeatureCollectionResponse = {
+      type: "FeatureCollection",
+      features: [],
+      numberMatched: 0,
+      numberReturned: 0,
+    } as unknown as WfsFeatureCollectionResponse;
+    const { client } = makeClient({ responses: [empty] });
+
+    await expect(
+      runGeometryFeatureByIdQuery({ typename: "ADMINEXPRESS-COG.LATEST:commune", feature_id: "commune.404" }, { wfsClient: client }),
+    ).rejects.toThrow(/introuvable/);
+  });
+
+  it("throws a uniqueness error when more than one feature is returned", async () => {
+    const twoFeatures: WfsFeatureCollectionResponse = {
+      type: "FeatureCollection",
+      features: [
+        { type: "Feature", id: "commune.1", geometry: { type: "Point", coordinates: [2, 48] }, properties: {} },
+        { type: "Feature", id: "commune.1", geometry: { type: "Point", coordinates: [2, 48] }, properties: {} },
+      ],
+      numberMatched: 2,
+      numberReturned: 2,
+    } as unknown as WfsFeatureCollectionResponse;
+    const { client } = makeClient({ responses: [twoFeatures] });
+
+    await expect(
+      runGeometryFeatureByIdQuery(byIdInput, { wfsClient: client }),
+    ).rejects.toThrow(/devrait être unique/);
+  });
+
+  it("rejects an off-contract 200 body (not a FeatureCollection)", async () => {
+    const bad = { error: "boom" } as unknown as WfsFeatureCollectionResponse;
+    const { client } = makeClient({ responses: [bad] });
+
+    await expect(
+      runGeometryFeatureByIdQuery(byIdInput, { wfsClient: client }),
+    ).rejects.toThrow(/FeatureCollection GeoJSON exploitable/);
   });
 });

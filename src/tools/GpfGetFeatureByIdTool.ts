@@ -1,24 +1,15 @@
 /**
  * MCP tool exposing exact WFS feature lookup by `feature_id`.
  *
- * The tool keeps MCP-facing concerns such as schema exposure, compact response
- * formatting, and request-preview output. The `results` execution flow itself
- * is delegated to the structured WFS engine.
+ * The tool keeps MCP-facing concerns such as schema exposure and response
+ * formatting. The execution flow itself is delegated to the structured WFS engine.
  */
 
 import BaseTool from "./BaseTool.js";
 
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
-import { buildPropertyName, executeGetFeatureById } from "../wfs/byId.js";
-import { wfsClient } from "../wfs/execution.js";
+import { executeGetFeatureById } from "../wfs/byId.js";
 import {
-  buildGetFeatureByIdRequest,
-  toWfsHttpGetUrlPayload,
-  toWfsHttpPostRequestPayload,
-} from "../wfs/request.js";
-import {
-  gpfGetFeatureByIdHttpGetUrlOutputSchema,
-  gpfGetFeatureByIdHttpPostRequestOutputSchema,
   gpfGetFeatureByIdInputObjectSchema,
   gpfGetFeatureByIdInputSchema,
   type GpfGetFeatureByIdInput,
@@ -36,7 +27,7 @@ class GpfGetFeatureByIdTool extends BaseTool<GpfGetFeatureByIdInput> {
     "Récupère exactement un objet GPF à partir de `typename` et `feature_id`, sans filtre attributaire ni spatial.",
     "Ce tool est le chemin robuste quand vous disposez déjà d'une `feature_ref { typename, feature_id }` issue d'un autre tool (`adminexpress`, `cadastre`, `urbanisme`, `assiette_sup`, `gpf_get_features`).",
     "Le contrat garantit une cardinalité stricte : 0 résultat ou plusieurs résultats provoquent une erreur explicite.",
-    "Utiliser `result_type=\"http_post_request\"` pour récupérer une requête POST robuste, ou `result_type=\"http_get_url\"` pour récupérer l'URL GET équivalente et l'utiliser ou la visualiser dans un outil la supportant."
+    "Utiliser `spatial_extras` pour renvoyer une information géométrique dérivée (bbox, centroïde, ...) de l'objet."
   ].join("\n");
 
   // `schema` remains the runtime validation source, while `inputSchema`
@@ -55,45 +46,16 @@ class GpfGetFeatureByIdTool extends BaseTool<GpfGetFeatureByIdInput> {
   }
 
   /**
-   * Formats compact responses (`http_post_request`, `http_get_url`, `results`) into `structuredContent`.
+   * Formats the `results` FeatureCollection into `structuredContent`.
    *
-   * We intentionally do not expose a single `outputSchemaShape` for the tool as
-   * a whole: the `results` path returns a generic FeatureCollection whose
-   * feature properties depend on the queried WFS layer, while HTTP preview
-   * modes have compact, closed shapes that are worth validating explicitly.
+   * We intentionally do not expose an `outputSchemaShape` for the tool: the
+   * returned FeatureCollection's feature properties depend on the queried WFS
+   * layer, so it has no closed shape worth validating.
    *
    * @param data Raw execution result returned by the tool implementation.
-   * @returns An MCP success response, optionally enriched with structured content.
+   * @returns An MCP success response enriched with structured content.
    */
   protected createSuccessResponse(data: unknown) {
-    if (
-      typeof data === "object" &&
-      data !== null &&
-      "result_type" in data &&
-      data.result_type === "http_post_request"
-    ) {
-      const payload = gpfGetFeatureByIdHttpPostRequestOutputSchema.parse(data);
-
-      return {
-        content: [{ type: "text" as const, text: JSON.stringify(payload) }],
-        structuredContent: payload,
-      };
-    }
-
-    if (
-      typeof data === "object" &&
-      data !== null &&
-      "result_type" in data &&
-      data.result_type === "http_get_url"
-    ) {
-      const payload = gpfGetFeatureByIdHttpGetUrlOutputSchema.parse(data);
-
-      return {
-        content: [{ type: "text" as const, text: JSON.stringify(payload) }],
-        structuredContent: payload,
-      };
-    }
-
     if (
       typeof data === "object" &&
       data !== null &&
@@ -107,16 +69,16 @@ class GpfGetFeatureByIdTool extends BaseTool<GpfGetFeatureByIdInput> {
     }
 
     throw new Error(
-      "Réponse interne inattendue pour gpf_get_feature_by_id : le résultat devrait être une requête HTTP, une URL GET ou une FeatureCollection.",
+      "Réponse interne inattendue pour gpf_get_feature_by_id : le résultat devrait être une FeatureCollection.",
     );
   }
 
   /**
    * Orchestrates the by-id execution flow:
-   * schema lookup -> request compilation -> optional HTTP preview output -> WFS execution -> cardinality validation.
+   * schema validation -> WFS execution -> cardinality validation.
    *
    * @param input Normalized tool input.
-   * @returns Either an HTTP preview payload or a transformed FeatureCollection containing one feature.
+   * @returns A transformed FeatureCollection containing one feature.
    */
   async execute(input: GpfGetFeatureByIdInput) {
     const validatedInput = gpfGetFeatureByIdInputSchema.parse(input);
@@ -124,24 +86,10 @@ class GpfGetFeatureByIdTool extends BaseTool<GpfGetFeatureByIdInput> {
       input: validatedInput
     });
 
-    if (validatedInput.result_type === "http_post_request" || validatedInput.result_type === "http_get_url") {
-      // HTTP preview modes are handled here because they return a preview payload,
-      // not the actual by-id WFS result.
-      const featureType = await wfsClient.getFeatureType(validatedInput.typename);
-      const propertyName = buildPropertyName(featureType, {
-        includeGeometry: true,
-        select: validatedInput.select,
-      });
-      const request = buildGetFeatureByIdRequest(validatedInput.typename, validatedInput.feature_id, propertyName);
-      return validatedInput.result_type === "http_post_request"
-        ? toWfsHttpPostRequestPayload(request)
-        : toWfsHttpGetUrlPayload(request);
-    }
-
     return executeGetFeatureById({
-      typename: input.typename,
-      feature_id: input.feature_id,
-      select: input.select,
+      typename: validatedInput.typename,
+      feature_id: validatedInput.feature_id,
+      select: validatedInput.select,
       spatial_extras: validatedInput.spatial_extras,
     });
   }

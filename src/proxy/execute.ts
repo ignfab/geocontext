@@ -32,13 +32,13 @@ import {
   getSpatialFilter,
   type ResolvedFeatureGeometryRef,
 } from "../wfs/queryPreparation.js";
-import { requireSingleFeatureById } from "../wfs/byId.js";
+import { buildPropertyName, requireSingleFeatureById } from "../wfs/byId.js";
 import { ServiceResponseError } from "../helpers/http.js";
 import type {
   WfsFeatureCollectionResponse,
   WfsFeatureResponse,
 } from "../wfs/types.js";
-import type { GpfGetFeaturesInput } from "../wfs/schema.js";
+import type { GpfGetFeaturesInput, GpfGetFeatureByIdLayerInput } from "../wfs/schema.js";
 
 // --- Injected Dependencies ---
 
@@ -241,4 +241,85 @@ export async function runGeometryFeatureQuery(
   }
 
   return featureCollection;
+}
+
+// --- By-id Public Engine ---
+
+/**
+ * Dependencies injected into {@link runGeometryFeatureByIdQuery}. Narrower than
+ * {@link GeometryFeatureQueryDeps}: a by-id lookup has no filters, so it never
+ * resolves a reference geometry and needs no isochrone resolver.
+ */
+export type GeometryFeatureByIdQueryDeps = {
+  wfsClient: WfsClientLike;
+};
+
+/**
+ * Executes a single-feature by-id lookup and returns the RAW FeatureCollection
+ * with full geometry (for map rendering by MCP Carto).
+ *
+ * Counterpart of {@link runGeometryFeatureQuery} for the by-id producer tool:
+ * - fetches exactly one feature by its WFS `featureID`;
+ * - validates an optional `select` against the embedded catalog and appends the
+ *   geometry column; without `select`, omits `propertyName` so every property is
+ *   returned;
+ * - requests WGS84 (`EPSG:4326`, [lon, lat]) like the query path;
+ * - enforces strict cardinality (0 or >1 results throw);
+ * - returns the untransformed single-feature collection — never `attachFeatureRefs`
+ *   (which would null the geometry).
+ *
+ * @param input Validated by-id layer input (`{ typename, feature_id, select? }`).
+ * @param deps Injected WFS client (catalog + execution).
+ * @returns The raw WFS FeatureCollection with the single matching feature.
+ */
+export async function runGeometryFeatureByIdQuery(
+  input: GpfGetFeatureByIdLayerInput,
+  deps: GeometryFeatureByIdQueryDeps,
+): Promise<WfsFeatureCollectionResponse> {
+  const { wfsClient } = deps;
+  const featureType: Collection = await wfsClient.getFeatureType(input.typename);
+
+  // Validate `select` against the same embedded catalog used at URL generation,
+  // then force the geometry column into the WFS selection. Re-validating here is
+  // required because decoded proxy tokens remain untrusted input.
+  const propertyName = buildPropertyName(featureType, {
+    includeGeometry: true,
+    select: input.select,
+  });
+  const request = buildGetFeatureByIdRequest(
+    input.typename,
+    input.feature_id,
+    propertyName,
+  );
+
+  // Request WGS84 lon/lat, matching the query path and the /gpf convention. Set it
+  // on request.query, which the proxy transport serializes into the fetch URL.
+  request.query.srsName = "EPSG:4326";
+
+  const featureCollection = await wfsClient.fetchFeatureCollection(request);
+
+  // Off-contract-body guard, mirroring runGeometryFeatureQuery: reject a
+  // 200-with-error-body before requireSingleFeatureById (which only checks the
+  // features array), so Carto never receives a valid-looking bad layer.
+  if (
+    featureCollection?.type !== "FeatureCollection" ||
+    !Array.isArray(featureCollection.features)
+  ) {
+    throw new Error(
+      "Le service WFS n'a pas retourné une FeatureCollection GeoJSON exploitable.",
+    );
+  }
+
+  const firstFeature = requireSingleFeatureById(featureCollection, {
+    typename: input.typename,
+    feature_id: input.feature_id,
+  });
+
+  return {
+    ...featureCollection,
+    features: [firstFeature],
+    totalFeatures: 1,
+    numberReturned: 1,
+    numberMatched: 1,
+  };
 }
