@@ -44,7 +44,7 @@ import type { GpfGetFeaturesInput, GpfGetFeatureByIdLayerInput } from "../wfs/sc
 
 /**
  * Minimal WFS client surface the proxy engine depends on. The HTTP layer injects
- * a concrete client whose transport is size-bounded and rate-limited (commit 3);
+ * a concrete client whose transport is size-bounded and rate-limited;
  * tests inject a double.
  */
 export type WfsClientLike = {
