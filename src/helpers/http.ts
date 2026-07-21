@@ -258,8 +258,14 @@ async function fetchTextWithLimit(
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
+  // The try/catch/finally wraps ONLY the abortable work: the fetch and the body
+  // streaming. That is the sole source of an AbortError, so the timeout → 504
+  // mapping lives here. Everything after (upstream-status handling) runs on the
+  // already-read `text` — pure CPU, no I/O — so it is kept OUT of this scope.
+  let response: Awaited<ReturnType<typeof fetch>>;
+  let text: string;
   try {
-    const response = await fetch(url, {
+    response = await fetch(url, {
       ...buildFetchOptions(method, body, headers),
       signal: controller.signal,
     });
@@ -288,39 +294,7 @@ async function fetchTextWithLimit(
       chunks.push(chunk);
     }
 
-    const text = Buffer.concat(chunks).toString("utf8");
-
-    // Preserve the upstream HTTP status: a non-2xx must not be handed back as a
-    // valid body (a 400/500 whose body happens to look like a FeatureCollection
-    // would otherwise be served to Carto as a real layer). Route it through the
-    // same structured XML/JSON error extraction as the JSON path — it always
-    // throws for a non-ok response, yielding a ServiceResponseError that carries
-    // the real status + WFS detail.
-    if (!response.ok) {
-      const contentType = (response.headers.get("content-type") ?? "").toLowerCase();
-      const errorContext = buildResponseContext(
-        { status: response.status, statusText: response.statusText, ok: false, headers: response.headers, text: async () => text },
-        text,
-        contentType,
-      );
-      if (errorContext.looksLikeXml) {
-        handleXmlResponse(errorContext); // always throws
-      }
-      let json: unknown;
-      try {
-        json = JSON.parse(text);
-      } catch {
-        json = undefined;
-      }
-      const serviceError = extractJsonServiceError(json ?? previewBody(text) ?? UNKNOWN_UPSTREAM_DETAIL);
-      throw buildServiceResponseError(
-        errorContext,
-        `Erreur HTTP du service (${errorContext.responseLabel}): ${serviceError.detail}`,
-        { code: serviceError.code, detail: serviceError.detail },
-      );
-    }
-
-    return text;
+    text = Buffer.concat(chunks).toString("utf8");
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
       throw new ServiceResponseError(
@@ -339,8 +313,42 @@ async function fetchTextWithLimit(
     }
     throw error;
   } finally {
+    // Safe to clear as soon as the body is read: the timer's only job is to abort
+    // the in-flight fetch/stream, which is complete by the time we get here.
     clearTimeout(timeoutId);
   }
+
+  // Preserve the upstream HTTP status: a non-2xx must not be handed back as a
+  // valid body (a 400/500 whose body happens to look like a FeatureCollection
+  // would otherwise be served to Carto as a real layer). Route it through the
+  // same structured XML/JSON error extraction as the JSON path — it always
+  // throws for a non-ok response, yielding a ServiceResponseError that carries
+  // the real status + WFS detail.
+  if (!response.ok) {
+    const contentType = (response.headers.get("content-type") ?? "").toLowerCase();
+    const errorContext = buildResponseContext(
+      { status: response.status, statusText: response.statusText, ok: false, headers: response.headers, text: async () => text },
+      text,
+      contentType,
+    );
+    if (errorContext.looksLikeXml) {
+      handleXmlResponse(errorContext); // always throws
+    }
+    let json: unknown;
+    try {
+      json = JSON.parse(text);
+    } catch {
+      json = undefined;
+    }
+    const serviceError = extractJsonServiceError(json ?? previewBody(text) ?? UNKNOWN_UPSTREAM_DETAIL);
+    throw buildServiceResponseError(
+      errorContext,
+      `Erreur HTTP du service (${errorContext.responseLabel}): ${serviceError.detail}`,
+      { code: serviceError.code, detail: serviceError.detail },
+    );
+  }
+
+  return text;
 }
 
 /**
