@@ -134,7 +134,7 @@ async function resolveReferenceGeometry(
   });
 }
 
-// --- Public Engine ---
+// --- Get Features Public Engine ---
 
 /**
  * Executes a layer feature query and returns the RAW FeatureCollection with full

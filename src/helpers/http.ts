@@ -232,7 +232,7 @@ export class ResponseTooLargeError extends Error {
  * as the accumulated size exceeds `maxBytes`. Unlike `fetchJSON*`, this bounds
  * memory before the whole body is buffered and does not JSON-parse: it returns
  * the raw text so the caller decides how to parse it. Shared core behind
- * `fetchTextPostWithLimit` and `fetchJSONGetWithLimit`.
+ * `fetchJSONPostWithLimit` and `fetchJSONGetWithLimit`.
  *
  * The timeout is an explicit parameter (not read from env) so the same fetch
  * path can serve the LLM tools (`HTTP_TIMEOUT`) and the proxy
@@ -344,24 +344,52 @@ async function fetchTextWithLimit(
 }
 
 /**
- * POST variant of the size-bounded transport. Returns the raw response text so
- * the caller decides how to parse it (the proxy WFS leg parses it as JSON).
+ * Parses a size-bounded 2xx body as JSON, or raises a 502 `ServiceResponseError`.
+ * A 2xx body that is not JSON is a bad UPSTREAM response (not a proxy bug), so it
+ * surfaces as a 502. `label` names the upstream service in the (server-logged)
+ * message so an operator can tell which leg failed. Shared by
+ * `fetchJSONPostWithLimit` and `fetchJSONGetWithLimit` so the parse + 502 lives in
+ * ONE place.
+ *
+ * @param text Bounded raw response body.
+ * @param label Upstream service name interpolated into the error message.
+ * @returns The parsed JSON payload.
+ */
+function parseBoundedJson<T>(text: string, label: string): T {
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new ServiceResponseError(
+      `Le service ${label} a renvoyé un corps 2xx qui n'est pas du JSON exploitable.`,
+      { http: { status: 502, statusText: "Bad Gateway" }, service: { code: "invalid_upstream_body" } },
+    );
+  }
+}
+
+/**
+ * POST variant of the size-bounded transport, parsing the bounded body as JSON.
+ * Symmetric to {@link fetchJSONGetWithLimit}: the proxy WFS leg uses it so the
+ * bounded fetch + JSON parse + 502-on-bad-body logic lives in one shared place
+ * ({@link parseBoundedJson}) instead of being reimplemented in `proxy/transport.ts`.
  *
  * @param url Target URL.
  * @param body Encoded request body.
  * @param headers Additional request headers.
  * @param timeoutMs Wall-clock timeout in milliseconds.
  * @param maxBytes Maximum number of body bytes to accept before aborting.
- * @returns The raw response text, guaranteed to be at most `maxBytes` bytes.
+ * @param label Upstream service name for the 502 message (e.g. `"WFS"`).
+ * @returns The parsed JSON payload.
  */
-export function fetchTextPostWithLimit(
+export async function fetchJSONPostWithLimit<T>(
   url: string,
   body: string,
   headers: RequestHeaders,
   timeoutMs: number,
   maxBytes: number,
-): Promise<string> {
-  return fetchTextWithLimit("POST", url, body, headers, timeoutMs, maxBytes);
+  label: string,
+): Promise<T> {
+  const text = await fetchTextWithLimit("POST", url, body, headers, timeoutMs, maxBytes);
+  return parseBoundedJson<T>(text, label);
 }
 
 /**
@@ -370,29 +398,20 @@ export function fetchTextPostWithLimit(
  * through the SAME `PROXY_UPSTREAM_TIMEOUT` + `PROXY_MAX_RESPONSE_BYTES` bounds
  * as its WFS leg, instead of the unbounded `HTTP_TIMEOUT`-only `fetchJSONGet`.
  *
- * A 2xx body that is not JSON is a bad upstream response, so it surfaces as a
- * `ServiceResponseError` (mapped to 502 by the proxy), mirroring the WFS leg in
- * `proxy/transport.ts`.
- *
  * @param url Target URL.
  * @param timeoutMs Wall-clock timeout in milliseconds.
  * @param maxBytes Maximum number of body bytes to accept before aborting.
+ * @param label Upstream service name for the 502 message (e.g. `"d'isochrone"`).
  * @returns The parsed JSON payload.
  */
 export async function fetchJSONGetWithLimit<T>(
   url: string,
   timeoutMs: number,
   maxBytes: number,
+  label: string,
 ): Promise<T> {
   const text = await fetchTextWithLimit("GET", url, undefined, {}, timeoutMs, maxBytes);
-  try {
-    return JSON.parse(text) as T;
-  } catch {
-    throw new ServiceResponseError(
-      "Le service distant a renvoyé un corps 2xx qui n'est pas du JSON exploitable.",
-      { http: { status: 502, statusText: "Bad Gateway" }, service: { code: "invalid_upstream_body" } },
-    );
-  }
+  return parseBoundedJson<T>(text, label);
 }
 
 // --- Response Parsing ---

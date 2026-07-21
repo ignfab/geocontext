@@ -14,7 +14,8 @@ vi.mock("node-fetch", async () => {
 import {
     fetchJSONGet,
     fetchJSONPost,
-    fetchTextPostWithLimit,
+    fetchJSONPostWithLimit,
+    fetchJSONGetWithLimit,
     parseJsonResponse,
     ResponseTooLargeError,
     ServiceResponseError,
@@ -433,7 +434,9 @@ describe("Test HTTP helpers", () => {
         await pendingRequest;
     });
 
-    // --- fetchTextPostWithLimit (size-bounded proxy fetch) ---
+    // --- fetchJSONPostWithLimit / fetchJSONGetWithLimit (size-bounded fetch: byte cap + JSON parse + labelled 502) ---
+    // These exercise the shared bounded core (fetchTextWithLimit) through the two
+    // public JSON wrappers; the byte-cap and non-2xx paths throw before the JSON parse.
 
     // Builds a response whose `body` yields the given chunks as an async iterable,
     // mirroring node-fetch's Node Readable stream.
@@ -454,22 +457,35 @@ describe("Test HTTP helpers", () => {
         };
     }
 
-    it("returns the full body when under the byte cap", async () => {
-        fetchMock.mockResolvedValue(createStreamResponse(["{\"ok\"", ":true}"]) as unknown as Awaited<ReturnType<typeof fetch>>);
+    it("parses a bounded 2xx JSON body (chunks reassembled)", async () => {
+        fetchMock.mockResolvedValue(
+            createStreamResponse(['{"type":"Feature', 'Collection","features":[]}']) as unknown as Awaited<ReturnType<typeof fetch>>,
+        );
 
-        const text = await fetchTextPostWithLimit("https://example.test", "", {}, 1000, 1024);
-        expect(text).toBe('{"ok":true}');
+        await expect(
+            fetchJSONPostWithLimit("https://example.test", "body", {}, 1000, 1024, "WFS"),
+        ).resolves.toEqual({ type: "FeatureCollection", features: [] });
     });
 
     it("aborts with ResponseTooLargeError when the body exceeds the byte cap", async () => {
-        // Three 10-byte chunks = 30 bytes total; cap at 15 bytes trips on the 2nd chunk.
+        // Three 10-byte chunks = 30 bytes total; cap at 15 bytes trips on the 2nd chunk,
+        // before any JSON parse.
         fetchMock.mockResolvedValue(
             createStreamResponse(["0123456789", "0123456789", "0123456789"]) as unknown as Awaited<ReturnType<typeof fetch>>,
         );
 
         await expect(
-            fetchTextPostWithLimit("https://example.test", "", {}, 1000, 15),
+            fetchJSONPostWithLimit("https://example.test", "", {}, 1000, 15, "WFS"),
         ).rejects.toBeInstanceOf(ResponseTooLargeError);
+    });
+
+    it("accepts a body exactly at the byte cap (inclusive boundary)", async () => {
+        // 10-byte JSON payload, cap 10 -> total > maxBytes is false, accepted then parsed.
+        fetchMock.mockResolvedValue(createStreamResponse(['"01234567"']) as unknown as Awaited<ReturnType<typeof fetch>>);
+
+        await expect(
+            fetchJSONPostWithLimit("https://example.test", "", {}, 1000, 10, "WFS"),
+        ).resolves.toBe("01234567");
     });
 
     it("throws ServiceResponseError with the upstream status on a non-2xx (XML error body)", async () => {
@@ -484,7 +500,7 @@ describe("Test HTTP helpers", () => {
         );
 
         await expect(
-            fetchTextPostWithLimit("https://example.test", "", {}, 1000, 1024),
+            fetchJSONPostWithLimit("https://example.test", "", {}, 1000, 1024, "WFS"),
         ).rejects.toMatchObject({
             name: "ServiceResponseError",
             httpStatus: 400,
@@ -500,17 +516,38 @@ describe("Test HTTP helpers", () => {
         );
 
         await expect(
-            fetchTextPostWithLimit("https://example.test", "", {}, 1000, 1024),
+            fetchJSONPostWithLimit("https://example.test", "", {}, 1000, 1024, "WFS"),
         ).rejects.toBeInstanceOf(ServiceResponseError);
     });
 
-    it("accepts a body exactly at the byte cap (inclusive boundary)", async () => {
-        fetchMock.mockResolvedValue(createStreamResponse(["0123456789"]) as unknown as Awaited<ReturnType<typeof fetch>>);
+    it("fetchJSONPostWithLimit maps a 2xx non-JSON body to a 502 naming the service via `label`", async () => {
+        fetchMock.mockResolvedValue(
+            createStreamResponse(["<html>upstream error page</html>"]) as unknown as Awaited<ReturnType<typeof fetch>>,
+        );
 
-        // 10 bytes, cap 10 -> total > maxBytes is false, accepted.
         await expect(
-            fetchTextPostWithLimit("https://example.test", "", {}, 1000, 10),
-        ).resolves.toBe("0123456789");
+            fetchJSONPostWithLimit("https://example.test", "body", {}, 1000, 1024, "WFS"),
+        ).rejects.toMatchObject({
+            name: "ServiceResponseError",
+            httpStatus: 502,
+            serviceCode: "invalid_upstream_body",
+            message: expect.stringContaining("WFS"),
+        });
+    });
+
+    it("fetchJSONGetWithLimit maps a 2xx non-JSON body to a 502 naming the service via `label`", async () => {
+        fetchMock.mockResolvedValue(
+            createStreamResponse(["not json at all"]) as unknown as Awaited<ReturnType<typeof fetch>>,
+        );
+
+        await expect(
+            fetchJSONGetWithLimit("https://example.test", 1000, 1024, "d'isochrone"),
+        ).rejects.toMatchObject({
+            name: "ServiceResponseError",
+            httpStatus: 502,
+            serviceCode: "invalid_upstream_body",
+            message: expect.stringContaining("d'isochrone"),
+        });
     });
 
 });

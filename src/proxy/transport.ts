@@ -2,7 +2,7 @@
  * Proxy WFS transport and client.
  *
  * The proxy needs the SAME catalog + compilation façade as the LLM path but a
- * DIFFERENT execution: size-bounded reads (`fetchTextPostWithLimit`), a dedicated
+ * DIFFERENT execution: size-bounded reads (`fetchJSONPostWithLimit`), a dedicated
  * rate limiter (`GPF_WFS_PROXY`), a shorter upstream timeout, and full-geometry
  * output. So it reuses the existing `WfsClient` façade (which is designed for
  * transport injection) with a proxy `WfsTransportLike`, rather than duplicating it.
@@ -18,7 +18,7 @@ import type { ResolvedFeatureGeometryRef } from "../wfs/queryPreparation.js";
 import type { GpfGetFeaturesInput } from "../wfs/schema.js";
 import { NavigationIsochroneClient } from "../gpf/navigation.js";
 import type { TravelTimeResolver } from "./execute.js";
-import { fetchTextPostWithLimit, fetchJSONGetWithLimit, ServiceResponseError } from "../helpers/http.js";
+import { fetchJSONPostWithLimit, fetchJSONGetWithLimit } from "../helpers/http.js";
 import { RateLimiter } from "../helpers/RateLimiter.js";
 import { getEnv } from "../config/env.js";
 
@@ -38,7 +38,12 @@ function buildProxyTransport(rateLimiter: RateLimiter): WfsTransportLike {
 
       const env = getEnv();
       const url = `${request.url}?${new URLSearchParams(request.query).toString()}`;
-      const text = await fetchTextPostWithLimit(
+      // Bounded fetch + JSON parse + 502-on-bad-body all live in fetchJSONPostWithLimit
+      // (symmetric to the isochrone leg's fetchJSONGetWithLimit). It already throws on
+      // non-2xx, on the byte cap, and on a 2xx body that is not JSON (→ 502,
+      // invalid_upstream_body, labelled "WFS"). runGeometryFeatureQuery validates the
+      // resulting shape (FeatureCollection + features array).
+      return fetchJSONPostWithLimit<WfsFeatureCollectionResponse>(
         url,
         request.body,
         {
@@ -47,22 +52,8 @@ function buildProxyTransport(rateLimiter: RateLimiter): WfsTransportLike {
         },
         env.PROXY_UPSTREAM_TIMEOUT * 1000,
         env.PROXY_MAX_RESPONSE_BYTES,
+        "WFS",
       );
-
-      // fetchTextPostWithLimit already threw on non-2xx and on the byte cap; here we
-      // only turn the bounded text into JSON. runGeometryFeatureQuery validates the
-      // resulting shape (FeatureCollection + features array).
-      // A 2xx body that is not JSON (HTML error page, XML, truncated) is a bad
-      // UPSTREAM response, not a proxy bug — surface it as a ServiceResponseError
-      // (mapped to 502), not the generic 500 fallback.
-      try {
-        return JSON.parse(text) as WfsFeatureCollectionResponse;
-      } catch {
-        throw new ServiceResponseError(
-          "Le service WFS a renvoyé un corps 2xx qui n'est pas du JSON exploitable.",
-          { http: { status: 502, statusText: "Bad Gateway" }, service: { code: "invalid_upstream_body" } },
-        );
-      }
     },
   };
 }
@@ -103,7 +94,7 @@ let cachedProxyIsochroneClient: NavigationIsochroneClient | undefined;
 function getProxyIsochroneClient(): NavigationIsochroneClient {
   cachedProxyIsochroneClient ??= new NavigationIsochroneClient(
     new RateLimiter({ name: "GPF_NAVIGATION_PROXY", maxCalls: getEnv().GPF_NAVIGATION_PROXY_RATE_LIMIT, period: 1 }),
-    (url) => fetchJSONGetWithLimit(url, getEnv().PROXY_UPSTREAM_TIMEOUT * 1000, getEnv().PROXY_MAX_RESPONSE_BYTES),
+    (url) => fetchJSONGetWithLimit(url, getEnv().PROXY_UPSTREAM_TIMEOUT * 1000, getEnv().PROXY_MAX_RESPONSE_BYTES, "d'isochrone"),
   );
   return cachedProxyIsochroneClient;
 }
