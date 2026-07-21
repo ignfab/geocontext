@@ -27,17 +27,14 @@ import {
 } from "../wfs/request.js";
 import {
   compileQueryParts,
-  geometryToEwkt,
   getGeometryProperty,
   getSpatialFilter,
   type ResolvedFeatureGeometryRef,
 } from "../wfs/queryPreparation.js";
 import { buildPropertyName, requireSingleFeatureById } from "../wfs/byId.js";
+import { resolveFeatureGeometryEwkt } from "../wfs/referenceGeometry.js";
 import { ServiceResponseError } from "../helpers/http.js";
-import type {
-  WfsFeatureCollectionResponse,
-  WfsFeatureResponse,
-} from "../wfs/types.js";
+import type { WfsFeatureCollectionResponse } from "../wfs/types.js";
 import type { GpfGetFeaturesInput, GpfGetFeatureByIdLayerInput } from "../wfs/schema.js";
 
 // --- Injected Dependencies ---
@@ -96,19 +93,6 @@ function ensureGeometrySelected(
 }
 
 /**
- * Narrow guard for GeoJSON-like geometry objects returned by the WFS.
- */
-function isGeometryLike(value: unknown): value is { type: string; coordinates: unknown } {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "type" in value &&
-    typeof (value as { type: unknown }).type === "string" &&
-    "coordinates" in value
-  );
-}
-
-/**
  * Resolves the reference feature geometry for an `intersects_feature` filter,
  * using the injected client (a second upstream call). Returns `undefined` when
  * the input does not use `intersects_feature`.
@@ -144,27 +128,10 @@ async function resolveReferenceGeometry(
     return undefined;
   }
 
-  const { wfsClient } = deps;
-  const referenceFeatureType = await wfsClient.getFeatureType(spatialFilter.typename);
-  const referenceGeometryProperty = getGeometryProperty(referenceFeatureType);
-  const request = buildGetFeatureByIdRequest(
-    spatialFilter.typename,
-    spatialFilter.feature_id,
-    referenceGeometryProperty.name,
-  );
-  const featureCollection = await wfsClient.fetchFeatureCollection(request);
-  const referenceFeature: WfsFeatureResponse = requireSingleFeatureById(featureCollection, {
+  return resolveFeatureGeometryEwkt(deps.wfsClient, {
     typename: spatialFilter.typename,
     feature_id: spatialFilter.feature_id,
   });
-
-  if (!isGeometryLike(referenceFeature.geometry)) {
-    throw new Error(
-      `Le feature de référence '${spatialFilter.feature_id}' n'a pas de géométrie exploitable.`,
-    );
-  }
-
-  return { geometry_ewkt: geometryToEwkt(referenceFeature.geometry) };
 }
 
 // --- Public Engine ---

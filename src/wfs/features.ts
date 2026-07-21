@@ -11,11 +11,10 @@ import type { Collection } from "@ignfab/gpf-schema-store";
 import { navigationIsochroneClient } from "../gpf/navigation.js";
 import { ServiceResponseError } from "../helpers/http.js";
 import logger from "../logger.js";
-import { fetchFeatureById, requireSingleFeatureById } from "./byId.js";
+import { resolveFeatureGeometryEwkt } from "./referenceGeometry.js";
 import {
   compileQueryParts,
   geometryToEwkt,
-  getGeometryProperty,
   getSpatialFilter,
   type CompiledQuery,
   type ResolvedFeatureGeometryRef,
@@ -43,11 +42,6 @@ export type PreparedGetFeaturesRequest = {
   request: CompiledRequest;
 };
 
-type GeometryLike = {
-  type: string;
-  coordinates: unknown;
-};
-
 // --- Validation ---
 
 /**
@@ -73,23 +67,6 @@ export function ensureIntersectsFeatureTargetsOtherTypename(
   }
 }
 
-/**
- * Checks whether a raw value exposes the minimal geometry shape required by
- * `geometryToEwkt`.
- *
- * @param value Unknown feature geometry value.
- * @returns `true` when the value looks like a GeoJSON geometry object.
- */
-function isGeometryLike(value: unknown): value is GeometryLike {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "type" in value &&
-    typeof value.type === "string" &&
-    "coordinates" in value
-  );
-}
-
 // --- Reference Geometry ---
 
 /**
@@ -107,27 +84,10 @@ export async function resolveIntersectsFeatureGeometry(
     return undefined;
   }
 
-  const referenceFeatureType = await wfsClient.getFeatureType(spatialFilter.typename);
-  const referenceGeometryProperty = getGeometryProperty(referenceFeatureType);
-  const featureCollection = await fetchFeatureById({
-    typename: spatialFilter.typename,
-    feature_id: spatialFilter.feature_id,
-    propertyName: referenceGeometryProperty.name,
-  });
-  const referenceFeature = requireSingleFeatureById(featureCollection, {
+  return resolveFeatureGeometryEwkt(wfsClient, {
     typename: spatialFilter.typename,
     feature_id: spatialFilter.feature_id,
   });
-
-  if (!isGeometryLike(referenceFeature?.geometry)) {
-    throw new Error(
-      `Le feature de référence '${spatialFilter.feature_id}' n'a pas de géométrie exploitable.`,
-    );
-  }
-
-  return {
-    geometry_ewkt: geometryToEwkt(referenceFeature.geometry),
-  };
 }
 
 /**
