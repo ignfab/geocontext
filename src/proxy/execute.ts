@@ -33,7 +33,7 @@ import {
 } from "../wfs/queryPreparation.js";
 import { buildPropertyName, requireSingleFeatureById } from "../wfs/byId.js";
 import { resolveFeatureGeometryEwkt } from "../wfs/referenceGeometry.js";
-import { ServiceResponseError } from "../helpers/http.js";
+import { ServiceResponseError, extractJsonServiceError } from "../helpers/http.js";
 import type { WfsFeatureCollectionResponse } from "../wfs/types.js";
 import type { GpfGetFeaturesInput, GpfGetFeatureByIdLayerInput } from "../wfs/schema.js";
 
@@ -90,6 +90,46 @@ function ensureGeometrySelected(
     return propertyName;
   }
   return [...columns, geometryProperty.name].join(",");
+}
+
+/**
+ * Rejects an upstream 2xx body that is not a usable GeoJSON FeatureCollection.
+ *
+ * The proxy fetch path returns raw text with no schema check (unlike the LLM
+ * path's `parseJsonResponse`), so a 200-with-error-body (an OWS/JSON exception
+ * envelope served with a 200 status), an empty `{}`, or any off-contract JSON
+ * would otherwise reach Carto as a valid-looking layer.
+ *
+ * Thrown as a {@link ServiceResponseError} (→ HTTP 502, an UPSTREAM anomaly) and
+ * NOT a plain Error (which `server.ts` would map to a misleading 500). A
+ * best-effort {@link extractJsonServiceError} pass records the real cause
+ * SERVER-SIDE: a 200-with-error-body surfaces its OWS `code`/`detail`, anything
+ * else a body preview — so the distinct failure modes are traceable in the logs.
+ * The client still receives the fixed generic message (no upstream leak), the
+ * distinction lives only in the trace.
+ *
+ * @param featureCollection Raw parsed upstream body.
+ * @param typename Layer being queried, for the server-side diagnostic.
+ */
+function assertUsableFeatureCollection(
+  featureCollection: WfsFeatureCollectionResponse,
+  typename: string,
+): void {
+  if (
+    featureCollection?.type === "FeatureCollection" &&
+    Array.isArray(featureCollection.features)
+  ) {
+    return;
+  }
+
+  const { code, detail } = extractJsonServiceError(featureCollection);
+  throw new ServiceResponseError(
+    `Le service WFS n'a pas retourné une FeatureCollection GeoJSON exploitable pour '${typename}' (cause amont : ${detail}${code ? `, code : ${code}` : ""}).`,
+    {
+      http: { status: 502, statusText: "Bad Gateway" },
+      service: { code: code ?? "invalid_upstream_body", detail },
+    },
+  );
 }
 
 /**
@@ -193,19 +233,9 @@ export async function runGeometryFeatureQuery(
     throw error;
   }
 
-  // Validate the response shape before serving it as a map layer. The proxy fetch
-  // path returns raw text with no schema check (unlike the LLM path's
-  // parseJsonResponse), so a 200-with-error-body, `{}`, or any off-contract JSON
-  // must be rejected here rather than handed to Carto as a valid-looking layer.
-  // Mirrors the guard in wfsClient.fetchMultiTypename.
-  if (
-    featureCollection?.type !== "FeatureCollection" ||
-    !Array.isArray(featureCollection.features)
-  ) {
-    throw new Error(
-      "Le service WFS n'a pas retourné une FeatureCollection GeoJSON exploitable.",
-    );
-  }
+  // Reject an off-contract 2xx body before serving it as a map layer (see the
+  // helper: 200-with-error-body / `{}` / non-FeatureCollection → traced 502).
+  assertUsableFeatureCollection(featureCollection, input.typename);
 
   return featureCollection;
 }
@@ -268,14 +298,7 @@ export async function runGeometryFeatureByIdQuery(
   // Off-contract-body guard, mirroring runGeometryFeatureQuery: reject a
   // 200-with-error-body before requireSingleFeatureById (which only checks the
   // features array), so Carto never receives a valid-looking bad layer.
-  if (
-    featureCollection?.type !== "FeatureCollection" ||
-    !Array.isArray(featureCollection.features)
-  ) {
-    throw new Error(
-      "Le service WFS n'a pas retourné une FeatureCollection GeoJSON exploitable.",
-    );
-  }
+  assertUsableFeatureCollection(featureCollection, input.typename);
 
   const firstFeature = requireSingleFeatureById(featureCollection, {
     typename: input.typename,

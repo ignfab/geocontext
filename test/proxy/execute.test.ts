@@ -144,9 +144,25 @@ describe("proxy/execute · runGeometryFeatureQuery", () => {
     ["an empty object", {}],
     ["a non-array features field", { type: "FeatureCollection", features: "nope" }],
     ["a missing type", { features: [] }],
-  ])("rejects an off-contract response (%s) instead of serving it as a layer", async (_label, badResponse) => {
+  ])("rejects an off-contract response (%s) as a 502, not a valid layer", async (_label, badResponse) => {
     const { client } = makeClient({ responses: [badResponse as unknown as WfsFeatureCollectionResponse] });
-    await expect(runGeometryFeatureQuery(baseInput, { wfsClient: client, resolveTravelTime: unexpectedResolveTravelTime })).rejects.toThrow(/FeatureCollection GeoJSON exploitable/);
+    const promise = runGeometryFeatureQuery(baseInput, { wfsClient: client, resolveTravelTime: unexpectedResolveTravelTime });
+    // Now a ServiceResponseError(502) — an UPSTREAM anomaly — not a plain Error (which
+    // server.ts would map to a misleading 500). Client still gets the generic phrase.
+    await expect(promise).rejects.toMatchObject({ name: "ServiceResponseError", httpStatus: 502 });
+    await expect(promise).rejects.toThrow(/FeatureCollection GeoJSON exploitable/);
+  });
+
+  it("traces the upstream cause of a 200-with-error-body in the (server-side) detail", async () => {
+    const { client } = makeClient({
+      responses: [{ exceptions: [{ code: "NoApplicableCode", text: "détail amont" }] } as unknown as WfsFeatureCollectionResponse],
+    });
+    // The client-facing message stays generic, but the internal (logged) message must
+    // carry the extracted upstream cause so a 200-error-body is distinguishable from a
+    // `{}` in the logs — the whole point of routing it through extractJsonServiceError.
+    const promise = runGeometryFeatureQuery(baseInput, { wfsClient: client, resolveTravelTime: unexpectedResolveTravelTime });
+    await expect(promise).rejects.toMatchObject({ name: "ServiceResponseError", httpStatus: 502 });
+    await expect(promise).rejects.toThrow(/détail amont/);
   });
 
   it("allows a same-typename intersects_feature (diverges from the LLM path)", async () => {
@@ -376,12 +392,12 @@ describe("proxy/execute · runGeometryFeatureByIdQuery", () => {
     ).rejects.toThrow(/devrait être unique/);
   });
 
-  it("rejects an off-contract 200 body (not a FeatureCollection)", async () => {
+  it("rejects an off-contract 200 body (not a FeatureCollection) as a 502", async () => {
     const bad = { error: "boom" } as unknown as WfsFeatureCollectionResponse;
     const { client } = makeClient({ responses: [bad] });
 
-    await expect(
-      runGeometryFeatureByIdQuery(byIdInput, { wfsClient: client }),
-    ).rejects.toThrow(/FeatureCollection GeoJSON exploitable/);
+    const promise = runGeometryFeatureByIdQuery(byIdInput, { wfsClient: client });
+    await expect(promise).rejects.toMatchObject({ name: "ServiceResponseError", httpStatus: 502 });
+    await expect(promise).rejects.toThrow(/FeatureCollection GeoJSON exploitable/);
   });
 });

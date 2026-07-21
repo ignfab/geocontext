@@ -585,7 +585,7 @@ function getChild(element: XmlElement | null | undefined, localName: string): Xm
  * @param json Parsed JSON payload.
  * @returns A normalized `{ code, detail }` pair.
  */
-function extractJsonServiceError(json: unknown): JsonServiceError {
+export function extractJsonServiceError(json: unknown): JsonServiceError {
   if (typeof json === "string") {
     return { detail: asNonEmptyString(json) ?? UNKNOWN_UPSTREAM_DETAIL };
   }
