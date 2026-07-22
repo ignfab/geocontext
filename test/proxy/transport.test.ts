@@ -35,7 +35,7 @@ vi.mock("../../src/helpers/RateLimiter", () => ({
   },
 }));
 
-import { getProxyWfsClient, resolveProxyTravelTime } from "../../src/proxy/transport";
+import { getProxyWfsClient, resolveProxyTravelTimeGeometry } from "../../src/proxy/transport";
 import { resetEnv } from "../../src/config/env";
 
 const TEST_SECRET = "a".repeat(64);
@@ -109,7 +109,7 @@ describe("proxy/transport · buildProxyTransport (via getProxyWfsClient)", () =>
   });
 });
 
-describe("proxy/transport · resolveProxyTravelTime", () => {
+describe("proxy/transport · resolveProxyTravelTimeGeometry", () => {
   const travelTimeInput: GpfGetFeaturesInput = {
     typename: "BDTOPO_V3:batiment",
     limit: 100,
@@ -126,7 +126,7 @@ describe("proxy/transport · resolveProxyTravelTime", () => {
       geometry: { type: "Polygon", coordinates: [[[2, 48], [2.2, 48], [2.2, 48.2], [2, 48]]] },
     });
 
-    const result = await resolveProxyTravelTime(travelTimeInput);
+    const result = await resolveProxyTravelTimeGeometry(travelTimeInput);
 
     expect(fetchJSONGetWithLimit).toHaveBeenCalledOnce();
     const [url, timeoutMs, maxBytes, label] = fetchJSONGetWithLimit.mock.calls[0];
@@ -150,7 +150,7 @@ describe("proxy/transport · resolveProxyTravelTime", () => {
       limit: 100,
       spatial_extras: [],
     };
-    await expect(resolveProxyTravelTime(noFilter)).rejects.toThrow(/travel_time/);
+    await expect(resolveProxyTravelTimeGeometry(noFilter)).rejects.toThrow(/travel_time/);
     expect(fetchJSONGetWithLimit).not.toHaveBeenCalled();
   });
 });

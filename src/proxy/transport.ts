@@ -103,21 +103,25 @@ function getProxyIsochroneClient(): NavigationIsochroneClient {
   return cachedProxyIsochroneClient;
 }
 
-// --- Isochrone Resolver ---
+// --- Reference-geometry resolver (travel_time / isochrone) ---
 
 /**
- * Resolves the isochrone geometry for a `travel_time` filter into EWKT, via the
- * proxy isochrone client (bounded fetch + `GPF_NAVIGATION_PROXY` rate limiter).
- * Injected into `runGeometryFeatureQuery` so it only fires for travel_time inputs.
+ * Reference-geometry resolver for the `travel_time` spatial filter: turns the
+ * isochrone into a reference geometry (EWKT) that is fed INTO the WFS query — the
+ * sibling of `intersects_feature`'s reference-geometry resolution
+ * (`resolveFeatureGeometryEwkt`). It does NOT fetch features itself (that is the
+ * WFS transport's job). Backed by the proxy isochrone client (bounded fetch +
+ * `GPF_NAVIGATION_PROXY` rate limiter), and injected into `runGeometryFeatureQuery`
+ * so it only fires for travel_time inputs.
  */
-export const resolveProxyTravelTime: TravelTimeResolver = async (
+export const resolveProxyTravelTimeGeometry: TravelTimeResolver = async (
   input: GpfGetFeaturesInput,
 ): Promise<ResolvedFeatureGeometryRef> => {
   const spatialFilter = getSpatialFilter(input);
   if (spatialFilter?.operator !== "travel_time") {
     // Guarded by the caller (runGeometryFeatureQuery only calls this for travel_time);
     // defensive check keeps the type narrow.
-    throw new Error("resolveProxyTravelTime appelé sans filtre `travel_time`.");
+    throw new Error("resolveProxyTravelTimeGeometry appelé sans filtre `travel_time`.");
   }
 
   const geometry = await getProxyIsochroneClient().getTravelTimeGeometry({
@@ -142,7 +146,7 @@ export const resolveProxyTravelTime: TravelTimeResolver = async (
 export function getDefaultGeometryFeatureQueryDeps(): GeometryFeatureQueryDeps {
   return {
     wfsClient: getProxyWfsClient(),
-    resolveTravelTime: resolveProxyTravelTime,
+    resolveTravelTime: resolveProxyTravelTimeGeometry,
   };
 }
 
