@@ -44,7 +44,6 @@ class GpfGetFeaturesLayerTool extends BaseTool<GpfGetFeaturesLayerInput> {
     "Interroge un type GPF et renvoie une **URL de couche cartographiable** (`data_url`) : une URL opaque, à passer telle quelle à un outil d'affichage cartographique (MCP Carto, ...). L'ouvrir renvoie une FeatureCollection GeoJSON avec les géométries complètes.",
     "À utiliser dès qu'il faut **afficher / cartographier** des objets GPF. Pour des attributs sans géométrie, utiliser `gpf_get_features`.",
     `Mêmes filtres que \`gpf_get_features\` : \`select\` pour choisir les propriétés, \`where\` pour filtrer, \`order_by\` pour trier et un filtre spatial dédié (${GPF_SPATIAL_FILTER_DOCNAMES}) pour le spatial.`,
-    "⚠️ Ne pas tenter de décoder, modifier ou reconstruire la `data_url` : elle est opaque par conception. Pour une autre requête, rappeler ce tool avec les nouveaux paramètres.",
     "**OBLIGATOIRE : toujours appeler `gpf_describe_type` avant ce tool, sauf si `gpf_describe_type` a déjà été appelé pour ce même typename dans la conversation en cours.** Les noms de propriétés ne peuvent pas être devinés."
   ].join("\n");
   protected outputSchemaShape = gpfGetFeaturesLayerOutputSchema;
