@@ -14,7 +14,7 @@
  * geometry column is always retained. The URL encodes those validated params as
  * an opaque token, so the LLM can neither parse nor rebuild the underlying WFS
  * request. Even though a by-id URL is always short, it stays opaque on purpose:
- * issue #160's goal is to hide WFS syntax from the model, not merely to keep URLs short.
+ * the goal is to hide WFS syntax from the model, not merely to keep URLs short.
  *
  * The proxy that decodes the token runs as a SEPARATE http-only process, so this
  * tool is only useful under the http transport. It is still LISTED in every
