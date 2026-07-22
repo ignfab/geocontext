@@ -6,12 +6,12 @@ import { startProxyServer, type ProxyServerHandle } from "../helpers/proxy-serve
 import { INTEGRATION_CONFIG } from "../config/shared.js";
 
 /**
- * Level-1 integration test for the stateless WFS proxy: boots the server in HTTP
+ * Level-1 integration test for the stateless geodata proxy: boots the server in HTTP
  * mode and exercises the real endpoint against the live Géoplateforme WFS.
  * Validates the end-to-end path (token decode → WFS query → full-geometry GeoJSON)
  * that unit tests (mocked) cannot cover.
  */
-describe("proxy-wfs (level 1)", () => {
+describe("proxy (level 1)", () => {
   let server: ProxyServerHandle;
 
   beforeAll(async () => {

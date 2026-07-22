@@ -29,7 +29,7 @@ RUN rm -rf \
       /usr/local/bin/yarnpkg
 USER node
 
-# Stateless WFS proxy image (built with `--target proxy`).
+# Stateless geodata proxy image (built with `--target proxy`).
 FROM runtime-base AS proxy
 EXPOSE 3002
 CMD ["node", "--use-env-proxy", "dist/proxy/index.js"]

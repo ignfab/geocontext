@@ -1,5 +1,5 @@
 /**
- * Opaque, tamper-evident URL token codec for the stateless WFS proxy.
+ * Opaque, tamper-evident URL token codec for the stateless geodata proxy.
  *
  * Encodes a validated query-params object into a compact, URL-safe string so the
  * LLM can hand MCP Carto a short, opaque `data_url` it cannot parse or rebuild

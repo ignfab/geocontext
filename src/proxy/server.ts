@@ -1,5 +1,5 @@
 /**
- * Stateless WFS proxy HTTP server.
+ * Stateless geodata proxy HTTP server.
  *
  * Serves `GET {PROXY_ENDPOINT}?q=<token>`: decode the opaque token, re-validate
  * it through the layer schema, run the geometry-full WFS query, and return a

@@ -376,7 +376,7 @@ function parseBoundedJson<T>(text: string, label: string): T {
 
 /**
  * POST variant of the size-bounded transport, parsing the bounded body as JSON.
- * Symmetric to {@link fetchJSONGetWithLimit}: the proxy WFS leg uses it so the
+ * Symmetric to {@link fetchJSONGetWithLimit}: the geodata proxy leg uses it so the
  * bounded fetch + JSON parse + 502-on-bad-body logic lives in one shared place
  * ({@link parseBoundedJson}) instead of being reimplemented in `proxy/transport.ts`.
  *

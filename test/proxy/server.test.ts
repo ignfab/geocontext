@@ -24,7 +24,7 @@ vi.mock("../../src/proxy/transport", () => ({
 // A fixed 32-byte hex key for the test environment.
 const TEST_SECRET = "a".repeat(64);
 const KEY = Buffer.from(TEST_SECRET, "hex");
-const ENDPOINT = "/api/v1/proxy-wfs";
+const ENDPOINT = "/api/v1/proxy";
 
 let server: Server;
 let baseUrl: string;

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Entry point for the stateless WFS proxy server.
+ * Entry point for the stateless geodata proxy server.
  *
  * Runs as a SEPARATE process/image from the MCP server so the two can be deployed
  * and scaled independently. The proxy is always HTTP; it shares only the

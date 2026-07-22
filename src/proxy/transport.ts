@@ -1,5 +1,5 @@
 /**
- * Proxy WFS transport and client.
+ * Geodata proxy transport and client.
  *
  * The proxy needs the SAME catalog + compilation façade as the LLM path but a
  * DIFFERENT execution: size-bounded reads (`fetchJSONPostWithLimit`), a dedicated
@@ -62,12 +62,12 @@ function buildProxyTransport(rateLimiter: RateLimiter): WfsTransportLike {
   };
 }
 
-// --- Proxy WFS Client (singleton) ---
+// --- Geodata proxy Client (singleton) ---
 
 let cachedProxyWfsClient: WfsClient | undefined;
 
 /**
- * Returns the proxy WFS client: the shared `WfsClient` façade wired to the proxy
+ * Returns the geodata proxy client: the shared `WfsClient` façade wired to the proxy
  * transport (bounded fetch + `GPF_WFS_PROXY` rate limit) and the embedded catalog.
  * Lazily built so the rate limit is read from a fully-parsed environment.
  */
@@ -87,7 +87,7 @@ let cachedProxyIsochroneClient: NavigationIsochroneClient | undefined;
 
 /**
  * Returns the proxy isochrone client: a dedicated `NavigationIsochroneClient`
- * wired to the SAME size-bounded, shorter-timeout fetch the proxy WFS leg uses
+ * wired to the SAME size-bounded, shorter-timeout fetch the geodata proxy leg uses
  * (`PROXY_UPSTREAM_TIMEOUT` + `PROXY_MAX_RESPONSE_BYTES`) and its own
  * `GPF_NAVIGATION_PROXY` rate limiter — NOT the default `navigationIsochroneClient`
  * singleton, which uses the unbounded `HTTP_TIMEOUT`-only `fetchJSONGet`. This

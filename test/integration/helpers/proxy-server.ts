@@ -1,6 +1,6 @@
 /**
  * Boots the geocontext server in HTTP mode as a child process so the stateless
- * WFS proxy listener can be exercised end-to-end against the live Géoplateforme.
+ * geodata proxy listener can be exercised end-to-end against the live Géoplateforme.
  *
  * The MCP HTTP transport and the proxy listener share one process; this fixture
  * provides the proxy base URL and a shared PROXY_URL_SECRET so the test can mint

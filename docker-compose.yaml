@@ -30,7 +30,7 @@ services:
           memory: 256M
     restart: unless-stopped
 
-  # Stateless WFS proxy. Serves the GeoJSON layer URLs Carto fetches; decodes the
+w  # Stateless geodata proxy. Serves the GeoJSON layer URLs Carto fetches; decodes the
   # opaque token with the same shared key.
   proxy:
     image: geocontext-proxy

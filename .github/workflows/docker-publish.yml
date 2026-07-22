@@ -26,7 +26,7 @@ jobs:
           # Historical tag stays the MCP server (no break for existing deployments).
           - target: mcp
             image: ${{ github.repository }}
-          # New stateless WFS proxy image, published under a -proxy suffix.
+          # New stateless geodata proxy image, published under a -proxy suffix.
           - target: proxy
             image: ${{ github.repository }}-proxy
 

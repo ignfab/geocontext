@@ -4,12 +4,12 @@
  * Unlike `gpf_get_features` (attributes only, no geometry), this tool hands back a
  * short opaque `data_url` that the LLM passes verbatim to a map client (MCP Carto,
  * ...). Fetching it returns a full-geometry GeoJSON FeatureCollection served by the
- * stateless WFS proxy. The URL encodes the validated query params as an opaque
+ * stateless geodata proxy. The URL encodes the validated query params as an opaque
  * token, so the LLM can neither parse nor rebuild the underlying WFS request — this
  * is the whole point: it stops the model from reconstructing a `cql_filter` by hand
  * and bypassing geocontext's validation.
  *
- * The token is decoded by the stateless WFS proxy, a SEPARATE process
+ * The token is decoded by the stateless geodata proxy, a SEPARATE process
  * (src/proxy/index.ts). This tool therefore needs a REACHABLE PROXY configured —
  * the shared secret plus its public base URL — which is INDEPENDENT of the MCP's
  * own transport: a stdio MCP pointed at a locally-run proxy works exactly like the
@@ -100,7 +100,7 @@ class GpfGetFeaturesLayerTool extends BaseTool<GpfGetFeaturesLayerInput> {
     // fallback tool when no proxy is configured.
     if (!env.PROXY_URL_SECRET || !env.PROXY_PUBLIC_BASE_URL) {
       throw new Error(
-        "`gpf_get_features_layer` nécessite un proxy cartographique configuré (variables d'environnement `PROXY_URL_SECRET` et `PROXY_PUBLIC_BASE_URL`, pointant vers un proxy WFS joignable). Sans proxy configuré, utiliser `gpf_get_features` (attributs, sans géométrie).",
+        "`gpf_get_features_layer` nécessite un proxy geodata configuré (variables d'environnement `PROXY_URL_SECRET` et `PROXY_PUBLIC_BASE_URL`, pointant vers un proxy joignable). Sans proxy configuré, utiliser `gpf_get_features` (attributs, sans géométrie).",
       );
     }
 

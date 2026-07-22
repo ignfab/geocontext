@@ -127,7 +127,7 @@ const envSchema = z.object({
         .transform(parseJsonEnvValue)
         .pipe(z.record(z.string(), z.unknown()).optional())
         .optional(),
-    // Stateless WFS proxy (only used in http transport)
+    // Stateless geodata proxy (only used in http transport)
     // Symmetric key for the opaque proxy URL token. Decoded to a 32-byte Buffer.
     // Optional at the schema level; presence is required PER ENTRY POINT
     // (src/index.ts requires it in http mode; src/proxy/index.ts always requires
@@ -138,7 +138,7 @@ const envSchema = z.object({
         .transform(parseProxyUrlSecret)
         .pipe(z.instanceof(Buffer).optional())
         .optional(),
-    // Maximum size, in bytes, of a proxy WFS response body. The proxy reads the
+    // Maximum size, in bytes, of a geodata proxy response body. The proxy reads the
     // response by chunks and aborts past this cap (network + memory + OpenLayers
     // parse/render guard). Default 25 MiB — comfortably fits a dense generalized
     // carto layer (e.g. 5000 CARTO-PE communes ≈ 5.8 MB) while rejecting
@@ -152,8 +152,8 @@ const envSchema = z.object({
         z
             .string()
             .trim()
-            .regex(/^\/(?!\/)[^?#]*$/, "Expected a path like /api/v1/proxy-wfs, without query or fragment")
-            .default("/api/v1/proxy-wfs"),
+            .regex(/^\/(?!\/)[^?#]*$/, "Expected a path like /api/v1/proxy, without query or fragment")
+            .default("/api/v1/proxy"),
     ),
     // Externally reachable base URL of the proxy, used to build the absolute
     // data_url handed to Carto. Behind an ingress this differs from the bind

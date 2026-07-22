@@ -8,7 +8,7 @@ import { getEnv } from "./config/env.js";
 
 // --- Entry Point ---
 //
-// This is the MCP server entry point (stdio or http). The stateless WFS proxy
+// This is the MCP server entry point (stdio or http). The stateless geodata proxy
 // runs as a SEPARATE process/image with its own entry point (src/proxy/index.ts),
 // so the two can be deployed and scaled independently. They only share the
 // PROXY_URL_SECRET (the MCP layer tool encodes the token, the proxy decodes it).

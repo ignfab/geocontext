@@ -63,7 +63,7 @@ function makeEnv(overrides: Partial<Env>): Env {
     TRANSPORT_TYPE: "http",
     PROXY_URL_SECRET: SECRET,
     PROXY_PUBLIC_BASE_URL: "https://proxy.example.test",
-    PROXY_ENDPOINT: "/api/v1/proxy-wfs",
+    PROXY_ENDPOINT: "/api/v1/proxy",
     ...overrides,
   } as Env;
 }
@@ -116,7 +116,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
 
     expect(response.isError).toBeUndefined();
     const payload = JSON.parse((response.content[0] as { text: string }).text);
-    expect(payload.data_url).toContain("https://proxy.example.test/api/v1/proxy-wfs?q=");
+    expect(payload.data_url).toContain("https://proxy.example.test/api/v1/proxy?q=");
   });
 
   it("builds an opaque data_url that round-trips back to the tagged query params", async () => {
@@ -144,7 +144,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
     expect(payload).toEqual(response.structuredContent);
 
     const url = new URL(payload.data_url);
-    expect(url.origin + url.pathname).toEqual("https://proxy.example.test/api/v1/proxy-wfs");
+    expect(url.origin + url.pathname).toEqual("https://proxy.example.test/api/v1/proxy");
     const token = url.searchParams.get("q");
     expect(token).toBeTruthy();
 
@@ -174,7 +174,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
 
     expect(response.isError).toBeUndefined();
     const payload = JSON.parse((response.content[0] as { text: string }).text);
-    expect(payload.data_url).toContain("https://proxy.example.test/api/v1/proxy-wfs?q=");
+    expect(payload.data_url).toContain("https://proxy.example.test/api/v1/proxy?q=");
     expect(payload.data_url).not.toContain("//api/v1");
   });
 
@@ -192,7 +192,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
 
     expect(response.isError).toBeUndefined();
     const payload = JSON.parse((response.content[0] as { text: string }).text);
-    expect(payload.data_url).toContain("https://example.test/published/proxy/api/v1/proxy-wfs?q=");
+    expect(payload.data_url).toContain("https://example.test/published/proxy/api/v1/proxy?q=");
   });
 
   it("rejects result_type and spatial_extras as unknown parameters", async () => {

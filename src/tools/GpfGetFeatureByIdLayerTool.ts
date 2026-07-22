@@ -6,7 +6,7 @@
  * returns the feature's attributes (geometry stripped), this one hands back a
  * short opaque `data_url` the LLM passes verbatim to a map client (MCP Carto,
  * ...). Fetching it returns a full-geometry GeoJSON FeatureCollection with the
- * single matching feature, served by the stateless WFS proxy.
+ * single matching feature, served by the stateless geodata proxy.
  *
  * The surface is deliberately STRICT: `{ typename, feature_id, select? }`. There
  * is no attribute or spatial filter here by design — a by-id lookup targets one
@@ -16,7 +16,7 @@
  * request. Even though a by-id URL is always short, it stays opaque on purpose:
  * the goal is to hide WFS syntax from the model, not merely to keep URLs short.
  *
- * The token is decoded by the stateless WFS proxy, a SEPARATE process
+ * The token is decoded by the stateless geodata proxy, a SEPARATE process
  * (src/proxy/index.ts). This tool therefore needs a REACHABLE PROXY configured —
  * the shared secret plus its public base URL — which is INDEPENDENT of the MCP's
  * own transport: a stdio MCP pointed at a locally-run proxy works exactly like the
@@ -109,7 +109,7 @@ class GpfGetFeatureByIdLayerTool extends BaseTool<GpfGetFeatureByIdLayerInput> {
     // WFS/token work, and steer toward the geometry-less fallback tool.
     if (!env.PROXY_URL_SECRET || !env.PROXY_PUBLIC_BASE_URL) {
       throw new Error(
-        "`gpf_get_feature_by_id_layer` nécessite un proxy cartographique configuré (variables d'environnement `PROXY_URL_SECRET` et `PROXY_PUBLIC_BASE_URL`, pointant vers un proxy WFS joignable). Sans proxy configuré, utiliser `gpf_get_feature_by_id` (attributs, sans géométrie).",
+        "`gpf_get_feature_by_id_layer` nécessite un proxy geodata configuré (variables d'environnement `PROXY_URL_SECRET` et `PROXY_PUBLIC_BASE_URL`, pointant vers un proxy joignable). Sans proxy configuré, utiliser `gpf_get_feature_by_id` (attributs, sans géométrie).",
       );
     }
 
