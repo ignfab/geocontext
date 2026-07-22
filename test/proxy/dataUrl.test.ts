@@ -17,7 +17,7 @@ describe("proxy/dataUrl · buildDataUrl", () => {
     expect(url).not.toContain("//api/v1");
   });
 
-  it("PRESERVES an ingress path prefix on the base (P2 fix)", () => {
+  it("PRESERVES an ingress path prefix on the base", () => {
     const url = buildDataUrl("https://example.test/published/proxy", ENDPOINT, TOKEN);
     // The prefix must survive — new URL(endpoint, base) would have dropped it.
     expect(url).toBe("https://example.test/published/proxy/api/v1/proxy?q=abc-DEF_123");

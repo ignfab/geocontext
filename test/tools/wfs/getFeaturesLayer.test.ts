@@ -26,7 +26,7 @@ vi.doMock("../../../src/config/env.js", async () => {
   };
 });
 
-// The tool now runs a network-free catalog pre-flight (P2): getFeatureType +
+// The tool now runs a network-free catalog pre-flight: getFeatureType +
 // compileQueryParts against the EMBEDDED catalog. Mock the catalog so the
 // validation is deterministic and does not depend on the shipped catalog.
 vi.doMock("../../../src/wfs/catalog.js", () => ({
@@ -243,7 +243,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
     });
   });
 
-  it("rejects an unknown property BEFORE minting the URL (catalog pre-flight, P2)", async () => {
+  it("rejects an unknown property BEFORE minting the URL (catalog pre-flight)", async () => {
     mockGetEnv.mockReturnValue(makeEnv({}));
     mockGetFeatureType.mockResolvedValue(communeType);
     const tool = new GpfGetFeaturesLayerTool();
@@ -270,7 +270,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
     expect(mockGetFeatureType).toHaveBeenCalledWith("ADMINEXPRESS-COG.LATEST:commune");
   });
 
-  it("rejects an unknown intersects_feature reference typename BEFORE minting (P2)", async () => {
+  it("rejects an unknown intersects_feature reference typename BEFORE minting (catalog pre-flight)", async () => {
     mockGetEnv.mockReturnValue(makeEnv({}));
     // The target type is known; the reference type in the spatial filter is not.
     mockGetFeatureType.mockImplementation(async (typename: string) => {
@@ -302,12 +302,59 @@ describe("Test GpfGetFeaturesLayerTool", () => {
     expect(mockGetFeatureType).toHaveBeenCalledWith("TYPE_QUI_N_EXISTE_PAS");
   });
 
+  it("rejects an intersects_feature reference type that has NO geometry column BEFORE minting (catalog pre-flight)", async () => {
+    mockGetEnv.mockReturnValue(makeEnv({}));
+    // Reference type EXISTS but is an attribute-only table (no property carries a
+    // defaultCrs), so the proxy could not resolve a reference geometry from it. The
+    // pre-flight must catch that here (getGeometryProperty), not defer it to an opaque
+    // proxy 5xx at map-load — symmetric with the main typename's geometry check.
+    const tableType: Collection = {
+      id: "wfs_scot:doc_urba",
+      namespace: "wfs_scot",
+      name: "doc_urba",
+      title: "Document d'urbanisme (table, sans géométrie)",
+      description: "Fixture de test : type attributaire sans géométrie",
+      properties: [
+        { name: "partition", type: "string" },
+        { name: "idurba", type: "string" },
+      ],
+    };
+    mockGetFeatureType.mockImplementation(async (typename: string) => {
+      if (typename === "ADMINEXPRESS-COG.LATEST:commune") return communeType;
+      if (typename === "wfs_scot:doc_urba") return tableType;
+      throw new Error(`FeatureTypeNotFound: ${typename}`);
+    });
+    const tool = new GpfGetFeaturesLayerTool();
+
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_get_features_layer",
+        arguments: {
+          typename: "ADMINEXPRESS-COG.LATEST:commune",
+          intersects_feature_filter: {
+            typename: "wfs_scot:doc_urba",
+            feature_id: "doc_urba.1",
+          },
+        },
+      },
+    });
+
+    // Fails at the tool call (no data_url minted); the reference typename WAS loaded.
+    expect(response.isError).toBe(true);
+    const textContent = response.content[0];
+    if (textContent.type !== "text") {
+      throw new Error("expected text content");
+    }
+    expect(textContent.text).not.toContain("data_url");
+    expect(mockGetFeatureType).toHaveBeenCalledWith("wfs_scot:doc_urba");
+  });
+
   it("translates an oversized query into a FR proxy-url error", async () => {
     mockGetEnv.mockReturnValue(makeEnv({}));
     mockGetFeatureType.mockResolvedValue(communeType);
     const tool = new GpfGetFeaturesLayerTool();
 
-    // Many where clauses on a VALID catalog property (so the P2 pre-flight passes)
+    // Many where clauses on a VALID catalog property (so the catalog pre-flight passes)
     // but with unique, incompressible values, so the encoded token blows past
     // MAX_TOKEN_CHARS and encodeToken throws ProxyTokenTooLargeError.
     const where = Array.from({ length: 400 }, (_unused, index) => ({

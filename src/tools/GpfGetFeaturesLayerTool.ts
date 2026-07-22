@@ -25,7 +25,7 @@ import { getEnv } from "../config/env.js";
 import { encodeToken } from "../proxy/token.js";
 import { buildDataUrl } from "../proxy/dataUrl.js";
 import { wfsClient } from "../wfs/execution.js";
-import { compileQueryParts, getSpatialFilter } from "../wfs/queryPreparation.js";
+import { compileQueryParts, getGeometryProperty, getSpatialFilter } from "../wfs/queryPreparation.js";
 import {
   gpfGetFeaturesLayerInputObjectSchema,
   gpfGetFeaturesLayerInputSchema,
@@ -112,7 +112,7 @@ class GpfGetFeaturesLayerTool extends BaseTool<GpfGetFeaturesLayerInput> {
     // so the caller gets a clean validation error rather than a proxy-side rejection.
     const compiledInput = gpfGetFeaturesLayerInputSchema.parse(input);
 
-    // Semantic pre-flight (P2): validate the query against the EMBEDDED catalog
+    // Semantic pre-flight: validate the query against the EMBEDDED catalog
     // BEFORE minting the URL, so a bad typename/select/where/order_by fails at THIS
     // tool call (where the LLM can fix it) instead of surfacing as an opaque proxy
     // 5xx only when the map client later fetches the data_url. getFeatureType and
@@ -124,9 +124,15 @@ class GpfGetFeaturesLayerTool extends BaseTool<GpfGetFeaturesLayerInput> {
     // filter — it is a SECOND typename the proxy would resolve at fetch time
     // (execute.ts resolveReferenceGeometry), and an unknown one would otherwise
     // surface only as a proxy 5xx. Its `feature_id` cannot be checked here (that IS
-    // a network lookup); only the typename's existence is validated locally.
+    // a network lookup), but its existence AND its geometry column are validated
+    // locally: the proxy resolves the reference geometry via getGeometryProperty
+    // (referenceGeometry.ts), so a geometry-less reference type would otherwise pass
+    // this pre-flight and fail only as an opaque proxy 5xx at map-load. Forcing the
+    // same network-free check here makes it fail at THIS tool call, symmetric with the
+    // main typename (whose geometry compileQueryParts validates below).
     if (spatialFilter?.operator === "intersects_feature") {
-      await wfsClient.getFeatureType(spatialFilter.typename);
+      const referenceType = await wfsClient.getFeatureType(spatialFilter.typename);
+      getGeometryProperty(referenceType);
     }
 
     // We must NOT resolve the reference geometry for intersects_feature/travel_time

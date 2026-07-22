@@ -26,7 +26,7 @@ vi.doMock("../../../src/config/env.js", async () => {
   };
 });
 
-// The tool now runs a network-free catalog pre-flight (P2): getFeatureType on the
+// The tool now runs a network-free catalog pre-flight: getFeatureType on the
 // target typename. Mock the catalog so validation is deterministic.
 vi.doMock("../../../src/wfs/catalog.js", () => ({
   GPF_WFS_URL: "https://data.geopf.fr/wfs",
@@ -192,7 +192,7 @@ describe("Test GpfGetFeatureByIdLayerTool", () => {
     expect(payload.data_url).toContain("https://example.test/published/proxy/api/v1/proxy?q=");
   });
 
-  it("rejects an unknown typename BEFORE minting the URL (catalog pre-flight, P2)", async () => {
+  it("rejects an unknown typename BEFORE minting the URL (catalog pre-flight)", async () => {
     mockGetEnv.mockReturnValue(makeEnv({}));
     // The embedded catalog does not know this type -> getFeatureType throws.
     mockGetFeatureType.mockRejectedValue(new Error("FeatureTypeNotFound: TYPE_QUI_N_EXISTE_PAS"));
