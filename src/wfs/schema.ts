@@ -234,7 +234,7 @@ export const gpfGetFeaturesLayerOutputSchema = z.object({
   data_url: z
     .string()
     .url()
-    .describe("URL opaque et autoportée renvoyant une FeatureCollection GeoJSON (géométries complètes) prête à être affichée dans un outil cartographique. Ne pas tenter de la décoder ni de la reconstruire : elle encode la requête validée."),
+    .describe("URL renvoyant une FeatureCollection GeoJSON (géométries complètes) prête à être affichée dans un outil cartographique."),
 }).strict();
 
 // --- Proxy token discriminant ---
