@@ -16,10 +16,13 @@
  * request. Even though a by-id URL is always short, it stays opaque on purpose:
  * the goal is to hide WFS syntax from the model, not merely to keep URLs short.
  *
- * The proxy that decodes the token runs as a SEPARATE http-only process, so this
- * tool is only useful under the http transport. It is still LISTED in every
- * transport (so `tools/list` is identical everywhere), but fails fast with a
- * clear FR error when called under stdio — before any WFS work or token minting.
+ * The token is decoded by the stateless WFS proxy, a SEPARATE process
+ * (src/proxy/index.ts). This tool therefore needs a REACHABLE PROXY configured —
+ * the shared secret plus its public base URL — which is INDEPENDENT of the MCP's
+ * own transport: a stdio MCP pointed at a locally-run proxy works exactly like the
+ * http deployment. The tool is still LISTED in every transport (so `tools/list` is
+ * identical everywhere) but fails fast with a clear FR error — before any WFS work
+ * or token minting — when no proxy is configured.
  */
 
 import BaseTool from "./BaseTool.js";
@@ -99,22 +102,15 @@ class GpfGetFeatureByIdLayerTool extends BaseTool<GpfGetFeatureByIdLayerInput> {
   async execute(input: GpfGetFeatureByIdLayerInput) {
     const env = getEnv();
 
-    // Fail fast under stdio (or any non-http transport): the proxy that serves the
-    // URL is http-only, so a data_url would point at nothing. Refuse BEFORE any
-    // token work, and without needing the secret.
-    if (env.TRANSPORT_TYPE !== "http") {
+    // Gate on CONFIGURATION, not on TRANSPORT_TYPE (see gpf_get_features_layer): the
+    // tool only yields a working URL when a reachable proxy is configured (shared
+    // secret + public base URL), which is independent of the MCP's own transport —
+    // a stdio MCP pointed at a locally-run proxy works too. Fail fast BEFORE any
+    // WFS/token work, and steer toward the geometry-less fallback tool.
+    if (!env.PROXY_URL_SECRET || !env.PROXY_PUBLIC_BASE_URL) {
       throw new Error(
-        "`gpf_get_feature_by_id_layer` n'est disponible qu'en mode http (le service qui sert la couche est un proxy http). En local (stdio), utiliser `gpf_get_feature_by_id`.",
+        "`gpf_get_feature_by_id_layer` nécessite un proxy cartographique configuré (variables d'environnement `PROXY_URL_SECRET` et `PROXY_PUBLIC_BASE_URL`, pointant vers un proxy WFS joignable). Sans proxy configuré, utiliser `gpf_get_feature_by_id` (attributs, sans géométrie).",
       );
-    }
-
-    // Defensive: index.ts already refuses to start the http server without both,
-    // but guard so a misconfiguration surfaces a clear FR message, not a crash.
-    if (!env.PROXY_URL_SECRET) {
-      throw new Error("Proxy cartographique mal configuré : clé `PROXY_URL_SECRET` absente.");
-    }
-    if (!env.PROXY_PUBLIC_BASE_URL) {
-      throw new Error("Proxy cartographique mal configuré : `PROXY_PUBLIC_BASE_URL` absente.");
     }
 
     // Validate the input the same way the proxy will re-validate the decoded token,

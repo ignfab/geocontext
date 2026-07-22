@@ -61,6 +61,49 @@ Avec certains clients MCP, vous serez amené à éditer un fichier JSON. Par exe
     - Voir [configuration du serveur MCP](./config.md) pour les paramètres disponibles
 
 
+## Activer les tools cartographiques en local
+
+Les tools `gpf_get_features_layer` et `gpf_get_feature_by_id_layer` renvoient une `data_url` opaque, servie par le **proxy WFS**, un processus séparé du serveur MCP. Ils sont listés dans tous les transports mais échouent tant qu'aucun proxy joignable n'est configuré. Comme le proxy est **indépendant du transport**, on peut les activer en local — **même en `stdio`** — en lançant les deux composants côte à côte, sans Docker.
+
+Il faut une clé partagée (`PROXY_URL_SECRET`) entre les deux processus, et pointer le MCP vers le proxy local via `PROXY_PUBLIC_BASE_URL`.
+
+```bash
+# 1. Générer une clé, partagée par le MCP et le proxy (une seule fois)
+export PROXY_URL_SECRET=$(openssl rand -hex 32)
+
+# 2. Démarrer le proxy WFS (processus séparé) — écoute par défaut sur http://localhost:3002
+node --use-env-proxy dist/proxy/index.js
+```
+
+```bash
+# 3. Dans un autre terminal : le MCP en stdio, pointé vers le proxy local
+export PROXY_URL_SECRET=<la même clé qu'à l'étape 1>
+export PROXY_PUBLIC_BASE_URL=http://localhost:3002
+node --use-env-proxy dist/index.js
+```
+
+Le MCP forge alors des URLs `http://localhost:3002/api/v1/proxy-wfs?q=<token>` que le client cartographique peut charger. Les navigateurs traitent `localhost` comme un contexte sûr : il n'y a donc pas de blocage *mixed content*, même depuis une page en `https`.
+
+Pour un client MCP configuré par fichier JSON, ajoutez les variables dans le bloc `env` du serveur (et lancez `node --use-env-proxy dist/proxy/index.js` à côté, avec la même `PROXY_URL_SECRET`) :
+
+```json
+{
+  "mcpServers": {
+    "geocontext": {
+      "command": "node",
+      "args": ["--use-env-proxy", "/chemin/absolu/vers/geocontext/dist/index.js"],
+      "env": {
+        "PROXY_URL_SECRET": "<clé hexadécimale de 64 caractères>",
+        "PROXY_PUBLIC_BASE_URL": "http://localhost:3002"
+      }
+    }
+  }
+}
+```
+
+!!!tip
+    Sans ces deux variables, les tools `*_layer` échouent avec un message explicite. Utiliser alors `gpf_get_features` / `gpf_get_feature_by_id` (attributs, sans géométrie).
+
 ## Déboguer avec MCP Inspector
 
 **MCP Inspector** est l'outil de développement officiel pour tester et déboguer un serveur MCP local.

@@ -72,9 +72,11 @@ describe("Test GpfGetFeatureByIdLayerTool", () => {
     mockGetFeatureType.mockReset();
   });
 
-  it("fails fast under stdio without touching the secret", async () => {
+  it("fails fast when no proxy is configured, without touching the catalog", async () => {
+    // No secret + no public base URL = no reachable proxy to serve the layer. The
+    // gate is on configuration, not transport, so the transport here is irrelevant.
     mockGetEnv.mockReturnValue(
-      makeEnv({ TRANSPORT_TYPE: "stdio", PROXY_URL_SECRET: undefined, PROXY_PUBLIC_BASE_URL: undefined }),
+      makeEnv({ PROXY_URL_SECRET: undefined, PROXY_PUBLIC_BASE_URL: undefined }),
     );
     const tool = new GpfGetFeatureByIdLayerTool();
 
@@ -90,9 +92,28 @@ describe("Test GpfGetFeatureByIdLayerTool", () => {
     if (textContent.type !== "text") {
       throw new Error("expected text content");
     }
-    expect(textContent.text).toContain("mode http");
-    // Fail-fast means the catalog pre-flight never runs under stdio.
+    expect(textContent.text).toContain("PROXY_URL_SECRET");
+    // Fail-fast means the catalog pre-flight never runs.
     expect(mockGetFeatureType).not.toHaveBeenCalled();
+  });
+
+  it("mints a data_url under stdio when a proxy IS configured (gate is config, not transport)", async () => {
+    // stdio + a locally-run proxy (secret + base URL set) is a valid dev setup: the
+    // tool must produce a URL, proving the gate no longer keys on TRANSPORT_TYPE.
+    mockGetEnv.mockReturnValue(makeEnv({ TRANSPORT_TYPE: "stdio" }));
+    mockGetFeatureType.mockResolvedValue(communeType);
+    const tool = new GpfGetFeatureByIdLayerTool();
+
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_get_feature_by_id_layer",
+        arguments: { typename: "ADMINEXPRESS-COG.LATEST:commune", feature_id: "commune.1" },
+      },
+    });
+
+    expect(response.isError).toBeUndefined();
+    const payload = JSON.parse((response.content[0] as { text: string }).text);
+    expect(payload.data_url).toContain("https://proxy.example.test/api/v1/proxy-wfs?q=");
   });
 
   it("builds an opaque data_url that round-trips to the by-id-tagged params", async () => {

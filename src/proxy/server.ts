@@ -4,10 +4,6 @@
  * Serves `GET {PROXY_ENDPOINT}?q=<token>`: decode the opaque token, re-validate
  * it through the layer schema, run the geometry-full WFS query, and return a
  * GeoJSON FeatureCollection for MCP Carto to render.
- *
- * mcp-framework's HTTP server is a hardcoded router with no route hook, so the
- * proxy runs as a SEPARATE `node:http` listener in the same process (http mode
- * only), started from `main()`.
  */
 
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
