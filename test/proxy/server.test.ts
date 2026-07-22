@@ -244,9 +244,9 @@ describe("proxy/server", () => {
     expect(res.headers["access-control-allow-origin"]).toBe("*");
   });
 
-  it("answers OPTIONS preflight with 204 and the CORS method headers", async () => {
+  it("answers OPTIONS preflight with 200 and the CORS method headers", async () => {
     const res = await request(baseUrl).options(ENDPOINT).set("Origin", "https://any.example");
-    expect(res.status).toBe(204);
+    expect(res.status).toBe(200);
     expect(res.headers["access-control-allow-origin"]).toBe("*");
     expect(res.headers["access-control-allow-methods"]).toContain("GET");
     expect(res.headers["access-control-allow-methods"]).toContain("OPTIONS");

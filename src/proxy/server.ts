@@ -185,9 +185,12 @@ function createRequestHandler() {
   return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     applyCors(res);
 
-    // Preflight.
+    // Preflight. Answer 200, not 204: both are spec-permitted, but some browsers
+    // mistake a 204 preflight as applying to the resource itself and never send
+    // the follow-up request. Since the proxy serves browser consumers we cannot
+    // enumerate, 200 is the safe choice (even though the MCP transport uses 204).
     if (req.method === "OPTIONS") {
-      res.writeHead(204);
+      res.writeHead(200);
       res.end();
       return;
     }
