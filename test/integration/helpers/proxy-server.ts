@@ -26,7 +26,7 @@ export interface ProxyServerHandle {
 
 const HOST = "127.0.0.1";
 const PROXY_PORT = 3099;
-const ENDPOINT = "/api/v1/proxy-wfs";
+const ENDPOINT = "/api/v1/proxy-test";
 
 /**
  * Starts the standalone proxy process and waits until its endpoint responds.
