@@ -148,16 +148,24 @@ export function transformFeatureCollectionResponse(
 
 // --- Feature References ---
 
+export type GpfGetFeatureCoreInput = {
+  typename: string,
+  select?: string[],
+  spatial_extras?: string[],
+}
+
 /**
- * Transforms a FeatureCollection and injects the exact queried typename into each `feature_ref`.
+ * Transforms a FeatureCollection obtained from upstream.
+ * 
+ * - Inject the exact queried typename into each `feature_ref`.
+ * - Compute the required `spatial_extras`.
  *
  * @param featureCollection Raw FeatureCollection returned by the WFS endpoint.
- * @param typename Typename of the queried layer.
- * @param spatial_extras List of extra geometry data to include for each feature.
- * @returns A transformed FeatureCollection whose `feature_ref` objects carry the exact typename.
+ * @param input GpfGetFeatures or GpfGetFeatureById input query.
+ * @returns A FeatureCollection with the required transformations done.
  */
-export function attachFeatureRefs(featureCollection: GenericFeatureCollection, typename: string, spatial_extras: string[] = []) {
-  const transformed = transformFeatureCollectionResponse(featureCollection, spatial_extras);
+export function postProcessFeatureCollection(featureCollection: GenericFeatureCollection, input: GpfGetFeatureCoreInput) {
+  const transformed = transformFeatureCollectionResponse(featureCollection, input.spatial_extras);
   if (!Array.isArray(transformed.features)) {
     return transformed;
   }
@@ -174,7 +182,7 @@ export function attachFeatureRefs(featureCollection: GenericFeatureCollection, t
       ...feature,
       feature_ref: {
         ...featureRef,
-        typename,
+        typename: input.typename,
       },
     };
   });

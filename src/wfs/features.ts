@@ -28,7 +28,7 @@ import {
   buildMainRequest,
   type CompiledRequest,
 } from "./request.js";
-import { attachFeatureRefs } from "./response.js";
+import { postProcessFeatureCollection } from "./response.js";
 import type { GpfQueryFeaturesInput } from "./schema.js";
 
 // --- Types ---
@@ -202,7 +202,7 @@ export async function executeQueryFeatures(input: GpfQueryFeaturesInput) {
   }
 
   if (isGetFeaturesQuery) {
-    return attachFeatureRefs(featureCollection, input.typename, input.spatial_extras);
+    return postProcessFeatureCollection(featureCollection, input);
   } else {
     return {
       numberMatched: getMatchedFeatureCount(featureCollection),
