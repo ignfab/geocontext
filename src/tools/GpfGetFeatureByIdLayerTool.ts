@@ -49,7 +49,8 @@ class GpfGetFeatureByIdLayerTool extends BaseTool<GpfGetFeatureByIdLayerInput> {
     "Renvoie une **URL de couche cartographiable** (`data_url`) pour exactement un objet GPF, identifié par `typename` et `feature_id` : une URL opaque, à passer telle quelle à un outil d'affichage cartographique (MCP Carto, ...). L'ouvrir renvoie une FeatureCollection GeoJSON contenant le seul objet demandé, avec sa géométrie complète.",
     "C'est le pendant cartographique de `gpf_get_feature_by_id` : utiliser ce tool dès qu'il faut **afficher / cartographier** un objet précis dont on connaît déjà la `feature_ref { typename, feature_id }` (issue d'un autre tool : `adminexpress`, `cadastre`, `urbanisme`, `assiette_sup`, `gpf_get_features`). Pour récupérer ses attributs sans géométrie, utiliser `gpf_get_feature_by_id`.",
     "Utiliser `select` pour limiter les propriétés attributaires retournées.",
-    "Aucun filtre attributaire ni spatial n'est accepté : ce tool cible un objet unique par son identifiant. Le contrat garantit une cardinalité stricte côté proxy (0 ou plusieurs résultats provoquent une erreur explicite).",
+    "Aucun filtre attributaire ni spatial n'est accepté : ce tool cible un objet unique par son identifiant, utiliser `gpf_get_features_layer` pour cibler des objets par filtrage.",
+    "Cet outil ne peut renvoyer qu'un unique objet (0 ou plusieurs résultats provoquent une erreur explicite).",
     "⚠️ Ne pas tenter de décoder, modifier ou reconstruire la `data_url` : elle est opaque par conception. Pour un autre objet, rappeler ce tool avec un autre `feature_id`.",
   ].join("\n");
   protected outputSchemaShape = gpfGetFeaturesLayerOutputSchema;
