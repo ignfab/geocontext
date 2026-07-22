@@ -150,7 +150,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
 
     // The token is opaque but must decode back to exactly the encoded params: the
     // query discriminant plus the strict object shape the proxy re-validates — no
-    // result_type, no spatial_extras.
+    // spatial_extras.
     const decoded = decodeToken(token as string, SECRET);
     expect(decoded).toEqual({
       kind: PROXY_TOKEN_KIND.query,
@@ -195,7 +195,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
     expect(payload.data_url).toContain("https://example.test/published/proxy/api/v1/proxy?q=");
   });
 
-  it("rejects result_type and spatial_extras as unknown parameters", async () => {
+  it("rejects spatial_extras as an unknown parameter", async () => {
     mockGetEnv.mockReturnValue(makeEnv({}));
     const tool = new GpfGetFeaturesLayerTool();
 
@@ -204,7 +204,6 @@ describe("Test GpfGetFeaturesLayerTool", () => {
         name: "gpf_get_features_layer",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
-          result_type: "results",
           spatial_extras: ["bbox"],
         },
       },
@@ -214,7 +213,6 @@ describe("Test GpfGetFeaturesLayerTool", () => {
     expect(response.structuredContent).toMatchObject({
       type: "urn:geocontext:problem:invalid-tool-params",
       errors: expect.arrayContaining([
-        expect.objectContaining({ name: "result_type", code: "unknown_parameter" }),
         expect.objectContaining({ name: "spatial_extras", code: "unknown_parameter" }),
       ]),
     });

@@ -958,7 +958,7 @@ La sortie inclut notamment le type des propriétés, leur description, leurs val
 
 | Champ | Type | Requis | Description |
 | --- | --- | --- | --- |
-| `typename` | string | oui | Le nom du type (ex : BDTOPO_V3:batiment) |
+| `typename` | string | oui | Le nom du type à décrire (de la forme `prefixe:nom`). |
 
 <details>
 <summary>Schéma d’entrée brut</summary>
@@ -969,7 +969,7 @@ La sortie inclut notamment le type des propriétés, leur description, leurs val
   "properties": {
     "typename": {
       "type": "string",
-      "description": "Le nom du type (ex : BDTOPO_V3:batiment)",
+      "description": "Le nom du type à décrire (de la forme `prefixe:nom`).",
       "minLength": 1
     }
   },
@@ -1117,7 +1117,7 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
 | `select` | array | non | Liste des propriétés non géométriques à renvoyer pour chaque objet. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles. Exemple : `["code_insee", "nom_officiel"]`. |
 | `spatial_extras` | array | non | Éléments calculés depuis la géométrie à renvoyer pour chaque objet. Peut inclure `centroid` et `bbox`, aucun par défaut. Valeur par défaut : []. |
 | `travel_time_filter` | object | non | Filtre spatial par temps de trajet depuis un point (`profile` voiture ou piéton). Exclusif avec les autres filtres spatiaux. |
-| `typename` | string | oui | Nom exact du type GPF à interroger, par exemple `BDTOPO_V3:batiment`. Utiliser `gpf_search_types` pour trouver un `typename` valide. |
+| `typename` | string | oui | Nom exact du type GPF à interroger de la forme `prefixe:nom`. Utiliser `gpf_search_types` pour trouver un `typename` valide. |
 | `where` | array | non | Clauses de filtre attributaire, combinées avec `AND`. |
 
 <details>
@@ -1130,7 +1130,7 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
     "typename": {
       "type": "string",
       "minLength": 1,
-      "description": "Nom exact du type GPF à interroger, par exemple `BDTOPO_V3:batiment`. Utiliser `gpf_search_types` pour trouver un `typename` valide."
+      "description": "Nom exact du type GPF à interroger de la forme `prefixe:nom`. Utiliser `gpf_search_types` pour trouver un `typename` valide."
     },
     "select": {
       "type": "array",
@@ -1423,7 +1423,6 @@ Couche cartographiable d’objets GPF
 Interroge un type GPF et renvoie une **URL de couche cartographiable** (`data_url`) : une URL opaque, à passer telle quelle à un outil d'affichage cartographique (MCP Carto, ...). L'ouvrir renvoie une FeatureCollection GeoJSON avec les géométries complètes.
 À utiliser dès qu'il faut **afficher / cartographier** des objets GPF. Pour des attributs sans géométrie, utiliser `gpf_get_features`.
 Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, `where` pour filtrer, `order_by` pour trier et un filtre spatial dédié (`bbox_filter`, `intersects_point_filter`, `dwithin_point_filter`, `intersects_feature_filter` ou `travel_time_filter`) pour le spatial.
-⚠️ Ne pas tenter de décoder, modifier ou reconstruire la `data_url` : elle est opaque par conception. Pour une autre requête, rappeler ce tool avec les nouveaux paramètres.
 **OBLIGATOIRE : toujours appeler `gpf_describe_type` avant ce tool, sauf si `gpf_describe_type` a déjà été appelé pour ce même typename dans la conversation en cours.** Les noms de propriétés ne peuvent pas être devinés.
 ```
 
@@ -1439,7 +1438,7 @@ Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, 
 | `order_by` | array | non | Liste ordonnée des critères de tri. |
 | `select` | array | non | Liste des propriétés non géométriques à renvoyer pour chaque objet. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles. Exemple : `["code_insee", "nom_officiel"]`. |
 | `travel_time_filter` | object | non | Filtre spatial par temps de trajet depuis un point (`profile` voiture ou piéton). Exclusif avec les autres filtres spatiaux. |
-| `typename` | string | oui | Nom exact du type GPF à interroger, par exemple `BDTOPO_V3:batiment`. Utiliser `gpf_search_types` pour trouver un `typename` valide. |
+| `typename` | string | oui | Nom exact du type GPF à interroger de la forme `prefixe:nom`. Utiliser `gpf_search_types` pour trouver un `typename` valide. |
 | `where` | array | non | Clauses de filtre attributaire, combinées avec `AND`. |
 
 <details>
@@ -1452,7 +1451,7 @@ Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, 
     "typename": {
       "type": "string",
       "minLength": 1,
-      "description": "Nom exact du type GPF à interroger, par exemple `BDTOPO_V3:batiment`. Utiliser `gpf_search_types` pour trouver un `typename` valide."
+      "description": "Nom exact du type GPF à interroger de la forme `prefixe:nom`. Utiliser `gpf_search_types` pour trouver un `typename` valide."
     },
     "select": {
       "type": "array",
@@ -1712,7 +1711,7 @@ Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, 
 
 | Champ | Type | Requis | Description |
 | --- | --- | --- | --- |
-| `data_url` | string | oui | URL opaque et autoportée renvoyant une FeatureCollection GeoJSON (géométries complètes) prête à être affichée dans un outil cartographique. Ne pas tenter de la décoder ni de la reconstruire : elle encode la requête validée. |
+| `data_url` | string | oui | URL renvoyant une FeatureCollection GeoJSON (géométries complètes) prête à être affichée dans un outil cartographique. |
 
 <details>
 <summary>Schéma de sortie brut</summary>
@@ -1723,7 +1722,7 @@ Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, 
   "properties": {
     "data_url": {
       "type": "string",
-      "description": "URL opaque et autoportée renvoyant une FeatureCollection GeoJSON (géométries complètes) prête à être affichée dans un outil cartographique. Ne pas tenter de la décoder ni de la reconstruire : elle encode la requête validée.",
+      "description": "URL renvoyant une FeatureCollection GeoJSON (géométries complètes) prête à être affichée dans un outil cartographique.",
       "format": "uri"
     }
   },
@@ -1775,7 +1774,7 @@ Les noms de propriétés utilisés dans `where` **ne peuvent pas être devinés*
 | `intersects_feature_filter` | object | non | Filtre spatial par intersection avec un feature GPF de référence. Exclusif avec les autres filtres spatiaux. |
 | `intersects_point_filter` | object | non | Filtre spatial par intersection avec un point. Exclusif avec les autres filtres spatiaux. |
 | `travel_time_filter` | object | non | Filtre spatial par temps de trajet depuis un point (`profile` voiture ou piéton). Exclusif avec les autres filtres spatiaux. |
-| `typename` | string | oui | Nom exact du type GPF à interroger, par exemple `BDTOPO_V3:batiment`. Utiliser `gpf_search_types` pour trouver un `typename` valide. |
+| `typename` | string | oui | Nom exact du type GPF à interroger de la forme `prefixe:nom`. Utiliser `gpf_search_types` pour trouver un `typename` valide. |
 | `where` | array | non | Clauses de filtre attributaire, combinées avec `AND`. |
 
 <details>
@@ -1788,7 +1787,7 @@ Les noms de propriétés utilisés dans `where` **ne peuvent pas être devinés*
     "typename": {
       "type": "string",
       "minLength": 1,
-      "description": "Nom exact du type GPF à interroger, par exemple `BDTOPO_V3:batiment`. Utiliser `gpf_search_types` pour trouver un `typename` valide."
+      "description": "Nom exact du type GPF à interroger de la forme `prefixe:nom`. Utiliser `gpf_search_types` pour trouver un `typename` valide."
     },
     "where": {
       "type": "array",
@@ -2132,9 +2131,9 @@ Couche cartographiable d’un objet GPF par identifiant
 ```
 Renvoie une **URL de couche cartographiable** (`data_url`) pour exactement un objet GPF, identifié par `typename` et `feature_id` : une URL opaque, à passer telle quelle à un outil d'affichage cartographique (MCP Carto, ...). L'ouvrir renvoie une FeatureCollection GeoJSON contenant le seul objet demandé, avec sa géométrie complète.
 C'est le pendant cartographique de `gpf_get_feature_by_id` : utiliser ce tool dès qu'il faut **afficher / cartographier** un objet précis dont on connaît déjà la `feature_ref { typename, feature_id }` (issue d'un autre tool : `adminexpress`, `cadastre`, `urbanisme`, `assiette_sup`, `gpf_get_features`). Pour récupérer ses attributs sans géométrie, utiliser `gpf_get_feature_by_id`.
-Utiliser `select` pour limiter les propriétés attributaires retournées. Chaque nom est vérifié dans le catalogue embarqué et la propriété géométrique est toujours ajoutée automatiquement.
-Aucun filtre attributaire ni spatial n'est accepté : ce tool cible un objet unique par son identifiant. Le contrat garantit une cardinalité stricte côté proxy (0 ou plusieurs résultats provoquent une erreur explicite).
-⚠️ Ne pas tenter de décoder, modifier ou reconstruire la `data_url` : elle est opaque par conception. Pour un autre objet, rappeler ce tool avec un autre `feature_id`.
+Utiliser `select` pour limiter les propriétés attributaires retournées.
+Aucun filtre attributaire ni spatial n'est accepté : ce tool cible un objet unique par son identifiant, utiliser `gpf_get_features_layer` pour cibler des objets par filtrage.
+Cet outil ne peut renvoyer qu'un unique objet (0 ou plusieurs résultats provoquent une erreur explicite).
 ```
 
 ### Schéma d’entrée
@@ -2187,7 +2186,7 @@ Aucun filtre attributaire ni spatial n'est accepté : ce tool cible un objet uni
 
 | Champ | Type | Requis | Description |
 | --- | --- | --- | --- |
-| `data_url` | string | oui | URL opaque et autoportée renvoyant une FeatureCollection GeoJSON (géométries complètes) prête à être affichée dans un outil cartographique. Ne pas tenter de la décoder ni de la reconstruire : elle encode la requête validée. |
+| `data_url` | string | oui | URL renvoyant une FeatureCollection GeoJSON (géométries complètes) prête à être affichée dans un outil cartographique. |
 
 <details>
 <summary>Schéma de sortie brut</summary>
@@ -2198,7 +2197,7 @@ Aucun filtre attributaire ni spatial n'est accepté : ce tool cible un objet uni
   "properties": {
     "data_url": {
       "type": "string",
-      "description": "URL opaque et autoportée renvoyant une FeatureCollection GeoJSON (géométries complètes) prête à être affichée dans un outil cartographique. Ne pas tenter de la décoder ni de la reconstruire : elle encode la requête validée.",
+      "description": "URL renvoyant une FeatureCollection GeoJSON (géométries complètes) prête à être affichée dans un outil cartographique.",
       "format": "uri"
     }
   },

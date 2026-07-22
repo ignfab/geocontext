@@ -298,32 +298,6 @@ describe("Test GpfGetFeaturesTool", () => {
     });
   });
 
-  it("should reject an unknown result_type parameter", async () => {
-    const tool = new GpfGetFeaturesTool();
-    const response = await tool.toolCall({
-      params: {
-        name: "gpf_get_features",
-        arguments: {
-          typename: "ADMINEXPRESS-COG.LATEST:commune",
-          result_type: "http_post_request",
-        },
-      },
-    });
-
-    // `result_type` no longer exists on the schema; under `.strict()` a stray
-    // value is rejected as an unknown parameter.
-    expect(response.isError).toBe(true);
-    expect(response.structuredContent).toMatchObject({
-      type: "urn:geocontext:problem:invalid-tool-params",
-      errors: expect.arrayContaining([
-        expect.objectContaining({
-          name: "result_type",
-          code: "unknown_parameter",
-        }),
-      ]),
-    });
-  });
-
   it("should reject multiple spatial filters as invalid tool parameters", async () => {
     const tool = new GpfGetFeaturesTool();
     const response = await tool.toolCall({

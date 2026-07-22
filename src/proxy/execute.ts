@@ -12,7 +12,7 @@
  * This module reuses the WFS query-compilation primitives (`compileQueryParts`,
  * `buildMainRequest`, reference-geometry resolution) but:
  * - forces the geometry column into the request `propertyName` itself, without
- *   touching `buildSelectList` (which stays coupled to the LLM `result_type`);
+ *   touching `buildSelectList` (which stays coupled to the LLM `select`/`spatial_extras` knobs);
  * - returns the RAW FeatureCollection, never `attachFeatureRefs`;
  * - runs against an INJECTED WfsClient, so it is fully testable without network
  *   and lets the HTTP layer supply a size-bounded, rate-limited client.
@@ -185,7 +185,7 @@ async function resolveReferenceGeometry(
  * convention, and returns the untransformed WFS response — never trimmed.
  *
  * @param input Validated layer query input (same shape as `gpf_get_features`
- *   minus `result_type`/`spatial_extras`).
+ *   minus the LLM-only `spatial_extras` knob).
  * @param deps Injected WFS client (catalog + execution) and isochrone resolver
  *   (always required; invoked only for `travel_time` filters).
  * @returns The raw WFS FeatureCollection, geometry preserved.

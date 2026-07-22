@@ -57,7 +57,7 @@ Avec certains clients MCP, vous serez amené à éditer un fichier JSON. Par exe
 ```
 
 !!!tip
-    - L'option `--use-env-proxy` est facultative. Voir la [configuration du proxy réseau](./config/proxy.md).
+    - L'option `--use-env-proxy` est facultative. Voir la [configuration du proxy réseau](./config/corporate-proxy.md).
     - Voir [configuration du serveur MCP](./config.md) pour les paramètres disponibles
 
 

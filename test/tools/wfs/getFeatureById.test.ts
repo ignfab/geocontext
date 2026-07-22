@@ -50,7 +50,7 @@ describe("Test GpfGetFeatureByIdTool", () => {
     mockFetchJSONPost.mockReset();
   });
 
-  it("should expose an MCP definition without a result_type knob", () => {
+  it("should expose its MCP input schema definition", () => {
     const tool = new GpfGetFeatureByIdTool();
     expect(tool.toolDefinition.title).toEqual("Lecture d’un objet GPF par identifiant");
     expect(tool.toolDefinition.inputSchema).toEqual({
@@ -302,38 +302,6 @@ describe("Test GpfGetFeatureByIdTool", () => {
       type: "urn:geocontext:problem:feature-cardinality",
       errors: expect.arrayContaining([
         expect.objectContaining({ code: "feature_cardinality" }),
-      ]),
-    });
-  });
-
-  it("should reject an unknown result_type parameter", async () => {
-    const tool = new GpfGetFeatureByIdTool();
-    const response = await tool.toolCall({
-      params: {
-        name: "gpf_get_feature_by_id",
-        arguments: {
-          typename: "ADMINEXPRESS-COG.LATEST:commune",
-          feature_id: "commune.1",
-          result_type: "http_post_request",
-        },
-      },
-    });
-
-    // `result_type` no longer exists on the schema; under `.strict()` a stray
-    // value is rejected as an unknown parameter.
-    expect(response.isError).toBe(true);
-    const textContent = response.content[0];
-    if (textContent.type !== "text") {
-      throw new Error("expected text content");
-    }
-    expect(textContent.text).toContain("Paramètres invalides");
-    expect(response.structuredContent).toMatchObject({
-      type: "urn:geocontext:problem:invalid-tool-params",
-      errors: expect.arrayContaining([
-        expect.objectContaining({
-          name: "result_type",
-          code: "unknown_parameter",
-        }),
       ]),
     });
   });

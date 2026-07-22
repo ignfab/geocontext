@@ -264,15 +264,11 @@ export function renderOutputSection(definition) {
     ].join("\n");
   }
 
-  const modes =
-    definition.inputSchema?.properties?.result_type?.enum?.map((value) => `\`${String(value)}\``) ??
-    [];
-
-  const note = modes.length
-    ? `Aucun \`outputSchema\` unique n'est exposé. La sortie dépend de \`result_type\` (${modes.join(", ")}).`
-    : "Aucun `outputSchema` unique n'est exposé. La sortie est gérée par la sérialisation par défaut du framework ou par un formatage de réponse spécifique.";
-
-  return ["### Sortie", "", note].join("\n");
+  return [
+    "### Sortie",
+    "",
+    "Aucun `outputSchema` unique n'est exposé. La sortie est gérée par la sérialisation par défaut du framework ou par un formatage de réponse spécifique.",
+  ].join("\n");
 }
 
 async function loadPackageMetadata() {

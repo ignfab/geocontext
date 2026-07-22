@@ -140,8 +140,6 @@ describe("generate-mcp-docs helpers", () => {
     });
 
     expect(markdown).toContain('| Succès | oui | non | `content[0].text` est la FeatureCollection stringifiée (propriétés attributaires uniquement) ; aucun `structuredContent` n\'est ajouté. |');
-    expect(markdown).not.toContain("http_post_request");
-    expect(markdown).not.toContain("http_get_url");
   });
 
   it("should document the get feature by id single-mode response contract", async () => {
@@ -152,7 +150,6 @@ describe("generate-mcp-docs helpers", () => {
     });
 
     expect(markdown).toContain('| Succès | oui | oui | `content[0].text` est la FeatureCollection stringifiée, également exposée dans `structuredContent`. |');
-    expect(markdown).not.toContain("result_type");
   });
 
   it("should document shared MCP annotations", async () => {
