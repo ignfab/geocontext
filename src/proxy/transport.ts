@@ -17,7 +17,11 @@ import { getSpatialFilter, geometryToEwkt } from "../wfs/queryPreparation.js";
 import type { ResolvedFeatureGeometryRef } from "../wfs/queryPreparation.js";
 import type { GpfGetFeaturesInput } from "../wfs/schema.js";
 import { NavigationIsochroneClient } from "../gpf/navigation.js";
-import type { TravelTimeResolver } from "./execute.js";
+import type {
+  TravelTimeResolver,
+  GeometryFeatureQueryDeps,
+  GeometryFeatureByIdQueryDeps,
+} from "./execute.js";
 import { fetchJSONPostWithLimit, fetchJSONGetWithLimit } from "../helpers/http.js";
 import { RateLimiter } from "../helpers/RateLimiter.js";
 import { getEnv } from "../config/env.js";
@@ -125,3 +129,30 @@ export const resolveProxyTravelTime: TravelTimeResolver = async (
 
   return { geometry_ewkt: geometryToEwkt(geometry) };
 };
+
+// --- Default Engine Dependencies ---
+
+/**
+ * Default (production) dependency bundle for `runGeometryFeatureQuery`: the proxy
+ * WFS client and the proxy isochrone resolver. Bundling the concrete proxy wiring
+ * here keeps `server.ts` decoupled from the individual clients — it asks the
+ * transport layer for "the deps" instead of assembling them itself. Tests inject
+ * their own deps into the engine directly.
+ */
+export function getDefaultGeometryFeatureQueryDeps(): GeometryFeatureQueryDeps {
+  return {
+    wfsClient: getProxyWfsClient(),
+    resolveTravelTime: resolveProxyTravelTime,
+  };
+}
+
+/**
+ * Default (production) dependency bundle for `runGeometryFeatureByIdQuery`.
+ * Narrower than {@link getDefaultGeometryFeatureQueryDeps}: a by-id lookup has no
+ * spatial filter, so it needs only the WFS client (no isochrone resolver).
+ */
+export function getDefaultGeometryFeatureByIdQueryDeps(): GeometryFeatureByIdQueryDeps {
+  return {
+    wfsClient: getProxyWfsClient(),
+  };
+}

@@ -22,7 +22,10 @@ import {
 } from "../wfs/schema.js";
 import { runGeometryFeatureQuery, runGeometryFeatureByIdQuery } from "./execute.js";
 import { FeatureNotFoundError, FeatureCardinalityError } from "../wfs/byId.js";
-import { getProxyWfsClient, resolveProxyTravelTime } from "./transport.js";
+import {
+  getDefaultGeometryFeatureQueryDeps,
+  getDefaultGeometryFeatureByIdQueryDeps,
+} from "./transport.js";
 import {
   decodeToken,
   ProxyTokenMalformedError,
@@ -148,15 +151,13 @@ async function handleLayerRequest(url: URL, res: ServerResponse): Promise<void> 
 
     if (kind === PROXY_TOKEN_KIND.byId) {
       const input = gpfGetFeatureByIdLayerInputObjectSchema.parse(payload);
-      featureCollection = await runGeometryFeatureByIdQuery(input, {
-        wfsClient: getProxyWfsClient(),
-      });
+      featureCollection = await runGeometryFeatureByIdQuery(
+        input,
+        getDefaultGeometryFeatureByIdQueryDeps(),
+      );
     } else if (kind === PROXY_TOKEN_KIND.query) {
       const input = gpfGetFeaturesLayerInputSchema.parse(payload);
-      featureCollection = await runGeometryFeatureQuery(input, {
-        wfsClient: getProxyWfsClient(),
-        resolveTravelTime: resolveProxyTravelTime,
-      });
+      featureCollection = await runGeometryFeatureQuery(input, getDefaultGeometryFeatureQueryDeps());
     } else {
       throw new ProxyTokenMalformedError(`Unknown proxy token kind: ${String(kind)}.`);
     }

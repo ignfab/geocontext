@@ -17,8 +17,8 @@ vi.mock("../../src/proxy/execute", () => ({
   runGeometryFeatureByIdQuery: (...args: unknown[]) => runGeometryFeatureByIdQuery(...args),
 }));
 vi.mock("../../src/proxy/transport", () => ({
-  getProxyWfsClient: () => ({}),
-  resolveProxyTravelTime: vi.fn(),
+  getDefaultGeometryFeatureQueryDeps: () => ({ wfsClient: {}, resolveTravelTime: vi.fn() }),
+  getDefaultGeometryFeatureByIdQueryDeps: () => ({ wfsClient: {} }),
 }));
 
 // A fixed 32-byte hex key for the test environment.
