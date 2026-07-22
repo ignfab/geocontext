@@ -37,15 +37,14 @@ import {
   compileIntersectsFeatureSpatialFilter,
   compileAdjacentFeatureSpatialFilter,
   compileIntersectsPointSpatialFilter,
-  type ResolvedFeatureGeometryRef,
+  type GeometryLike,
 } from "./spatialCql.js";
 
 // --- Re-exports ---
 
-export { geometryToEwkt } from "./geometry.js";
 export { validateSelectProperty, getGeometryProperty } from "./properties.js";
 export { getSpatialFilter } from "./spatialFilter.js";
-export type { GeometryLike, ResolvedFeatureGeometryRef } from "./spatialCql.js";
+export type { GeometryLike } from "./spatialCql.js";
 
 // --- Internal Constants ---
 
@@ -176,8 +175,8 @@ function compileOrderByClause(featureType: Collection, geometryProperty: Collect
 function resolvedGeometry(
   operator : string,
   geometryKind: string,
-  resolvedGeometryRef? : ResolvedFeatureGeometryRef,
-) : ResolvedFeatureGeometryRef {
+  resolvedGeometryRef? : GeometryLike,
+) : GeometryLike {
   if (!resolvedGeometryRef) {
     throw new Error(`Le filtre spatial \`${operator}\` exige la résolution préalable de la géométrie ${geometryKind}.`);
   }
@@ -195,12 +194,12 @@ function resolvedGeometry(
 export function compileQueryParts(
   input: GpfQueryFeaturesInput,
   featureType: Collection,
-  resolvedGeometryRef?: ResolvedFeatureGeometryRef,
+  resolvedGeometryRef?: GeometryLike,
 ): CompiledQuery {
   const geometryProperty = getGeometryProperty(featureType);
   const spatialFilter = getSpatialFilter(input);
   const fragments: string[] = [];
-  let resolved : ResolvedFeatureGeometryRef;
+  let resolved : GeometryLike;
 
   // Keep the spatial predicate first: the GeoPlateforme GeoServer is sensitive
   // to filter ordering and may reject equivalent filters when attributes come first.

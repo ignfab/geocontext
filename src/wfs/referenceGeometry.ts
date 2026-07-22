@@ -2,8 +2,8 @@
  * Resolution of a reference feature's geometry for spatial-filter compilation.
  *
  * `intersects_feature` filters name another feature by id; before the CQL can be
- * compiled, that feature's geometry must be fetched and converted to EWKT. This
- * module owns that single primitive, client-agnostic so both consumers share it:
+ * compiled, that feature's geometry must be fetched. This module owns that single
+ * primitive, client-agnostic so both consumers share it:
  * - the LLM path (`resolveIntersectsFeatureGeometry`, on the module singleton);
  * - the proxy engine (`resolveReferenceGeometry`, on its injected, size-bounded
  *   client).
@@ -16,8 +16,7 @@ import type { Collection } from "@ignfab/gpf-schema-store";
 
 import {
   getGeometryProperty,
-  geometryToEwkt,
-  type ResolvedFeatureGeometryRef,
+  type GeometryLike,
 } from "./queryPreparation.js";
 import { buildGetFeatureByIdRequest, type CompiledRequest } from "./request.js";
 import { requireSingleFeatureById } from "./byId.js";
@@ -27,17 +26,12 @@ import type { WfsFeatureCollectionResponse } from "./types.js";
  * Minimal WFS client surface needed to resolve a reference feature's geometry:
  * a catalog lookup plus a single by-id fetch. Both the default singleton
  * `wfsClient` and the proxy engine's injected, size-bounded client satisfy it
- * structurally, so {@link resolveFeatureGeometryEwkt} serves both paths from a
+ * structurally, so {@link resolveFeatureGeometry} serves both paths from a
  * single implementation.
  */
 export type ReferenceGeometryClient = {
   getFeatureType(typename: string): Promise<Collection>;
   fetchFeatureCollection(request: CompiledRequest): Promise<WfsFeatureCollectionResponse>;
-};
-
-type GeometryLike = {
-  type: string;
-  coordinates: unknown;
 };
 
 /**
@@ -58,7 +52,7 @@ function isGeometryLike(value: unknown): value is GeometryLike {
 
 /**
  * Fetches a single reference feature by id (requesting only its geometry column)
- * and returns its geometry as EWKT, ready for CQL compilation.
+ * and returns its geometry.
  *
  * The caller supplies the WFS client so each path keeps its own transport
  * (module singleton vs injected, size-bounded) without duplicating the
@@ -66,13 +60,13 @@ function isGeometryLike(value: unknown): value is GeometryLike {
  *
  * @param client WFS client used for the catalog lookup and the by-id fetch.
  * @param ref Target reference feature (layer + expected feature id).
- * @returns The reference geometry as EWKT.
+ * @returns The reference geometry.
  * @throws When the resolved feature carries no usable geometry.
  */
-export async function resolveFeatureGeometryEwkt(
+export async function resolveFeatureGeometry(
   client: ReferenceGeometryClient,
   ref: { typename: string; feature_id: string },
-): Promise<ResolvedFeatureGeometryRef> {
+): Promise<GeometryLike> {
   const referenceFeatureType = await client.getFeatureType(ref.typename);
   const referenceGeometryProperty = getGeometryProperty(referenceFeatureType);
   const request = buildGetFeatureByIdRequest(
@@ -89,8 +83,5 @@ export async function resolveFeatureGeometryEwkt(
     );
   }
 
-  return { 
-    geometry_raw: referenceFeature.geometry,
-    geometry_ewkt: geometryToEwkt(referenceFeature.geometry),
-  };
+  return referenceFeature.geometry
 }

@@ -135,13 +135,9 @@ describe("compileIntersectsFeatureSpatialFilter", () => {
       type: "MultiPolygon",
       coordinates: [[[[2.0, 48.0], [2.2, 48.0], [2.2, 48.2], [2.0, 48.0]]]]
     }
-    const resolvedGeometry = {
-      geometry_ewkt: geometryToEwkt(geometry),
-      geometry_raw: geometry
-    };
-    expect(resolvedGeometry.geometry_ewkt).toEqual("SRID=4326;MULTIPOLYGON(((2 48,2.2 48,2.2 48.2,2 48)))");
+    expect(geometryToEwkt(geometry)).toEqual("SRID=4326;MULTIPOLYGON(((2 48,2.2 48,2.2 48.2,2 48)))");
 
-    const result = compileIntersectsFeatureSpatialFilter(geometryProperty, resolvedGeometry);
+    const result = compileIntersectsFeatureSpatialFilter(geometryProperty, geometry);
 
     expect(result).toEqual("INTERSECTS(the_geom,SRID=4326;MULTIPOLYGON(((2 48,2.2 48,2.2 48.2,2 48))))");
   });
@@ -151,13 +147,9 @@ describe("compileIntersectsFeatureSpatialFilter", () => {
       type: "Point",
       coordinates: [2.3522, 48.8566]
     }
-    const resolvedGeometry = {
-      geometry_ewkt: geometryToEwkt(geometry),
-      geometry_raw: geometry
-    };
-    expect(resolvedGeometry.geometry_ewkt).toEqual("SRID=4326;POINT(2.3522 48.8566)");
+    expect(geometryToEwkt(geometry)).toEqual("SRID=4326;POINT(2.3522 48.8566)");
 
-    const result = compileIntersectsFeatureSpatialFilter(geometryProperty, resolvedGeometry);
+    const result = compileIntersectsFeatureSpatialFilter(geometryProperty, geometry);
 
     expect(result).toEqual("INTERSECTS(the_geom,SRID=4326;POINT(2.3522 48.8566))");
   });

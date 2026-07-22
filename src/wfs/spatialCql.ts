@@ -21,10 +21,6 @@ export type GeometryLike = {
   coordinates: unknown;
 };
 
-export type ResolvedFeatureGeometryRef = {
-  geometry_ewkt: string;
-  geometry_raw: GeometryLike;
-};
 
 // --- Helper Types and Functions ---
 
@@ -139,8 +135,8 @@ export function compileDwithinSpatialFilter(geometryProperty: CollectionProperty
  * @param geometry The actual geometry and its EWKT serialization.
  * @returns A CQL intersects predicate.
  */
-export function compileIntersectsFeatureSpatialFilter(geometryProperty: CollectionProperty, geometry: ResolvedFeatureGeometryRef) {
-  return `INTERSECTS(${geometryProperty.name},${geometry.geometry_ewkt})`;
+export function compileIntersectsFeatureSpatialFilter(geometryProperty: CollectionProperty, geometry: GeometryLike) {
+  return `INTERSECTS(${geometryProperty.name},${geometryToEwkt(geometry)})`;
 }
 
 /**
@@ -150,7 +146,7 @@ export function compileIntersectsFeatureSpatialFilter(geometryProperty: Collecti
  * @param geometry The actual geometry and its EWKT serialization.
  * @returns A CQL predicate composed of an "intersect" and a "not intersects".
  */
-export function compileAdjacentFeatureSpatialFilter(geometryProperty: CollectionProperty, geometry: ResolvedFeatureGeometryRef) {
-  const innerPoints = geometryToEwkt(findInnerPoints(geometry.geometry_raw));
-  return `INTERSECTS(${geometryProperty.name},${geometry.geometry_ewkt}) AND NOT INTERSECTS(${geometryProperty.name},${innerPoints})`;
+export function compileAdjacentFeatureSpatialFilter(geometryProperty: CollectionProperty, geometry: GeometryLike) {
+  const innerPoints = geometryToEwkt(findInnerPoints(geometry));
+  return `INTERSECTS(${geometryProperty.name},${geometryToEwkt(geometry)}) AND NOT INTERSECTS(${geometryProperty.name},${innerPoints})`;
 }
