@@ -15,8 +15,8 @@ import type {
   WfsFeatureResponse,
 } from "./types.js";
 import { buildGetFeatureByIdRequest } from "./request.js";
-import { attachFeatureRefs } from "./response.js";
 import { buildPropertyName } from "./properties.js"
+import { postProcessFeatureCollection } from "./response.js";
 
 // --- Input Types ---
 
@@ -174,5 +174,5 @@ export async function executeGetFeatureById(
     numberMatched: 1,
   };
 
-  return attachFeatureRefs(singleFeatureCollection, input.typename, input.spatial_extras);
+  return postProcessFeatureCollection(singleFeatureCollection, input);
 }
