@@ -18,7 +18,7 @@
 - **Données de référence à jour** — les réponses s’appuient sur les référentiels géographiques publiés en continu par l’IGN et ses partenaires.
 - **Réponses optimisées pour les LLM** — les traitements et filtrages sont faits côté serveur pour limiter les tokens transmis au modèle.
 - **Moins d’hallucinations** — les descriptions et schémas enrichis aident l’assistant à identifier les bonnes données et les bons champs (implémentation anticipée de [OGC API Feature - schema](https://docs.ogc.org/is/23-058r2/23-058r2.html) dans [ignfab/gpf-schema-store](https://github.com/ignfab/gpf-schema-store)).
-- **Compatible MCP** — utilisable avec des clients compatibles MCP comme Claude Desktop, Cursor ou MCPJam, mais aussi directement dans certaines interfaces de chat en ligne compatibles, comme Claude, Le Chat de Mistral ou ChatGPT, via leurs connecteurs MCP.
+- **Compatible MCP** — utilisable avec des clients compatibles MCP comme Claude Desktop, Cursor ou MCPJam, mais aussi directement dans certaines interfaces de chat en ligne compatibles, comme Claude, Mistral Vibe ou ChatGPT, via leurs connecteurs MCP.
 
 ## Démo en 30 secondes
 
@@ -226,7 +226,6 @@ La documentation détaillée est répartie par usage :
 
 - **Installer Geocontext dans un client MCP**
   - [Utilisation avec Claude Desktop](docs/usage/claude-desktop.md)
-  - [Utilisation avec MCPJam](docs/usage/mcpjam.md)
 
 - **Configurer le serveur MCP**
   - [Configuration avancée](docs/config.md) : proxy d’entreprise, modes de transport `stdio` / `http`, paramètres d’exécution.
