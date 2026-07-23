@@ -18,7 +18,7 @@
  *   and lets the HTTP layer supply a size-bounded, rate-limited client.
  */
 
-import type { OgcCollectionSchema, CollectionProperty } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionSchema, OgcCollectionProperty } from "@ignfab/gpf-schema-store";
 
 import {
   buildGetFeatureByIdRequest,
@@ -81,7 +81,7 @@ export type GeometryFeatureQueryDeps = {
  */
 function ensureGeometrySelected(
   propertyName: string | undefined,
-  geometryProperty: CollectionProperty,
+  geometryProperty: OgcCollectionProperty,
 ): string | undefined {
   if (!propertyName) {
     return undefined;
