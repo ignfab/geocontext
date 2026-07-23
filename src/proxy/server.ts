@@ -191,24 +191,37 @@ function createRequestHandler() {
       return;
     }
 
-    const url = new URL(req.url ?? "/", "http://localhost");
-
-    if (url.pathname !== PROXY_ENDPOINT) {
-      sendJsonError(res, 404, "Ressource introuvable.");
-      return;
-    }
-
-    if (req.method !== "GET") {
-      res.setHeader("Allow", "GET, OPTIONS");
-      sendJsonError(res, 405, "Méthode non autorisée.");
-      return;
-    }
-
+    // Everything below runs inside one try/catch. `new URL` throws ERR_INVALID_URL
+    // on a malformed request target (e.g. `GET //`), and this handler is async, so an
+    // unguarded throw escapes as an unhandled rejection — which terminates the process
+    // on Node >= 24 (a trivial, unauthenticated DoS). Mapping every throw to a response
+    // keeps the proxy alive.
     try {
+      let url: URL;
+      try {
+        url = new URL(req.url ?? "/", "http://localhost");
+      } catch {
+        // Malformed request target: a client error, not a proxy fault.
+        sendJsonError(res, 400, "Cible de requête invalide.");
+        return;
+      }
+
+      if (url.pathname !== PROXY_ENDPOINT) {
+        sendJsonError(res, 404, "Ressource introuvable.");
+        return;
+      }
+
+      if (req.method !== "GET") {
+        res.setHeader("Allow", "GET, OPTIONS");
+        sendJsonError(res, 405, "Méthode non autorisée.");
+        return;
+      }
+
       await handleLayerRequest(url, res);
     } catch (error) {
-      // Safety net: handleLayerRequest maps its own errors, so this only catches
-      // truly unexpected failures.
+      // Safety net: handleLayerRequest maps its own errors, so this catches only
+      // truly unexpected failures — and it guarantees no throw from the URL parse or
+      // dispatch above can escape the async handler as an unhandled rejection.
       logger.error(`[proxy] unexpected error: ${error instanceof Error ? error.message : String(error)}`);
       if (!res.headersSent) {
         sendJsonError(res, 500, "Erreur interne du proxy.");

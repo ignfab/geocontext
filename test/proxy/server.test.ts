@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Server } from "node:http";
-import type { AddressInfo } from "node:net";
+import { connect, type AddressInfo } from "node:net";
 import request from "supertest";
 
 import { encodeToken } from "../../src/proxy/token";
@@ -221,6 +221,38 @@ describe("proxy/server", () => {
     const res = await request(baseUrl).post(ENDPOINT).query({ q: validToken() });
     expect(res.status).toBe(405);
     expect(res.headers["allow"]).toContain("GET");
+  });
+
+  it("400 on a malformed request target without crashing the process (raw `GET //`)", async () => {
+    // Regression: a target node delivers verbatim but `new URL` rejects (e.g. "//")
+    // must map to a clean 400, never escape the async handler as an unhandled
+    // rejection (which terminates the process on Node >= 24). supertest normalizes
+    // the path, so send the raw request line over a socket.
+    const { port } = server.address() as AddressInfo;
+    const statusLine = await new Promise<string>((resolve, reject) => {
+      const socket = connect(port, "127.0.0.1", () => {
+        socket.write("GET // HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n");
+      });
+      let buffer = "";
+      socket.on("data", (chunk) => {
+        buffer += chunk.toString();
+        if (buffer.includes("\r\n")) {
+          socket.destroy();
+          resolve(buffer.split("\r\n")[0] ?? "");
+        }
+      });
+      socket.on("error", reject);
+      socket.setTimeout(2000, () => {
+        socket.destroy();
+        reject(new Error("no response — handler hung or process crashed"));
+      });
+    });
+    expect(statusLine).toContain("400");
+
+    // The server is still alive and serving after the malformed request.
+    runGeometryFeatureQuery.mockResolvedValue(SAMPLE_COLLECTION);
+    const res = await request(baseUrl).get(ENDPOINT).query({ q: validToken() });
+    expect(res.status).toBe(200);
   });
 
   it("does not return a GeoJSON-shaped body on error", async () => {
