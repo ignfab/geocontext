@@ -950,7 +950,7 @@ Description d’un type GPF
 ```
 Renvoie le schéma détaillé d'un type GPF à partir de son identifiant (`typename`) : identifiants, description et liste des propriétés.
 Utiliser ce tool après `gpf_search_types` pour inspecter les propriétés disponibles avant d'appeler `gpf_get_features`.
-La sortie inclut notamment le type des propriétés, leur description, leurs valeurs possibles (`enum`) lorsqu'elles existent
+La sortie inclut notamment le type des propriétés, leur description, leurs valeurs possibles (`oneOf`) lorsqu'elles existent
 **IMPORTANT : Appel fortement recommandé si les noms exacts des propriétés ne sont pas connus : un nom de propriété incorrect provoque une erreur**.
 ```
 
@@ -986,11 +986,10 @@ La sortie inclut notamment le type des propriétés, leur description, leurs val
 | Champ | Type | Requis | Description |
 | --- | --- | --- | --- |
 | `description` | string | oui | La description du type GPF. |
-| `id` | string | oui | L'identifiant complet du type GPF. |
-| `name` | string | oui | Le nom court du type GPF. |
-| `namespace` | string | oui | L'espace de nommage du type GPF. |
-| `properties` | array | oui | La liste des propriétés du type GPF. |
+| `properties` | array | oui | La liste des propriétés pouvant être présentes dans ce type GPF. |
+| `required` | array | oui | La liste des noms de propriétés toujours présentes dans ce type GPF. |
 | `title` | string | oui | Le titre lisible du type GPF. |
+| `typename` | string | oui | L'identifiant unique du type GPF. |
 
 <details>
 <summary>Schéma de sortie brut</summary>
@@ -999,17 +998,9 @@ La sortie inclut notamment le type des propriétés, leur description, leurs val
 {
   "type": "object",
   "properties": {
-    "id": {
+    "typename": {
       "type": "string",
-      "description": "L'identifiant complet du type GPF."
-    },
-    "namespace": {
-      "type": "string",
-      "description": "L'espace de nommage du type GPF."
-    },
-    "name": {
-      "type": "string",
-      "description": "Le nom court du type GPF."
+      "description": "L'identifiant unique du type GPF."
     },
     "title": {
       "type": "string",
@@ -1021,7 +1012,7 @@ La sortie inclut notamment le type des propriétés, leur description, leurs val
     },
     "properties": {
       "type": "array",
-      "description": "La liste des propriétés du type GPF.",
+      "description": "La liste des propriétés pouvant être présentes dans ce type GPF.",
       "items": {
         "type": "object",
         "properties": {
@@ -1031,7 +1022,13 @@ La sortie inclut notamment le type des propriétés, leur description, leurs val
           },
           "type": {
             "type": "string",
-            "description": "Le type de la propriété."
+            "description": "Le type de la propriété.",
+            "enum": [
+              "string",
+              "boolean",
+              "integer",
+              "number"
+            ]
           },
           "title": {
             "type": "string",
@@ -1041,32 +1038,51 @@ La sortie inclut notamment le type des propriétés, leur description, leurs val
             "type": "string",
             "description": "La description de la propriété."
           },
-          "enum": {
+          "oneOf": {
             "type": "array",
             "description": "Les valeurs possibles de la propriété.",
             "items": {
-              "type": "string"
+              "type": "object",
+              "properties": {
+                "const": {
+                  "type": "string",
+                  "description": "La valeur parmi celles possibles de la propriété."
+                },
+                "title": {
+                  "type": "string",
+                  "description": "Le titre lisible de cette valeur."
+                },
+                "description": {
+                  "type": "string",
+                  "description": "La signification de cette valeur."
+                }
+              },
+              "required": [
+                "const",
+                "title"
+              ]
             }
-          },
-          "defaultCrs": {
-            "type": "string",
-            "description": "Le système de coordonnées par défaut si la propriété est géométrique."
           }
         },
         "required": [
-          "name",
-          "type"
+          "name"
         ]
+      }
+    },
+    "required": {
+      "type": "array",
+      "description": "La liste des noms de propriétés toujours présentes dans ce type GPF.",
+      "items": {
+        "type": "string"
       }
     }
   },
   "required": [
-    "id",
-    "namespace",
-    "name",
+    "typename",
     "title",
     "description",
-    "properties"
+    "properties",
+    "required"
   ]
 }
 ```
