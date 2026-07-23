@@ -1,9 +1,9 @@
 import { vi, describe, it, expect, afterEach } from "vitest";
 
-import type { Collection } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 import { ServiceResponseError } from "../../../src/helpers/http.js";
 
-const mockGetFeatureType = vi.fn<(typename: string) => Promise<Collection>>();
+const mockGetFeatureType = vi.fn<(typename: string) => Promise<OgcCollectionSchema>>();
 const mockFetchJSONPost = vi.fn<(
   url: string,
   body?: string,
@@ -35,7 +35,7 @@ describe("Test GpfGetFeaturesTool", () => {
     }
   }
 
-  const polygonFeatureType: Collection = {
+  const polygonFeatureType: OgcCollectionSchema = {
     id: "ADMINEXPRESS-COG.LATEST:commune",
     namespace: "ADMINEXPRESS-COG.LATEST",
     name: "commune",
@@ -49,7 +49,7 @@ describe("Test GpfGetFeaturesTool", () => {
     ],
   };
 
-  const pointFeatureType: Collection = {
+  const pointFeatureType: OgcCollectionSchema = {
     id: "BDTOPO_V3:point_d_acces",
     namespace: "BDTOPO_V3",
     name: "point_d_acces",
@@ -61,7 +61,7 @@ describe("Test GpfGetFeaturesTool", () => {
     ],
   };
 
-  const multipointFeatureType: Collection = {
+  const multipointFeatureType: OgcCollectionSchema = {
     id: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:localisant",
     namespace: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS",
     name: "localisant",
@@ -100,7 +100,7 @@ describe("Test GpfGetFeaturesTool", () => {
     totalFeatures: 34877,
   };
 
-  function mockFeatureTypes(featureTypes: Record<string, Collection>) {
+  function mockFeatureTypes(featureTypes: Record<string, OgcCollectionSchema>) {
     mockGetFeatureType.mockImplementation(async (typename: string) => {
       const featureType = featureTypes[typename];
       if (!featureType) {

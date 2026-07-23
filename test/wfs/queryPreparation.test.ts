@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { Collection } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 
 import { compileQueryParts, geometryToEwkt } from "../../src/wfs/queryPreparation";
 import type { GpfGetFeaturesInput } from "../../src/wfs/schema";
 
 describe("gpfGetFeatures/queryPreparation", () => {
-  const featureType: Collection = {
+  const featureType: OgcCollectionSchema = {
     id: "ADMINEXPRESS-COG.LATEST:commune",
     namespace: "ADMINEXPRESS-COG.LATEST",
     name: "commune",

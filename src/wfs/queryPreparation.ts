@@ -8,7 +8,7 @@
  * - a small façade over lower-level helpers reused elsewhere in the engine
  */
 
-import type { Collection, CollectionProperty } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionSchema, CollectionProperty } from "@ignfab/gpf-schema-store";
 
 import {
   validateSelectProperty,
@@ -129,7 +129,7 @@ function compileIsNullClause(property: CollectionProperty) {
  * @param clause Raw where clause received from the tool input.
  * @returns A CQL predicate fragment.
  */
-function compileWhereClause(featureType: Collection, geometryProperty: CollectionProperty, clause: WhereClause) {
+function compileWhereClause(featureType: OgcCollectionSchema, geometryProperty: CollectionProperty, clause: WhereClause) {
   const property = resolveNonGeometryProperty(
     featureType,
     geometryProperty,
@@ -162,7 +162,7 @@ function compileWhereClause(featureType: Collection, geometryProperty: Collectio
  * @param clause Raw order-by clause received from the tool input.
  * @returns A WFS `sortBy` fragment.
  */
-function compileOrderByClause(featureType: Collection, geometryProperty: CollectionProperty, clause: OrderByClause) {
+function compileOrderByClause(featureType: OgcCollectionSchema, geometryProperty: CollectionProperty, clause: OrderByClause) {
   const property = resolveNonGeometryProperty(
     featureType,
     geometryProperty,
@@ -184,7 +184,7 @@ function compileOrderByClause(featureType: Collection, geometryProperty: Collect
  */
 export function compileQueryParts(
   input: GpfQueryFeaturesInput,
-  featureType: Collection,
+  featureType: OgcCollectionSchema,
   resolvedGeometryRef?: ResolvedFeatureGeometryRef,
 ): CompiledQuery {
   const geometryProperty = getGeometryProperty(featureType);

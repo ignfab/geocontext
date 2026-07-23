@@ -5,7 +5,7 @@
  * concerns such as schema exposure and response formatting.
  */
 
-import type { Collection } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 
 import {
   wfsClient,
@@ -53,7 +53,7 @@ type FetchFeatureByIdInput = {
  * @returns A comma-separated property list, or `undefined` when all properties should be returned.
  */
 export function buildPropertyName(
-  featureType: Collection,
+  featureType: OgcCollectionSchema,
   input: PropertySelectionInput,
 ) {
   // `includeGeometry` is also an invariant check: even without `select`, a
@@ -193,7 +193,7 @@ export function requireSingleFeatureById(
 export async function executeGetFeatureById(
   input: GetFeatureByIdExecutionInput,
 ) {
-  const featureType: Collection = await wfsClient.getFeatureType(input.typename);
+  const featureType: OgcCollectionSchema = await wfsClient.getFeatureType(input.typename);
   const propertyName = buildPropertyName(featureType, {
     includeGeometry: (input.spatial_extras ?? []).length > 0,
     select: input.select,

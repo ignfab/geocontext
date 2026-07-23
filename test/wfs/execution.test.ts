@@ -1,5 +1,5 @@
 import { vi, describe, expect, afterEach, it } from "vitest";
-import type { Collection } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 import { getMatchedFeatureCount } from "../../src/wfs/response.js";
 
 const mockPost = vi.fn<(request: any) => Promise<unknown>>();
@@ -107,7 +107,7 @@ describe("WfsClient", () => {
   });
 
   it("should accept structural test doubles as dependencies", async () => {
-    const featureType: Collection = {
+    const featureType: OgcCollectionSchema = {
       id: "BDTOPO_V3:batiment",
       namespace: "BDTOPO_V3",
       name: "batiment",
