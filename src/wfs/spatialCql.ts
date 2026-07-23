@@ -5,7 +5,7 @@
  * can be combined with attribute predicates in the final query.
  */
 
-import type { CollectionProperty } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionProperty } from "@ignfab/gpf-schema-store";
 
 import type { SpatialFilter } from "./schema.js";
 
@@ -18,7 +18,7 @@ import type { SpatialFilter } from "./schema.js";
  * @param spatialFilter Normalized bbox filter.
  * @returns A CQL bbox predicate.
  */
-export function compileBboxSpatialFilter(geometryProperty: CollectionProperty, spatialFilter: Extract<SpatialFilter, { operator: "bbox" }>) {
+export function compileBboxSpatialFilter(geometryProperty: OgcCollectionProperty, spatialFilter: Extract<SpatialFilter, { operator: "bbox" }>) {
   if (spatialFilter.west >= spatialFilter.east) {
     throw new Error("Le bbox est invalide : `west` doit être strictement inférieur à `east`.");
   }
@@ -35,7 +35,7 @@ export function compileBboxSpatialFilter(geometryProperty: CollectionProperty, s
  * @param spatialFilter Normalized point intersection filter.
  * @returns A CQL intersects predicate.
  */
-export function compileIntersectsPointSpatialFilter(geometryProperty: CollectionProperty, spatialFilter: Extract<SpatialFilter, { operator: "intersects_point" }>) {
+export function compileIntersectsPointSpatialFilter(geometryProperty: OgcCollectionProperty, spatialFilter: Extract<SpatialFilter, { operator: "intersects_point" }>) {
   return `INTERSECTS(${geometryProperty.name},SRID=4326;POINT(${spatialFilter.lon} ${spatialFilter.lat}))`;
 }
 
@@ -46,7 +46,7 @@ export function compileIntersectsPointSpatialFilter(geometryProperty: Collection
  * @param spatialFilter Normalized distance filter.
  * @returns A CQL dwithin predicate.
  */
-export function compileDwithinSpatialFilter(geometryProperty: CollectionProperty, spatialFilter: Extract<SpatialFilter, { operator: "dwithin_point" }>) {
+export function compileDwithinSpatialFilter(geometryProperty: OgcCollectionProperty, spatialFilter: Extract<SpatialFilter, { operator: "dwithin_point" }>) {
   return `DWITHIN(${geometryProperty.name},SRID=4326;POINT(${spatialFilter.lon} ${spatialFilter.lat}),${spatialFilter.distance_m},meters)`;
 }
 
@@ -57,6 +57,6 @@ export function compileDwithinSpatialFilter(geometryProperty: CollectionProperty
  * @param geometryEwkt Reference geometry serialized as EWKT.
  * @returns A CQL intersects predicate.
  */
-export function compileIntersectsFeatureSpatialFilter(geometryProperty: CollectionProperty, geometryEwkt: string) {
+export function compileIntersectsFeatureSpatialFilter(geometryProperty: OgcCollectionProperty, geometryEwkt: string) {
   return `INTERSECTS(${geometryProperty.name},${geometryEwkt})`;
 }

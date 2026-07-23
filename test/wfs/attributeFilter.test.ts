@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
-import type { CollectionProperty } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionProperty } from "@ignfab/gpf-schema-store";
 
 import { formatScalarValue, normalizeWhereClause } from "../../src/wfs/attributeFilter";
 import type { WhereClause } from "../../src/wfs/schema";
 
 // Minimal catalog properties covering the coercion branches.
-const integerProperty: CollectionProperty = { name: "population", type: "integer" };
-const floatProperty: CollectionProperty = { name: "hauteur", type: "float" };
-const booleanProperty: CollectionProperty = { name: "actif", type: "boolean" };
-const enumProperty: CollectionProperty = { name: "nature", type: "string", enum: ["Chapelle", "Eglise"] };
+const integerProperty: OgcCollectionProperty = { name: "population", type: "integer" };
+const floatProperty: OgcCollectionProperty = { name: "hauteur", type: "float" };
+const booleanProperty: OgcCollectionProperty = { name: "actif", type: "boolean" };
+const enumProperty: OgcCollectionProperty = { name: "nature", type: "string", enum: ["Chapelle", "Eglise"] };
 
 describe("attributeFilter/normalizeWhereClause", () => {
   // --- Numeric coercion rejection (regression guard for the empty/hex silent-coercion bug) ---

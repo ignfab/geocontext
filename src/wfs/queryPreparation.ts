@@ -8,7 +8,7 @@
  * - a small façade over lower-level helpers reused elsewhere in the engine
  */
 
-import type { OgcCollectionSchema, CollectionProperty } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionSchema, OgcCollectionProperty } from "@ignfab/gpf-schema-store";
 
 import {
   buildPropertyName,
@@ -63,7 +63,7 @@ export type ResolvedFeatureGeometryRef = {
 };
 
 export type CompiledQuery = {
-  geometryProperty?: CollectionProperty;
+  geometryProperty?: OgcCollectionProperty;
   propertyName: string;
   cqlFilter?: string;
   sortBy?: string;
@@ -79,7 +79,7 @@ export type CompiledQuery = {
  * @returns A CQL predicate fragment.
  */
 function compileScalarComparisonClause(
-  property: CollectionProperty,
+  property: OgcCollectionProperty,
   clause: ScalarComparisonClause,
 ) {
   return `${property.name} ${SCALAR_COMPARISON_OPERATORS[clause.operator]} ${formatScalarValue(clause.value)}`;
@@ -93,7 +93,7 @@ function compileScalarComparisonClause(
  * @returns A CQL predicate fragment.
  */
 function compileOrderedComparisonClause(
-  property: CollectionProperty,
+  property: OgcCollectionProperty,
   clause: OrderedComparisonClause,
 ) {
   return `${property.name} ${NUMERIC_COMPARISON_OPERATORS[clause.operator]} ${formatScalarValue(clause.value)}`;
@@ -106,7 +106,7 @@ function compileOrderedComparisonClause(
  * @param clause Normalized `in` clause.
  * @returns A CQL predicate fragment.
  */
-function compileInClause(property: CollectionProperty, clause: InClause) {
+function compileInClause(property: OgcCollectionProperty, clause: InClause) {
   return `${property.name} IN (${clause.values.map(formatScalarValue).join(", ")})`;
 }
 
@@ -116,7 +116,7 @@ function compileInClause(property: CollectionProperty, clause: InClause) {
  * @param property Non-geometric property targeted by the clause.
  * @returns A CQL predicate fragment.
  */
-function compileIsNullClause(property: CollectionProperty) {
+function compileIsNullClause(property: OgcCollectionProperty) {
   return `${property.name} IS NULL`;
 }
 
@@ -182,7 +182,7 @@ export function compileQueryParts(
   featureType: OgcCollectionSchema,
   resolvedGeometryRef?: ResolvedFeatureGeometryRef,
 ): CompiledQuery {
-  let geometryProperty: undefined | CollectionProperty;
+  let geometryProperty: undefined | OgcCollectionProperty;
   const spatialFilter = getSpatialFilter(input);
   const fragments: string[] = [];
 

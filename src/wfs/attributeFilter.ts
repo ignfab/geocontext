@@ -5,7 +5,7 @@
  * and produces normalized values ready for CQL rendering.
  */
 
-import type { CollectionProperty } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionProperty } from "@ignfab/gpf-schema-store";
 
 import type { WhereClause } from "./schema.js";
 
@@ -70,7 +70,7 @@ export function formatScalarValue(value: ScalarValue) {
  * @param property Property metadata from the embedded catalog.
  * @returns `true` when the property type is recognized as boolean-like.
  */
-function isBooleanProperty(property: CollectionProperty) {
+function isBooleanProperty(property: OgcCollectionProperty) {
   return ["boolean", "bool"].includes(property.type.toLowerCase());
 }
 
@@ -80,7 +80,7 @@ function isBooleanProperty(property: CollectionProperty) {
  * @param property Property metadata from the embedded catalog.
  * @returns `true` when the property type is recognized as integer-like.
  */
-function isIntegerProperty(property: CollectionProperty) {
+function isIntegerProperty(property: OgcCollectionProperty) {
   return ["integer", "long", "short"].includes(property.type.toLowerCase());
 }
 
@@ -90,7 +90,7 @@ function isIntegerProperty(property: CollectionProperty) {
  * @param property Property metadata from the embedded catalog.
  * @returns `true` when the property type is recognized as numeric-like.
  */
-function isNumericProperty(property: CollectionProperty) {
+function isNumericProperty(property: OgcCollectionProperty) {
   return ["integer", "number", "float", "double", "decimal", "long", "short", "numeric"].includes(property.type.toLowerCase());
 }
 
@@ -100,7 +100,7 @@ function isNumericProperty(property: CollectionProperty) {
  * @param property Property metadata from the embedded catalog.
  * @returns `true` when the property type or name suggests a date-like value.
  */
-function isDateProperty(property: CollectionProperty) {
+function isDateProperty(property: OgcCollectionProperty) {
   const type = property.type.toLowerCase();
   return ["date", "datetime", "timestamp", "timestamptz"].includes(type) || property.name.startsWith("date_");
 }
@@ -209,7 +209,7 @@ function getSingleStringValue(filter: WhereClause, message: string) {
  * @param operator Ordered comparison operator being compiled.
  * @returns Nothing. Throws when the property type is incompatible with ordered comparisons.
  */
-function ensureNumericProperty(property: CollectionProperty, operator: keyof typeof NUMERIC_COMPARISON_OPERATORS) {
+function ensureNumericProperty(property: OgcCollectionProperty, operator: keyof typeof NUMERIC_COMPARISON_OPERATORS) {
   if (!isNumericProperty(property) && !isDateProperty(property)) {
     throw new Error(`L'opérateur '${operator}' n'est supporté que pour une propriété numérique ou de date. '${property.name}' est de type '${property.type}'.`);
   }
@@ -224,7 +224,7 @@ function ensureNumericProperty(property: CollectionProperty, operator: keyof typ
  * @param value Serialized scalar value received from the tool input.
  * @returns A normalized scalar value ready for CQL formatting.
  */
-function coerceScalarValueForProperty(property: CollectionProperty, value: string) {
+function coerceScalarValueForProperty(property: OgcCollectionProperty, value: string) {
   if (isIntegerProperty(property)) {
     return parseIntegerString(value, `La propriété '${property.name}' exige une valeur entière sérialisée en texte.`);
   }
@@ -251,7 +251,7 @@ function coerceScalarValueForProperty(property: CollectionProperty, value: strin
  * @param operator Ordered comparison operator being compiled.
  * @returns A normalized date or numeric value ready for CQL formatting.
  */
-function coerceOrderedValueForProperty(property: CollectionProperty, value: string, operator: keyof typeof NUMERIC_COMPARISON_OPERATORS) {
+function coerceOrderedValueForProperty(property: OgcCollectionProperty, value: string, operator: keyof typeof NUMERIC_COMPARISON_OPERATORS) {
   ensureNumericProperty(property, operator);
   if (isDateProperty(property)) {
     return parseDateString(value, `L'opérateur '${operator}' exige une propriété \`value\` date valide.`);
@@ -269,7 +269,7 @@ function coerceOrderedValueForProperty(property: CollectionProperty, value: stri
  * @param clause Raw where clause received from the tool input.
  * @returns A normalized where clause with coerced values.
  */
-export function normalizeWhereClause(property: CollectionProperty, clause: WhereClause): NormalizedWhereClause {
+export function normalizeWhereClause(property: OgcCollectionProperty, clause: WhereClause): NormalizedWhereClause {
   switch (clause.operator) {
     case "eq":
     case "ne": {
