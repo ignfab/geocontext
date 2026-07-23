@@ -12,7 +12,7 @@
  * This module reuses the WFS query-compilation primitives (`compileQueryParts`,
  * `buildMainRequest`, reference-geometry resolution) but:
  * - forces the geometry column into the request `propertyName` itself, without
- *   touching `buildSelectList` (which stays coupled to the LLM `select`/`spatial_extras` knobs);
+ *   touching `buildPropertyName` (which stays coupled to the LLM `select`/`spatial_extras` knobs);
  * - returns the RAW FeatureCollection, never `attachFeatureRefs`;
  * - runs against an INJECTED WfsClient, so it is fully testable without network
  *   and lets the HTTP layer supply a size-bounded, rate-limited client.
@@ -31,7 +31,8 @@ import {
   getSpatialFilter,
   type ResolvedFeatureGeometryRef,
 } from "../wfs/queryPreparation.js";
-import { buildPropertyName, requireSingleFeatureById } from "../wfs/byId.js";
+import { requireSingleFeatureById } from "../wfs/byId.js";
+import { buildPropertyNameWithGeometry } from "../wfs/properties.js"
 import { resolveFeatureGeometryEwkt } from "../wfs/referenceGeometry.js";
 import { rethrowIdentifiedCatalogDesyncError } from "../wfs/catalogDesync.js";
 import { ServiceResponseError, extractJsonServiceError } from "../helpers/http.js";
@@ -272,10 +273,7 @@ export async function runGeometryFeatureByIdQuery(
   // Validate `select` against the same embedded catalog used at URL generation,
   // then force the geometry column into the WFS selection. Re-validating here is
   // required because decoded proxy tokens remain untrusted input.
-  const propertyName = buildPropertyName(featureType, {
-    includeGeometry: true,
-    select: input.select,
-  });
+  const propertyName = buildPropertyNameWithGeometry(featureType, input.select);
   const request = buildGetFeatureByIdRequest(
     input.typename,
     input.feature_id,
