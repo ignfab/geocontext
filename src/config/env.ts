@@ -22,6 +22,30 @@ function parseJsonEnvValue(val: string, ctx: z.RefinementCtx): unknown {
     }
 }
 
+/**
+ * Accepts only an http(s) base URL carrying NO query string or fragment.
+ *
+ * `buildDataUrl` (src/proxy/dataUrl.ts) appends `PROXY_ENDPOINT` and `?q=<token>`
+ * to this base by string concatenation, so a query or fragment on the base would
+ * swallow the endpoint — producing a broken `data_url` that 404s at map-load with
+ * NO error here. Rejecting them at startup keeps that failure out of production.
+ * Symmetric with the `[^?#]` guard `PROXY_ENDPOINT` / `HTTP_MCP_ENDPOINT` enforce,
+ * and it also drops non-http(s) schemes (`z.string().url()` alone accepts `ftp://`).
+ */
+function isCleanHttpBaseUrl(value: string): boolean {
+    let url: URL;
+    try {
+        url = new URL(value);
+    } catch {
+        return false;
+    }
+    return (
+        (url.protocol === "http:" || url.protocol === "https:") &&
+        url.search === "" &&
+        url.hash === ""
+    );
+}
+
 /** Expected byte length of the proxy URL symmetric key (AES-256). */
 const PROXY_URL_SECRET_BYTES = 32;
 
@@ -157,8 +181,20 @@ const envSchema = z.object({
     ),
     // Externally reachable base URL of the proxy, used to build the absolute
     // data_url handed to Carto. Behind an ingress this differs from the bind
-    // host/port, so it is provided explicitly.
-    PROXY_PUBLIC_BASE_URL: z.preprocess(emptyToUndefined, z.string().url().optional()),
+    // host/port, so it is provided explicitly. Must be an http(s) base with no
+    // query/fragment (see isCleanHttpBaseUrl): buildDataUrl appends the endpoint by
+    // concatenation, so anything else silently forges a broken data_url.
+    PROXY_PUBLIC_BASE_URL: z.preprocess(
+        emptyToUndefined,
+        z
+            .string()
+            .url()
+            .refine(
+                isCleanHttpBaseUrl,
+                "Expected an http(s) base URL without query or fragment (e.g. https://host or https://host/prefix)",
+            )
+            .optional(),
+    ),
     // The proxy serves public, stateless GeoJSON, so its endpoint is opened to any
     // origin (Access-Control-Allow-Origin: *) in server.ts — no allowlist to configure.
     // Dedicated upstream WFS rate limit for the proxy, separate from GPF_WFS_RATE_LIMIT.

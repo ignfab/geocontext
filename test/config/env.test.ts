@@ -102,6 +102,37 @@ describe("parseEnv", () => {
     expect(() => parseEnv({ PROXY_URL_SECRET: "z".repeat(64) })).toThrow(/hex characters/);
   });
 
+  // --- PROXY_PUBLIC_BASE_URL validation ---
+
+  it("should accept a clean http(s) base URL (with or without a path prefix)", () => {
+    expect(parseEnv({ PROXY_PUBLIC_BASE_URL: "https://geollm.example.fr" }).PROXY_PUBLIC_BASE_URL)
+      .toBe("https://geollm.example.fr");
+    expect(parseEnv({ PROXY_PUBLIC_BASE_URL: "https://geollm.example.fr/published/proxy" }).PROXY_PUBLIC_BASE_URL)
+      .toBe("https://geollm.example.fr/published/proxy");
+    expect(parseEnv({ PROXY_PUBLIC_BASE_URL: "http://localhost:3002" }).PROXY_PUBLIC_BASE_URL)
+      .toBe("http://localhost:3002");
+  });
+
+  it("should treat an empty/blank PROXY_PUBLIC_BASE_URL as undefined (not run through the refine)", () => {
+    expect(parseEnv({ PROXY_PUBLIC_BASE_URL: "" }).PROXY_PUBLIC_BASE_URL).toBeUndefined();
+    expect(parseEnv({ PROXY_PUBLIC_BASE_URL: "   " }).PROXY_PUBLIC_BASE_URL).toBeUndefined();
+  });
+
+  it("should reject a non-URL PROXY_PUBLIC_BASE_URL", () => {
+    expect(() => parseEnv({ PROXY_PUBLIC_BASE_URL: "not a url" })).toThrow("Invalid environment configuration");
+  });
+
+  it("should reject a PROXY_PUBLIC_BASE_URL carrying a query or fragment (would break data_url)", () => {
+    // buildDataUrl appends the endpoint + ?q= by concatenation, so a query/fragment
+    // on the base would swallow the endpoint and 404 silently at map-load.
+    expect(() => parseEnv({ PROXY_PUBLIC_BASE_URL: "https://host/base?foo=1" })).toThrow("Invalid environment configuration");
+    expect(() => parseEnv({ PROXY_PUBLIC_BASE_URL: "https://host/base#frag" })).toThrow("Invalid environment configuration");
+  });
+
+  it("should reject a non-http(s) PROXY_PUBLIC_BASE_URL scheme", () => {
+    expect(() => parseEnv({ PROXY_PUBLIC_BASE_URL: "ftp://host/base" })).toThrow("Invalid environment configuration");
+  });
+
   // --- CORS ---
 
   it("should parse comma-separated CORS origins", () => {
