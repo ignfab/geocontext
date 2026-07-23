@@ -83,7 +83,7 @@ export function buildMainRequest(
 export function buildGetFeatureByIdRequest(
   typename: string,
   featureId: string,
-  propertyName?: string,
+  propertyName: string,
 ): CompiledRequest {
   const query: Record<string, string> = {
     service: "WFS",
