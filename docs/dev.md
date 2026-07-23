@@ -228,7 +228,7 @@ npm run test:e2e
 !!!warning
     **zod doit rester en version 3**
 
-L'utilisation de [npm-check-updates](https://www.npmjs.com/package/npm-check-updates?activeTab=readme) est recommandée pour gérer les monter de version :
+L'utilisation de [npm-check-updates](https://www.npmjs.com/package/npm-check-updates?activeTab=readme) est recommandée pour gérer les montées de version :
 
 ```bash
 # étudier les nouvelles versions disponible
