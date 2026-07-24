@@ -225,7 +225,7 @@ export const gpfGetFeaturesLayerInputObjectSchema = gpfGetFeaturesInputObjectSch
         .min(1)
         .max(MAX_LIMIT)
         .default(MAX_LIMIT)
-        .describe(`Nombre maximum d'objets à cartographier. Valeur par défaut : ${MAX_LIMIT} (plafond du service, soit l'ensemble des objets correspondants). Réduire pour alléger la carte. Maximum : ${MAX_LIMIT}.`),
+        .describe(`Nombre maximum d'objets à cartographier. Valeur par défaut : ${MAX_LIMIT} (plafond du service). Réduire pour alléger la carte. Maximum : ${MAX_LIMIT}. Une requête produisant plus de ${MAX_LIMIT} objets sera tronquée.`),
     }),
   )
   .strict();
