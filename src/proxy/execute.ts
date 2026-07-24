@@ -33,7 +33,7 @@ import {
 } from "../wfs/queryPreparation.js";
 import { buildPropertyName, requireSingleFeatureById } from "../wfs/byId.js";
 import { resolveFeatureGeometryEwkt } from "../wfs/referenceGeometry.js";
-import { rewriteIllegalGeometryColumnError } from "../wfs/catalogDesync.js";
+import { rethrowIdentifiedCatalogDesyncError } from "../wfs/catalogDesync.js";
 import { ServiceResponseError, extractJsonServiceError } from "../helpers/http.js";
 import type { WfsFeatureCollectionResponse } from "../wfs/types.js";
 import type { GpfGetFeaturesInput, GpfGetFeatureByIdLayerInput } from "../wfs/schema.js";
@@ -222,7 +222,7 @@ export async function runGeometryFeatureQuery(
     // name for this type it rejects it as "Illegal property name". Rewrite it into a
     // clear diagnostic (shared with the LLM path) rather than letting the raw
     // upstream string surface to Carto as an opaque 502.
-    rewriteIllegalGeometryColumnError(error, geometryProperty.name, input.typename);
+    rethrowIdentifiedCatalogDesyncError(error, geometryProperty.name, input.typename);
     throw error;
   }
 

@@ -20,14 +20,14 @@ import { ServiceResponseError } from "../helpers/http.js";
 /**
  * Rethrows a WFS "Illegal property name: <geometry column>" rejection as a clear
  * catalog-desync diagnostic. A no-op for any other error, so the caller re-throws
- * the original afterwards (`rewriteIllegalGeometryColumnError(...); throw error;`).
+ * the original afterwards (`rethrowIdentifiedCatalogDesyncError(...); throw error;`).
  *
  * @param error Error thrown by the WFS fetch.
  * @param geometryPropertyName Geometry column forced into the request from the embedded catalog.
  * @param typename Layer being queried, for the diagnostic.
  * @throws {Error} A catalog-desync diagnostic when the error matches; otherwise returns.
  */
-export function rewriteIllegalGeometryColumnError(
+export function rethrowIdentifiedCatalogDesyncError(
   error: unknown,
   geometryPropertyName: string,
   typename: string,

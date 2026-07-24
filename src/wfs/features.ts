@@ -11,7 +11,7 @@ import type { Collection } from "@ignfab/gpf-schema-store";
 import { navigationIsochroneClient } from "../gpf/navigation.js";
 import logger from "../logger.js";
 import { resolveFeatureGeometryEwkt } from "./referenceGeometry.js";
-import { rewriteIllegalGeometryColumnError } from "./catalogDesync.js";
+import { rethrowIdentifiedCatalogDesyncError } from "./catalogDesync.js";
 import {
   compileQueryParts,
   geometryToEwkt,
@@ -197,7 +197,7 @@ export async function executeQueryFeatures(input: GpfQueryFeaturesInput) {
   } catch (error: unknown) {
     // Rewrite an embedded-catalog geometry-column desync into a clear diagnostic
     // (shared with the proxy path); any other error passes through unchanged.
-    rewriteIllegalGeometryColumnError(error, compiled.geometryProperty.name, input.typename);
+    rethrowIdentifiedCatalogDesyncError(error, compiled.geometryProperty.name, input.typename);
     throw error;
   }
 
