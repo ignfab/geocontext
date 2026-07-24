@@ -22,6 +22,7 @@ import type {
   OrderByClause,
   WhereClause,
 } from "./schema.js";
+import { GPF_SPATIAL_FILTER_DOCNAMES } from "./schema.js"
 
 import {
   formatScalarValue,
@@ -131,7 +132,7 @@ function compileWhereClause(featureType: OgcCollectionSchema, clause: WhereClaus
   const property = resolveNonGeometryProperty(
     featureType,
     clause.property,
-    "La propriété '{property}' est géométrique. Utiliser un filtre spatial dédié (`bbox_filter`, `intersects_point_filter`, `dwithin_point_filter`, `intersects_feature_filter` ou `travel_time_filter`)."
+    `Utiliser un filtre spatial dédié (${GPF_SPATIAL_FILTER_DOCNAMES}).`
   );
   const normalized = normalizeWhereClause(property, clause);
 
@@ -159,12 +160,12 @@ function compileWhereClause(featureType: OgcCollectionSchema, clause: WhereClaus
  * @returns A WFS `sortBy` fragment.
  */
 function compileOrderByClause(featureType: OgcCollectionSchema, clause: OrderByClause) {
-  const property = resolveNonGeometryProperty(
+  resolveNonGeometryProperty(
     featureType,
     clause.property,
-    "La propriété '{property}' est géométrique. Utiliser une propriété non géométrique pour `order_by`."
+    "Utiliser une propriété non géométrique pour `order_by`."
   );
-  return `${property.name} ${ORDER_DIRECTION_TO_WFS[clause.direction]}`;
+  return `${clause.property} ${ORDER_DIRECTION_TO_WFS[clause.direction]}`;
 }
 
 // --- Query Compilation ---
