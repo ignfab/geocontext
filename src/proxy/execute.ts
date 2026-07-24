@@ -210,7 +210,7 @@ export async function runGeometryFeatureQuery(
 
   // Request WGS84 lon/lat, matching the convention the /gpf modules already
   // consume. Set it on request.query, which the proxy transport serializes into
-  // the fetch URL; request.get_url is not read on this path, so it is left as is.
+  // the fetch URL.
   request.query.srsName = "EPSG:4326";
 
   let featureCollection: WfsFeatureCollectionResponse;

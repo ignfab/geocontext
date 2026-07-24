@@ -11,15 +11,11 @@ import type { GpfQueryFeaturesInput } from "./schema.js";
 
 // --- Transport Types ---
 
-type WfsRequestTransport = {
+export type CompiledRequest = {
   method: "POST";
   url: string;
   query: Record<string, string>;
   body: string;
-};
-
-export type CompiledRequest = WfsRequestTransport & {
-  get_url: string;
 };
 
 // --- Request Assembly Helpers ---
@@ -37,26 +33,6 @@ function buildBody(cqlFilter?: string) {
   return new URLSearchParams({ cql_filter: cqlFilter }).toString();
 }
 
-/**
- * Builds the equivalent GET URL variant of the request.
- *
- * Kept on `CompiledRequest` for logging/diagnostics; the engine executes via POST,
- * which stays robust when the URL would otherwise be very long or carry a large
- * `cql_filter`.
- *
- * @param url Base WFS endpoint URL.
- * @param query Query-string parameters sent with the request.
- * @param cqlFilter Optional CQL filter to append to the GET variant.
- * @returns A derived GET URL.
- */
-export function buildGetUrl(url: string, query: Record<string, string>, cqlFilter?: string) {
-  const params = new URLSearchParams(query);
-  if (cqlFilter) {
-    params.set("cql_filter", cqlFilter);
-  }
-  return `${url}?${params.toString()}`;
-}
-
 // --- Public Builders ---
 
 /**
@@ -64,7 +40,7 @@ export function buildGetUrl(url: string, query: Record<string, string>, cqlFilte
  *
  * @param input Normalized tool input.
  * @param compiled Compiled query fragments produced from the input and feature type.
- * @returns A POST request split into base URL, query-string parameters, encoded body, and optional GET variant.
+ * @returns A POST request split into base URL, query-string parameters, and encoded body.
  */
 export function buildMainRequest(
   input: GpfQueryFeaturesInput,
@@ -93,7 +69,6 @@ export function buildMainRequest(
     url: GPF_WFS_URL,
     query,
     body,
-    get_url: buildGetUrl(GPF_WFS_URL, query, compiled.cqlFilter),
   };
 }
 
@@ -103,7 +78,7 @@ export function buildMainRequest(
  * @param typename Typename of the target layer.
  * @param featureId Identifier of the target feature.
  * @param propertyName Optional comma-separated property list.
- * @returns A POST request split into base URL, query-string parameters, empty body, and optional GET variant.
+ * @returns A POST request split into base URL, query-string parameters, and empty body.
  */
 export function buildGetFeatureByIdRequest(
   typename: string,
@@ -130,7 +105,6 @@ export function buildGetFeatureByIdRequest(
     url: GPF_WFS_URL,
     query,
     body: "",
-    get_url: buildGetUrl(GPF_WFS_URL, query),
   };
 }
 
@@ -156,7 +130,7 @@ export type MultiTypenameRequestInput = {
  * that query several layers at once.
  *
  * @param input Multi-typename request parameters.
- * @returns A POST request split into base URL, query-string parameters, encoded body, and optional GET variant.
+ * @returns A POST request split into base URL, query-string parameters, and encoded body.
  */
 export function buildMultiTypenameRequest(
   input: MultiTypenameRequestInput,
@@ -197,6 +171,5 @@ export function buildMultiTypenameRequest(
     url: GPF_WFS_URL,
     query,
     body,
-    get_url: buildGetUrl(GPF_WFS_URL, query, expandedCqlFilter),
   };
 }

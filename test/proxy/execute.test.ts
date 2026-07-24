@@ -121,8 +121,7 @@ describe("proxy/execute · runGeometryFeatureQuery", () => {
 
     await runGeometryFeatureQuery(baseInput, { wfsClient: client, resolveTravelTime: unexpectedResolveTravelTime });
 
-    // srsName lands on request.query, which the proxy transport serializes into the
-    // fetch URL. request.get_url is not read on this path, so it is not asserted.
+    // srsName lands on request.query, which the proxy transport serializes into the fetch URL.
     expect(requests[0].query.srsName).toBe("EPSG:4326");
   });
 

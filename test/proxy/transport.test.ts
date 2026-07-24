@@ -45,9 +45,6 @@ function makeRequest(overrides?: Partial<CompiledRequest>): CompiledRequest {
     url: "https://data.geopf.fr/wfs/ows",
     query: { service: "WFS", request: "GetFeature", srsName: "EPSG:4326" },
     body: "service=WFS&request=GetFeature",
-    // A marker present ONLY in get_url (never in query) proves the transport rebuilds
-    // the URL from request.query and ignores get_url — the reason K1's assignment was dead.
-    get_url: "https://data.geopf.fr/wfs/ows?FROM_GET_URL_MARKER=1",
     ...overrides,
   } as CompiledRequest;
 }
@@ -86,11 +83,9 @@ describe("proxy/transport · buildProxyTransport (via getProxyWfsClient)", () =>
     expect(rateLimit).toHaveBeenCalledOnce();
 
     const [url, body, headers, timeoutMs, maxBytes, label] = fetchJSONPostWithLimit.mock.calls[0];
-    // URL is rebuilt from request.query (NOT request.get_url), which is why the dead
-    // get_url assignment was removed from execute.ts.
+    // URL is rebuilt from request.query.
     expect(url).toContain("https://data.geopf.fr/wfs/ows?");
     expect(url).toContain("srsName=EPSG%3A4326");
-    expect(url).not.toContain("FROM_GET_URL_MARKER"); // rebuilt from query, not copied from get_url
     expect(body).toBe(request.body);
     expect(headers).toMatchObject({ "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" });
     expect(timeoutMs).toBe(10 * 1000); // PROXY_UPSTREAM_TIMEOUT (s) → ms

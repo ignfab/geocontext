@@ -30,10 +30,6 @@ describe("wfs_engine/request", () => {
     expect(bodyParams.get("cql_filter")).toEqual(
       "INTERSECTS(geometrie,SRID=4326;POINT(2.35 48.85));INTERSECTS(geometrie,SRID=4326;POINT(2.35 48.85))",
     );
-
-    expect(request.get_url).toContain("typeNames=%28ADMINEXPRESS-COG.LATEST%3Acommune%29%28ADMINEXPRESS-COG.LATEST%3Adepartement%29");
-    expect(request.get_url).toContain("srsName=EPSG%3A4326");
-    expect(request.get_url).toContain("cql_filter=INTERSECTS%28geometrie%2CSRID%3D4326%3BPOINT%282.35+48.85%29%29%3BINTERSECTS%28geometrie%2CSRID%3D4326%3BPOINT%282.35+48.85%29%29");
   });
 
   it("should build a multi-typename request without body when cql_filter is absent", () => {
@@ -42,8 +38,7 @@ describe("wfs_engine/request", () => {
     });
 
     expect(request.body).toEqual("");
-    expect(request.get_url).toContain("typeNames=%28ADMINEXPRESS-COG.LATEST%3Aregion%29");
-    expect(request.get_url).not.toContain("cql_filter=");
+    expect(request.query.typeNames).toEqual("(ADMINEXPRESS-COG.LATEST:region)");
   });
 
   it("should build a multi-typename request with one explicit filter per typename", () => {
@@ -84,13 +79,15 @@ describe("wfs_engine/request", () => {
     })).toThrow("`cqlFilter` et `cqlFilters`");
   });
 
-  it("should keep long get_url values for URL-first consumers", () => {
+  it("carries a long cql_filter in the POST body (why the engine executes via POST, not a GET URL)", () => {
     const request = buildMultiTypenameRequest({
       typenames: ["ADMINEXPRESS-COG.LATEST:commune"],
       cqlFilter: `code_insee IN (${Array.from({ length: 900 }, (_, i) => `'${i}'`).join(",")})`,
     });
 
-    expect(request.get_url).toContain("cql_filter=");
-    expect(request.get_url.length).toBeGreaterThan(6000);
+    // The URL-encoded filter would make an oversized GET URL (>6000 chars); the
+    // engine carries it in the POST body instead.
+    expect(request.body).toContain("cql_filter=");
+    expect(request.body.length).toBeGreaterThan(6000);
   });
 });
