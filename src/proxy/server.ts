@@ -61,7 +61,7 @@ function toHttpError(error: unknown): HttpError {
     return {
       status: 502,
       detail:
-        "La couche demandée est trop volumineuse pour être affichée. Affiner la requête ou utiliser une variante généralisée (CARTO-PE).",
+        "La couche demandée est trop volumineuse pour être renvoyée.",
     };
   }
   if (error instanceof FeatureNotFoundError) {
