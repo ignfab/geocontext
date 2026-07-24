@@ -11,10 +11,9 @@
 import type { OgcCollectionSchema, OgcCollectionProperty } from "@ignfab/gpf-schema-store";
 
 import {
-  validateSelectProperty,
   buildSelectList,
   resolveNonGeometryProperty,
-  getGeometryProperty,
+  getGeometryName,
 } from "./properties.js";
 import { getSpatialFilter } from "./spatialFilter.js";
 
@@ -41,7 +40,7 @@ import {
 // --- Re-exports ---
 
 export { geometryToEwkt } from "./geometry.js";
-export { validateSelectProperty, getGeometryProperty } from "./properties.js";
+export { validateSelectProperty, getGeometryName } from "./properties.js";
 export { getSpatialFilter } from "./spatialFilter.js";
 
 // --- Internal Constants ---
@@ -64,7 +63,7 @@ export type ResolvedFeatureGeometryRef = {
 };
 
 export type CompiledQuery = {
-  geometryProperty: OgcCollectionProperty;
+  geometryName: string;
   cqlFilter?: string;
   propertyName?: string;
   sortBy?: string;
@@ -125,14 +124,12 @@ function compileIsNullClause(property: OgcCollectionProperty) {
  * Compiles a structured where clause into a CQL fragment.
  *
  * @param featureType Feature type definition loaded from the embedded catalog.
- * @param geometryProperty Geometry property already resolved for the feature type.
  * @param clause Raw where clause received from the tool input.
  * @returns A CQL predicate fragment.
  */
-function compileWhereClause(featureType: OgcCollectionSchema, geometryProperty: OgcCollectionProperty, clause: WhereClause) {
+function compileWhereClause(featureType: OgcCollectionSchema, clause: WhereClause) {
   const property = resolveNonGeometryProperty(
     featureType,
-    geometryProperty,
     clause.property,
     "La propriété '{property}' est géométrique. Utiliser un filtre spatial dédié (`bbox_filter`, `intersects_point_filter`, `dwithin_point_filter`, `intersects_feature_filter` ou `travel_time_filter`)."
   );
@@ -158,14 +155,12 @@ function compileWhereClause(featureType: OgcCollectionSchema, geometryProperty: 
  * Compiles a structured sort clause into a WFS `sortBy` fragment.
  *
  * @param featureType Feature type definition loaded from the embedded catalog.
- * @param geometryProperty Geometry property already resolved for the feature type.
  * @param clause Raw order-by clause received from the tool input.
  * @returns A WFS `sortBy` fragment.
  */
-function compileOrderByClause(featureType: OgcCollectionSchema, geometryProperty: OgcCollectionProperty, clause: OrderByClause) {
+function compileOrderByClause(featureType: OgcCollectionSchema, clause: OrderByClause) {
   const property = resolveNonGeometryProperty(
     featureType,
-    geometryProperty,
     clause.property,
     "La propriété '{property}' est géométrique. Utiliser une propriété non géométrique pour `order_by`."
   );
@@ -187,7 +182,7 @@ export function compileQueryParts(
   featureType: OgcCollectionSchema,
   resolvedGeometryRef?: ResolvedFeatureGeometryRef,
 ): CompiledQuery {
-  const geometryProperty = getGeometryProperty(featureType);
+  const geometryName = getGeometryName(featureType);
   const spatialFilter = getSpatialFilter(input);
   const fragments: string[] = [];
 
@@ -196,43 +191,43 @@ export function compileQueryParts(
   if (spatialFilter) {
     switch (spatialFilter.operator) {
       case "bbox":
-        fragments.push(compileBboxSpatialFilter(geometryProperty, spatialFilter));
+        fragments.push(compileBboxSpatialFilter(geometryName, spatialFilter));
         break;
       case "intersects_point":
-        fragments.push(compileIntersectsPointSpatialFilter(geometryProperty, spatialFilter));
+        fragments.push(compileIntersectsPointSpatialFilter(geometryName, spatialFilter));
         break;
       case "dwithin_point":
-        fragments.push(compileDwithinSpatialFilter(geometryProperty, spatialFilter));
+        fragments.push(compileDwithinSpatialFilter(geometryName, spatialFilter));
         break;
       case "intersects_feature":
         if (!resolvedGeometryRef) {
           throw new Error("Le filtre spatial `intersects_feature` exige la résolution préalable de la géométrie de référence.");
         }
-        fragments.push(compileIntersectsFeatureSpatialFilter(geometryProperty, resolvedGeometryRef.geometry_ewkt));
+        fragments.push(compileIntersectsFeatureSpatialFilter(geometryName, resolvedGeometryRef.geometry_ewkt));
         break;
       case "travel_time":
         if (!resolvedGeometryRef) {
           throw new Error("Le filtre spatial `travel_time` exige la résolution préalable de la géométrie d'isochrone.");
         }
-        fragments.push(compileIntersectsFeatureSpatialFilter(geometryProperty, resolvedGeometryRef.geometry_ewkt));
+        fragments.push(compileIntersectsFeatureSpatialFilter(geometryName, resolvedGeometryRef.geometry_ewkt));
         break;
     }
   }
 
   for (const clause of input.where ?? []) {
-    fragments.push(compileWhereClause(featureType, geometryProperty, clause));
+    fragments.push(compileWhereClause(featureType, clause));
   }
 
   const isGetFeaturesQuery = "limit" in input;
 
   const sortBy = isGetFeaturesQuery && input.order_by && input.order_by.length > 0
-    ? input.order_by.map((clause) => compileOrderByClause(featureType, geometryProperty, clause)).join(",")
+    ? input.order_by.map((clause) => compileOrderByClause(featureType, clause)).join(",")
     : undefined;
 
-  const propertyNames = isGetFeaturesQuery ? buildSelectList(featureType, geometryProperty, input) : [];
+  const propertyNames = isGetFeaturesQuery ? buildSelectList(featureType, input) : [];
 
   return {
-    geometryProperty,
+    geometryName,
     cqlFilter: fragments.length > 0 ? fragments.join(" AND ") : undefined,
     propertyName: propertyNames.length > 0 ? propertyNames.join(",") : undefined,
     sortBy,

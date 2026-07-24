@@ -304,9 +304,9 @@ describe("Test GpfGetFeaturesLayerTool", () => {
 
   it("rejects an intersects_feature reference type that has NO geometry column BEFORE minting (catalog pre-flight)", async () => {
     mockGetEnv.mockReturnValue(makeEnv({}));
-    // Reference type EXISTS but is an attribute-only table (no property carries a
-    // defaultCrs), so the proxy could not resolve a reference geometry from it. The
-    // pre-flight must catch that here (getGeometryProperty), not defer it to an opaque
+    // Reference type EXISTS but is an attribute-only table (no property is geometric),
+    // so the proxy could not resolve a reference geometry from it. The
+    // pre-flight must catch that here (getGeometryName), not defer it to an opaque
     // proxy 5xx at map-load — symmetric with the main typename's geometry check.
     const tableType: OgcCollectionSchema = {
       $schema: "https://json-schema.org/draft/2020-12/schema",

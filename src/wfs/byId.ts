@@ -14,7 +14,7 @@ import type {
   WfsFeatureCollectionResponse,
   WfsFeatureResponse,
 } from "./types.js";
-import { validateSelectProperty, getGeometryProperty } from "./queryPreparation.js";
+import { validateSelectProperty, getGeometryName } from "./queryPreparation.js";
 import { buildGetFeatureByIdRequest } from "./request.js";
 import { attachFeatureRefs } from "./response.js";
 
@@ -59,21 +59,20 @@ export function buildPropertyName(
   // `includeGeometry` is also an invariant check: even without `select`, a
   // cartographic/derived-geometry caller must fail against a geometry-less type
   // before issuing a WFS request.
-  const geometryProperty = input.includeGeometry
-    ? getGeometryProperty(featureType)
+  const geometryName = input.includeGeometry
+    ? getGeometryName(featureType)
     : undefined;
 
   if (!input.select || input.select.length === 0) {
     return undefined;
   }
 
-  const selectionGeometryProperty = geometryProperty ?? getGeometryProperty(featureType);
   const selectedProperties = input.select.map((propertyName) =>
-    validateSelectProperty(featureType, selectionGeometryProperty, propertyName),
+    validateSelectProperty(featureType, propertyName),
   );
 
-  if (geometryProperty) {
-    return [...selectedProperties, geometryProperty.name].join(",");
+  if (geometryName) {
+    return [...selectedProperties, geometryName].join(",");
   }
 
   return selectedProperties.join(",");

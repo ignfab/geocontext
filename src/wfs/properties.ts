@@ -40,13 +40,14 @@ function getGeometryProperties(featureType: OgcCollectionSchema) {
  * @param featureType Feature type definition loaded from the embedded catalog.
  * @returns The unique geometry property for the feature type.
  */
-export function getGeometryProperty(featureType: OgcCollectionSchema) {
+export function getGeometryName(featureType: OgcCollectionSchema) : string {
   const geometryProperties = getGeometryProperties(featureType);
   if (geometryProperties.length === 0) {
-    throw new Error(`Le type '${featureType.id}' n'expose aucune propriété géométrique exploitable dans le catalogue embarqué.`);
+    throw new Error(`Erreur du catalogue embarqué : la collection '${featureType.title}' n'expose aucune propriété géométrique exploitable.`);
   }
   if (geometryProperties.length > 1) {
-    throw new Error(`Le type '${featureType.id}' expose plusieurs propriétés géométriques dans le catalogue embarqué : ${geometryProperties.map((property: OgcCollectionProperty) => property.name).join(", ")}.`);
+    // TODO: should we silently return the unique property identified by "x-ogc-role": 'primary-geometry'?
+    throw new Error(`La collection '${featureType.title}' expose plusieurs propriétés géométriques dans le catalogue embarqué : ${geometryProperties.join(", ")}.`);
   }
   return geometryProperties[0];
 }
@@ -78,15 +79,14 @@ function getPropertyOrThrow(featureType: OgcCollectionSchema, propertyName: stri
  * of the feature type.
  *
  * @param featureType Feature type definition loaded from the embedded catalog.
- * @param geometryProperty Geometry property already resolved for the feature type.
  * @param propertyName Exact property name requested by the caller.
  * @param message Error message template used when the property is geometric.
  * @returns The matching non-geometric property metadata.
  */
-export function resolveNonGeometryProperty(featureType: OgcCollectionSchema, geometryProperty: OgcCollectionProperty, propertyName: string, message: string) {
+export function resolveNonGeometryProperty(featureType: OgcCollectionSchema, propertyName: string, message: string) {
   const property = getPropertyOrThrow(featureType, propertyName);
-  if (property.name === geometryProperty.name || property.defaultCrs) {
-    throw new Error(message.replace("{property}", property.name));
+  if (!property.type) { // identifies a geometric property
+    throw new Error(message.replace("{property}", property.title ?? propertyName));
   }
   return property;
 }
@@ -97,14 +97,12 @@ export function resolveNonGeometryProperty(featureType: OgcCollectionSchema, geo
  * Validates a selected property name and returns the exact property name to expose.
  *
  * @param featureType Feature type definition loaded from the embedded catalog.
- * @param geometryProperty Geometry property already resolved for the feature type.
  * @param propertyName Raw selected property name.
  * @returns The validated non-geometric property name.
  */
-export function validateSelectProperty(featureType: OgcCollectionSchema, geometryProperty: OgcCollectionProperty, propertyName: string) {
+export function validateSelectProperty(featureType: OgcCollectionSchema, propertyName: string) {
   return resolveNonGeometryProperty(
     featureType,
-    geometryProperty,
     propertyName,
     "La propriété '{property}' est géométrique. `select` accepte uniquement des propriétés non géométriques."
   ).name;
@@ -121,27 +119,27 @@ export function validateSelectProperty(featureType: OgcCollectionSchema, geometr
  * - when `spatial_extras` is non-empty, the geometry column is appended so elements of GPF_GET_FEATURES_SPATIAL_EXTRAS (bbox, centroid, ...) can be derived
  *
  * @param featureType Feature type definition loaded from the embedded catalog.
- * @param geometryProperty Geometry property already resolved for the feature type.
+ * @param geometryName Geometry property name already resolved for the feature type.
  * @param input Normalized tool input.
  * @returns The list of property names to expose in the WFS `propertyName` parameter.
  */
 export function buildSelectList(
   featureType: OgcCollectionSchema,
-  geometryProperty: OgcCollectionProperty,
   input: GpfGetFeaturesInput,
 ) {
   const shouldIncludeGeometry = (input.spatial_extras ?? []).length > 0;
+  const geometryName = shouldIncludeGeometry ? getGeometryName(featureType) : undefined;
 
   // If `select` is specified, only the requested properties are returned
   // after validation against the embedded catalog.
   if (input.select && input.select.length > 0) {
     const selectedProperties = input.select.map((propertyName) =>
-      validateSelectProperty(featureType, geometryProperty, propertyName),
+      validateSelectProperty(featureType, propertyName),
     );
 
     // Include geometry when `spatial_extras` needs it to derive bbox/centroid/...
     if (shouldIncludeGeometry) {
-      return [...selectedProperties, geometryProperty.name];
+      return [...selectedProperties, geometryName];
     }
 
     return selectedProperties;
@@ -155,7 +153,7 @@ export function buildSelectList(
     .map((property: OgcCollectionProperty) => property.name);
 
   if (shouldIncludeGeometry) {
-    return [...nonGeometryProperties, geometryProperty.name];
+    return [...nonGeometryProperties, geometryName];
   }
 
   return nonGeometryProperties;

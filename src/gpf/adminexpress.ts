@@ -10,7 +10,7 @@ import logger from '../logger.js';
 
 import { wfsClient } from '../wfs/execution.js';
 import type { WfsFeatureCollectionResponse } from '../wfs/types.js';
-import { getGeometryProperty } from '../wfs/properties.js';
+import { getGeometryName } from '../wfs/properties.js';
 import { compileIntersectsPointSpatialFilter } from '../wfs/spatialCql.js';
 import { mapToFlatItems, type FlatItem } from '../wfs/response.js';
 import type { SpatialFilter } from '../wfs/schema.js';
@@ -53,8 +53,8 @@ export async function getAdminUnits(lon: number, lat: number): Promise<AdminUnit
     // cross-layer geometry property homogeneity.
     const cqlFilters = await Promise.all(ADMINEXPRESS_TYPENAMES.map(async (typename) => {
         const featureType = await wfsClient.getFeatureType(typename);
-        const geometryProperty = getGeometryProperty(featureType);
-        return compileIntersectsPointSpatialFilter(geometryProperty, spatialFilter);
+        const geometryName = getGeometryName(featureType);
+        return compileIntersectsPointSpatialFilter(geometryName, spatialFilter);
     }));
 
     // Execute the multi-typename WFS query
