@@ -10,14 +10,13 @@ import type { Collection } from "@ignfab/gpf-schema-store";
 
 import { navigationIsochroneClient } from "../gpf/navigation.js";
 import logger from "../logger.js";
-import { resolveFeatureGeometryEwkt } from "./referenceGeometry.js";
+import { resolveFeatureGeometry } from "./referenceGeometry.js";
 import { rethrowIdentifiedCatalogDesyncError } from "./catalogDesync.js";
 import {
   compileQueryParts,
-  geometryToEwkt,
   getSpatialFilter,
   type CompiledQuery,
-  type ResolvedFeatureGeometryRef,
+  type GeometryLike,
 } from "./queryPreparation.js";
 import {
   wfsClient,
@@ -61,8 +60,9 @@ export function ensureIntersectsFeatureTargetsOtherTypename(
     input.typename === spatialFilter.typename
   ) {
     throw new Error(
-      "Le filtre `intersects_feature` sur le même `typename` retourne potentiellement plusieurs objets. " +
-        "Utiliser `gpf_get_feature_by_id` avec `{ typename, feature_id: intersects_feature_filter.feature_id }` pour cibler exactement un objet.",
+      "Le filtre `intersects_feature` ne peut pas être utilisé sur le même `typename`. " +
+        "Utiliser `gpf_get_feature_by_id` avec `{ typename, feature_id: intersects_feature_filter.feature_id }` pour cibler exactement un objet. " +
+        "Alternativement, utiliser le filtre `adjacent_feature_filter` pour obtenir les objets adjacents.",
     );
   }
 }
@@ -70,36 +70,36 @@ export function ensureIntersectsFeatureTargetsOtherTypename(
 // --- Reference Geometry ---
 
 /**
- * Resolves the geometry of a reference feature when `intersects_feature` is used,
- * then converts it to EWKT for CQL compilation.
+ * Resolves the geometry of a reference feature when `intersects_feature` or `adjacent_feature` are used.
  *
  * @param input Normalized tool input.
  * @returns The resolved reference geometry, or `undefined` when no reference feature is needed.
  */
-export async function resolveIntersectsFeatureGeometry(
+export async function resolveFeatureFilterGeometry(
   input: GpfQueryFeaturesInput,
-): Promise<ResolvedFeatureGeometryRef | undefined> {
+): Promise<GeometryLike | undefined> {
   const spatialFilter = getSpatialFilter(input);
-  if (!spatialFilter || spatialFilter.operator !== "intersects_feature") {
+  if (!spatialFilter || (spatialFilter.operator !== "intersects_feature" && spatialFilter.operator !== "adjacent_feature")) {
     return undefined;
   }
 
-  return resolveFeatureGeometryEwkt(wfsClient, {
-    typename: spatialFilter.typename,
+  const typename = spatialFilter.operator == "intersects_feature" ? spatialFilter.typename : input.typename;
+
+  return resolveFeatureGeometry(wfsClient, {
+    typename: typename,
     feature_id: spatialFilter.feature_id,
   });
 }
 
 /**
- * Resolves the travel-time isochrone geometry when `travel_time_filter` is used,
- * then converts it to EWKT for CQL compilation.
+ * Resolves the travel-time isochrone geometry when `travel_time_filter` is used.
  *
  * @param input Normalized tool input.
  * @returns The resolved isochrone geometry, or `undefined` when no travel-time filter is requested.
  */
 export async function resolveTravelTimeGeometry(
   input: GpfQueryFeaturesInput,
-): Promise<ResolvedFeatureGeometryRef | undefined> {
+): Promise<GeometryLike | undefined> {
   const spatialFilter = getSpatialFilter(input);
   if (!spatialFilter || spatialFilter.operator !== "travel_time") {
     return undefined;
@@ -112,9 +112,7 @@ export async function resolveTravelTimeGeometry(
     profile: spatialFilter.profile,
   });
 
-  return {
-    geometry_ewkt: geometryToEwkt(geometry),
-  };
+  return geometry;
 }
 
 /**
@@ -125,12 +123,13 @@ export async function resolveTravelTimeGeometry(
  */
 export async function resolveSpatialFilterGeometry(
   input: GpfQueryFeaturesInput,
-): Promise<ResolvedFeatureGeometryRef | undefined> {
+): Promise<GeometryLike | undefined> {
   const spatialFilter = getSpatialFilter(input);
 
   switch (spatialFilter?.operator) {
     case "intersects_feature":
-      return resolveIntersectsFeatureGeometry(input);
+    case "adjacent_feature":
+      return resolveFeatureFilterGeometry(input);
     case "travel_time":
       return resolveTravelTimeGeometry(input);
     default:
@@ -153,7 +152,6 @@ export async function resolveSpatialFilterGeometry(
 export async function prepareQueryFeaturesRequest(
   input: GpfQueryFeaturesInput
 ): Promise<PreparedGetFeaturesRequest> {
-  // TODO: Assess if this guard does not prevent legitimate use cases.
   ensureIntersectsFeatureTargetsOtherTypename(input);
   // Get the feature type definition from the embedded catalog to access
   // property definitions and the geometry column name.

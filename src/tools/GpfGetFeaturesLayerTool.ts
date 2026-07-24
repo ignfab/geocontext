@@ -141,10 +141,14 @@ class GpfGetFeaturesLayerTool extends BaseTool<GpfGetFeaturesLayerInput> {
     // the attribute side (select/where/order_by).
     const needsResolvedRef =
       spatialFilter?.operator === "intersects_feature" || spatialFilter?.operator === "travel_time";
+    const fake_geometry = {
+      type: "Point",
+      coordinates: [0, 0],
+    };
     compileQueryParts(
       compiledInput,
       featureType,
-      needsResolvedRef ? { geometry_ewkt: "SRID=4326;POINT(0 0)" } : undefined,
+      needsResolvedRef ? fake_geometry : undefined,
     );
 
     logger.info(`[tool] execute ${this.name} ...`, {

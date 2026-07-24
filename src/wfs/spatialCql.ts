@@ -9,6 +9,86 @@ import type { CollectionProperty } from "@ignfab/gpf-schema-store";
 
 import type { SpatialFilter } from "./schema.js";
 
+import { geometryToEwkt } from "../wfs/geometry.js"
+import GeoJSONReader from 'jsts/org/locationtech/jts/io/GeoJSONReader.js'
+import GeometryFactory from 'jsts/org/locationtech/jts/geom/GeometryFactory.js'
+import InteriorPointArea from 'jsts/org/locationtech/jts/algorithm/InteriorPointArea.js'
+
+// --- Public Types ---
+
+export type GeometryLike = {
+  type: string;
+  coordinates: unknown;
+};
+
+
+// --- Helper Types and Functions ---
+
+type GeoJSONPoint = { type: "Point", coordinates: number[] }
+type GeoJSONMultiPoint = { type: "MultiPoint", coordinates: number[][] }
+
+/**
+ * Return a Geometry with one inner point per disjoint sub-geometry of the input.
+ *
+ * @param geometry Input geometry possibly composed of multiple sub-geometries
+ * @returns A Geometry of type either "Point" or "MultiPoint".
+ */
+function findInnerPoints(geometry: GeometryLike) : GeoJSONPoint | GeoJSONMultiPoint {
+  let ret: GeoJSONMultiPoint;
+  switch (geometry.type) {
+    case "LineString": {
+      const jts = (new GeoJSONReader(new GeometryFactory())).read(geometry);
+      const point = InteriorPointArea.getInteriorPoint(jts)
+      return {
+        type: "Point",
+        coordinates: [point.x, point.y]
+      };
+    }
+    case "MultiLineString": {
+      const coords = geometry.coordinates as [number, number][][]
+      ret = {
+        type: "MultiPoint",
+        coordinates: coords.map(linecoords => (findInnerPoints({
+          type: "LineString",
+          coordinates: linecoords,
+        }) as GeoJSONPoint).coordinates)
+      };
+      break;
+    }
+    case "Polygon": {
+      const jts = (new GeoJSONReader(new GeometryFactory())).read(geometry);
+      const point = InteriorPointArea.getInteriorPoint(jts)
+      return {
+        type: "Point",
+        coordinates: [point.x, point.y]
+      };
+    }
+    case "MultiPolygon": {
+      const coords = geometry.coordinates as [number, number][][][]
+      ret = {
+        type: "MultiPoint",
+        coordinates: coords.map(polygoncoords => (findInnerPoints({
+          type: "Polygon",
+          coordinates: polygoncoords,
+        }) as GeoJSONPoint).coordinates)
+      };
+      break;
+    }
+    // Do not accept Point or MultiPoint geometries as "inner point" cannot be defined in 0D
+    case "Point":
+    case "MultiPoint":
+    default:
+      throw new Error(`Le type de géométrie '${geometry.type}' n'est pas supporté pour \`adjacent_feature\`.`);
+  }
+  if (ret.coordinates.length == 1) {
+    return {
+      type: "Point",
+      coordinates: ret.coordinates[0]
+    }
+  }
+  return ret;
+}
+
 // --- Spatial Predicate Compilation ---
 
 /**
@@ -54,9 +134,21 @@ export function compileDwithinSpatialFilter(geometryProperty: CollectionProperty
  * Compiles an `intersects_feature` spatial filter once the reference geometry is already serialized.
  *
  * @param geometryProperty Geometry property already resolved for the feature type.
- * @param geometryEwkt Reference geometry serialized as EWKT.
+ * @param geometry The actual geometry and its EWKT serialization.
  * @returns A CQL intersects predicate.
  */
-export function compileIntersectsFeatureSpatialFilter(geometryProperty: CollectionProperty, geometryEwkt: string) {
-  return `INTERSECTS(${geometryProperty.name},${geometryEwkt})`;
+export function compileIntersectsFeatureSpatialFilter(geometryProperty: CollectionProperty, geometry: GeometryLike) {
+  return `INTERSECTS(${geometryProperty.name},${geometryToEwkt(geometry)})`;
+}
+
+/**
+ * Compiles an `adjacent_feature` spatial filter once the reference geometry is already serialized.
+ *
+ * @param geometryProperty Geometry property already resolved for the feature type.
+ * @param geometry The actual geometry and its EWKT serialization.
+ * @returns A CQL predicate composed of an "intersect" and a "not intersects".
+ */
+export function compileAdjacentFeatureSpatialFilter(geometryProperty: CollectionProperty, geometry: GeometryLike) {
+  const innerPoints = geometryToEwkt(findInnerPoints(geometry));
+  return `INTERSECTS(${geometryProperty.name},${geometryToEwkt(geometry)}) AND NOT INTERSECTS(${geometryProperty.name},${innerPoints})`;
 }

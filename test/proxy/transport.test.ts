@@ -37,6 +37,7 @@ vi.mock("../../src/helpers/RateLimiter", () => ({
 
 import { getProxyWfsClient, resolveProxyTravelTimeGeometry } from "../../src/proxy/transport";
 import { resetEnv } from "../../src/config/env";
+import { geometryToEwkt } from "../../src/wfs/geometry";
 
 const TEST_SECRET = "a".repeat(64);
 
@@ -112,7 +113,7 @@ describe("proxy/transport · resolveProxyTravelTimeGeometry", () => {
     travel_time_filter: { lon: 2.35, lat: 48.85, minutes: 15, profile: "pedestrian" },
   };
 
-  it("resolves the isochrone through the BOUNDED fetch (PROXY_UPSTREAM_TIMEOUT + PROXY_MAX_RESPONSE_BYTES) and returns EWKT", async () => {
+  it("resolves the isochrone through the BOUNDED fetch (PROXY_UPSTREAM_TIMEOUT + PROXY_MAX_RESPONSE_BYTES)", async () => {
     // The real NavigationIsochroneClient runs; only its fetcher is mocked. This is
     // the regression guard: the travel_time leg must NOT use the unbounded
     // fetchJSONGet (HTTP_TIMEOUT only) — it must go through fetchJSONGetWithLimit
@@ -136,7 +137,7 @@ describe("proxy/transport · resolveProxyTravelTimeGeometry", () => {
     expect(label).toBe("d'isochrone"); // names the isochrone leg in the 502 message
     // The dedicated GPF_NAVIGATION_PROXY rate limiter is invoked.
     expect(rateLimit).toHaveBeenCalled();
-    expect(result.geometry_ewkt).toMatch(/^SRID=4326;POLYGON/);
+    expect(geometryToEwkt(result)).toMatch(/^SRID=4326;POLYGON/);
   });
 
   it("throws defensively if called without a travel_time filter", async () => {

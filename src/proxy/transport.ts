@@ -13,8 +13,8 @@ import { wfsSchemaStore } from "../wfs/catalog.js";
 import type { WfsTransportLike } from "../wfs/execution.js";
 import type { CompiledRequest } from "../wfs/request.js";
 import type { WfsFeatureCollectionResponse } from "../wfs/types.js";
-import { getSpatialFilter, geometryToEwkt } from "../wfs/queryPreparation.js";
-import type { ResolvedFeatureGeometryRef } from "../wfs/queryPreparation.js";
+import { getSpatialFilter } from "../wfs/queryPreparation.js";
+import type { GeometryLike } from "../wfs/queryPreparation.js";
 import type { GpfGetFeaturesInput } from "../wfs/schema.js";
 import { NavigationIsochroneClient } from "../gpf/navigation.js";
 import type {
@@ -106,17 +106,13 @@ function getProxyIsochroneClient(): NavigationIsochroneClient {
 // --- Reference-geometry resolver (travel_time / isochrone) ---
 
 /**
- * Reference-geometry resolver for the `travel_time` spatial filter: turns the
- * isochrone into a reference geometry (EWKT) that is fed INTO the WFS query — the
- * sibling of `intersects_feature`'s reference-geometry resolution
- * (`resolveFeatureGeometryEwkt`). It does NOT fetch features itself (that is the
- * WFS transport's job). Backed by the proxy isochrone client (bounded fetch +
- * `GPF_NAVIGATION_PROXY` rate limiter), and injected into `runGeometryFeatureQuery`
- * so it only fires for travel_time inputs.
+ * Resolves the isochrone geometry for a `travel_time` filter, via the
+ * proxy isochrone client (bounded fetch + `GPF_NAVIGATION_PROXY` rate limiter).
+ * Injected into `runGeometryFeatureQuery` so it only fires for travel_time inputs.
  */
 export const resolveProxyTravelTimeGeometry: TravelTimeResolver = async (
   input: GpfGetFeaturesInput,
-): Promise<ResolvedFeatureGeometryRef> => {
+): Promise<GeometryLike> => {
   const spatialFilter = getSpatialFilter(input);
   if (spatialFilter?.operator !== "travel_time") {
     // Guarded by the caller (runGeometryFeatureQuery only calls this for travel_time);
@@ -131,7 +127,7 @@ export const resolveProxyTravelTimeGeometry: TravelTimeResolver = async (
     profile: spatialFilter.profile,
   });
 
-  return { geometry_ewkt: geometryToEwkt(geometry) };
+  return geometry;
 };
 
 // --- Default Engine Dependencies ---
