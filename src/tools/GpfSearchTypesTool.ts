@@ -71,13 +71,18 @@ class GpfSearchTypesTool extends BaseTool<GpfSearchTypesInput> {
 
     const maxResults = input.max_results || 10;
     const featureTypes = await wfsSchemaStore.searchFeatureTypesWithScores(input.query, maxResults);
-    return {
-      results: featureTypes.map(({ collection, score }) => ({
-        id: collection.id,
-        title: collection.title,
-        description: collection.description,
+    const results = await Promise.all(featureTypes.map(async ({ id, score }) => {
+      const schema = await wfsSchemaStore.getFeatureType(id);
+      return {
+        id,
+        title: schema.title,
+        description: schema.description,
         ...(score !== undefined ? { score } : {}),
-      })),
+      };
+    }));
+
+    return {
+      results,
     };
   }
 }
