@@ -56,7 +56,7 @@ export async function startProxyServer(): Promise<ProxyServerHandle> {
   const baseUrl = `http://${HOST}:${PROXY_PORT}`;
 
   // Poll the endpoint until it answers (any HTTP status means it is listening).
-  // A bare GET with no `q` returns 400 once the proxy is up.
+  // A bare GET on the endpoint returns 404 once the proxy is up (no `<token>.json`).
   const deadline = Date.now() + 30_000;
   for (;;) {
     if (Date.now() > deadline) {

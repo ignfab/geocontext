@@ -25,6 +25,8 @@ vi.mock("../../src/proxy/transport", () => ({
 const TEST_SECRET = "a".repeat(64);
 const KEY = Buffer.from(TEST_SECRET, "hex");
 const ENDPOINT = "/api/v1/proxy";
+/** Build the layer-URL path form served by the proxy: `${ENDPOINT}/<token>.json`. */
+const layerPath = (token: string) => `${ENDPOINT}/${token}.json`;
 
 let server: Server;
 let baseUrl: string;
@@ -79,7 +81,7 @@ describe("proxy/server", () => {
   it("returns the GeoJSON FeatureCollection as application/geo+json on a valid token", async () => {
     runGeometryFeatureQuery.mockResolvedValue(SAMPLE_COLLECTION);
 
-    const res = await request(baseUrl).get(ENDPOINT).query({ q: validToken() });
+    const res = await request(baseUrl).get(layerPath(validToken()));
 
     expect(res.status).toBe(200);
     expect(res.headers["content-type"]).toContain("application/geo+json");
@@ -96,7 +98,7 @@ describe("proxy/server", () => {
         service: { code: "InvalidParameterValue", detail: "Illegal property name: LEAK_ME" },
       }),
     );
-    const res = await request(baseUrl).get(ENDPOINT).query({ q: validToken() });
+    const res = await request(baseUrl).get(layerPath(validToken()));
     expect(res.status).toBe(502);
     expect(res.body).toMatchObject({ error: true });
     // Must NOT forward the raw upstream serviceDetail/message to the client.
@@ -111,7 +113,7 @@ describe("proxy/server", () => {
         http: { status: 504, statusText: "Gateway Timeout" },
       }),
     );
-    const res = await request(baseUrl).get(ENDPOINT).query({ q: validToken() });
+    const res = await request(baseUrl).get(layerPath(validToken()));
     expect(res.status).toBe(504);
     expect(res.body).toMatchObject({ error: true });
     expect(res.text).not.toContain("upstream timed out");
@@ -119,14 +121,14 @@ describe("proxy/server", () => {
 
   it("500 on an unexpected (non-typed) error", async () => {
     runGeometryFeatureQuery.mockRejectedValue(new Error("boom"));
-    const res = await request(baseUrl).get(ENDPOINT).query({ q: validToken() });
+    const res = await request(baseUrl).get(layerPath(validToken()));
     expect(res.status).toBe(500);
   });
 
   it("413 on an over-long `q` (token exceeds MAX_TOKEN_CHARS)", async () => {
     // decodeToken rejects a raw token longer than MAX_TOKEN_CHARS (4000) up front,
     // before any decrypt — so a long junk string is enough to hit ProxyTokenTooLargeError.
-    const res = await request(baseUrl).get(ENDPOINT).query({ q: "a".repeat(4001) });
+    const res = await request(baseUrl).get(layerPath("a".repeat(4001)));
     expect(res.status).toBe(413);
     // Fixed FR detail — must not forward the raw EN codec message / MAX_TOKEN_CHARS.
     expect(res.body).toMatchObject({ error: true, detail: "Jeton de requête trop volumineux." });
@@ -138,21 +140,28 @@ describe("proxy/server", () => {
     // so it maps to 502 (like the other upstream branches), not 413, and returns a
     // fixed FR detail rather than the raw EN error message.
     runGeometryFeatureQuery.mockRejectedValue(new ResponseTooLargeError("response exceeds 25 MiB"));
-    const res = await request(baseUrl).get(ENDPOINT).query({ q: validToken() });
+    const res = await request(baseUrl).get(layerPath(validToken()));
     expect(res.status).toBe(502);
     expect(res.body).toMatchObject({ error: true });
     expect(res.body.detail).not.toContain("exceeds");
   });
 
-  it("400 when `q` is missing", async () => {
+  it("404 on the bare endpoint (no `<token>.json` segment)", async () => {
     const res = await request(baseUrl).get(ENDPOINT);
+    expect(res.status).toBe(404);
+    expect(res.body).toMatchObject({ error: true });
+    expect(runGeometryFeatureQuery).not.toHaveBeenCalled();
+  });
+
+  it("400 on an empty token segment (`/.json`)", async () => {
+    const res = await request(baseUrl).get(`${ENDPOINT}/.json`);
     expect(res.status).toBe(400);
     expect(res.body).toMatchObject({ error: true });
     expect(runGeometryFeatureQuery).not.toHaveBeenCalled();
   });
 
   it("400 on a malformed/tampered token", async () => {
-    const res = await request(baseUrl).get(ENDPOINT).query({ q: "not-a-real-token!!" });
+    const res = await request(baseUrl).get(layerPath("not-a-real-token!!"));
     expect(res.status).toBe(400);
     expect(runGeometryFeatureQuery).not.toHaveBeenCalled();
   });
@@ -160,7 +169,7 @@ describe("proxy/server", () => {
   it("400 when the decoded params fail schema validation", async () => {
     // Encodes a query-kind payload the layer schema rejects (empty typename).
     const badToken = encodeToken({ kind: PROXY_TOKEN_KIND.query, typename: "", limit: 100 }, KEY);
-    const res = await request(baseUrl).get(ENDPOINT).query({ q: badToken });
+    const res = await request(baseUrl).get(layerPath(badToken));
     expect(res.status).toBe(400);
   });
 
@@ -168,7 +177,7 @@ describe("proxy/server", () => {
     // A token minted without a kind must be rejected as malformed, never
     // silently dispatched to a query path.
     const untagged = encodeToken({ typename: "BDTOPO_V3:batiment", limit: 100 }, KEY);
-    const res = await request(baseUrl).get(ENDPOINT).query({ q: untagged });
+    const res = await request(baseUrl).get(layerPath(untagged));
     expect(res.status).toBe(400);
     expect(runGeometryFeatureQuery).not.toHaveBeenCalled();
     expect(runGeometryFeatureByIdQuery).not.toHaveBeenCalled();
@@ -177,7 +186,7 @@ describe("proxy/server", () => {
   it("dispatches a by-id token to the single-feature engine", async () => {
     runGeometryFeatureByIdQuery.mockResolvedValue(SAMPLE_COLLECTION);
 
-    const res = await request(baseUrl).get(ENDPOINT).query({ q: validByIdToken() });
+    const res = await request(baseUrl).get(layerPath(validByIdToken()));
 
     expect(res.status).toBe(200);
     expect(res.headers["content-type"]).toContain("application/geo+json");
@@ -199,7 +208,7 @@ describe("proxy/server", () => {
       new FeatureNotFoundError("Le feature 'batiment.404' est introuvable dans 'BDTOPO_V3:batiment'."),
     );
 
-    const res = await request(baseUrl).get(ENDPOINT).query({ q: validByIdToken() });
+    const res = await request(baseUrl).get(layerPath(validByIdToken()));
 
     expect(res.status).toBe(404);
     expect(res.body).toHaveProperty("error", true);
@@ -211,19 +220,56 @@ describe("proxy/server", () => {
       new FeatureCardinalityError("… devrait être unique, mais 2 objets ont été retournés."),
     );
 
-    const res = await request(baseUrl).get(ENDPOINT).query({ q: validByIdToken() });
+    const res = await request(baseUrl).get(layerPath(validByIdToken()));
 
     expect(res.status).toBe(502);
     expect(res.body).toHaveProperty("error", true);
   });
 
   it("404 on an unknown path", async () => {
-    const res = await request(baseUrl).get("/nope").query({ q: validToken() });
+    const res = await request(baseUrl).get("/nope");
     expect(res.status).toBe(404);
   });
 
+  // The token now lives in the URL PATH, so the router's three-layer defense
+  // (new URL normalization + strict `${endpoint}/` prefix & `.json` suffix +
+  // base64url alphabet in decodeToken) is a security boundary. Pin each layer so a
+  // refactor of extractLayerToken cannot silently loosen it.
+  it("400 on a multi-segment token path (embedded `/` is not base64url)", async () => {
+    const res = await request(baseUrl).get(`${ENDPOINT}/foo/bar.json`);
+    expect(res.status).toBe(400);
+    expect(runGeometryFeatureQuery).not.toHaveBeenCalled();
+    expect(runGeometryFeatureByIdQuery).not.toHaveBeenCalled();
+  });
+
+  it("rejects a `..` traversal path (never reaches the engine)", async () => {
+    const res = await request(baseUrl).get("/api/v1/proxy/../../etc/passwd.json");
+    // `new URL` normalizes `..` before the endpoint match → the prefix no longer matches.
+    expect([400, 404]).toContain(res.status);
+    expect(runGeometryFeatureQuery).not.toHaveBeenCalled();
+    expect(runGeometryFeatureByIdQuery).not.toHaveBeenCalled();
+  });
+
+  it("400 on an encoded-slash token (`%2F` is not base64url)", async () => {
+    const res = await request(baseUrl).get(`${ENDPOINT}/a%2Fb.json`);
+    expect(res.status).toBe(400);
+    expect(runGeometryFeatureQuery).not.toHaveBeenCalled();
+  });
+
+  it("404 on a sibling-prefix path (the prefix requires a trailing slash)", async () => {
+    const res = await request(baseUrl).get("/api/v1/proxyEVIL.json");
+    expect(res.status).toBe(404);
+    expect(runGeometryFeatureQuery).not.toHaveBeenCalled();
+  });
+
+  it("404 when the `.json` suffix is missing", async () => {
+    const res = await request(baseUrl).get(`${ENDPOINT}/${validToken()}`);
+    expect(res.status).toBe(404);
+    expect(runGeometryFeatureQuery).not.toHaveBeenCalled();
+  });
+
   it("405 on a non-GET method", async () => {
-    const res = await request(baseUrl).post(ENDPOINT).query({ q: validToken() });
+    const res = await request(baseUrl).post(layerPath(validToken()));
     expect(res.status).toBe(405);
     expect(res.headers["allow"]).toContain("GET");
   });
@@ -256,12 +302,12 @@ describe("proxy/server", () => {
 
     // The server is still alive and serving after the malformed request.
     runGeometryFeatureQuery.mockResolvedValue(SAMPLE_COLLECTION);
-    const res = await request(baseUrl).get(ENDPOINT).query({ q: validToken() });
+    const res = await request(baseUrl).get(layerPath(validToken()));
     expect(res.status).toBe(200);
   });
 
   it("does not return a GeoJSON-shaped body on error", async () => {
-    const res = await request(baseUrl).get(ENDPOINT); // missing q -> 400
+    const res = await request(baseUrl).get(ENDPOINT); // bare endpoint -> 404
     expect(res.body.type).toBeUndefined(); // not a FeatureCollection
     expect(res.body).toHaveProperty("error", true);
   });
@@ -269,15 +315,14 @@ describe("proxy/server", () => {
   it("opens CORS to any origin (public stateless data, Allow-Origin: *)", async () => {
     runGeometryFeatureQuery.mockResolvedValue(SAMPLE_COLLECTION);
     const res = await request(baseUrl)
-      .get(ENDPOINT)
-      .query({ q: validToken() })
+      .get(layerPath(validToken()))
       .set("Origin", "https://any.example");
     expect(res.headers["access-control-allow-origin"]).toBe("*");
   });
 
   it("returns Allow-Origin: * even without an Origin header (non-browser client)", async () => {
     runGeometryFeatureQuery.mockResolvedValue(SAMPLE_COLLECTION);
-    const res = await request(baseUrl).get(ENDPOINT).query({ q: validToken() });
+    const res = await request(baseUrl).get(layerPath(validToken()));
     expect(res.headers["access-control-allow-origin"]).toBe("*");
   });
 

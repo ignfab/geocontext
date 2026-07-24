@@ -1,7 +1,7 @@
 /**
  * Stateless geodata proxy HTTP server.
  *
- * Serves `GET {PROXY_ENDPOINT}?q=<token>`: decode the opaque token, re-validate
+ * Serves `GET {PROXY_ENDPOINT}/<token>.json`: decode the opaque token, re-validate
  * it through the layer schema, run the geometry-full WFS query, and return a
  * GeoJSON FeatureCollection for MCP Carto to render.
  */
@@ -41,7 +41,7 @@ type HttpError = { status: number; detail: string };
  */
 function toHttpError(error: unknown): HttpError {
   if (error instanceof ProxyTokenTooLargeError) {
-    // An over-long `?q=` is genuinely a too-large client request → 413. Fixed FR
+    // An over-long token in the URL path is genuinely a too-large client request → 413. Fixed FR
     // detail: do NOT forward error.message (it is EN and discloses MAX_TOKEN_CHARS);
     // the real message is logged server-side by the caller, like every other branch.
     return { status: 413, detail: "Jeton de requête trop volumineux." };
@@ -95,7 +95,7 @@ function toHttpError(error: unknown): HttpError {
 // --- Response helpers ---
 
 /**
- * The proxy serves PUBLIC, stateless GeoJSON from an opaque `?q=` token: no
+ * The proxy serves PUBLIC, stateless GeoJSON from an opaque token in the URL path: no
  * cookies, no session, no per-user data — the response is identical for anyone
  * presenting the same token. CORS only governs whether a browser page may READ
  * the response, so with nothing private to protect a restrictive allowlist adds
@@ -130,12 +130,29 @@ function asDiscriminatedToken(params: unknown): { kind: unknown; [key: string]: 
 
 // --- Request handling ---
 
-async function handleLayerRequest(url: URL, res: ServerResponse): Promise<void> {
+/** Suffix on the layer-URL path; stripped to recover the opaque token. */
+const LAYER_URL_SUFFIX = ".json";
+
+/**
+ * Extracts the opaque token from a layer-URL path of the form
+ * `${endpoint}/<token>.json`. Returns the token (possibly empty) when the path
+ * has that shape, or `undefined` when it does not match the endpoint at all
+ * (mapped to 404). The token is NOT validated here: `decodeToken` enforces the
+ * base64url alphabet, so a multi-segment or garbage token fails cleanly as a 400.
+ */
+function extractLayerToken(pathname: string, endpoint: string): string | undefined {
+  const prefix = `${endpoint.replace(/\/+$/, "")}/`;
+  if (!pathname.startsWith(prefix) || !pathname.endsWith(LAYER_URL_SUFFIX)) {
+    return undefined;
+  }
+  return pathname.slice(prefix.length, -LAYER_URL_SUFFIX.length);
+}
+
+async function handleLayerRequest(token: string, res: ServerResponse): Promise<void> {
   const env = getEnv();
 
-  const token = url.searchParams.get("q");
   if (!token) {
-    sendJsonError(res, 400, "Paramètre `q` manquant.");
+    sendJsonError(res, 400, "Jeton manquant dans l'URL de couche.");
     return;
   }
 
@@ -218,7 +235,8 @@ function createRequestHandler() {
         return;
       }
 
-      if (url.pathname !== PROXY_ENDPOINT) {
+      const token = extractLayerToken(url.pathname, PROXY_ENDPOINT);
+      if (token === undefined) {
         sendJsonError(res, 404, "Ressource introuvable.");
         return;
       }
@@ -229,7 +247,7 @@ function createRequestHandler() {
         return;
       }
 
-      await handleLayerRequest(url, res);
+      await handleLayerRequest(token, res);
     } catch (error) {
       // Safety net: handleLayerRequest maps its own errors, so this catches only
       // truly unexpected failures — and it guarantees no throw from the URL parse or

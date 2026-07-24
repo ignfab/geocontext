@@ -116,7 +116,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
 
     expect(response.isError).toBeUndefined();
     const payload = JSON.parse((response.content[0] as { text: string }).text);
-    expect(payload.data_url).toContain("https://proxy.example.test/api/v1/proxy?q=");
+    expect(payload.data_url).toContain("https://proxy.example.test/api/v1/proxy/");
   });
 
   it("builds an opaque data_url that round-trips back to the tagged query params", async () => {
@@ -144,8 +144,9 @@ describe("Test GpfGetFeaturesLayerTool", () => {
     expect(payload).toEqual(response.structuredContent);
 
     const url = new URL(payload.data_url);
-    expect(url.origin + url.pathname).toEqual("https://proxy.example.test/api/v1/proxy");
-    const token = url.searchParams.get("q");
+    expect(url.pathname.startsWith("/api/v1/proxy/")).toBe(true);
+    expect(url.pathname.endsWith(".json")).toBe(true);
+    const token = url.pathname.slice("/api/v1/proxy/".length, -".json".length);
     expect(token).toBeTruthy();
 
     // The token is opaque but must decode back to exactly the encoded params: the
@@ -174,7 +175,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
 
     expect(response.isError).toBeUndefined();
     const payload = JSON.parse((response.content[0] as { text: string }).text);
-    expect(payload.data_url).toContain("https://proxy.example.test/api/v1/proxy?q=");
+    expect(payload.data_url).toContain("https://proxy.example.test/api/v1/proxy/");
     expect(payload.data_url).not.toContain("//api/v1");
   });
 
@@ -192,7 +193,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
 
     expect(response.isError).toBeUndefined();
     const payload = JSON.parse((response.content[0] as { text: string }).text);
-    expect(payload.data_url).toContain("https://example.test/published/proxy/api/v1/proxy?q=");
+    expect(payload.data_url).toContain("https://example.test/published/proxy/api/v1/proxy/");
   });
 
   it("rejects spatial_extras as an unknown parameter", async () => {

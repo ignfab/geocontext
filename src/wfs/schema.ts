@@ -257,8 +257,9 @@ export const gpfGetFeaturesLayerOutputSchema = z.object({
 
 // --- Proxy token discriminant ---
 
-// The proxy serves ONE opaque `?q=` token but two query kinds (a filtered layer
-// query and a single-feature by-id lookup). Both producer tools stamp their token
+// The proxy serves ONE opaque token (in the URL path, `${endpoint}/<token>.json`)
+// but two token kinds (a filtered layer query and a single-feature by-id lookup).
+// Both producer tools stamp their token
 // with this `kind` discriminant; the proxy reads it to dispatch to the right
 // schema + engine, then strips it before the strict per-kind `.parse`. It is
 // injected by the tool from validated params — never an LLM-supplied field.

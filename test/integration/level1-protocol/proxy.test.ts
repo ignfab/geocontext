@@ -35,7 +35,7 @@ describe("proxy (level 1)", () => {
         server.key,
       );
 
-      const res = await fetch(`${server.baseUrl}${server.endpoint}?q=${token}`);
+      const res = await fetch(`${server.baseUrl}${server.endpoint}/${token}.json`);
       expect(res.status).toBe(200);
       expect(res.headers.get("content-type")).toContain("application/geo+json");
 
@@ -68,7 +68,7 @@ describe("proxy (level 1)", () => {
         },
         server.key,
       );
-      const queryRes = await fetch(`${server.baseUrl}${server.endpoint}?q=${queryToken}`);
+      const queryRes = await fetch(`${server.baseUrl}${server.endpoint}/${queryToken}.json`);
       expect(queryRes.status).toBe(200);
       const queryBody = (await queryRes.json()) as { features?: { id?: string }[] };
       const featureId = queryBody.features?.[0]?.id;
@@ -84,7 +84,7 @@ describe("proxy (level 1)", () => {
         server.key,
       );
 
-      const res = await fetch(`${server.baseUrl}${server.endpoint}?q=${token}`);
+      const res = await fetch(`${server.baseUrl}${server.endpoint}/${token}.json`);
       expect(res.status).toBe(200);
       expect(res.headers.get("content-type")).toContain("application/geo+json");
 
@@ -101,7 +101,7 @@ describe("proxy (level 1)", () => {
   );
 
   it("rejects a tampered token with 400", async () => {
-    const res = await fetch(`${server.baseUrl}${server.endpoint}?q=not-a-real-token`);
+    const res = await fetch(`${server.baseUrl}${server.endpoint}/not-a-real-token.json`);
     expect(res.status).toBe(400);
   });
 });

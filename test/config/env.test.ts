@@ -123,8 +123,8 @@ describe("parseEnv", () => {
   });
 
   it("should reject a PROXY_PUBLIC_BASE_URL carrying a query or fragment (would break data_url)", () => {
-    // buildDataUrl appends the endpoint + ?q= by concatenation, so a query/fragment
-    // on the base would swallow the endpoint and 404 silently at map-load.
+    // buildDataUrl appends the endpoint + `/<token>.json` by concatenation, so a
+    // query/fragment on the base would swallow the endpoint and 404 silently at map-load.
     expect(() => parseEnv({ PROXY_PUBLIC_BASE_URL: "https://host/base?foo=1" })).toThrow("Invalid environment configuration");
     expect(() => parseEnv({ PROXY_PUBLIC_BASE_URL: "https://host/base#frag" })).toThrow("Invalid environment configuration");
   });

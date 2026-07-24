@@ -25,7 +25,7 @@ function parseJsonEnvValue(val: string, ctx: z.RefinementCtx): unknown {
 /**
  * Accepts only an http(s) base URL carrying NO query string or fragment.
  *
- * `buildDataUrl` (src/proxy/dataUrl.ts) appends `PROXY_ENDPOINT` and `?q=<token>`
+ * `buildDataUrl` (src/proxy/dataUrl.ts) appends `PROXY_ENDPOINT` and `/<token>.json`
  * to this base by string concatenation, so a query or fragment on the base would
  * swallow the endpoint — producing a broken `data_url` that 404s at map-load with
  * NO error here. Rejecting them at startup keeps that failure out of production.

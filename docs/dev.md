@@ -82,7 +82,7 @@ export PROXY_PUBLIC_BASE_URL=http://localhost:3002
 node --use-env-proxy dist/index.js
 ```
 
-Le MCP forge alors des URLs `http://localhost:3002/api/v1/proxy?q=<token>` que le client cartographique peut charger. Les navigateurs traitent `localhost` comme un contexte sûr : il n'y a donc pas de blocage *mixed content*, même depuis une page en `https`.
+Le MCP forge alors des URLs `http://localhost:3002/api/v1/proxy/<token>.json` que le client cartographique peut charger. Les navigateurs traitent `localhost` comme un contexte sûr : il n'y a donc pas de blocage *mixed content*, même depuis une page en `https`.
 
 Pour un client MCP configuré par fichier JSON, ajoutez les variables dans le bloc `env` du serveur (et lancez `node --use-env-proxy dist/proxy/index.js` à côté, avec la même `PROXY_URL_SECRET`) :
 

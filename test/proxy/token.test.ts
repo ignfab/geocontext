@@ -111,7 +111,7 @@ describe("proxy/token", () => {
     expect(() => decodeToken(tooShort, KEY)).toThrow(ProxyTokenMalformedError);
   });
 
-  it("rejects an empty token (the natural `?q=` case)", () => {
+  it("rejects an empty token (empty `/.json` path segment)", () => {
     // Rejection relies on the `+` quantifier in the base64url alphabet regex;
     // this pins that an empty string is treated as malformed input.
     expect(() => decodeToken("", KEY)).toThrow(ProxyTokenMalformedError);
