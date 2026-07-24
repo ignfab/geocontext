@@ -14,9 +14,9 @@ import type {
   WfsFeatureCollectionResponse,
   WfsFeatureResponse,
 } from "./types.js";
-import { validateSelectProperty, getGeometryProperty } from "./queryPreparation.js";
 import { buildGetFeatureByIdRequest } from "./request.js";
-import { attachFeatureRefs } from "./response.js";
+import { buildPropertyName } from "./properties.js"
+import { postProcessFeatureCollection } from "./response.js";
 
 // --- Input Types ---
 
@@ -40,44 +40,8 @@ type PropertySelectionInput = {
 type FetchFeatureByIdInput = {
   typename: string;
   feature_id: string;
-  propertyName?: string;
+  propertyName: string;
 };
-
-// --- Property Selection ---
-
-/**
- * Builds the optional `propertyName` request parameter from `select`.
- *
- * @param featureType Feature type definition loaded from the embedded catalog.
- * @param input Property selection options derived from the caller's output mode.
- * @returns A comma-separated property list, or `undefined` when all properties should be returned.
- */
-export function buildPropertyName(
-  featureType: Collection,
-  input: PropertySelectionInput,
-) {
-  // `includeGeometry` is also an invariant check: even without `select`, a
-  // cartographic/derived-geometry caller must fail against a geometry-less type
-  // before issuing a WFS request.
-  const geometryProperty = input.includeGeometry
-    ? getGeometryProperty(featureType)
-    : undefined;
-
-  if (!input.select || input.select.length === 0) {
-    return undefined;
-  }
-
-  const selectionGeometryProperty = geometryProperty ?? getGeometryProperty(featureType);
-  const selectedProperties = input.select.map((propertyName) =>
-    validateSelectProperty(featureType, selectionGeometryProperty, propertyName),
-  );
-
-  if (geometryProperty) {
-    return [...selectedProperties, geometryProperty.name].join(",");
-  }
-
-  return selectedProperties.join(",");
-}
 
 // --- Live Lookup ---
 
@@ -194,10 +158,7 @@ export async function executeGetFeatureById(
   input: GetFeatureByIdExecutionInput,
 ) {
   const featureType: Collection = await wfsClient.getFeatureType(input.typename);
-  const propertyName = buildPropertyName(featureType, {
-    includeGeometry: (input.spatial_extras ?? []).length > 0,
-    select: input.select,
-  });
+  const propertyName = buildPropertyName(featureType, input.select, input.spatial_extras);
   const featureCollection = await fetchFeatureById({
     typename: input.typename,
     feature_id: input.feature_id,
@@ -213,5 +174,5 @@ export async function executeGetFeatureById(
     numberMatched: 1,
   };
 
-  return attachFeatureRefs(singleFeatureCollection, input.typename, input.spatial_extras);
+  return postProcessFeatureCollection(singleFeatureCollection, input);
 }
