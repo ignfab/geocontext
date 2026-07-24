@@ -22,8 +22,12 @@ describe("gpfGetFeatures/queryPreparation", () => {
       population: { type: "integer" },
       hauteur: { type: "number" },
       actif: { type: "boolean" },
-      date_creation: { type: "string" },
-      geometrie: { },
+      date_creation: { type: "string", format: "date" },
+      updated_at: { type: "string", format: "date-time" },
+      geometrie: {
+        format: "geometry-multipolygon",
+        "x-ogc-role": "primary-geometry",
+      },
     },
     required: [],
   };
@@ -45,6 +49,21 @@ describe("gpfGetFeatures/queryPreparation", () => {
     }, featureType);
 
     expect(compiled.cqlFilter).toEqual("code_insee = '94080' AND population > 1000 AND actif IS NULL");
+  });
+
+  it("should compile where clauses with date filters (end-to-end)", () => {
+    const compiled = compileQueryParts({
+      ...baseInput,
+      where: [
+        { property: "code_insee", operator: "eq", value: "75056" },
+        { property: "date_creation", operator: "gte", value: "2020-01-01" },
+        { property: "updated_at", operator: "lt", value: "2026-07-30T12:00:00Z" },
+      ],
+    }, featureType);
+
+    expect(compiled.cqlFilter).toEqual(
+      "code_insee = '75056' AND date_creation >= '2020-01-01' AND updated_at < '2026-07-30T12:00:00Z'"
+    );
   });
 
   it("should compile bbox in lon lat order", () => {

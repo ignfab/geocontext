@@ -80,10 +80,10 @@ export type CompiledQuery = {
  * @returns A CQL predicate fragment.
  */
 function compileScalarComparisonClause(
-  property: OgcCollectionProperty,
+  propertyName: string,
   clause: ScalarComparisonClause,
 ) {
-  return `${property.name} ${SCALAR_COMPARISON_OPERATORS[clause.operator]} ${formatScalarValue(clause.value)}`;
+  return `${propertyName} ${SCALAR_COMPARISON_OPERATORS[clause.operator]} ${formatScalarValue(clause.value)}`;
 }
 
 /**
@@ -94,10 +94,10 @@ function compileScalarComparisonClause(
  * @returns A CQL predicate fragment.
  */
 function compileOrderedComparisonClause(
-  property: OgcCollectionProperty,
+  propertyName: string,
   clause: OrderedComparisonClause,
 ) {
-  return `${property.name} ${NUMERIC_COMPARISON_OPERATORS[clause.operator]} ${formatScalarValue(clause.value)}`;
+  return `${propertyName} ${NUMERIC_COMPARISON_OPERATORS[clause.operator]} ${formatScalarValue(clause.value)}`;
 }
 
 /**
@@ -107,8 +107,8 @@ function compileOrderedComparisonClause(
  * @param clause Normalized `in` clause.
  * @returns A CQL predicate fragment.
  */
-function compileInClause(property: OgcCollectionProperty, clause: InClause) {
-  return `${property.name} IN (${clause.values.map(formatScalarValue).join(", ")})`;
+function compileInClause(propertyName: string, clause: InClause) {
+  return `${propertyName} IN (${clause.values.map(formatScalarValue).join(", ")})`;
 }
 
 /**
@@ -117,8 +117,8 @@ function compileInClause(property: OgcCollectionProperty, clause: InClause) {
  * @param property Non-geometric property targeted by the clause.
  * @returns A CQL predicate fragment.
  */
-function compileIsNullClause(property: OgcCollectionProperty) {
-  return `${property.name} IS NULL`;
+function compileIsNullClause(propertyName: string) {
+  return `${propertyName} IS NULL`;
 }
 
 /**
@@ -129,26 +129,27 @@ function compileIsNullClause(property: OgcCollectionProperty) {
  * @returns A CQL predicate fragment.
  */
 function compileWhereClause(featureType: OgcCollectionSchema, clause: WhereClause) {
-  const property = resolveNonGeometryProperty(
+  const _property = resolveNonGeometryProperty(
     featureType,
     clause.property,
     `Utiliser un filtre spatial dédié (${GPF_SPATIAL_FILTER_DOCNAMES}).`
   );
-  const normalized = normalizeWhereClause(property, clause);
+  const normalized = normalizeWhereClause(_property, clause);
+  const propertyName = clause.property;
 
   switch (normalized.operator) {
     case "eq":
     case "ne":
-      return compileScalarComparisonClause(property, normalized);
+      return compileScalarComparisonClause(propertyName, normalized);
     case "lt":
     case "lte":
     case "gt":
     case "gte":
-      return compileOrderedComparisonClause(property, normalized);
+      return compileOrderedComparisonClause(propertyName, normalized);
     case "in":
-      return compileInClause(property, normalized);
+      return compileInClause(propertyName, normalized);
     case "is_null":
-      return compileIsNullClause(property);
+      return compileIsNullClause(propertyName);
   }
 }
 
