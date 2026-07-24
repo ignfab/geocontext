@@ -12,7 +12,7 @@
 
 import type { CompiledRequest } from "./request.js";
 import { buildMultiTypenameRequest } from "./request.js";
-import type { Collection } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 import type { WfsFeatureCollectionResponse } from "./types.js";
 import { wfsSchemaStore } from "./catalog.js";
 import { WfsTransport } from "./transport.js";
@@ -42,7 +42,7 @@ export type WfsTransportLike = {
 };
 
 export type WfsSchemaStoreLike = {
-  getFeatureType(typename: string): Promise<Collection>;
+  getFeatureType(typename: string): Promise<OgcCollectionSchema>;
 };
 
 // --- WfsClient Facade ---

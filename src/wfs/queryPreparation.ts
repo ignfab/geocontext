@@ -8,13 +8,12 @@
  * - a small façade over lower-level helpers reused elsewhere in the engine
  */
 
-import type { Collection, CollectionProperty } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionSchema, OgcCollectionProperty } from "@ignfab/gpf-schema-store";
 
 import {
-  validateSelectProperty,
   buildSelectList,
   resolveNonGeometryProperty,
-  getGeometryProperty,
+  getGeometryName,
 } from "./properties.js";
 import { getSpatialFilter } from "./spatialFilter.js";
 
@@ -23,6 +22,7 @@ import type {
   OrderByClause,
   WhereClause,
 } from "./schema.js";
+import { GPF_SPATIAL_FILTER_DOCNAMES } from "./schema.js"
 
 import {
   formatScalarValue,
@@ -41,7 +41,7 @@ import {
 // --- Re-exports ---
 
 export { geometryToEwkt } from "./geometry.js";
-export { validateSelectProperty, getGeometryProperty } from "./properties.js";
+export { validateSelectProperty, getGeometryName } from "./properties.js";
 export { getSpatialFilter } from "./spatialFilter.js";
 
 // --- Internal Constants ---
@@ -64,7 +64,7 @@ export type ResolvedFeatureGeometryRef = {
 };
 
 export type CompiledQuery = {
-  geometryProperty: CollectionProperty;
+  geometryName: string;
   cqlFilter?: string;
   propertyName?: string;
   sortBy?: string;
@@ -80,10 +80,10 @@ export type CompiledQuery = {
  * @returns A CQL predicate fragment.
  */
 function compileScalarComparisonClause(
-  property: CollectionProperty,
+  propertyName: string,
   clause: ScalarComparisonClause,
 ) {
-  return `${property.name} ${SCALAR_COMPARISON_OPERATORS[clause.operator]} ${formatScalarValue(clause.value)}`;
+  return `${propertyName} ${SCALAR_COMPARISON_OPERATORS[clause.operator]} ${formatScalarValue(clause.value)}`;
 }
 
 /**
@@ -94,10 +94,10 @@ function compileScalarComparisonClause(
  * @returns A CQL predicate fragment.
  */
 function compileOrderedComparisonClause(
-  property: CollectionProperty,
+  propertyName: string,
   clause: OrderedComparisonClause,
 ) {
-  return `${property.name} ${NUMERIC_COMPARISON_OPERATORS[clause.operator]} ${formatScalarValue(clause.value)}`;
+  return `${propertyName} ${NUMERIC_COMPARISON_OPERATORS[clause.operator]} ${formatScalarValue(clause.value)}`;
 }
 
 /**
@@ -107,8 +107,8 @@ function compileOrderedComparisonClause(
  * @param clause Normalized `in` clause.
  * @returns A CQL predicate fragment.
  */
-function compileInClause(property: CollectionProperty, clause: InClause) {
-  return `${property.name} IN (${clause.values.map(formatScalarValue).join(", ")})`;
+function compileInClause(propertyName: string, clause: InClause) {
+  return `${propertyName} IN (${clause.values.map(formatScalarValue).join(", ")})`;
 }
 
 /**
@@ -117,40 +117,39 @@ function compileInClause(property: CollectionProperty, clause: InClause) {
  * @param property Non-geometric property targeted by the clause.
  * @returns A CQL predicate fragment.
  */
-function compileIsNullClause(property: CollectionProperty) {
-  return `${property.name} IS NULL`;
+function compileIsNullClause(propertyName: string) {
+  return `${propertyName} IS NULL`;
 }
 
 /**
  * Compiles a structured where clause into a CQL fragment.
  *
  * @param featureType Feature type definition loaded from the embedded catalog.
- * @param geometryProperty Geometry property already resolved for the feature type.
  * @param clause Raw where clause received from the tool input.
  * @returns A CQL predicate fragment.
  */
-function compileWhereClause(featureType: Collection, geometryProperty: CollectionProperty, clause: WhereClause) {
-  const property = resolveNonGeometryProperty(
+function compileWhereClause(featureType: OgcCollectionSchema, clause: WhereClause) {
+  const _property = resolveNonGeometryProperty(
     featureType,
-    geometryProperty,
     clause.property,
-    "La propriété '{property}' est géométrique. Utiliser un filtre spatial dédié (`bbox_filter`, `intersects_point_filter`, `dwithin_point_filter`, `intersects_feature_filter` ou `travel_time_filter`)."
+    `Utiliser un filtre spatial dédié (${GPF_SPATIAL_FILTER_DOCNAMES}).`
   );
-  const normalized = normalizeWhereClause(property, clause);
+  const normalized = normalizeWhereClause(_property, clause);
+  const propertyName = clause.property;
 
   switch (normalized.operator) {
     case "eq":
     case "ne":
-      return compileScalarComparisonClause(property, normalized);
+      return compileScalarComparisonClause(propertyName, normalized);
     case "lt":
     case "lte":
     case "gt":
     case "gte":
-      return compileOrderedComparisonClause(property, normalized);
+      return compileOrderedComparisonClause(propertyName, normalized);
     case "in":
-      return compileInClause(property, normalized);
+      return compileInClause(propertyName, normalized);
     case "is_null":
-      return compileIsNullClause(property);
+      return compileIsNullClause(propertyName);
   }
 }
 
@@ -158,18 +157,16 @@ function compileWhereClause(featureType: Collection, geometryProperty: Collectio
  * Compiles a structured sort clause into a WFS `sortBy` fragment.
  *
  * @param featureType Feature type definition loaded from the embedded catalog.
- * @param geometryProperty Geometry property already resolved for the feature type.
  * @param clause Raw order-by clause received from the tool input.
  * @returns A WFS `sortBy` fragment.
  */
-function compileOrderByClause(featureType: Collection, geometryProperty: CollectionProperty, clause: OrderByClause) {
-  const property = resolveNonGeometryProperty(
+function compileOrderByClause(featureType: OgcCollectionSchema, clause: OrderByClause) {
+  resolveNonGeometryProperty(
     featureType,
-    geometryProperty,
     clause.property,
-    "La propriété '{property}' est géométrique. Utiliser une propriété non géométrique pour `order_by`."
+    "Utiliser une propriété non géométrique pour `order_by`."
   );
-  return `${property.name} ${ORDER_DIRECTION_TO_WFS[clause.direction]}`;
+  return `${clause.property} ${ORDER_DIRECTION_TO_WFS[clause.direction]}`;
 }
 
 // --- Query Compilation ---
@@ -184,10 +181,10 @@ function compileOrderByClause(featureType: Collection, geometryProperty: Collect
  */
 export function compileQueryParts(
   input: GpfQueryFeaturesInput,
-  featureType: Collection,
+  featureType: OgcCollectionSchema,
   resolvedGeometryRef?: ResolvedFeatureGeometryRef,
 ): CompiledQuery {
-  const geometryProperty = getGeometryProperty(featureType);
+  const geometryName = getGeometryName(featureType);
   const spatialFilter = getSpatialFilter(input);
   const fragments: string[] = [];
 
@@ -196,43 +193,43 @@ export function compileQueryParts(
   if (spatialFilter) {
     switch (spatialFilter.operator) {
       case "bbox":
-        fragments.push(compileBboxSpatialFilter(geometryProperty, spatialFilter));
+        fragments.push(compileBboxSpatialFilter(geometryName, spatialFilter));
         break;
       case "intersects_point":
-        fragments.push(compileIntersectsPointSpatialFilter(geometryProperty, spatialFilter));
+        fragments.push(compileIntersectsPointSpatialFilter(geometryName, spatialFilter));
         break;
       case "dwithin_point":
-        fragments.push(compileDwithinSpatialFilter(geometryProperty, spatialFilter));
+        fragments.push(compileDwithinSpatialFilter(geometryName, spatialFilter));
         break;
       case "intersects_feature":
         if (!resolvedGeometryRef) {
           throw new Error("Le filtre spatial `intersects_feature` exige la résolution préalable de la géométrie de référence.");
         }
-        fragments.push(compileIntersectsFeatureSpatialFilter(geometryProperty, resolvedGeometryRef.geometry_ewkt));
+        fragments.push(compileIntersectsFeatureSpatialFilter(geometryName, resolvedGeometryRef.geometry_ewkt));
         break;
       case "travel_time":
         if (!resolvedGeometryRef) {
           throw new Error("Le filtre spatial `travel_time` exige la résolution préalable de la géométrie d'isochrone.");
         }
-        fragments.push(compileIntersectsFeatureSpatialFilter(geometryProperty, resolvedGeometryRef.geometry_ewkt));
+        fragments.push(compileIntersectsFeatureSpatialFilter(geometryName, resolvedGeometryRef.geometry_ewkt));
         break;
     }
   }
 
   for (const clause of input.where ?? []) {
-    fragments.push(compileWhereClause(featureType, geometryProperty, clause));
+    fragments.push(compileWhereClause(featureType, clause));
   }
 
   const isGetFeaturesQuery = "limit" in input;
 
   const sortBy = isGetFeaturesQuery && input.order_by && input.order_by.length > 0
-    ? input.order_by.map((clause) => compileOrderByClause(featureType, geometryProperty, clause)).join(",")
+    ? input.order_by.map((clause) => compileOrderByClause(featureType, clause)).join(",")
     : undefined;
 
-  const propertyNames = isGetFeaturesQuery ? buildSelectList(featureType, geometryProperty, input) : [];
+  const propertyNames = isGetFeaturesQuery ? buildSelectList(featureType, input) : [];
 
   return {
-    geometryProperty,
+    geometryName,
     cqlFilter: fragments.length > 0 ? fragments.join(" AND ") : undefined,
     propertyName: propertyNames.length > 0 ? propertyNames.join(",") : undefined,
     sortBy,

@@ -12,10 +12,10 @@
  * (that lives in `byId.ts`) — it is one step of query preparation.
  */
 
-import type { Collection } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 
 import {
-  getGeometryProperty,
+  getGeometryName,
   geometryToEwkt,
   type ResolvedFeatureGeometryRef,
 } from "./queryPreparation.js";
@@ -31,7 +31,7 @@ import type { WfsFeatureCollectionResponse } from "./types.js";
  * single implementation.
  */
 export type ReferenceGeometryClient = {
-  getFeatureType(typename: string): Promise<Collection>;
+  getFeatureType(typename: string): Promise<OgcCollectionSchema>;
   fetchFeatureCollection(request: CompiledRequest): Promise<WfsFeatureCollectionResponse>;
 };
 
@@ -74,11 +74,11 @@ export async function resolveFeatureGeometryEwkt(
   ref: { typename: string; feature_id: string },
 ): Promise<ResolvedFeatureGeometryRef> {
   const referenceFeatureType = await client.getFeatureType(ref.typename);
-  const referenceGeometryProperty = getGeometryProperty(referenceFeatureType);
+  const referenceGeometryName = getGeometryName(referenceFeatureType);
   const request = buildGetFeatureByIdRequest(
     ref.typename,
     ref.feature_id,
-    referenceGeometryProperty.name,
+    referenceGeometryName,
   );
   const featureCollection = await client.fetchFeatureCollection(request);
   const referenceFeature = requireSingleFeatureById(featureCollection, ref);

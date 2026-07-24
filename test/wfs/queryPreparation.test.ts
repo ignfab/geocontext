@@ -1,25 +1,32 @@
 import { describe, expect, it } from "vitest";
-import type { Collection } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 
 import { compileQueryParts, geometryToEwkt } from "../../src/wfs/queryPreparation";
 import type { GpfGetFeaturesInput } from "../../src/wfs/schema";
 
 describe("gpfGetFeatures/queryPreparation", () => {
-  const featureType: Collection = {
-    id: "ADMINEXPRESS-COG.LATEST:commune",
-    namespace: "ADMINEXPRESS-COG.LATEST",
-    name: "commune",
+  const featureType: OgcCollectionSchema = {
+    $schema: "https://json-schema.org/draft/2020-12/schema",
+    "x-collection-id": "ADMINEXPRESS-COG.LATEST:commune",
+    type: "object",
     title: "Commune",
     description: "Description de test",
-    properties: [
-      { name: "code_insee", type: "string" },
-      { name: "nature", type: "string", enum: ["Chapelle", "Eglise"] },
-      { name: "population", type: "integer" },
-      { name: "hauteur", type: "float" },
-      { name: "actif", type: "boolean" },
-      { name: "date_creation", type: "string" },
-      { name: "geometrie", type: "multipolygon", defaultCrs: "EPSG:4326" },
-    ],
+    properties: {
+      code_insee: { type: "string" },
+      nature: {
+        type: "string",
+        oneOf: [
+          { const: "Chapelle", title: "Chapelle" },
+          { const: "Eglise", title: "Eglise" },
+        ],
+      },
+      population: { type: "integer" },
+      hauteur: { type: "number" },
+      actif: { type: "boolean" },
+      date_creation: { type: "string" },
+      geometrie: { },
+    },
+    required: [],
   };
 
   const baseInput: GpfGetFeaturesInput = {

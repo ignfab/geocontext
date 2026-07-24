@@ -9,18 +9,20 @@ import { expectToolCallToThrow } from "../helpers/level1-assertions.js";
 import { INTEGRATION_CONFIG } from "../config/shared.js";
 
 interface DescribeResult {
-  id: string;
-  namespace: string;
-  name: string;
+  typename: string;
   title: string;
   description: string;
+  required: string[];
   properties: Array<{
     name: string;
-    type: string;
+    type?: "string" | "boolean" | "integer" | "number";
     title?: string;
     description?: string;
-    enum?: string[];
-    defaultCrs?: string;
+    oneOf?: Array<{
+      const: string;
+      title: string;
+      description?: string;
+    }>;
   }>;
 }
 
@@ -32,15 +34,14 @@ describe("GPF Describe Type (integration)", () => {
       typename: "BDTOPO_V3:batiment",
     });
 
-    expect(result.id).toBe("BDTOPO_V3:batiment");
-    expect(result.name).toBe("batiment");
+    expect(result.typename).toBe("BDTOPO_V3:batiment");
     expect(result.properties).toBeDefined();
     expect(result.properties.length).toBeGreaterThan(0);
+    expect(result.required).toBeDefined();
 
     // Check that properties have expected fields
     const firstProp = result.properties[0];
     expect(firstProp.name).toBeDefined();
-    expect(firstProp.type).toBeDefined();
   }, INTEGRATION_CONFIG.timeout);
 
   it("should return an error for empty typename", async () => {

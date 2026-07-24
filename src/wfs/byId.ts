@@ -5,7 +5,7 @@
  * concerns such as schema exposure and response formatting.
  */
 
-import type { Collection } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 
 import {
   wfsClient,
@@ -14,7 +14,7 @@ import type {
   WfsFeatureCollectionResponse,
   WfsFeatureResponse,
 } from "./types.js";
-import { validateSelectProperty, getGeometryProperty } from "./queryPreparation.js";
+import { validateSelectProperty, getGeometryName } from "./queryPreparation.js";
 import { buildGetFeatureByIdRequest } from "./request.js";
 import { attachFeatureRefs } from "./response.js";
 
@@ -53,27 +53,26 @@ type FetchFeatureByIdInput = {
  * @returns A comma-separated property list, or `undefined` when all properties should be returned.
  */
 export function buildPropertyName(
-  featureType: Collection,
+  featureType: OgcCollectionSchema,
   input: PropertySelectionInput,
 ) {
   // `includeGeometry` is also an invariant check: even without `select`, a
   // cartographic/derived-geometry caller must fail against a geometry-less type
   // before issuing a WFS request.
-  const geometryProperty = input.includeGeometry
-    ? getGeometryProperty(featureType)
+  const geometryName = input.includeGeometry
+    ? getGeometryName(featureType)
     : undefined;
 
   if (!input.select || input.select.length === 0) {
     return undefined;
   }
 
-  const selectionGeometryProperty = geometryProperty ?? getGeometryProperty(featureType);
   const selectedProperties = input.select.map((propertyName) =>
-    validateSelectProperty(featureType, selectionGeometryProperty, propertyName),
+    validateSelectProperty(featureType, propertyName),
   );
 
-  if (geometryProperty) {
-    return [...selectedProperties, geometryProperty.name].join(",");
+  if (geometryName) {
+    return [...selectedProperties, geometryName].join(",");
   }
 
   return selectedProperties.join(",");
@@ -193,7 +192,7 @@ export function requireSingleFeatureById(
 export async function executeGetFeatureById(
   input: GetFeatureByIdExecutionInput,
 ) {
-  const featureType: Collection = await wfsClient.getFeatureType(input.typename);
+  const featureType: OgcCollectionSchema = await wfsClient.getFeatureType(input.typename);
   const propertyName = buildPropertyName(featureType, {
     includeGeometry: (input.spatial_extras ?? []).length > 0,
     select: input.select,

@@ -25,7 +25,7 @@ import { getEnv } from "../config/env.js";
 import { encodeToken } from "../proxy/token.js";
 import { buildDataUrl } from "../proxy/dataUrl.js";
 import { wfsClient } from "../wfs/execution.js";
-import { compileQueryParts, getGeometryProperty, getSpatialFilter } from "../wfs/queryPreparation.js";
+import { compileQueryParts, getGeometryName, getSpatialFilter } from "../wfs/queryPreparation.js";
 import {
   gpfGetFeaturesLayerInputObjectSchema,
   gpfGetFeaturesLayerInputSchema,
@@ -125,14 +125,14 @@ class GpfGetFeaturesLayerTool extends BaseTool<GpfGetFeaturesLayerInput> {
     // (execute.ts resolveReferenceGeometry), and an unknown one would otherwise
     // surface only as a proxy 5xx. Its `feature_id` cannot be checked here (that IS
     // a network lookup), but its existence AND its geometry column are validated
-    // locally: the proxy resolves the reference geometry via getGeometryProperty
+    // locally: the proxy resolves the reference geometry via getGeometryName
     // (referenceGeometry.ts), so a geometry-less reference type would otherwise pass
     // this pre-flight and fail only as an opaque proxy 5xx at map-load. Forcing the
     // same network-free check here makes it fail at THIS tool call, symmetric with the
     // main typename (whose geometry compileQueryParts validates below).
     if (spatialFilter?.operator === "intersects_feature") {
       const referenceType = await wfsClient.getFeatureType(spatialFilter.typename);
-      getGeometryProperty(referenceType);
+      getGeometryName(referenceType);
     }
 
     // We must NOT resolve the reference geometry for intersects_feature/travel_time

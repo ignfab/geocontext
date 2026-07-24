@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { Collection } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 
 import { runGeometryFeatureQuery, runGeometryFeatureByIdQuery, type WfsClientLike, type TravelTimeResolver } from "../../src/proxy/execute";
 import type { CompiledRequest } from "../../src/wfs/request";
@@ -9,29 +9,31 @@ import { ServiceResponseError } from "../../src/helpers/http";
 
 // --- Test catalog ---
 
-const communeType: Collection = {
-  id: "ADMINEXPRESS-COG.LATEST:commune",
-  namespace: "ADMINEXPRESS-COG.LATEST",
-  name: "commune",
+const communeType: OgcCollectionSchema = {
+  $schema: "https://json-schema.org/draft/2020-12/schema",
+  "x-collection-id": "ADMINEXPRESS-COG.LATEST:commune",
+  type: "object",
   title: "Commune",
   description: "Test feature type",
-  properties: [
-    { name: "code_insee", type: "string" },
-    { name: "population", type: "integer" },
-    { name: "geometrie", type: "multipolygon", defaultCrs: "EPSG:4326" },
-  ],
+  properties: {
+    code_insee: { type: "string" },
+    population: { type: "integer" },
+    geometrie: { },
+  },
+  required: [],
 };
 
-const departementType: Collection = {
-  id: "ADMINEXPRESS-COG.LATEST:departement",
-  namespace: "ADMINEXPRESS-COG.LATEST",
-  name: "departement",
+const departementType: OgcCollectionSchema = {
+  $schema: "https://json-schema.org/draft/2020-12/schema",
+  "x-collection-id": "ADMINEXPRESS-COG.LATEST:departement",
+  type: "object",
   title: "Département",
   description: "Test reference feature type",
-  properties: [
-    { name: "code_insee", type: "string" },
-    { name: "geom", type: "multipolygon", defaultCrs: "EPSG:4326" },
-  ],
+  properties: {
+    code_insee: { type: "string" },
+    geom: { },
+  },
+  required: [],
 };
 
 // A feature collection WITH geometry, as the live WFS returns it.
@@ -59,7 +61,7 @@ const baseInput: GpfGetFeaturesInput = {
 
 /** Builds a WfsClientLike double, recording the requests it executes. */
 function makeClient(overrides?: {
-  featureTypes?: Record<string, Collection>;
+  featureTypes?: Record<string, OgcCollectionSchema>;
   responses?: WfsFeatureCollectionResponse[];
 }) {
   const featureTypes = overrides?.featureTypes ?? {

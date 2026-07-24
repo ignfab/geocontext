@@ -1,10 +1,10 @@
 // --- Imports ---
 
 import {
-    Collection,
-    CollectionSearchResult,
+    OgcCollectionSchema,
+    CollectionSearchMatch,
     getCollectionCatalog,
-    MiniSearchCollectionSearchEngine,
+    CollectionCatalogOptions,
     MiniSearchCollectionSearchOptions,
 } from '@ignfab/gpf-schema-store';
 import { z } from 'zod';
@@ -16,13 +16,18 @@ export const GPF_WFS_URL = "https://data.geopf.fr/wfs";
 
 // Shared keys used by both `fields` and `boost` in MiniSearchCollectionSearchOptions.
 const MINISEARCH_INDEXED_OPTION_KEYS = [
-    "namespace",
-    "name",
-    "title",
-    "description",
-    "properties",
-    "enums",
-    "identifierTokens",
+  'namespace',
+  'name',
+  'identifierTokens',
+  'title',
+  'description',
+  'propertyNames',
+  'propertyTitles',
+  'propertyDescriptions',
+  'oneOfConsts',
+  'oneOfDescriptions',
+  'representedFeatures',
+  'selectionCriteria',
 ] as const;
 
 const MINISEARCH_COMBINE_WITH_VALUES = ["AND", "OR"] as const;
@@ -68,15 +73,6 @@ function parseMiniSearchOptions(value: unknown): MiniSearchOptions {
     return result.data;
 }
 
-function createMiniSearchEngineOptions(miniSearch?: MiniSearchOptions) {
-    if (!miniSearch) {
-        return undefined;
-    }
-
-    return {
-        defaultSearchOptions: miniSearch,
-    };
-}
 
 // Reads MiniSearch options from the GPF_WFS_MINISEARCH_OPTIONS environment variable.
 // Returns undefined when the variable is absent or empty.
@@ -95,21 +91,18 @@ export class WfsSchemaStore {
 
     private readonly catalog;
 
-    constructor(options: { miniSearch?: MiniSearchOptions } = {}) {
-        const searchEngineOptions = createMiniSearchEngineOptions(options.miniSearch);
-        this.catalog = getCollectionCatalog({
-            engineFactory: (items: Collection[]) => new MiniSearchCollectionSearchEngine(items, searchEngineOptions),
-        });
+    constructor(options: CollectionCatalogOptions = {}) {
+        this.catalog = getCollectionCatalog(options);
     }
 
-    async searchFeatureTypesWithScores(query: string, maxResults: number = 20): Promise<CollectionSearchResult[]> {
-        return this.catalog.searchWithScores(query, {
+    async searchFeatureTypesWithScores(query: string, maxResults: number = 20): Promise<CollectionSearchMatch[]> {
+        return this.catalog.search(query, {
             limit: maxResults,
         });
     }
 
-    async getFeatureType(name: string): Promise<Collection> {
-        const featureType = this.catalog.getById(name);
+    async getFeatureType(name: string): Promise<OgcCollectionSchema> {
+        const featureType = this.catalog.getCollectionSchema(name);
         if (featureType) {
             return featureType;
         }
@@ -121,6 +114,7 @@ export class WfsSchemaStore {
 // --- Default singleton ---
 
 // Pre-configured client using the default GPF endpoint and optional env-based MiniSearch options.
-export const wfsSchemaStore = new WfsSchemaStore({
-    miniSearch: loadMiniSearchOptionsFromEnv(),
-});
+const miniSearchFromEnv = loadMiniSearchOptionsFromEnv();
+export const wfsSchemaStore = new WfsSchemaStore(
+    miniSearchFromEnv ? { miniSearch: miniSearchFromEnv } : {},
+);

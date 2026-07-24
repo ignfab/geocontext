@@ -18,7 +18,7 @@
  *   and lets the HTTP layer supply a size-bounded, rate-limited client.
  */
 
-import type { Collection, CollectionProperty } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionSchema, OgcCollectionProperty } from "@ignfab/gpf-schema-store";
 
 import {
   buildGetFeatureByIdRequest,
@@ -27,7 +27,7 @@ import {
 } from "../wfs/request.js";
 import {
   compileQueryParts,
-  getGeometryProperty,
+  getGeometryName,
   getSpatialFilter,
   type ResolvedFeatureGeometryRef,
 } from "../wfs/queryPreparation.js";
@@ -46,7 +46,7 @@ import type { GpfGetFeaturesInput, GpfGetFeatureByIdLayerInput } from "../wfs/sc
  * tests inject a double.
  */
 export type WfsClientLike = {
-  getFeatureType(typename: string): Promise<Collection>;
+  getFeatureType(typename: string): Promise<OgcCollectionSchema>;
   fetchFeatureCollection(request: CompiledRequest): Promise<WfsFeatureCollectionResponse>;
 };
 
@@ -76,21 +76,21 @@ export type GeometryFeatureQueryDeps = {
  * which already includes geometry, so it is left untouched.
  *
  * @param propertyName Comma-separated selection from `compileQueryParts`, if any.
- * @param geometryProperty Geometry property resolved for the feature type.
+ * @param geometryName Geometry property name resolved for the feature type.
  * @returns A selection guaranteed to include the geometry column, or `undefined`.
  */
 function ensureGeometrySelected(
   propertyName: string | undefined,
-  geometryProperty: CollectionProperty,
+  geometryName: string,
 ): string | undefined {
   if (!propertyName) {
     return undefined;
   }
   const columns = propertyName.split(",");
-  if (columns.includes(geometryProperty.name)) {
+  if (columns.includes(geometryName)) {
     return propertyName;
   }
-  return [...columns, geometryProperty.name].join(",");
+  return [...columns, geometryName].join(",");
 }
 
 /**
@@ -196,15 +196,15 @@ export async function runGeometryFeatureQuery(
   deps: GeometryFeatureQueryDeps,
 ): Promise<WfsFeatureCollectionResponse> {
   const { wfsClient } = deps;
-  const featureType: Collection = await wfsClient.getFeatureType(input.typename);
-  const geometryProperty = getGeometryProperty(featureType);
+  const featureType: OgcCollectionSchema = await wfsClient.getFeatureType(input.typename);
+  const geometryName = getGeometryName(featureType);
 
   const resolvedGeometryRef = await resolveReferenceGeometry(input, deps);
   const compiled = compileQueryParts(input, featureType, resolvedGeometryRef);
 
   const request = buildMainRequest(input, {
     cqlFilter: compiled.cqlFilter,
-    propertyName: ensureGeometrySelected(compiled.propertyName, geometryProperty),
+    propertyName: ensureGeometrySelected(compiled.propertyName, geometryName),
     sortBy: compiled.sortBy,
   });
 
@@ -222,7 +222,7 @@ export async function runGeometryFeatureQuery(
     // name for this type it rejects it as "Illegal property name". Rewrite it into a
     // clear diagnostic (shared with the LLM path) rather than letting the raw
     // upstream string surface to Carto as an opaque 502.
-    rethrowIdentifiedCatalogDesyncError(error, geometryProperty.name, input.typename);
+    rethrowIdentifiedCatalogDesyncError(error, geometryName, input.typename);
     throw error;
   }
 
@@ -267,7 +267,7 @@ export async function runGeometryFeatureByIdQuery(
   deps: GeometryFeatureByIdQueryDeps,
 ): Promise<WfsFeatureCollectionResponse> {
   const { wfsClient } = deps;
-  const featureType: Collection = await wfsClient.getFeatureType(input.typename);
+  const featureType: OgcCollectionSchema = await wfsClient.getFeatureType(input.typename);
 
   // Validate `select` against the same embedded catalog used at URL generation,
   // then force the geometry column into the WFS selection. Re-validating here is

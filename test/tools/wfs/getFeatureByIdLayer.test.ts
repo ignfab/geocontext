@@ -1,6 +1,6 @@
 import { vi, describe, it, expect, afterEach } from "vitest";
 
-import type { Collection } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 
 import type { Env } from "../../../src/config/env.js";
 import { decodeToken } from "../../../src/proxy/token.js";
@@ -11,7 +11,7 @@ const SECRET_HEX = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789ab
 const SECRET = Buffer.from(SECRET_HEX, "hex");
 
 const mockGetEnv = vi.fn<() => Env>();
-const mockGetFeatureType = vi.fn<(typename: string) => Promise<Collection>>();
+const mockGetFeatureType = vi.fn<(typename: string) => Promise<OgcCollectionSchema>>();
 
 vi.doMock("../../../src/config/env.js", async () => {
   const actual = await vi.importActual<typeof import("../../../src/config/env.js")>(
@@ -39,16 +39,17 @@ const { default: GpfGetFeatureByIdLayerTool } = await import(
   "../../../src/tools/GpfGetFeatureByIdLayerTool"
 );
 
-const communeType: Collection = {
-  id: "ADMINEXPRESS-COG.LATEST:commune",
-  namespace: "ADMINEXPRESS-COG.LATEST",
-  name: "commune",
+const communeType: OgcCollectionSchema = {
+  $schema: "https://json-schema.org/draft/2020-12/schema",
+  "x-collection-id": "ADMINEXPRESS-COG.LATEST:commune",
+  type: "object",
   title: "Commune",
   description: "Fixture de test",
-  properties: [
-    { name: "code_insee", type: "string" },
-    { name: "geometrie", type: "multipolygon", defaultCrs: "EPSG:4326" },
-  ],
+  properties: {
+    code_insee: { type: "string" },
+    geometrie: { },
+  },
+  required: [],
 };
 
 /**

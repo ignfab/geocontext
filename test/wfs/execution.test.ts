@@ -1,5 +1,5 @@
 import { vi, describe, expect, afterEach, it } from "vitest";
-import type { Collection } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 import { getMatchedFeatureCount } from "../../src/wfs/response.js";
 
 const mockPost = vi.fn<(request: any) => Promise<unknown>>();
@@ -107,16 +107,17 @@ describe("WfsClient", () => {
   });
 
   it("should accept structural test doubles as dependencies", async () => {
-    const featureType: Collection = {
-      id: "BDTOPO_V3:batiment",
-      namespace: "BDTOPO_V3",
-      name: "batiment",
+    const featureType: OgcCollectionSchema = {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      "x-collection-id": "BDTOPO_V3:batiment",
+      type: "object",
       title: "Batiment",
       description: "Description de test",
-      properties: [
-        { name: "cleabs", type: "string" },
-        { name: "geometrie", type: "multipolygon", defaultCrs: "EPSG:4326" },
-      ],
+      properties: {
+        cleabs: { type: "string" },
+        geometrie: { },
+      },
+      required: [],
     };
     const post = vi.fn(async () => ({
       type: "FeatureCollection",

@@ -1,6 +1,6 @@
 import { vi, describe, it, expect, afterEach } from "vitest";
 
-import type { Collection } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 
 import type { Env } from "../../../src/config/env.js";
 import { decodeToken } from "../../../src/proxy/token.js";
@@ -11,7 +11,7 @@ const SECRET_HEX = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789ab
 const SECRET = Buffer.from(SECRET_HEX, "hex");
 
 const mockGetEnv = vi.fn<() => Env>();
-const mockGetFeatureType = vi.fn<(typename: string) => Promise<Collection>>();
+const mockGetFeatureType = vi.fn<(typename: string) => Promise<OgcCollectionSchema>>();
 
 vi.doMock("../../../src/config/env.js", async () => {
   const actual = await vi.importActual<typeof import("../../../src/config/env.js")>(
@@ -40,18 +40,19 @@ const { default: GpfGetFeaturesLayerTool } = await import(
   "../../../src/tools/GpfGetFeaturesLayerTool"
 );
 
-const communeType: Collection = {
-  id: "ADMINEXPRESS-COG.LATEST:commune",
-  namespace: "ADMINEXPRESS-COG.LATEST",
-  name: "commune",
+const communeType: OgcCollectionSchema = {
+  $schema: "https://json-schema.org/draft/2020-12/schema",
+  "x-collection-id": "ADMINEXPRESS-COG.LATEST:commune",
+  type: "object",
   title: "Commune",
   description: "Fixture de test",
-  properties: [
-    { name: "code_insee", type: "string" },
-    { name: "nom_officiel", type: "string" },
-    { name: "population", type: "integer" },
-    { name: "geometrie", type: "multipolygon", defaultCrs: "EPSG:4326" },
-  ],
+  properties: {
+    code_insee: { type: "string" },
+    nom_officiel: { type: "string" },
+    population: { type: "integer" },
+    geometrie: { },
+  },
+  required: [],
 };
 
 /**
@@ -303,20 +304,21 @@ describe("Test GpfGetFeaturesLayerTool", () => {
 
   it("rejects an intersects_feature reference type that has NO geometry column BEFORE minting (catalog pre-flight)", async () => {
     mockGetEnv.mockReturnValue(makeEnv({}));
-    // Reference type EXISTS but is an attribute-only table (no property carries a
-    // defaultCrs), so the proxy could not resolve a reference geometry from it. The
-    // pre-flight must catch that here (getGeometryProperty), not defer it to an opaque
+    // Reference type EXISTS but is an attribute-only table (no property is geometric),
+    // so the proxy could not resolve a reference geometry from it. The
+    // pre-flight must catch that here (getGeometryName), not defer it to an opaque
     // proxy 5xx at map-load — symmetric with the main typename's geometry check.
-    const tableType: Collection = {
-      id: "wfs_scot:doc_urba",
-      namespace: "wfs_scot",
-      name: "doc_urba",
+    const tableType: OgcCollectionSchema = {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      "x-collection-id": "wfs_scot:doc_urba",
+      type: "object",
       title: "Document d'urbanisme (table, sans géométrie)",
       description: "Fixture de test : type attributaire sans géométrie",
-      properties: [
-        { name: "partition", type: "string" },
-        { name: "idurba", type: "string" },
-      ],
+      properties: {
+        partition: { type: "string" },
+        idurba: { type: "string" },
+      },
+      required: [],
     };
     mockGetFeatureType.mockImplementation(async (typename: string) => {
       if (typename === "ADMINEXPRESS-COG.LATEST:commune") return communeType;
