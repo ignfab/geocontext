@@ -125,7 +125,7 @@ describe("proxy/server", () => {
     expect(res.status).toBe(500);
   });
 
-  it("413 on an over-long `q` (token exceeds MAX_TOKEN_CHARS)", async () => {
+  it("413 on an over-long token (exceeds MAX_TOKEN_CHARS)", async () => {
     // decodeToken rejects a raw token longer than MAX_TOKEN_CHARS (4000) up front,
     // before any decrypt — so a long junk string is enough to hit ProxyTokenTooLargeError.
     const res = await request(baseUrl).get(layerPath("a".repeat(4001)));

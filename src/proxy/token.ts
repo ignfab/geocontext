@@ -34,7 +34,7 @@ const KEY_BYTES = 32;
 const IV_BYTES = 12;
 const AUTH_TAG_BYTES = 16;
 
-/** Bound the accepted `q` string before any decode work, to reject oversized input cheaply. */
+/** Bound the accepted token string before any decode work, to reject oversized input cheaply. */
 export const MAX_TOKEN_CHARS = 4000;
 
 /**
