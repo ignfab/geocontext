@@ -9,9 +9,9 @@
 import type { Collection } from "@ignfab/gpf-schema-store";
 
 import { navigationIsochroneClient } from "../gpf/navigation.js";
-import { ServiceResponseError } from "../helpers/http.js";
 import logger from "../logger.js";
 import { resolveFeatureGeometryEwkt } from "./referenceGeometry.js";
+import { rewriteIllegalGeometryColumnError } from "./catalogDesync.js";
 import {
   compileQueryParts,
   geometryToEwkt,
@@ -195,15 +195,9 @@ export async function executeQueryFeatures(input: GpfQueryFeaturesInput) {
     );
     featureCollection = await wfsClient.fetchFeatureCollection(request);
   } catch (error: unknown) {
-    if (
-      error instanceof ServiceResponseError &&
-      error.serviceCode === "InvalidParameterValue" &&
-      error.serviceDetail === `Illegal property name: ${compiled.geometryProperty.name}`
-    ) {
-      throw new Error(
-        `Le champ géométrique '${compiled.geometryProperty.name}' issu du catalogue embarqué est rejeté par le WFS live pour '${input.typename}'. Le catalogue embarqué est probablement désynchronisé. Détail : ${error.message}`,
-      );
-    }
+    // Rewrite an embedded-catalog geometry-column desync into a clear diagnostic
+    // (shared with the proxy path); any other error passes through unchanged.
+    rewriteIllegalGeometryColumnError(error, compiled.geometryProperty.name, input.typename);
     throw error;
   }
 

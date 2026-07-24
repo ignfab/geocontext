@@ -33,6 +33,7 @@ import {
 } from "../wfs/queryPreparation.js";
 import { buildPropertyName, requireSingleFeatureById } from "../wfs/byId.js";
 import { resolveFeatureGeometryEwkt } from "../wfs/referenceGeometry.js";
+import { rewriteIllegalGeometryColumnError } from "../wfs/catalogDesync.js";
 import { ServiceResponseError, extractJsonServiceError } from "../helpers/http.js";
 import type { WfsFeatureCollectionResponse } from "../wfs/types.js";
 import type { GpfGetFeaturesInput, GpfGetFeatureByIdLayerInput } from "../wfs/schema.js";
@@ -219,17 +220,9 @@ export async function runGeometryFeatureQuery(
     // Catalog desync: the proxy forces the embedded catalog's geometry column into
     // the request (ensureGeometrySelected), so if the live WFS uses a different geom
     // name for this type it rejects it as "Illegal property name". Rewrite it into a
-    // clear diagnostic (mirrors the LLM path's executeQueryFeatures) rather than
-    // letting the raw upstream string surface to Carto as an opaque 502.
-    if (
-      error instanceof ServiceResponseError &&
-      error.serviceCode === "InvalidParameterValue" &&
-      error.serviceDetail === `Illegal property name: ${geometryProperty.name}`
-    ) {
-      throw new Error(
-        `Le champ géométrique '${geometryProperty.name}' issu du catalogue embarqué est rejeté par le WFS live pour '${input.typename}'. Le catalogue embarqué est probablement désynchronisé. Détail : ${error.message}`,
-      );
-    }
+    // clear diagnostic (shared with the LLM path) rather than letting the raw
+    // upstream string surface to Carto as an opaque 502.
+    rewriteIllegalGeometryColumnError(error, geometryProperty.name, input.typename);
     throw error;
   }
 
