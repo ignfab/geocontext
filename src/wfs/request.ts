@@ -3,7 +3,7 @@
  *
  * This module centralizes:
  * - the transport shape shared by compiled requests
- * - GET/POST request assembly helpers
+ * - POST request assembly helpers
  */
 
 import { GPF_WFS_URL } from "./catalog.js";
