@@ -3,8 +3,7 @@
  *
  * This module centralizes:
  * - the transport shape shared by compiled requests
- * - GET/POST request assembly helpers
- * - the compact HTTP payloads exposed by MCP WFS tools
+ * - POST request assembly helpers
  */
 
 import { GPF_WFS_URL } from "./catalog.js";
@@ -12,75 +11,12 @@ import type { GpfQueryFeaturesInput } from "./schema.js";
 
 // --- Transport Types ---
 
-type WfsRequestTransport = {
+export type CompiledRequest = {
   method: "POST";
   url: string;
   query: Record<string, string>;
   body: string;
 };
-
-export type CompiledRequest = WfsRequestTransport & {
-  get_url: string;
-};
-
-export type WfsHttpPostRequestPayload = {
-  result_type: "http_post_request";
-  http_post_request: {
-    method: "POST";
-    url: string;
-    headers: { "Content-Type": "application/x-www-form-urlencoded" };
-    body: string;
-  };
-};
-
-export type WfsHttpGetUrlPayload = {
-  result_type: "http_get_url";
-  http_get_url: string;
-};
-
-// --- Request Payload Mapping ---
-
-/**
- * Builds a full URL from base endpoint and query parameters.
- *
- * @param url Base WFS endpoint URL.
- * @param query Query-string parameters sent with the request.
- * @returns URL with encoded query-string parameters.
- */
-function buildUrlWithQuery(url: string, query: Record<string, string>) {
-  return `${url}?${new URLSearchParams(query).toString()}`;
-}
-
-/**
- * Maps a compiled WFS request to the compact MCP POST payload.
- *
- * @param request Compiled request ready to be executed against the WFS service.
- * @returns A normalized POST payload exposed by MCP tools.
- */
-export function toWfsHttpPostRequestPayload(request: CompiledRequest): WfsHttpPostRequestPayload {
-  return {
-    result_type: "http_post_request",
-    http_post_request: {
-      method: request.method,
-      url: buildUrlWithQuery(request.url, request.query),
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: request.body,
-    },
-  };
-}
-
-/**
- * Maps a compiled WFS request to the compact MCP GET URL payload.
- *
- * @param request Compiled request ready to be serialized as an equivalent GET URL.
- * @returns A normalized GET URL payload exposed by MCP tools.
- */
-export function toWfsHttpGetUrlPayload(request: CompiledRequest): WfsHttpGetUrlPayload {
-  return {
-    result_type: "http_get_url",
-    http_get_url: request.get_url,
-  };
-}
 
 // --- Request Assembly Helpers ---
 
@@ -97,25 +33,6 @@ function buildBody(cqlFilter?: string) {
   return new URLSearchParams({ cql_filter: cqlFilter }).toString();
 }
 
-/**
- * Builds the equivalent GET URL variant of the request.
- *
- * Consumers should prefer `http_post_request` for robust direct WFS execution
- * when this URL is very long or contains a large `cql_filter`.
- *
- * @param url Base WFS endpoint URL.
- * @param query Query-string parameters sent with the request.
- * @param cqlFilter Optional CQL filter to append to the GET variant.
- * @returns A derived GET URL.
- */
-export function buildGetUrl(url: string, query: Record<string, string>, cqlFilter?: string) {
-  const params = new URLSearchParams(query);
-  if (cqlFilter) {
-    params.set("cql_filter", cqlFilter);
-  }
-  return `${url}?${params.toString()}`;
-}
-
 // --- Public Builders ---
 
 /**
@@ -123,7 +40,7 @@ export function buildGetUrl(url: string, query: Record<string, string>, cqlFilte
  *
  * @param input Normalized tool input.
  * @param compiled Compiled query fragments produced from the input and feature type.
- * @returns A POST request split into base URL, query-string parameters, encoded body, and optional GET variant.
+ * @returns A POST request split into base URL, query-string parameters, and encoded body.
  */
 export function buildMainRequest(
   input: GpfQueryFeaturesInput,
@@ -152,7 +69,6 @@ export function buildMainRequest(
     url: GPF_WFS_URL,
     query,
     body,
-    get_url: buildGetUrl(GPF_WFS_URL, query, compiled.cqlFilter),
   };
 }
 
@@ -162,7 +78,7 @@ export function buildMainRequest(
  * @param typename Typename of the target layer.
  * @param featureId Identifier of the target feature.
  * @param propertyName Optional comma-separated property list.
- * @returns A POST request split into base URL, query-string parameters, empty body, and optional GET variant.
+ * @returns A POST request split into base URL, query-string parameters, and empty body.
  */
 export function buildGetFeatureByIdRequest(
   typename: string,
@@ -189,7 +105,6 @@ export function buildGetFeatureByIdRequest(
     url: GPF_WFS_URL,
     query,
     body: "",
-    get_url: buildGetUrl(GPF_WFS_URL, query),
   };
 }
 
@@ -215,7 +130,7 @@ export type MultiTypenameRequestInput = {
  * that query several layers at once.
  *
  * @param input Multi-typename request parameters.
- * @returns A POST request split into base URL, query-string parameters, encoded body, and optional GET variant.
+ * @returns A POST request split into base URL, query-string parameters, and encoded body.
  */
 export function buildMultiTypenameRequest(
   input: MultiTypenameRequestInput,
@@ -256,6 +171,5 @@ export function buildMultiTypenameRequest(
     url: GPF_WFS_URL,
     query,
     body,
-    get_url: buildGetUrl(GPF_WFS_URL, query, expandedCqlFilter),
   };
 }

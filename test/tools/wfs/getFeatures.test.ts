@@ -229,103 +229,17 @@ describe("Test GpfGetFeaturesTool", () => {
     });
   });
 
-  it("should return text content and structuredContent for http_post_request", async () => {
-    const tool = new GpfGetFeaturesTool();
-    mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
-
-    const response = await tool.toolCall({
-      params: {
-        name: "gpf_get_features",
-        arguments: {
-          typename: "ADMINEXPRESS-COG.LATEST:commune",
-          result_type: "http_post_request",
-          select: ["code_insee"],
-          where: [
-            {
-              property: "code_insee",
-              operator: "eq",
-              value: "01001",
-            },
-          ],
-        },
-      },
-    });
-
-    expect(response.isError).toBeUndefined();
-    expect(response.content[0]).toMatchObject({
-      type: "text",
-    });
-    const textContent = response.content[0];
-    if (textContent.type !== "text") {
-      throw new Error("expected text content");
-    }
-    const payload = JSON.parse(textContent.text);
-    expect(payload).toEqual(response.structuredContent);
-    expect(payload.result_type).toEqual("http_post_request");
-    expect(payload.http_get_url).toBeUndefined();
-    expect(payload.http_post_request).toMatchObject({
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: expect.stringContaining("cql_filter="),
-    });
-    const url = new URL(payload.http_post_request.url);
-    expect(url.origin + url.pathname).toEqual("https://data.geopf.fr/wfs");
-    expect(url.searchParams.get("service")).toEqual("WFS");
-    expect(url.searchParams.get("exceptions")).toEqual("application/json");
-    expect(url.searchParams.get("propertyName")).toEqual("code_insee,geometrie");
-    expect(url.searchParams.get("cql_filter")).toBeNull();
-  });
-
-  it("should return text content and structuredContent for http_get_url", async () => {
-    const tool = new GpfGetFeaturesTool();
-    mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
-
-    const response = await tool.toolCall({
-      params: {
-        name: "gpf_get_features",
-        arguments: {
-          typename: "ADMINEXPRESS-COG.LATEST:commune",
-          result_type: "http_get_url",
-          select: ["code_insee"],
-          where: [
-            {
-              property: "code_insee",
-              operator: "eq",
-              value: "01001",
-            },
-          ],
-        },
-      },
-    });
-
-    expect(response.isError).toBeUndefined();
-    const textContent = response.content[0];
-    if (textContent.type !== "text") {
-      throw new Error("expected text content");
-    }
-    const payload = JSON.parse(textContent.text);
-    expect(payload).toEqual(response.structuredContent);
-    expect(payload).toMatchObject({
-      result_type: "http_get_url",
-      http_get_url: expect.stringContaining("https://data.geopf.fr/wfs?"),
-    });
-    expect(payload.http_post_request).toBeUndefined();
-    const url = new URL(payload.http_get_url);
-    expect(url.searchParams.get("propertyName")).toEqual("code_insee,geometrie");
-    expect(url.searchParams.get("cql_filter")).toContain("code_insee = '01001'");
-  });
-
   it("should compile travel_time_filter into a WFS request using an isochrone geometry", async () => {
     const tool = new GpfGetFeaturesTool();
     mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
     const isochroneUrls = captureIsochroneRequests();
+    const requests = captureRequests({ type: "FeatureCollection", features: [], totalFeatures: 0 });
 
     const response = await tool.toolCall({
       params: {
         name: "gpf_get_features",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
-          result_type: "http_post_request",
           travel_time_filter: {
             lon: 2.337306,
             lat: 48.849319,
@@ -344,15 +258,12 @@ describe("Test GpfGetFeaturesTool", () => {
     expect(isochroneUrl.searchParams.get("costValue")).toEqual("15");
     expect(isochroneUrl.searchParams.get("profile")).toEqual("pedestrian");
 
-    const textContent = response.content[0];
-    if (textContent.type !== "text") {
-      throw new Error("expected text content");
-    }
-    const payload = JSON.parse(textContent.text);
-    expect(new URLSearchParams(payload.http_post_request.body).get("cql_filter")).toEqual(
+    // In `results` mode the WFS POST is actually executed; assert the isochrone
+    // geometry was compiled into the outgoing request's cql_filter.
+    expect(requests).toHaveLength(1);
+    expect(new URLSearchParams(requests[0].body).get("cql_filter")).toEqual(
       "INTERSECTS(geometrie,SRID=4326;POLYGON((2 48,2.2 48,2.2 48.2,2 48)))",
     );
-    expect(mockFetchJSONPost).not.toHaveBeenCalled();
   });
 
   it("should return isError=true for invalid input", async () => {
@@ -385,63 +296,6 @@ describe("Test GpfGetFeaturesTool", () => {
         }),
       ]),
     });
-  });
-
-  it("should reject legacy request result_type", async () => {
-    const tool = new GpfGetFeaturesTool();
-    const response = await tool.toolCall({
-      params: {
-        name: "gpf_get_features",
-        arguments: {
-          typename: "ADMINEXPRESS-COG.LATEST:commune",
-          result_type: "request",
-        },
-      },
-    });
-
-    expect(response.isError).toBe(true);
-    expect(response.structuredContent).toMatchObject({
-      type: "urn:geocontext:problem:invalid-tool-params",
-      errors: expect.arrayContaining([
-        expect.objectContaining({
-          name: "result_type",
-          code: "invalid_enum_value",
-          detail: expect.stringContaining("http_post_request"),
-        }),
-      ]),
-    });
-  });
-
-  it("should reject spatial_extras with http_get_url result_type", async () => {
-    const tool = new GpfGetFeaturesTool();
-    const response = await tool.toolCall({
-      params: {
-        name: "gpf_get_features",
-        arguments: {
-          typename: "ADMINEXPRESS-COG.LATEST:commune",
-          result_type: "http_get_url",
-          spatial_extras: ["bbox"],
-        },
-      },
-    });
-
-    expect(response.isError).toBe(true);
-    const textContent = response.content[0];
-    if (textContent.type !== "text") {
-      throw new Error("expected text content");
-    }
-    expect(textContent.text).toContain("spatial_extras");
-    expect(response.structuredContent).toMatchObject({
-      type: "urn:geocontext:problem:invalid-tool-params",
-      errors: expect.arrayContaining([
-        expect.objectContaining({
-          name: "spatial_extras",
-          code: "custom",
-        }),
-      ]),
-    });
-    expect(mockGetFeatureType).not.toHaveBeenCalled();
-    expect(mockFetchJSONPost).not.toHaveBeenCalled();
   });
 
   it("should reject multiple spatial filters as invalid tool parameters", async () => {
@@ -739,19 +593,14 @@ describe("Test GpfGetFeaturesTool", () => {
             typename: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:localisant",
             feature_id: "localisant.1",
           },
-          result_type: "http_post_request",
         },
       },
     });
 
     expect(response.isError).toBeUndefined();
-    expect(requests).toHaveLength(1);
-    const textContent = response.content[0];
-    if (textContent.type !== "text") {
-      throw new Error("expected text content");
-    }
-    const payload = JSON.parse(textContent.text);
-    expect(payload.http_post_request.body).toContain("MULTIPOINT");
+    // In `results` mode the main query POST is executed; its cql_filter carries the
+    // MultiPoint geometry resolved from the reference feature.
+    expect(requests.some((request) => request.body.includes("MULTIPOINT"))).toBe(true);
   });
 
   it("should report missing reference features clearly for intersects_feature", async () => {
@@ -787,7 +636,10 @@ describe("Test GpfGetFeaturesTool", () => {
     expect(textContent.text).toContain("est introuvable");
     expect(textContent.text).toContain("localisant.404");
     expect(response.structuredContent).toMatchObject({
-      type: "urn:geocontext:problem:execution-error",
+      type: "urn:geocontext:problem:feature-not-found",
+      errors: expect.arrayContaining([
+        expect.objectContaining({ code: "feature_not_found" }),
+      ]),
     });
   });
 

@@ -56,16 +56,23 @@ export function buildPropertyName(
   featureType: Collection,
   input: PropertySelectionInput,
 ) {
+  // `includeGeometry` is also an invariant check: even without `select`, a
+  // cartographic/derived-geometry caller must fail against a geometry-less type
+  // before issuing a WFS request.
+  const geometryProperty = input.includeGeometry
+    ? getGeometryProperty(featureType)
+    : undefined;
+
   if (!input.select || input.select.length === 0) {
     return undefined;
   }
 
-  const geometryProperty = getGeometryProperty(featureType);
+  const selectionGeometryProperty = geometryProperty ?? getGeometryProperty(featureType);
   const selectedProperties = input.select.map((propertyName) =>
-    validateSelectProperty(featureType, geometryProperty, propertyName),
+    validateSelectProperty(featureType, selectionGeometryProperty, propertyName),
   );
 
-  if (input.includeGeometry) {
+  if (geometryProperty) {
     return [...selectedProperties, geometryProperty.name].join(",");
   }
 
@@ -92,10 +99,42 @@ export async function fetchFeatureById(
   return wfsClient.fetchFeatureCollection(request);
 }
 
+// --- Cardinality Errors ---
+
+/**
+ * Raised when a by-id lookup matches ZERO features: the requested `feature_id`
+ * does not exist in the target type. This is a client-caused not-found condition
+ * (HTTP 404 on the proxy), distinct from an upstream anomaly.
+ */
+export class FeatureNotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "FeatureNotFoundError";
+  }
+}
+
+/**
+ * Raised when a by-id lookup breaks the strict single-feature contract for a
+ * reason attributable to the UPSTREAM service, not the client: more than one
+ * feature returned for a unique `featureID`, an id that differs from the one
+ * requested, or a collection body that is not a usable features array. Mapped to
+ * HTTP 502 on the proxy (the client request was valid).
+ */
+export class FeatureCardinalityError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "FeatureCardinalityError";
+  }
+}
+
 // --- Cardinality Enforcement ---
 
 /**
  * Enforces the strict by-id contract on a raw WFS FeatureCollection.
+ *
+ * Throws {@link FeatureNotFoundError} when the feature is absent (client-caused,
+ * → 404) and {@link FeatureCardinalityError} for upstream contract violations
+ * (duplicate, id mismatch, unusable body → 502).
  *
  * @param featureCollection Raw FeatureCollection returned by the WFS service.
  * @param input Expected target layer and feature id.
@@ -106,15 +145,15 @@ export function requireSingleFeatureById(
   input: Pick<GetFeatureByIdExecutionInput, "typename" | "feature_id">,
 ): WfsFeatureResponse {
   if (!Array.isArray(featureCollection.features)) {
-    throw new Error("Le service WFS n'a pas retourné de collection d'objets exploitable.");
+    throw new FeatureCardinalityError("Le service WFS n'a pas retourné de collection d'objets exploitable.");
   }
 
   if (featureCollection.features.length === 0) {
-    throw new Error(`Le feature '${input.feature_id}' est introuvable dans '${input.typename}'.`);
+    throw new FeatureNotFoundError(`Le feature '${input.feature_id}' est introuvable dans '${input.typename}'.`);
   }
 
   if (featureCollection.features.length > 1) {
-    throw new Error(
+    throw new FeatureCardinalityError(
       `Le feature '${input.feature_id}' dans '${input.typename}' devrait être unique, mais ${featureCollection.features.length} objets ont été retournés.`,
     );
   }
@@ -122,7 +161,7 @@ export function requireSingleFeatureById(
   const [firstFeature] = featureCollection.features;
 
   if (firstFeature?.id !== input.feature_id) {
-    throw new Error(
+    throw new FeatureCardinalityError(
       `Le service WFS a retourné l'identifiant '${String(firstFeature?.id)}' au lieu de '${input.feature_id}'.`,
     );
   }
@@ -133,7 +172,7 @@ export function requireSingleFeatureById(
 // --- Results Execution ---
 
 /**
- * Executes the structured WFS by-id flow for `result_type="results"`.
+ * Executes the structured WFS by-id flow.
  *
  * This function:
  * - loads the feature type from the embedded catalog

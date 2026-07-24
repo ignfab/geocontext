@@ -62,8 +62,12 @@ describe("generate-mcp-docs helpers", () => {
     const { sortToolDefinitions } = await loadDocsHelpers();
 
     const sorted = sortToolDefinitions([
+      { name: "gpf_get_feature_by_id_layer" },
+      { name: "gpf_count_features" },
       { name: "gpf_get_features" },
+      { name: "gpf_get_feature_by_id" },
       { name: "adminexpress" },
+      { name: "gpf_get_features_layer" },
       { name: "geocode" },
       { name: "unknown_custom_tool" },
       { name: "altitude" },
@@ -74,6 +78,10 @@ describe("generate-mcp-docs helpers", () => {
       "altitude",
       "adminexpress",
       "gpf_get_features",
+      "gpf_get_features_layer",
+      "gpf_count_features",
+      "gpf_get_feature_by_id",
+      "gpf_get_feature_by_id_layer",
       "unknown_custom_tool",
     ]);
   });
@@ -124,16 +132,24 @@ describe("generate-mcp-docs helpers", () => {
     expect(markdown).toContain("| Erreur | oui | oui | `content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`. |");
   });
 
-  it("should document the get features response modes", async () => {
+  it("should document the get features single-mode response contract", async () => {
     const { renderResponseContractSection } = await loadDocsHelpers();
 
     const markdown = renderResponseContractSection({
       name: "gpf_get_features",
     });
 
-    expect(markdown).toContain('| Succès `result_type="results"` | oui | non | `content[0].text` est la FeatureCollection stringifiée ; aucun `structuredContent` n\'est ajouté dans ce mode. |');
-    expect(markdown).toContain('| Succès `result_type="http_post_request"` | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |');
-    expect(markdown).toContain('| Succès `result_type="http_get_url"` | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |');
+    expect(markdown).toContain('| Succès | oui | non | `content[0].text` est la FeatureCollection stringifiée (propriétés attributaires uniquement) ; aucun `structuredContent` n\'est ajouté. |');
+  });
+
+  it("should document the get feature by id single-mode response contract", async () => {
+    const { renderResponseContractSection } = await loadDocsHelpers();
+
+    const markdown = renderResponseContractSection({
+      name: "gpf_get_feature_by_id",
+    });
+
+    expect(markdown).toContain('| Succès | oui | oui | `content[0].text` est la FeatureCollection stringifiée, également exposée dans `structuredContent`. |');
   });
 
   it("should document shared MCP annotations", async () => {

@@ -9,13 +9,12 @@
 import type { Collection } from "@ignfab/gpf-schema-store";
 
 import { navigationIsochroneClient } from "../gpf/navigation.js";
-import { ServiceResponseError } from "../helpers/http.js";
 import logger from "../logger.js";
-import { fetchFeatureById, requireSingleFeatureById } from "./byId.js";
+import { resolveFeatureGeometryEwkt } from "./referenceGeometry.js";
+import { rethrowIdentifiedCatalogDesyncError } from "./catalogDesync.js";
 import {
   compileQueryParts,
   geometryToEwkt,
-  getGeometryProperty,
   getSpatialFilter,
   type CompiledQuery,
   type ResolvedFeatureGeometryRef,
@@ -43,11 +42,6 @@ export type PreparedGetFeaturesRequest = {
   request: CompiledRequest;
 };
 
-type GeometryLike = {
-  type: string;
-  coordinates: unknown;
-};
-
 // --- Validation ---
 
 /**
@@ -73,23 +67,6 @@ export function ensureIntersectsFeatureTargetsOtherTypename(
   }
 }
 
-/**
- * Checks whether a raw value exposes the minimal geometry shape required by
- * `geometryToEwkt`.
- *
- * @param value Unknown feature geometry value.
- * @returns `true` when the value looks like a GeoJSON geometry object.
- */
-function isGeometryLike(value: unknown): value is GeometryLike {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "type" in value &&
-    typeof value.type === "string" &&
-    "coordinates" in value
-  );
-}
-
 // --- Reference Geometry ---
 
 /**
@@ -107,27 +84,10 @@ export async function resolveIntersectsFeatureGeometry(
     return undefined;
   }
 
-  const referenceFeatureType = await wfsClient.getFeatureType(spatialFilter.typename);
-  const referenceGeometryProperty = getGeometryProperty(referenceFeatureType);
-  const featureCollection = await fetchFeatureById({
-    typename: spatialFilter.typename,
-    feature_id: spatialFilter.feature_id,
-    propertyName: referenceGeometryProperty.name,
-  });
-  const referenceFeature = requireSingleFeatureById(featureCollection, {
+  return resolveFeatureGeometryEwkt(wfsClient, {
     typename: spatialFilter.typename,
     feature_id: spatialFilter.feature_id,
   });
-
-  if (!isGeometryLike(referenceFeature?.geometry)) {
-    throw new Error(
-      `Le feature de référence '${spatialFilter.feature_id}' n'a pas de géométrie exploitable.`,
-    );
-  }
-
-  return {
-    geometry_ewkt: geometryToEwkt(referenceFeature.geometry),
-  };
 }
 
 /**
@@ -235,15 +195,9 @@ export async function executeQueryFeatures(input: GpfQueryFeaturesInput) {
     );
     featureCollection = await wfsClient.fetchFeatureCollection(request);
   } catch (error: unknown) {
-    if (
-      error instanceof ServiceResponseError &&
-      error.serviceCode === "InvalidParameterValue" &&
-      error.serviceDetail === `Illegal property name: ${compiled.geometryProperty.name}`
-    ) {
-      throw new Error(
-        `Le champ géométrique '${compiled.geometryProperty.name}' issu du catalogue embarqué est rejeté par le WFS live pour '${input.typename}'. Le catalogue embarqué est probablement désynchronisé. Détail : ${error.message}`,
-      );
-    }
+    // Rewrite an embedded-catalog geometry-column desync into a clear diagnostic
+    // (shared with the proxy path); any other error passes through unchanged.
+    rethrowIdentifiedCatalogDesyncError(error, compiled.geometryProperty.name, input.typename);
     throw error;
   }
 

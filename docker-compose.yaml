@@ -1,8 +1,9 @@
 services:
-  geocontext:
-    image: geocontext
+  mcp:
+    image: geocontext-mcp
     build:
       context: .
+      target: mcp
       args:
       - http_proxy
       - https_proxy
@@ -12,15 +13,47 @@ services:
       - HTTP_PROXY
       - HTTPS_PROXY
       - HTTP_HOST=0.0.0.0
+      - HTTP_PORT=${HTTP_PORT:-3000}
       - HTTP_MCP_ENDPOINT=${HTTP_MCP_ENDPOINT:-/mcp}
+      - TRANSPORT_TYPE=http
+      # Shared 32-byte hex key for the opaque proxy URLs.
+      # Generate with: openssl rand -hex 32.
+      - PROXY_URL_SECRET=${PROXY_URL_SECRET:?PROXY_URL_SECRET is required (openssl rand -hex 32)}
+      # Externally reachable base URL of the proxy, used to build layer data_urls.
+      - PROXY_PUBLIC_BASE_URL=${PROXY_PUBLIC_BASE_URL:-http://localhost:${PROXY_PORT:-3002}}
     ports:
-    - ${HTTP_PORT:-3000}:3000
+    - ${HTTP_PORT:-3000}:${HTTP_PORT:-3000}
     deploy:
       resources:
         limits:
           cpus: '0.5'
           memory: 256M
-        reservations:
-          cpus: '0.1'
+    restart: unless-stopped
+
+  # Stateless geodata proxy. Serves the GeoJSON layer URLs Carto fetches; decodes the
+  # opaque token with the same shared key.
+  proxy:
+    image: geocontext-proxy
+    build:
+      context: .
+      target: proxy
+      args:
+      - http_proxy
+      - https_proxy
+    environment:
+      - http_proxy
+      - https_proxy
+      - HTTP_PROXY
+      - HTTPS_PROXY
+      - HTTP_HOST=0.0.0.0
+      - PROXY_PORT=${PROXY_PORT:-3002}
+      # Same shared key as the MCP; the proxy decodes the token the MCP encoded.
+      - PROXY_URL_SECRET=${PROXY_URL_SECRET:?PROXY_URL_SECRET is required (openssl rand -hex 32)}
+    ports:
+    - ${PROXY_PORT:-3002}:${PROXY_PORT:-3002}
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
           memory: 256M
     restart: unless-stopped

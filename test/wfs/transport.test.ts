@@ -28,7 +28,6 @@ describe("WfsTransport", () => {
       url: "https://data.geopf.fr/wfs",
       query: { service: "WFS", version: "2.0.0", request: "GetFeature" },
       body: "cql_filter=code_insee%3D'75056'",
-      get_url: "https://data.geopf.fr/wfs?service=WFS&version=2.0.0&request=GetFeature&cql_filter=code_insee%3D'75056'",
     };
 
     const result = await transport.post(request);
@@ -61,7 +60,6 @@ describe("WfsTransport", () => {
       url: "https://data.geopf.fr/wfs",
       query: { service: "WFS" },
       body: "",
-      get_url: "https://data.geopf.fr/wfs?service=WFS",
     };
 
     await transport.post(request);

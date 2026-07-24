@@ -4,7 +4,6 @@
  * This module centralizes:
  * - shared schema fragments reused by WFS tools
  * - public tool input schemas and inferred input types
- * - compact output schemas used for HTTP preview responses
  */
 
 import { z } from "zod";
@@ -91,30 +90,6 @@ const travelTimeFilterSchema = z.object({
     .describe("Mode de déplacement utilisé pour calculer l'isochrone (`car` ou `pedestrian`)."),
 }).strict().describe("Filtre les objets situés dans une zone atteignable en un temps donné depuis un point.");
 
-// --- Shared Compact Outputs ---
-
-const wfsHttpPostRequestOutputSchema = z.object({
-  result_type: z.literal("http_post_request").describe("Indique que la réponse contient une requête POST robuste à exécuter par un client HTTP."),
-  http_post_request: z.object({
-    method: z.literal("POST").describe("Méthode HTTP à utiliser."),
-    url: z.string().url().describe("L'URL de la requête."),
-    headers: z.object({
-      "Content-Type": z.literal("application/x-www-form-urlencoded").describe("Type de contenu du corps POST."),
-    }).strict().describe("En-têtes HTTP à envoyer avec la requête POST."),
-    body: z.string().describe("Corps de la requête POST, encodé en `application/x-www-form-urlencoded`."),
-  }).strict().describe("Requête HTTP POST complète à utiliser pour appeler directement le service pourvoyeur."),
-});
-
-const wfsHttpGetUrlOutputSchema = z.object({
-  result_type: z.literal("http_get_url").describe("Indique que la réponse contient l'URL GET équivalente."),
-  http_get_url: z.string().url().describe("URL GET complète avec tous les paramètres. Utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant; pour une exécution HTTP robuste, préférer `http_post_request` car l'URL renvoyée ici peut être trop longue."),
-});
-
-export const gpfGetFeaturesHttpPostRequestOutputSchema = wfsHttpPostRequestOutputSchema;
-export const gpfGetFeaturesHttpGetUrlOutputSchema = wfsHttpGetUrlOutputSchema;
-export const gpfGetFeatureByIdHttpPostRequestOutputSchema = wfsHttpPostRequestOutputSchema;
-export const gpfGetFeatureByIdHttpGetUrlOutputSchema = wfsHttpGetUrlOutputSchema;
-
 // --- Shared GPF Inputs ---
 
 const gpfTypenameInputSchema = z.object({
@@ -122,7 +97,7 @@ const gpfTypenameInputSchema = z.object({
     .string()
     .trim()
     .min(1, "le nom du type ne doit pas être vide")
-    .describe("Nom exact du type GPF à interroger, par exemple `BDTOPO_V3:batiment`. Utiliser `gpf_search_types` pour trouver un `typename` valide.")
+    .describe("Nom exact du type GPF à interroger de la forme `prefixe:nom`. Utiliser `gpf_search_types` pour trouver un `typename` valide.")
 })
 
 const gpfWhereFilterInputSchema = z.object({
@@ -156,7 +131,7 @@ const gpfGeometryExtraInputSchema = z.object({
     .array(z.enum(GPF_GET_FEATURES_SPATIAL_EXTRAS))
     .default([])
     .transform((val) => [...new Set(val)])
-    .describe(`Éléments calculés depuis la géométrie à renvoyer pour \`result_type=results\`. Peut inclure ${GPF_SPATIAL_EXTRAS_DOCNAMES}, aucun par défaut.`),
+    .describe(`Éléments calculés depuis la géométrie à renvoyer pour chaque objet. Peut inclure ${GPF_SPATIAL_EXTRAS_DOCNAMES}, aucun par défaut.`),
 })
 
 function assertSpatialFilterExclusion(input : Record<string, unknown>, ctx : z.RefinementCtx) {
@@ -167,21 +142,6 @@ function assertSpatialFilterExclusion(input : Record<string, unknown>, ctx : z.R
       code: z.ZodIssueCode.custom,
       path: ["spatial_filters"],
       message: `Un seul filtre spatial est autorisé (${usedSpatialFilters.join(", ")} fournis).`,
-    });
-  }
-}
-
-type GeometryExtraRefinementInput = {
-  spatial_extras: z.output<typeof gpfGetFeaturesInputObjectSchema>["spatial_extras"];
-  result_type: z.output<typeof gpfGetFeaturesInputObjectSchema>["result_type"];
-};
-
-function assertGeometryExtraQuery(input: GeometryExtraRefinementInput, ctx: z.RefinementCtx) {
-  if (input.spatial_extras.length > 0 && input.result_type !== "results") {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["spatial_extras"],
-      message: "`spatial_extras` ne peut être utilisé qu'avec `result_type=results`. Dans les cas `http_post_request` et `http_get_url`, la géométrie complète est renvoyée par la requête."
     });
   }
 }
@@ -219,10 +179,6 @@ export const gpfGetFeaturesInputObjectSchema = gpfTypenameInputSchema
     .max(MAX_LIMIT)
     .default(DEFAULT_LIMIT)
     .describe(`Nombre maximum d'objets à renvoyer. Valeur par défaut : ${DEFAULT_LIMIT}. Maximum : ${MAX_LIMIT}.`),
-  result_type: z
-    .enum(["results", "http_post_request", "http_get_url"])
-    .default("results")
-    .describe("`results` renvoie une FeatureCollection avec les propriétés attributaires uniquement — **les géométries ne sont pas incluses**, ce mode ne peut donc pas être utilisé directement pour cartographier. `http_post_request` renvoie une requête POST robuste à exécuter directement. `http_get_url` renvoie l'URL GET équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant. Avec `http_post_request` ou `http_get_url`, la géométrie est automatiquement ajoutée aux propriétés du `select` pour garantir l'affichage cartographique."),
   order_by: z
     .array(orderBySchema)
     .min(1)
@@ -233,8 +189,7 @@ export const gpfGetFeaturesInputObjectSchema = gpfTypenameInputSchema
   .strict();
 
 export const gpfGetFeaturesInputSchema = gpfGetFeaturesInputObjectSchema
-  .superRefine(assertSpatialFilterExclusion)
-  .superRefine(assertGeometryExtraQuery);
+  .superRefine(assertSpatialFilterExclusion);
 
 // --- `gpf_get_features` Types ---
 
@@ -243,6 +198,111 @@ export type GpfGetFeaturesInput = z.infer<typeof gpfGetFeaturesInputSchema>;
 // --- `gpf_get_features` Published Schema ---
 
 export const gpfGetFeaturesPublishedInputSchema = generatePublishedInputSchema(gpfGetFeaturesInputObjectSchema);
+
+// --- `gpf_get_features_layer` (proxy) ---
+
+// The stateless proxy carries the same query surface as `gpf_get_features` MINUS
+// the LLM-only knob `spatial_extras` (the proxy always returns full-geometry
+// GeoJSON, so the derived-geometry extras have no meaning). Derived from the
+// object schema so the fragments stay defined once. The plain object variant is
+// what the tool publishes (the framework needs a non-transformed Zod object); the
+// transform re-injects `spatial_extras: []` so the parsed value is a valid
+// `GpfGetFeaturesInput` for the engine.
+// `limit` is also overridden: the attribute tool `gpf_get_features` keeps a low
+// default (100) to protect the LLM context, but a MAP LAYER wants the COMPLETE
+// result set — and the tool returns only an opaque `data_url`, so a low default
+// would silently truncate the rendered map with no cardinality feedback. Default
+// to MAX_LIMIT (the GPF server-side cap, i.e. "as many as the service returns");
+// the LLM can still lower it for a lighter map, and the proxy byte cap
+// (PROXY_MAX_RESPONSE_BYTES) stays the real volume guard for dense layers.
+export const gpfGetFeaturesLayerInputObjectSchema = gpfGetFeaturesInputObjectSchema
+  .omit({ spatial_extras: true, limit: true })
+  .merge(
+    z.object({
+      limit: z
+        .number()
+        .int()
+        .min(1)
+        .max(MAX_LIMIT)
+        .default(MAX_LIMIT)
+        .describe(`Nombre maximum d'objets à cartographier. Valeur par défaut : ${MAX_LIMIT} (plafond du service). Réduire pour alléger la carte. Maximum : ${MAX_LIMIT}. Une requête produisant plus de ${MAX_LIMIT} objets sera tronquée.`),
+    }),
+  )
+  .strict();
+
+export const gpfGetFeaturesLayerInputSchema = gpfGetFeaturesLayerInputObjectSchema
+  .transform((value): GpfGetFeaturesInput => ({
+    ...value,
+    spatial_extras: [],
+  }))
+  .superRefine((value, ctx) => assertSpatialFilterExclusion(value, ctx));
+
+export type GpfGetFeaturesLayerInput = z.input<typeof gpfGetFeaturesLayerInputSchema>;
+
+// --- `gpf_get_features_layer` Published Schema ---
+
+export const gpfGetFeaturesLayerPublishedInputSchema = generatePublishedInputSchema(gpfGetFeaturesLayerInputObjectSchema);
+
+// --- `gpf_get_features_layer` Outputs ---
+
+// Shared by both layer-producer tools (`gpf_get_features_layer` and
+// `gpf_get_feature_by_id_layer`): the opaque URL output has the same shape
+// regardless of which query kind produced it.
+export const gpfGetFeaturesLayerOutputSchema = z.object({
+  data_url: z
+    .string()
+    .url()
+    .describe("URL renvoyant une FeatureCollection GeoJSON (géométries complètes) prête à être affichée dans un outil cartographique."),
+}).strict();
+
+// --- Proxy token discriminant ---
+
+// The proxy serves ONE opaque token (in the URL path, `${endpoint}/<token>.json`)
+// but two token kinds (a filtered layer query and a single-feature by-id lookup).
+// Both producer tools stamp their token
+// with this `kind` discriminant; the proxy reads it to dispatch to the right
+// schema + engine, then strips it before the strict per-kind `.parse`. It is
+// injected by the tool from validated params — never an LLM-supplied field.
+export const PROXY_TOKEN_KIND = {
+  query: "query",
+  byId: "by_id",
+} as const;
+
+export type ProxyTokenKind = (typeof PROXY_TOKEN_KIND)[keyof typeof PROXY_TOKEN_KIND];
+
+// --- `gpf_get_feature_by_id_layer` (proxy) ---
+
+// Fields shared by the attribute and cartographic by-id tools. `select` only
+// controls non-geometric properties; the cartographic path always adds the
+// catalog geometry column itself.
+const gpfFeatureByIdCoreInputSchema = z.object({
+  typename: z
+    .string()
+    .trim()
+    .min(1, "le nom du type ne doit pas être vide")
+    .describe("Nom exact du type GPF à interroger, par exemple `ADMINEXPRESS-COG.LATEST:commune`."),
+  feature_id: z
+    .string()
+    .trim()
+    .min(1, "le feature_id ne doit pas être vide")
+    .describe("Identifiant GPF exact de l'objet à récupérer, par exemple `commune.8952`."),
+  select: z
+    .array(z.string().trim().min(1))
+    .min(1)
+    .optional()
+    .describe("Liste des propriétés non géométriques à renvoyer. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`."),
+});
+
+// Map-layer counterpart of `gpf_get_feature_by_id`: no attribute/spatial filters
+// and no `spatial_extras`, but an optional catalog-validated `select` to reduce
+// the returned attributes while retaining the complete geometry.
+export const gpfGetFeatureByIdLayerInputObjectSchema = gpfFeatureByIdCoreInputSchema.strict();
+
+export type GpfGetFeatureByIdLayerInput = z.infer<typeof gpfGetFeatureByIdLayerInputObjectSchema>;
+
+// --- `gpf_get_feature_by_id_layer` Published Schema ---
+
+export const gpfGetFeatureByIdLayerPublishedInputSchema = generatePublishedInputSchema(gpfGetFeatureByIdLayerInputObjectSchema);
 
 // --- `gpf_count_features` ---
 
@@ -273,34 +333,11 @@ export type GpfQueryFeaturesInput = GpfGetFeaturesInput | GpfCountFeaturesInput
 
 // --- `gpf_get_feature_by_id` ---
 
-export const gpfGetFeatureByIdInputObjectSchema = z.object({
-  typename: z
-    .string()
-    .trim()
-    .min(1, "le nom du type ne doit pas être vide")
-    .describe("Nom exact du type GPF à interroger, par exemple `ADMINEXPRESS-COG.LATEST:commune`."),
-  // The description is not exactly the same as in gpfTypenameInputSchema because the
-  // MCP should only call getFeatureById using a previously-obtained feature_ref.
-  feature_id: z
-    .string()
-    .trim()
-    .min(1, "le feature_id ne doit pas être vide")
-    .describe("Identifiant GPF exact de l'objet à récupérer, par exemple `commune.8952`."),
-  result_type: z
-    .enum(["results", "http_post_request", "http_get_url"])
-    .default("results")
-    .describe("`results` renvoie une FeatureCollection normalisée avec exactement un objet et le choix de `spatial_extras` en guise d'information géométrique. `http_post_request` renvoie une requête POST robuste à exécuter directement. `http_get_url` renvoie l'URL GET équivalente, utile pour les consommateurs URL-first ou pour la visualisation dans un outil la supportant."),
-  select: z
-    .array(z.string().trim().min(1))
-    .min(1)
-    .optional()
-    .describe("Liste des propriétés non géométriques à renvoyer. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`."),
-})
+export const gpfGetFeatureByIdInputObjectSchema = gpfFeatureByIdCoreInputSchema
   .merge(gpfGeometryExtraInputSchema)
   .strict();
 
-export const gpfGetFeatureByIdInputSchema = gpfGetFeatureByIdInputObjectSchema
-  .superRefine(assertGeometryExtraQuery);
+export const gpfGetFeatureByIdInputSchema = gpfGetFeatureByIdInputObjectSchema;
 
 export type GpfGetFeatureByIdInput = z.infer<typeof gpfGetFeatureByIdInputSchema>;
 

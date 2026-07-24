@@ -103,15 +103,4 @@ describe("GetFeatureById (integration)", () => {
       }),
     );
   }, INTEGRATION_CONFIG.timeout);
-
-  it("should return an error for when trying to combine `spatial_extras` with a `result_type` other than `request`", async () => {
-    await expectToolCallToThrow(
-      callTool(getHandle().client, "gpf_get_feature_by_id", {
-        typename: featureRef.typename,
-        feature_id: featureRef.feature_id,
-        spatial_extras: ["centroid"],
-        result_type: "http_post_request"
-      }),
-    );
-  }, INTEGRATION_CONFIG.timeout);
 });
