@@ -130,14 +130,14 @@ describe("gpfGetFeatures/queryPreparation", () => {
     expect(compiled.propertyName).toEqual("code_insee,population,geometrie");
   });
 
-  it("should set geometryProperty when spatial_extras is requested without a spatial filter", () => {
+  it("should set geometryName when spatial_extras is requested without a spatial filter", () => {
     const compiled = compileQueryParts({
       ...baseInput,
       spatial_extras: ["bbox"],
     }, featureType);
 
-    expect(compiled.geometryProperty).toBeDefined();
-    expect(compiled.geometryProperty).toEqual(featureType.properties.geometrie);
+    expect(compiled.geometryName).toBeDefined();
+    expect(compiled.geometryName).toEqual("geometrie");
   });
 
   it("should throw catalog desync error when spatial_extras is requested but the feature type has no geometry property", () => {

@@ -197,8 +197,8 @@ export async function executeQueryFeatures(input: GpfQueryFeaturesInput) {
   } catch (error: unknown) {
     // Rewrite an embedded-catalog geometry-column desync into a clear diagnostic
     // (shared with the proxy path); any other error passes through unchanged.
-    if (compiled.geometryProperty) {
-      rethrowIdentifiedCatalogDesyncError(error, compiled.geometryProperty.name, input.typename);
+    if (compiled.geometryName) {
+      rethrowIdentifiedCatalogDesyncError(error, compiled.geometryName, input.typename);
     }
     throw error;
   }

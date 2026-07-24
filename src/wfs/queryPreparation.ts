@@ -13,7 +13,7 @@ import type { OgcCollectionSchema, OgcCollectionProperty } from "@ignfab/gpf-sch
 import {
   buildPropertyName,
   resolveNonGeometryProperty,
-  getGeometryProperty,
+  getGeometryName,
 } from "./properties.js";
 import { getSpatialFilter } from "./spatialFilter.js";
 
@@ -40,7 +40,7 @@ import {
 // --- Re-exports ---
 
 export { geometryToEwkt } from "./geometry.js";
-export { getGeometryProperty } from "./properties.js";
+export { getGeometryName } from "./properties.js";
 export { getSpatialFilter } from "./spatialFilter.js";
 
 // --- Internal Constants ---
@@ -63,7 +63,7 @@ export type ResolvedFeatureGeometryRef = {
 };
 
 export type CompiledQuery = {
-  geometryProperty?: OgcCollectionProperty;
+  geometryName?: string;
   propertyName: string;
   cqlFilter?: string;
   sortBy?: string;
@@ -182,35 +182,35 @@ export function compileQueryParts(
   featureType: OgcCollectionSchema,
   resolvedGeometryRef?: ResolvedFeatureGeometryRef,
 ): CompiledQuery {
-  let geometryProperty: undefined | OgcCollectionProperty;
+  let geometryName: string | undefined;
   const spatialFilter = getSpatialFilter(input);
   const fragments: string[] = [];
 
   // Keep the spatial predicate first: the GeoPlateforme GeoServer is sensitive
   // to filter ordering and may reject equivalent filters when attributes come first.
   if (spatialFilter) {
-    geometryProperty = getGeometryProperty(featureType);
+    geometryName = getGeometryName(featureType);
     switch (spatialFilter.operator) {
       case "bbox":
-        fragments.push(compileBboxSpatialFilter(geometryProperty, spatialFilter));
+        fragments.push(compileBboxSpatialFilter(geometryName, spatialFilter));
         break;
       case "intersects_point":
-        fragments.push(compileIntersectsPointSpatialFilter(geometryProperty, spatialFilter));
+        fragments.push(compileIntersectsPointSpatialFilter(geometryName, spatialFilter));
         break;
       case "dwithin_point":
-        fragments.push(compileDwithinSpatialFilter(geometryProperty, spatialFilter));
+        fragments.push(compileDwithinSpatialFilter(geometryName, spatialFilter));
         break;
       case "intersects_feature":
         if (!resolvedGeometryRef) {
           throw new Error("Le filtre spatial `intersects_feature` exige la résolution préalable de la géométrie de référence.");
         }
-        fragments.push(compileIntersectsFeatureSpatialFilter(geometryProperty, resolvedGeometryRef.geometry_ewkt));
+        fragments.push(compileIntersectsFeatureSpatialFilter(geometryName, resolvedGeometryRef.geometry_ewkt));
         break;
       case "travel_time":
         if (!resolvedGeometryRef) {
           throw new Error("Le filtre spatial `travel_time` exige la résolution préalable de la géométrie d'isochrone.");
         }
-        fragments.push(compileIntersectsFeatureSpatialFilter(geometryProperty, resolvedGeometryRef.geometry_ewkt));
+        fragments.push(compileIntersectsFeatureSpatialFilter(geometryName, resolvedGeometryRef.geometry_ewkt));
         break;
     }
   }
@@ -226,29 +226,29 @@ export function compileQueryParts(
     // for CountFeatures: only return the required parts
     return {
       cqlFilter,
-      geometryProperty,
+      geometryName,
       propertyName: "",
     };
   }
 
   // for GetFeatures and GetFeatureById: compute sortBy, propertyName and
-  // ensure that geometryProperty is set when it is among the returned columns.
+  // ensure that geometryName is set when it is among the returned columns.
 
   const sortBy = input.order_by && input.order_by.length > 0
     ? input.order_by.map((clause) => compileOrderByClause(featureType, clause)).join(",")
     : undefined;
 
-  if (!geometryProperty && input.spatial_extras.length > 0) {
-    geometryProperty = getGeometryProperty(featureType);
+  if (!geometryName && input.spatial_extras.length > 0) {
+    geometryName = getGeometryName(featureType);
   }
 
-  const propertyName = buildPropertyName(featureType, input.select, input.spatial_extras, geometryProperty);
+  const propertyName = buildPropertyName(featureType, input.select, input.spatial_extras, geometryName);
 
-  // geometryProperty must always be set if it is among the returned columns.
+  // geometryName must always be set if it is among the returned columns.
   // It may also be set even if not required in the returned columns.
 
   return {
-    geometryProperty,
+    geometryName,
     cqlFilter,
     propertyName,
     sortBy,

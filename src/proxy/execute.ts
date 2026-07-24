@@ -28,7 +28,7 @@ import {
 } from "../wfs/request.js";
 import {
   compileQueryParts,
-  getGeometryProperty,
+  getGeometryName,
   getSpatialFilter,
   type ResolvedFeatureGeometryRef,
 } from "../wfs/queryPreparation.js";
@@ -77,18 +77,18 @@ export type GeometryFeatureQueryDeps = {
  * returns full geometry.
  *
  * @param propertyName Comma-separated selection from `compileQueryParts`.
- * @param geometryProperty Geometry property resolved for the feature type.
+ * @param geometryName Geometry property name resolved for the feature type.
  * @returns A selection guaranteed to include the geometry column.
  */
 function ensureGeometrySelected(
   propertyName: string,
-  geometryProperty: OgcCollectionProperty,
+  geometryName: string,
 ): string {
   const columns = propertyName.split(",");
-  if (columns.includes(geometryProperty.name)) {
+  if (columns.includes(geometryName)) {
     return propertyName;
   }
-  return [...columns, geometryProperty.name].join(",");
+  return [...columns, geometryName].join(",");
 }
 
 /**
@@ -195,14 +195,14 @@ export async function runGeometryFeatureQuery(
 ): Promise<WfsFeatureCollectionResponse> {
   const { wfsClient } = deps;
   const featureType: OgcCollectionSchema = await wfsClient.getFeatureType(input.typename);
-  const geometryProperty = getGeometryProperty(featureType);
+  const geometryName = getGeometryName(featureType);
 
   const resolvedGeometryRef = await resolveReferenceGeometry(input, deps);
   const compiled = compileQueryParts(input, featureType, resolvedGeometryRef);
 
   const request = buildMainRequest(input, {
     cqlFilter: compiled.cqlFilter,
-    propertyName: ensureGeometrySelected(compiled.propertyName, geometryProperty),
+    propertyName: ensureGeometrySelected(compiled.propertyName, geometryName),
     sortBy: compiled.sortBy,
   });
 
@@ -220,7 +220,7 @@ export async function runGeometryFeatureQuery(
     // name for this type it rejects it as "Illegal property name". Rewrite it into a
     // clear diagnostic (shared with the LLM path) rather than letting the raw
     // upstream string surface to Carto as an opaque 502.
-    rethrowIdentifiedCatalogDesyncError(error, geometryProperty.name, input.typename);
+    rethrowIdentifiedCatalogDesyncError(error, geometryName, input.typename);
     throw error;
   }
 

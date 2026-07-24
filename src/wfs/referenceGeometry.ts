@@ -15,7 +15,7 @@
 import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 
 import {
-  getGeometryProperty,
+  getGeometryName,
   geometryToEwkt,
   type ResolvedFeatureGeometryRef,
 } from "./queryPreparation.js";
@@ -74,11 +74,11 @@ export async function resolveFeatureGeometryEwkt(
   ref: { typename: string; feature_id: string },
 ): Promise<ResolvedFeatureGeometryRef> {
   const referenceFeatureType = await client.getFeatureType(ref.typename);
-  const referenceGeometryProperty = getGeometryProperty(referenceFeatureType);
+  const referenceGeometryName = getGeometryName(referenceFeatureType);
   const request = buildGetFeatureByIdRequest(
     ref.typename,
     ref.feature_id,
-    referenceGeometryProperty.name,
+    referenceGeometryName,
   );
   const featureCollection = await client.fetchFeatureCollection(request);
   const referenceFeature = requireSingleFeatureById(featureCollection, ref);
