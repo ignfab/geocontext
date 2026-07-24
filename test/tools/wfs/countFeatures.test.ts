@@ -34,6 +34,8 @@ const { default: GpfCountFeaturesTool } = await import(
 );
 
 describe("Test GpfCountFeaturesTool", () => {
+  const COMMUNE_TYPENAME = "ADMINEXPRESS-COG.LATEST:commune";
+
   class RespondableGpfCountFeaturesTool extends GpfCountFeaturesTool {
     respond(data: {numberMatched: number}) {
       return this.createSuccessResponse(data);
@@ -41,17 +43,18 @@ describe("Test GpfCountFeaturesTool", () => {
   }
 
   const polygonFeatureType: OgcCollectionSchema = {
-    id: "ADMINEXPRESS-COG.LATEST:commune",
-    namespace: "ADMINEXPRESS-COG.LATEST",
-    name: "commune",
+    $schema: "https://json-schema.org/draft/2020-12/schema",
+    "x-collection-id": COMMUNE_TYPENAME,
+    type: "object",
     title: "Commune",
     description: "Description de test",
-    properties: [
-      { name: "code_insee", type: "string" },
-      { name: "population", type: "integer" },
-      { name: "actif", type: "boolean" },
-      { name: "geometrie", type: "multipolygon", defaultCrs: "EPSG:4326" },
-    ],
+    properties: {
+      code_insee: { type: "string" },
+      population: { type: "integer" },
+      actif: { type: "boolean" },
+      geometrie: { },
+    },
+    required: [],
   };
 
   function mockFeatureTypes(featureTypes: Record<string, OgcCollectionSchema>) {
@@ -127,7 +130,7 @@ describe("Test GpfCountFeaturesTool", () => {
 
   it("should apply travel_time_filter before returning the count", async () => {
     const tool = new GpfCountFeaturesTool();
-    mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
+    mockFeatureTypes({ [COMMUNE_TYPENAME]: polygonFeatureType });
     captureIsochroneRequests();
     const requests = captureRequests({ numberMatched: 12 });
 
@@ -167,7 +170,7 @@ describe("Test GpfCountFeaturesTool", () => {
     { kind: "wrong", mockResponse: { numberMatched: "unknown" }, errorMessage: 'numberMatched="unknown"'}
   ])("should fail clearly when numberMatched is $kind", async ({mockResponse, errorMessage}) => {
     const tool = new GpfCountFeaturesTool();
-    mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
+    mockFeatureTypes({ [COMMUNE_TYPENAME]: polygonFeatureType });
     captureRequests(mockResponse);
 
     const response = await tool.toolCall({

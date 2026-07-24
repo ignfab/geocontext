@@ -40,15 +40,16 @@ const { default: GpfGetFeatureByIdLayerTool } = await import(
 );
 
 const communeType: OgcCollectionSchema = {
-  id: "ADMINEXPRESS-COG.LATEST:commune",
-  namespace: "ADMINEXPRESS-COG.LATEST",
-  name: "commune",
+  $schema: "https://json-schema.org/draft/2020-12/schema",
+  "x-collection-id": "ADMINEXPRESS-COG.LATEST:commune",
+  type: "object",
   title: "Commune",
   description: "Fixture de test",
-  properties: [
-    { name: "code_insee", type: "string" },
-    { name: "geometrie", type: "multipolygon", defaultCrs: "EPSG:4326" },
-  ],
+  properties: {
+    code_insee: { type: "string" },
+    geometrie: { },
+  },
+  required: [],
 };
 
 /**

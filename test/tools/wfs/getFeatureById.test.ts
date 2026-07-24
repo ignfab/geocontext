@@ -32,16 +32,17 @@ describe("Test GpfGetFeatureByIdTool", () => {
   }
 
   const polygonFeatureType: OgcCollectionSchema = {
-    id: "ADMINEXPRESS-COG.LATEST:commune",
-    namespace: "ADMINEXPRESS-COG.LATEST",
-    name: "commune",
+    $schema: "https://json-schema.org/draft/2020-12/schema",
+    "x-collection-id": "ADMINEXPRESS-COG.LATEST:commune",
+    type: "object",
     title: "Commune",
     description: "Description de test",
-    properties: [
-      { name: "code_insee", type: "string" },
-      { name: "nom_officiel", type: "string" },
-      { name: "geometrie", type: "multipolygon", defaultCrs: "EPSG:4326" },
-    ],
+    properties: {
+      code_insee: { type: "string" },
+      nom_officiel: { type: "string" },
+      geometrie: { },
+    },
+    required: [],
   };
 
   afterEach(() => {

@@ -108,15 +108,16 @@ describe("WfsClient", () => {
 
   it("should accept structural test doubles as dependencies", async () => {
     const featureType: OgcCollectionSchema = {
-      id: "BDTOPO_V3:batiment",
-      namespace: "BDTOPO_V3",
-      name: "batiment",
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      "x-collection-id": "BDTOPO_V3:batiment",
+      type: "object",
       title: "Batiment",
       description: "Description de test",
-      properties: [
-        { name: "cleabs", type: "string" },
-        { name: "geometrie", type: "multipolygon", defaultCrs: "EPSG:4326" },
-      ],
+      properties: {
+        cleabs: { type: "string" },
+        geometrie: { },
+      },
+      required: [],
     };
     const post = vi.fn(async () => ({
       type: "FeatureCollection",
