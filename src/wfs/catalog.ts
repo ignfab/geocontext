@@ -114,6 +114,7 @@ export class WfsSchemaStore {
 // --- Default singleton ---
 
 // Pre-configured client using the default GPF endpoint and optional env-based MiniSearch options.
-export const wfsSchemaStore = new WfsSchemaStore({
-    miniSearch: loadMiniSearchOptionsFromEnv(),
-});
+const miniSearchFromEnv = loadMiniSearchOptionsFromEnv();
+export const wfsSchemaStore = new WfsSchemaStore(
+    miniSearchFromEnv ? { miniSearch: miniSearchFromEnv } : {},
+);
