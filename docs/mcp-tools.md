@@ -1434,7 +1434,7 @@ Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, 
 | `dwithin_point_filter` | object | non | Filtre spatial par distance à un point. Exclusif avec les autres filtres spatiaux. |
 | `intersects_feature_filter` | object | non | Filtre spatial par intersection avec un feature GPF de référence. Exclusif avec les autres filtres spatiaux. |
 | `intersects_point_filter` | object | non | Filtre spatial par intersection avec un point. Exclusif avec les autres filtres spatiaux. |
-| `limit` | integer | non | Nombre maximum d'objets à renvoyer. Valeur par défaut : 100. Maximum : 5000. Valeur par défaut : 100. |
+| `limit` | integer | non | Nombre maximum d'objets à cartographier. Valeur par défaut : 5000 (plafond du service, soit l'ensemble des objets correspondants). Réduire pour alléger la carte. Maximum : 5000. Valeur par défaut : 5000. |
 | `order_by` | array | non | Liste ordonnée des critères de tri. |
 | `select` | array | non | Liste des propriétés non géométriques à renvoyer pour chaque objet. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles. Exemple : `["code_insee", "nom_officiel"]`. |
 | `travel_time_filter` | object | non | Filtre spatial par temps de trajet depuis un point (`profile` voiture ou piéton). Exclusif avec les autres filtres spatiaux. |
@@ -1660,13 +1660,6 @@ Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, 
       "additionalProperties": false,
       "description": "Filtre spatial par temps de trajet depuis un point (`profile` voiture ou piéton). Exclusif avec les autres filtres spatiaux."
     },
-    "limit": {
-      "type": "integer",
-      "minimum": 1,
-      "maximum": 5000,
-      "default": 100,
-      "description": "Nombre maximum d'objets à renvoyer. Valeur par défaut : 100. Maximum : 5000."
-    },
     "order_by": {
       "type": "array",
       "items": {
@@ -1695,6 +1688,13 @@ Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, 
       },
       "minItems": 1,
       "description": "Liste ordonnée des critères de tri."
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5000,
+      "default": 5000,
+      "description": "Nombre maximum d'objets à cartographier. Valeur par défaut : 5000 (plafond du service, soit l'ensemble des objets correspondants). Réduire pour alléger la carte. Maximum : 5000."
     }
   },
   "required": [

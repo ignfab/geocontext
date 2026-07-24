@@ -128,15 +128,20 @@ describe("proxy/server", () => {
     // before any decrypt — so a long junk string is enough to hit ProxyTokenTooLargeError.
     const res = await request(baseUrl).get(ENDPOINT).query({ q: "a".repeat(4001) });
     expect(res.status).toBe(413);
-    expect(res.body).toMatchObject({ error: true });
+    // Fixed FR detail — must not forward the raw EN codec message / MAX_TOKEN_CHARS.
+    expect(res.body).toMatchObject({ error: true, detail: "Jeton de requête trop volumineux." });
     expect(runGeometryFeatureQuery).not.toHaveBeenCalled();
   });
 
-  it("413 on an oversize upstream response (ResponseTooLargeError)", async () => {
+  it("502 on an oversize upstream response (ResponseTooLargeError)", async () => {
+    // The oversize body is an UPSTREAM anomaly the fixed opaque token cannot remedy,
+    // so it maps to 502 (like the other upstream branches), not 413, and returns a
+    // fixed FR detail rather than the raw EN error message.
     runGeometryFeatureQuery.mockRejectedValue(new ResponseTooLargeError("response exceeds 25 MiB"));
     const res = await request(baseUrl).get(ENDPOINT).query({ q: validToken() });
-    expect(res.status).toBe(413);
+    expect(res.status).toBe(502);
     expect(res.body).toMatchObject({ error: true });
+    expect(res.body.detail).not.toContain("exceeds");
   });
 
   it("400 when `q` is missing", async () => {

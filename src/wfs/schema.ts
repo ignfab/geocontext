@@ -208,8 +208,26 @@ export const gpfGetFeaturesPublishedInputSchema = generatePublishedInputSchema(g
 // what the tool publishes (the framework needs a non-transformed Zod object); the
 // transform re-injects `spatial_extras: []` so the parsed value is a valid
 // `GpfGetFeaturesInput` for the engine.
+// `limit` is also overridden: the attribute tool `gpf_get_features` keeps a low
+// default (100) to protect the LLM context, but a MAP LAYER wants the COMPLETE
+// result set — and the tool returns only an opaque `data_url`, so a low default
+// would silently truncate the rendered map with no cardinality feedback. Default
+// to MAX_LIMIT (the GPF server-side cap, i.e. "as many as the service returns");
+// the LLM can still lower it for a lighter map, and the proxy byte cap
+// (PROXY_MAX_RESPONSE_BYTES) stays the real volume guard for dense layers.
 export const gpfGetFeaturesLayerInputObjectSchema = gpfGetFeaturesInputObjectSchema
-  .omit({ spatial_extras: true })
+  .omit({ spatial_extras: true, limit: true })
+  .merge(
+    z.object({
+      limit: z
+        .number()
+        .int()
+        .min(1)
+        .max(MAX_LIMIT)
+        .default(MAX_LIMIT)
+        .describe(`Nombre maximum d'objets à cartographier. Valeur par défaut : ${MAX_LIMIT} (plafond du service, soit l'ensemble des objets correspondants). Réduire pour alléger la carte. Maximum : ${MAX_LIMIT}.`),
+    }),
+  )
   .strict();
 
 export const gpfGetFeaturesLayerInputSchema = gpfGetFeaturesLayerInputObjectSchema

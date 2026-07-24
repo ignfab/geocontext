@@ -41,7 +41,10 @@ type HttpError = { status: number; detail: string };
  */
 function toHttpError(error: unknown): HttpError {
   if (error instanceof ProxyTokenTooLargeError) {
-    return { status: 413, detail: error.message };
+    // An over-long `?q=` is genuinely a too-large client request → 413. Fixed FR
+    // detail: do NOT forward error.message (it is EN and discloses MAX_TOKEN_CHARS);
+    // the real message is logged server-side by the caller, like every other branch.
+    return { status: 413, detail: "Jeton de requête trop volumineux." };
   }
   if (error instanceof ProxyTokenMalformedError || error instanceof ProxyTokenTamperedError) {
     return { status: 400, detail: "Jeton de requête invalide." };
@@ -50,7 +53,16 @@ function toHttpError(error: unknown): HttpError {
     return { status: 400, detail: "Paramètres de couche invalides." };
   }
   if (error instanceof ResponseTooLargeError) {
-    return { status: 413, detail: error.message };
+    // The UPSTREAM response exceeded PROXY_MAX_RESPONSE_BYTES. The map client's
+    // request is a fixed opaque token it cannot shrink, so 413 ("your request is too
+    // large") mislabels a condition it cannot remediate. Treat it like the other
+    // upstream anomalies (→ 502) with a fixed, actionable FR detail; the real message
+    // (which carries the byte cap) is logged server-side, never leaked to the client.
+    return {
+      status: 502,
+      detail:
+        "La couche demandée est trop volumineuse pour être affichée. Affiner la requête ou utiliser une variante généralisée (CARTO-PE).",
+    };
   }
   if (error instanceof FeatureNotFoundError) {
     // Client asked for a feature_id that does not exist: a genuine not-found.
