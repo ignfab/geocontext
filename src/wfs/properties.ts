@@ -80,13 +80,13 @@ function getPropertyOrThrow(featureType: OgcCollectionSchema, propertyName: stri
  *
  * @param featureType Feature type definition loaded from the embedded catalog.
  * @param propertyName Exact property name requested by the caller.
- * @param message Error message template used when the property is geometric.
+ * @param message Error message used when the property is geometric.
  * @returns The matching non-geometric property metadata.
  */
 export function resolveNonGeometryProperty(featureType: OgcCollectionSchema, propertyName: string, message: string) {
   const property = getPropertyOrThrow(featureType, propertyName);
   if (!property.type) { // identifies a geometric property
-    throw new Error(message.replace("{property}", property.title ?? propertyName));
+    throw new Error(`La propriété ${property.title ?? propertyName} est géométrique. ` + message);
   }
   return property;
 }
@@ -101,11 +101,12 @@ export function resolveNonGeometryProperty(featureType: OgcCollectionSchema, pro
  * @returns The validated non-geometric property name.
  */
 export function validateSelectProperty(featureType: OgcCollectionSchema, propertyName: string) {
-  return resolveNonGeometryProperty(
+  resolveNonGeometryProperty(
     featureType,
     propertyName,
-    "La propriété '{property}' est géométrique. `select` accepte uniquement des propriétés non géométriques."
-  ).name;
+    "`select` accepte uniquement des propriétés non géométriques."
+  );
+  return propertyName;
 }
 
 // --- Property Selection ---
