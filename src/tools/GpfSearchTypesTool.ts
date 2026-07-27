@@ -7,6 +7,7 @@ import { z } from "zod";
 
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import { wfsSchemaStore } from "../wfs/catalog.js";
+import type { DetailedCollectionSearchMatch } from "../wfs/catalog.js";
 import logger from "../logger.js";
 
 // --- Schema ---
@@ -31,10 +32,13 @@ const gpfSearchTypesInputSchema = z.object({
 type GpfSearchTypesInput = z.infer<typeof gpfSearchTypesInputSchema>;
 
 const gpfSearchTypeResultSchema = z.object({
-  id: z.string().describe("L'identifiant complet du type GPF."),
+  typename: z.string().describe("L'identifiant du type GPF."),
   title: z.string().describe("Le titre lisible du type GPF."),
   description: z.string().describe("La description du type GPF."),
   score: z.number().describe("Le score de pertinence de la recherche.").optional(),
+  queryTerms: z.array(z.string()).optional().describe("Les termes de la requête qui ont produit ce résultat."),
+  terms: z.array(z.string()).optional().describe("Les termes indexés correspondant à la requête."),
+  match: z.object({}).catchall(z.array(z.string())).optional().describe("Détail des correspondances : associe chaque terme indexé aux champs où il a été trouvé."),
 });
 
 const gpfSearchTypesOutputSchema = z.object({
@@ -71,13 +75,16 @@ class GpfSearchTypesTool extends BaseTool<GpfSearchTypesInput> {
 
     const maxResults = input.max_results || 10;
     const featureTypes = await wfsSchemaStore.searchFeatureTypesWithScores(input.query, maxResults);
-    const results = await Promise.all(featureTypes.map(async ({ id, score }) => {
+    const results = await Promise.all(featureTypes.map(async ({ id, score, queryTerms, terms, match }: DetailedCollectionSearchMatch) => {
       const schema = await wfsSchemaStore.getFeatureType(id);
       return {
-        id,
+        typename: id,
         title: schema.title,
         description: schema.description,
-        ...(score !== undefined ? { score } : {}),
+        score,
+        queryTerms,
+        terms,
+        match,
       };
     }));
 

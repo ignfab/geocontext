@@ -7,6 +7,7 @@ import {
     CollectionCatalogOptions,
     MiniSearchCollectionSearchOptions,
 } from '@ignfab/gpf-schema-store';
+import type { MatchInfo } from 'minisearch';
 import { z } from 'zod';
 import { getEnv } from '../config/env.js';
 
@@ -35,6 +36,16 @@ const MINISEARCH_COMBINE_WITH_VALUES = ["AND", "OR"] as const;
 // --- Types ---
 
 type MiniSearchOptions = MiniSearchCollectionSearchOptions;
+
+/**
+ * CollectionSearchMatch extended with MiniSearch-specific metadata.
+ * Fields are populated when the underlying engine supports searchDetailed().
+ */
+export type DetailedCollectionSearchMatch = CollectionSearchMatch & {
+    queryTerms?: string[];
+    terms?: string[];
+    match?: MatchInfo;
+};
 
 // --- Errors ---
 
@@ -95,10 +106,16 @@ export class WfsSchemaStore {
         this.catalog = getCollectionCatalog(options);
     }
 
-    async searchFeatureTypesWithScores(query: string, maxResults: number = 20): Promise<CollectionSearchMatch[]> {
-        return this.catalog.search(query, {
-            limit: maxResults,
-        });
+    async searchFeatureTypesWithScores(query: string, maxResults: number = 20): Promise<DetailedCollectionSearchMatch[]> {
+        // Use searchDetailed() when available (MiniSearchCollectionSearchEngine) to surface
+        // queryTerms, terms and match in addition to id and score.
+        // The method is not part of the CollectionCatalog interface, so we access it at
+        // runtime through the engine stored on InMemoryCollectionCatalog.
+        const engine = (this.catalog as unknown as { searchEngine?: { searchDetailed?: (q: string, opts: object) => DetailedCollectionSearchMatch[] } }).searchEngine;
+        if (typeof engine?.searchDetailed === 'function') {
+            return engine.searchDetailed(query, { limit: maxResults });
+        }
+        return this.catalog.search(query, { limit: maxResults });
     }
 
     async getFeatureType(name: string): Promise<OgcCollectionSchema> {
