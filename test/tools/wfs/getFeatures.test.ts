@@ -74,6 +74,18 @@ describe("Test GpfGetFeaturesTool", () => {
     ],
   };
 
+  const tableFeatureType: Collection = {
+    id: "wfs_scot:doc_urba",
+    namespace: "wfs_scot",
+    name: "doc_urba",
+    title: "Document d'urbanisme",
+    description: "Description de test",
+    properties: [
+      { name: "partition", type: "string" },
+      { name: "idurba", type: "string" },
+    ],
+  };
+
   const featureCollection: {
     type: string;
     features: Array<{
@@ -421,6 +433,12 @@ describe("Test GpfGetFeaturesTool", () => {
         name: "gpf_get_features",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
+          bbox_filter: {
+            west: 2.1,
+            south: 48.7,
+            east: 2.5,
+            north: 48.9,
+          },
         },
       },
     });
@@ -440,7 +458,7 @@ describe("Test GpfGetFeaturesTool", () => {
   it("should return feature_ref for non point layers with geometry set to null", async () => {
     const tool = new GpfGetFeaturesTool();
     mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
-    captureRequests({
+    const requests = captureRequests({
       ...featureCollection,
       crs: null,
       features: [
@@ -464,6 +482,8 @@ describe("Test GpfGetFeaturesTool", () => {
     });
 
     expect(response.isError).toBeUndefined();
+    expect(requests).toHaveLength(1);
+    expect(requests[0].query.propertyName).toEqual("code_insee,population,actif");
     const textContent = response.content[0];
     if (textContent.type !== "text") {
       throw new Error("expected text content");
@@ -522,6 +542,48 @@ describe("Test GpfGetFeaturesTool", () => {
       typename: "ADMINEXPRESS-COG.LATEST:commune",
       feature_id: "commune.1",
     });
+  });
+
+  it("should not append the geometry column to propertyName when spatial_extras is empty", async () => {
+    const tool = new GpfGetFeaturesTool();
+    mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
+    const requests = captureRequests(featureCollection);
+
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_get_features",
+        arguments: {
+          typename: "ADMINEXPRESS-COG.LATEST:commune",
+          select: ["code_insee"],
+          spatial_extras: [],
+          limit: 1,
+        },
+      },
+    });
+
+    expect(response.isError).toBeUndefined();
+    expect(requests).toHaveLength(1);
+    expect(requests[0].query.propertyName).toEqual("code_insee");
+  });
+
+  it("should request only non-geometric properties when select is omitted", async () => {
+    const tool = new GpfGetFeaturesTool();
+    mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
+    const requests = captureRequests(featureCollection);
+
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_get_features",
+        arguments: {
+          typename: "ADMINEXPRESS-COG.LATEST:commune",
+          limit: 1,
+        },
+      },
+    });
+
+    expect(response.isError).toBeUndefined();
+    expect(requests).toHaveLength(1);
+    expect(requests[0].query.propertyName).toEqual("code_insee,population,actif");
   });
 
   it("should set point geometry to null and keep feature_ref", async () => {
@@ -671,5 +733,62 @@ describe("Test GpfGetFeaturesTool", () => {
       type: "urn:geocontext:problem:execution-error",
     });
     expect(requests).toHaveLength(0);
+  });
+
+  it("should work on a geometry-less table when select and spatial_extras are empty", async () => {
+    const tool = new GpfGetFeaturesTool();
+    mockFeatureTypes({ [tableFeatureType.id]: tableFeatureType });
+    const requests = captureRequests({
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          id: "doc_urba.1",
+          properties: {
+            partition: "A",
+            idurba: "S123",
+          },
+        },
+      ],
+      totalFeatures: 1,
+    });
+
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_get_features",
+        arguments: {
+          typename: "wfs_scot:doc_urba",
+          limit: 1,
+        },
+      },
+    });
+
+    expect(response.isError).toBeUndefined();
+    expect(requests).toHaveLength(1);
+    expect(requests[0].query.propertyName).toEqual("partition,idurba");
+  });
+
+  it("should fail before WFS request on a geometry-less table when spatial_extras is not empty", async () => {
+    const tool = new GpfGetFeaturesTool();
+    mockFeatureTypes({ [tableFeatureType.id]: tableFeatureType });
+
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_get_features",
+        arguments: {
+          typename: "wfs_scot:doc_urba",
+          spatial_extras: ["bbox"],
+          limit: 1,
+        },
+      },
+    });
+
+    expect(response.isError).toBe(true);
+    const textContent = response.content[0];
+    if (textContent.type !== "text") {
+      throw new Error("expected text content");
+    }
+    expect(textContent.text).toContain("n'expose aucune propriété géométrique exploitable");
+    expect(mockFetchJSONPost).not.toHaveBeenCalled();
   });
 });

@@ -77,14 +77,13 @@ function getPropertyOrThrow(featureType: Collection, propertyName: string) {
  * of the feature type.
  *
  * @param featureType Feature type definition loaded from the embedded catalog.
- * @param geometryProperty Geometry property already resolved for the feature type.
  * @param propertyName Exact property name requested by the caller.
  * @param message Error message template used when the property is geometric.
  * @returns The matching non-geometric property metadata.
  */
-export function resolveNonGeometryProperty(featureType: Collection, geometryProperty: CollectionProperty, propertyName: string, message: string) {
+export function resolveNonGeometryProperty(featureType: Collection, propertyName: string, message: string) {
   const property = getPropertyOrThrow(featureType, propertyName);
-  if (property.name === geometryProperty.name || property.defaultCrs) {
+  if (property.defaultCrs) {
     throw new Error(message.replace("{property}", property.name));
   }
   return property;
@@ -96,14 +95,12 @@ export function resolveNonGeometryProperty(featureType: Collection, geometryProp
  * Validates a selected property name and returns the exact property name to expose.
  *
  * @param featureType Feature type definition loaded from the embedded catalog.
- * @param geometryProperty Geometry property already resolved for the feature type.
  * @param propertyName Raw selected property name.
  * @returns The validated non-geometric property name.
  */
-export function validateSelectProperty(featureType: Collection, geometryProperty: CollectionProperty, propertyName: string) {
+export function validateSelectProperty(featureType: Collection, propertyName: string) {
   return resolveNonGeometryProperty(
     featureType,
-    geometryProperty,
     propertyName,
     "La propriété '{property}' est géométrique. `select` accepte uniquement des propriétés non géométriques."
   ).name;
@@ -130,7 +127,7 @@ export function buildPropertyName(
   featureType: Collection,
   select?: string[],
   spatial_extras?: string[],
-  geometryProperty: CollectionProperty = getGeometryProperty(featureType),
+  geometryProperty?: CollectionProperty | undefined,
   includeGeometry: boolean = (spatial_extras ?? []).length > 0,
 ) : string {
 
@@ -138,17 +135,19 @@ export function buildPropertyName(
   // after validation against the embedded catalog.
   if (select && select.length > 0) {
     const selectedProperties = select.map((propertyName) =>
-      validateSelectProperty(featureType, geometryProperty, propertyName),
+      validateSelectProperty(featureType, propertyName),
     );
 
     if (includeGeometry) {
-      return [...selectedProperties, geometryProperty.name].join(",");
+      return [...selectedProperties, (geometryProperty ?? getGeometryProperty(featureType)).name].join(",");
     }
 
     return selectedProperties.join(",");
   }
 
   if (includeGeometry) {
+    // ensure that the geometric property exists
+    geometryProperty ?? getGeometryProperty(featureType);
     return ""; // return all properties
   }
 

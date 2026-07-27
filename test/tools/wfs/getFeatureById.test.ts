@@ -44,6 +44,18 @@ describe("Test GpfGetFeatureByIdTool", () => {
     ],
   };
 
+  const tableFeatureType: Collection = {
+    id: "wfs_scot:doc_urba",
+    namespace: "wfs_scot",
+    name: "doc_urba",
+    title: "Document d'urbanisme",
+    description: "Description de test",
+    properties: [
+      { name: "partition", type: "string" },
+      { name: "idurba", type: "string" },
+    ],
+  };
+
   afterEach(() => {
     vi.clearAllMocks();
     mockGetFeatureType.mockReset();
@@ -132,6 +144,7 @@ describe("Test GpfGetFeatureByIdTool", () => {
     expect(response.isError).toBeUndefined();
     expect(requests).toHaveLength(1);
     expect(requests[0].query.exceptions).toEqual("application/json");
+    expect(requests[0].query.propertyName).toEqual("code_insee,nom_officiel");
     const textContent = response.content[0];
     if (textContent.type !== "text") {
       throw new Error("expected text content");
@@ -203,6 +216,54 @@ describe("Test GpfGetFeatureByIdTool", () => {
     expect(results.features[0].bbox).toBeDefined();
     expect(results.features[0].bbox).toStrictEqual([2.3, 48.8, 2.4, 48.9]);
     expect(results.features[0].centroid).toBeUndefined();
+  });
+
+  it("should not append the geometry column to propertyName when spatial_extras is empty", async () => {
+    const tool = new GpfGetFeatureByIdTool();
+    const requests: Array<{ url: string; query: Record<string, string> }> = [];
+    mockGetFeatureType.mockResolvedValue(polygonFeatureType);
+    mockFetchJSONPost.mockImplementation(async (url, _body) => {
+      const [baseUrl, queryString = ""] = url.split("?");
+      requests.push({
+        url: baseUrl,
+        query: Object.fromEntries(new URLSearchParams(queryString).entries()),
+      });
+
+      return {
+        type: "FeatureCollection",
+        totalFeatures: 1,
+        features: [
+          {
+            type: "Feature",
+            id: "commune.1",
+            geometry: {
+              type: "Polygon",
+              coordinates: [[[2.3, 48.8], [2.4, 48.8], [2.4, 48.9], [2.3, 48.9], [2.3, 48.8]]],
+            },
+            geometry_name: "geometrie",
+            properties: {
+              code_insee: "01001",
+            },
+          },
+        ],
+      };
+    });
+
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_get_feature_by_id",
+        arguments: {
+          typename: "ADMINEXPRESS-COG.LATEST:commune",
+          feature_id: "commune.1",
+          select: ["code_insee"],
+          spatial_extras: [],
+        },
+      },
+    });
+
+    expect(response.isError).toBeUndefined();
+    expect(requests).toHaveLength(1);
+    expect(requests[0].query.propertyName).toEqual("code_insee");
   });
 
   it("should fail clearly when the feature is missing", async () => {
@@ -330,5 +391,70 @@ describe("Test GpfGetFeatureByIdTool", () => {
       type: "urn:geocontext:problem:execution-error",
       detail: expect.stringContaining("gpf_get_feature_by_id"),
     });
+  });
+
+  it("should work on a geometry-less table when select and spatial_extras are empty", async () => {
+    const tool = new GpfGetFeatureByIdTool();
+    const requests: Array<{ url: string; query: Record<string, string> }> = [];
+    mockGetFeatureType.mockResolvedValue(tableFeatureType);
+    mockFetchJSONPost.mockImplementation(async (url) => {
+      const [baseUrl, queryString = ""] = url.split("?");
+      requests.push({
+        url: baseUrl,
+        query: Object.fromEntries(new URLSearchParams(queryString).entries()),
+      });
+      return {
+        type: "FeatureCollection",
+        totalFeatures: 1,
+        features: [
+          {
+            type: "Feature",
+            id: "doc_urba.1",
+            properties: {
+              partition: "A",
+              idurba: "S123",
+            },
+          },
+        ],
+      };
+    });
+
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_get_feature_by_id",
+        arguments: {
+          typename: "wfs_scot:doc_urba",
+          feature_id: "doc_urba.1",
+        },
+      },
+    });
+
+    expect(response.isError).toBeUndefined();
+    expect(requests).toHaveLength(1);
+    expect(requests[0].query.propertyName).toEqual("partition,idurba");
+  });
+
+  it("should fail before WFS request on a geometry-less table when spatial_extras is not empty", async () => {
+    const tool = new GpfGetFeatureByIdTool();
+    mockGetFeatureType.mockResolvedValue(tableFeatureType);
+
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_get_feature_by_id",
+        arguments: {
+          typename: "wfs_scot:doc_urba",
+          feature_id: "doc_urba.1",
+          spatial_extras: ["bbox"],
+        },
+      },
+    });
+
+    expect(response.isError).toBe(true);
+    const textContent = response.content[0];
+    if (textContent.type !== "text") {
+      throw new Error("expected text content");
+    }
+    expect(textContent.text).toContain("n'expose aucune propriété géométrique exploitable");
+    expect(mockFetchJSONPost).not.toHaveBeenCalled();
   });
 });
