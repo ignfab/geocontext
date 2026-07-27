@@ -22,6 +22,63 @@ function parseJsonEnvValue(val: string, ctx: z.RefinementCtx): unknown {
     }
 }
 
+/**
+ * Accepts only an http(s) base URL carrying NO query string or fragment.
+ *
+ * `buildDataUrl` (src/proxy/dataUrl.ts) appends `PROXY_ENDPOINT` and `/<token>.json`
+ * to this base by string concatenation, so a query or fragment on the base would
+ * swallow the endpoint — producing a broken `data_url` that 404s at map-load with
+ * NO error here. Rejecting them at startup keeps that failure out of production.
+ * Symmetric with the `[^?#]` guard `PROXY_ENDPOINT` / `HTTP_MCP_ENDPOINT` enforce,
+ * and it also drops non-http(s) schemes (`z.string().url()` alone accepts `ftp://`).
+ */
+function isCleanHttpBaseUrl(value: string): boolean {
+    let url: URL;
+    try {
+        url = new URL(value);
+    } catch {
+        return false;
+    }
+    return (
+        (url.protocol === "http:" || url.protocol === "https:") &&
+        url.search === "" &&
+        url.hash === ""
+    );
+}
+
+/** Expected byte length of the proxy URL symmetric key (AES-256). */
+const PROXY_URL_SECRET_BYTES = 32;
+
+/** A 32-byte key encoded as 64 hex characters. Generate with `openssl rand -hex 32`. */
+const PROXY_URL_SECRET_HEX = new RegExp(`^[0-9a-fA-F]{${PROXY_URL_SECRET_BYTES * 2}}$`);
+
+/**
+ * Decodes the proxy URL secret from a strict 64-character hex string into a
+ * 32-byte Buffer. Returns `undefined` for an empty value; adds a Zod issue and
+ * returns `z.NEVER` when the value is not exactly 64 hex characters.
+ *
+ * A single explicit encoding (hex) is required rather than guessing among
+ * encodings: the key is a random 32-byte value provisioned as a k8s Secret
+ * (e.g. `openssl rand -hex 32`), so there is no human-typed value to be lenient
+ * about, and a strict regex rejects malformed input instead of silently
+ * truncating (as `Buffer.from(x, "hex")` would).
+ */
+function parseProxyUrlSecret(val: string, ctx: z.RefinementCtx): Buffer | undefined {
+    if (val === "") {
+        return undefined;
+    }
+
+    if (!PROXY_URL_SECRET_HEX.test(val)) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Expected a ${PROXY_URL_SECRET_BYTES}-byte key as ${PROXY_URL_SECRET_BYTES * 2} hex characters (e.g. \`openssl rand -hex ${PROXY_URL_SECRET_BYTES}\`).`,
+        });
+        return z.NEVER as unknown as undefined;
+    }
+
+    return Buffer.from(val, "hex");
+}
+
 // --- Reusable Schemas ---
 
 const portSchema = z.coerce
@@ -94,7 +151,67 @@ const envSchema = z.object({
         .transform(parseJsonEnvValue)
         .pipe(z.record(z.string(), z.unknown()).optional())
         .optional(),
+    // Stateless geodata proxy (only used in http transport)
+    // Symmetric key for the opaque proxy URL token. Decoded to a 32-byte Buffer.
+    // Optional at the schema level; presence is required PER ENTRY POINT
+    // (src/index.ts requires it in http mode; src/proxy/index.ts always requires
+    // it), not by a global superRefine — see the note after the schema.
+    PROXY_URL_SECRET: z
+        .string()
+        .trim()
+        .transform(parseProxyUrlSecret)
+        .pipe(z.instanceof(Buffer).optional())
+        .optional(),
+    // Maximum size, in bytes, of a geodata proxy response body. The proxy reads the
+    // response by chunks and aborts past this cap (network + memory + OpenLayers
+    // parse/render guard). Default 25 MiB — comfortably fits a dense generalized
+    // carto layer (e.g. 5000 CARTO-PE communes ≈ 5.8 MB) while rejecting
+    // full-resolution monsters (5000 full-res communes ≈ 95 MB).
+    PROXY_MAX_RESPONSE_BYTES: z.preprocess(emptyToUndefined, positiveIntegerSchema.default(25 * 1024 * 1024)),
+    // Listen port for the proxy HTTP server (separate from the MCP HTTP port).
+    PROXY_PORT: z.preprocess(emptyToUndefined, portSchema.default(3002)),
+    // Path the proxy serves the layer endpoint on.
+    PROXY_ENDPOINT: z.preprocess(
+        emptyToUndefined,
+        z
+            .string()
+            .trim()
+            .regex(/^\/(?!\/)[^?#]*$/, "Expected a path like /api/v1/proxy, without query or fragment")
+            .default("/api/v1/proxy"),
+    ),
+    // Externally reachable base URL of the proxy, used to build the absolute
+    // data_url handed to Carto. Behind an ingress this differs from the bind
+    // host/port, so it is provided explicitly. Must be an http(s) base with no
+    // query/fragment (see isCleanHttpBaseUrl): buildDataUrl appends the endpoint by
+    // concatenation, so anything else silently forges a broken data_url.
+    PROXY_PUBLIC_BASE_URL: z.preprocess(
+        emptyToUndefined,
+        z
+            .string()
+            .url()
+            .refine(
+                isCleanHttpBaseUrl,
+                "Expected an http(s) base URL without query or fragment (e.g. https://host or https://host/prefix)",
+            )
+            .optional(),
+    ),
+    // The proxy serves public, stateless GeoJSON, so its endpoint is opened to any
+    // origin (Access-Control-Allow-Origin: *) in server.ts — no allowlist to configure.
+    // Dedicated upstream WFS rate limit for the proxy, separate from GPF_WFS_RATE_LIMIT.
+    // Both counters hit the same IGN service, so split one allowance across them.
+    GPF_WFS_PROXY_RATE_LIMIT: z.preprocess(emptyToUndefined, positiveIntegerSchema.default(10)),
+    // Dedicated isochrone rate limit for the proxy's travel_time leg, separate from
+    // GPF_NAVIGATION_RATE_LIMIT. Both counters hit the same IGN service, so split one
+    // allowance across them.
+    GPF_NAVIGATION_PROXY_RATE_LIMIT: z.preprocess(emptyToUndefined, positiveIntegerSchema.default(5)),
+    // Upstream timeout (seconds) for the proxy's WFS AND isochrone calls, shorter than
+    // HTTP_TIMEOUT so a 2-call intersects_feature/travel_time stays under the
+    // browser/Carto fetch timeout.
+    PROXY_UPSTREAM_TIMEOUT: z.preprocess(emptyToUndefined, positiveNumberSchema.default(10)),
 });
+// PROXY_URL_SECRET is validated PER ENTRY POINT (src/index.ts requires it in http
+// mode; src/proxy/index.ts always requires it), not by a global superRefine —
+// the two processes have different requirements.
 
 // --- Parsing ---
 

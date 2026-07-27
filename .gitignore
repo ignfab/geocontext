@@ -6,3 +6,4 @@
 .npmrc
 .codex
 .env.e2e
+.env

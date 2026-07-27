@@ -17,7 +17,7 @@ const gpfDescribeTypeInputSchema = z.object({
     .string()
     .trim()
     .min(1, "le nom du type ne doit pas être vide")
-    .describe("Le nom du type (ex : BDTOPO_V3:batiment)"),
+    .describe("Le nom du type à décrire (de la forme `prefixe:nom`)."),
 }).strict();
 
 // --- Types ---

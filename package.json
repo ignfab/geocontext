@@ -4,7 +4,8 @@
   "description": "An experimental MCP server providing access to the services and data of the french Geoplateform",
   "type": "module",
   "bin": {
-    "geocontext": "./dist/index.js"
+    "geocontext": "./dist/index.js",
+    "geocontext-proxy": "./dist/proxy/index.js"
   },
   "files": [
     "dist"
@@ -76,6 +77,7 @@
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@types/geojson": "^7946.0.16",
     "@types/node": "^25.9.0",
+    "@types/supertest": "^7.2.1",
     "@vitest/coverage-v8": "^4.1.6",
     "langchain": "^1.4.1",
     "supertest": "^7.2.2",

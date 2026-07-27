@@ -213,6 +213,215 @@ function getHttpTimeoutMs(): number {
   return getEnv().HTTP_TIMEOUT * 1000;
 }
 
+// --- Size-Bounded Transport ---
+
+/**
+ * Raised when an upstream response body exceeds the caller-provided byte cap.
+ * Used by the proxy to bound network + memory + downstream parse cost without
+ * relying on an upstream `Content-Length` (WFS responses are often chunked).
+ */
+export class ResponseTooLargeError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ResponseTooLargeError";
+  }
+}
+
+/**
+ * Executes a fetch and reads the response body **by chunks**, aborting as soon
+ * as the accumulated size exceeds `maxBytes`. Unlike `fetchJSON*`, this bounds
+ * memory before the whole body is buffered and does not JSON-parse: it returns
+ * the raw text so the caller decides how to parse it. Shared core behind
+ * `fetchJSONPostWithLimit` and `fetchJSONGetWithLimit`.
+ *
+ * The timeout is an explicit parameter (not read from env) so the same fetch
+ * path can serve the LLM tools (`HTTP_TIMEOUT`) and the proxy
+ * (`PROXY_UPSTREAM_TIMEOUT`).
+ *
+ * @param method HTTP method to use.
+ * @param url Target URL.
+ * @param body Encoded request body (`undefined` for GET).
+ * @param headers Additional request headers.
+ * @param timeoutMs Wall-clock timeout in milliseconds.
+ * @param maxBytes Maximum number of body bytes to accept before aborting.
+ * @returns The raw response text, guaranteed to be at most `maxBytes` bytes.
+ */
+async function fetchTextWithLimit(
+  method: string,
+  url: string,
+  body: string | undefined,
+  headers: RequestHeaders,
+  timeoutMs: number,
+  maxBytes: number,
+): Promise<string> {
+  logger.info(`[HTTP] ${method} ${url} (bounded, max ${maxBytes} bytes) ...`);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  // The try/catch/finally wraps ONLY the abortable work: the fetch and the body
+  // streaming. That is the sole source of an AbortError, so the timeout → 504
+  // mapping lives here. Everything after (upstream-status handling) runs on the
+  // already-read `text` — pure CPU, no I/O — so it is kept OUT of this scope.
+  let response: Awaited<ReturnType<typeof fetch>>;
+  let text: string;
+  try {
+    response = await fetch(url, {
+      ...buildFetchOptions(method, body, headers),
+      signal: controller.signal,
+    });
+
+    if (!response.body) {
+      if (!response.ok) {
+        throw new ServiceResponseError(
+          `Erreur HTTP du service (${buildResponseLabel(response.status, response.statusText)}): ${UNKNOWN_UPSTREAM_DETAIL}`,
+          { http: { status: response.status, statusText: response.statusText } },
+        );
+      }
+      return "";
+    }
+
+    const chunks: Buffer[] = [];
+    let total = 0;
+    // node-fetch exposes the body as a Node Readable stream (async-iterable of Buffers).
+    for await (const chunk of response.body as AsyncIterable<Buffer>) {
+      total += chunk.length;
+      if (total > maxBytes) {
+        controller.abort();
+        throw new ResponseTooLargeError(
+          `La réponse du service distant dépasse la taille maximale autorisée (${maxBytes} octets).`,
+        );
+      }
+      chunks.push(chunk);
+    }
+
+    text = Buffer.concat(chunks).toString("utf8");
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new ServiceResponseError(
+        `Délai d'attente dépassé pour le service distant (${timeoutMs} ms).`,
+        {
+          http: {
+            status: UPSTREAM_TIMEOUT_STATUS,
+            statusText: UPSTREAM_TIMEOUT_STATUS_TEXT,
+          },
+          service: {
+            code: UPSTREAM_TIMEOUT_CODE,
+            detail: `Le service distant n'a pas répondu dans le délai imparti (${timeoutMs} ms).`,
+          },
+        },
+      );
+    }
+    throw error;
+  } finally {
+    // Safe to clear as soon as the body is read: the timer's only job is to abort
+    // the in-flight fetch/stream, which is complete by the time we get here.
+    clearTimeout(timeoutId);
+  }
+
+  // Preserve the upstream HTTP status: a non-2xx must not be handed back as a
+  // valid body (a 400/500 whose body happens to look like a FeatureCollection
+  // would otherwise be served to Carto as a real layer). Route it through the
+  // same structured XML/JSON error extraction as the JSON path — it always
+  // throws for a non-ok response, yielding a ServiceResponseError that carries
+  // the real status + WFS detail.
+  if (!response.ok) {
+    const contentType = (response.headers.get("content-type") ?? "").toLowerCase();
+    const errorContext = buildResponseContext(
+      { status: response.status, statusText: response.statusText, ok: false, headers: response.headers, text: async () => text },
+      text,
+      contentType,
+    );
+    if (errorContext.looksLikeXml) {
+      handleXmlResponse(errorContext); // always throws
+    }
+    let json: unknown;
+    try {
+      json = JSON.parse(text);
+    } catch {
+      json = undefined;
+    }
+    const serviceError = extractJsonServiceError(json ?? previewBody(text) ?? UNKNOWN_UPSTREAM_DETAIL);
+    throw buildServiceResponseError(
+      errorContext,
+      `Erreur HTTP du service (${errorContext.responseLabel}): ${serviceError.detail}`,
+      { code: serviceError.code, detail: serviceError.detail },
+    );
+  }
+
+  return text;
+}
+
+/**
+ * Parses a size-bounded 2xx body as JSON, or raises a 502 `ServiceResponseError`.
+ * A 2xx body that is not JSON is a bad UPSTREAM response (not a proxy bug), so it
+ * surfaces as a 502. `label` names the upstream service in the (server-logged)
+ * message so an operator can tell which leg failed. Shared by
+ * `fetchJSONPostWithLimit` and `fetchJSONGetWithLimit` so the parse + 502 lives in
+ * ONE place.
+ *
+ * @param text Bounded raw response body.
+ * @param label Upstream service name interpolated into the error message.
+ * @returns The parsed JSON payload.
+ */
+function parseBoundedJson<T>(text: string, label: string): T {
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new ServiceResponseError(
+      `Le service ${label} a renvoyé un corps 2xx qui n'est pas du JSON exploitable.`,
+      { http: { status: 502, statusText: "Bad Gateway" }, service: { code: "invalid_upstream_body" } },
+    );
+  }
+}
+
+/**
+ * POST variant of the size-bounded transport, parsing the bounded body as JSON.
+ * Symmetric to {@link fetchJSONGetWithLimit}: the geodata proxy leg uses it so the
+ * bounded fetch + JSON parse + 502-on-bad-body logic lives in one shared place
+ * ({@link parseBoundedJson}) instead of being reimplemented in `proxy/transport.ts`.
+ *
+ * @param url Target URL.
+ * @param body Encoded request body.
+ * @param headers Additional request headers.
+ * @param timeoutMs Wall-clock timeout in milliseconds.
+ * @param maxBytes Maximum number of body bytes to accept before aborting.
+ * @param label Upstream service name for the 502 message (e.g. `"WFS"`).
+ * @returns The parsed JSON payload.
+ */
+export async function fetchJSONPostWithLimit<T>(
+  url: string,
+  body: string,
+  headers: RequestHeaders,
+  timeoutMs: number,
+  maxBytes: number,
+  label: string,
+): Promise<T> {
+  const text = await fetchTextWithLimit("POST", url, body, headers, timeoutMs, maxBytes);
+  return parseBoundedJson<T>(text, label);
+}
+
+/**
+ * GET variant of the size-bounded transport, parsing the bounded body as JSON.
+ * Used by the proxy's isochrone leg so a `travel_time` layer request goes
+ * through the SAME `PROXY_UPSTREAM_TIMEOUT` + `PROXY_MAX_RESPONSE_BYTES` bounds
+ * as its WFS leg, instead of the unbounded `HTTP_TIMEOUT`-only `fetchJSONGet`.
+ *
+ * @param url Target URL.
+ * @param timeoutMs Wall-clock timeout in milliseconds.
+ * @param maxBytes Maximum number of body bytes to accept before aborting.
+ * @param label Upstream service name for the 502 message (e.g. `"d'isochrone"`).
+ * @returns The parsed JSON payload.
+ */
+export async function fetchJSONGetWithLimit<T>(
+  url: string,
+  timeoutMs: number,
+  maxBytes: number,
+  label: string,
+): Promise<T> {
+  const text = await fetchTextWithLimit("GET", url, undefined, {}, timeoutMs, maxBytes);
+  return parseBoundedJson<T>(text, label);
+}
+
 // --- Response Parsing ---
 
 /**
@@ -376,7 +585,7 @@ function getChild(element: XmlElement | null | undefined, localName: string): Xm
  * @param json Parsed JSON payload.
  * @returns A normalized `{ code, detail }` pair.
  */
-function extractJsonServiceError(json: unknown): JsonServiceError {
+export function extractJsonServiceError(json: unknown): JsonServiceError {
   if (typeof json === "string") {
     return { detail: asNonEmptyString(json) ?? UNKNOWN_UPSTREAM_DETAIL };
   }
