@@ -1,5 +1,5 @@
 import turfDistance from "@turf/distance";
-import { booleanIntersects } from "@turf/boolean-intersects";
+import { booleanPointInPolygon } from "@turf/boolean-point-in-polygon";
 import { flatten } from "@turf/flatten";
 import { feature } from "@turf/helpers";
 import { nearestPointOnLine } from "@turf/nearest-point-on-line";
@@ -19,31 +19,54 @@ export interface DistanceResult {
   point2: Position;
 }
 
-export function splitIntoPointsAndLineStrings(g : Geometry): { points: Point[]; lineStrings: LineString[] } {
-  const flat : FlattenedGeometry[] = (flatten(feature(g)).features ?? []).map(f => f.geometry);
+export function splitIntoFlatGeometries(g: Geometry): { points: Point[]; lineStrings: LineString[]; polygons: Polygon[] } {
+  const flat: FlattenedGeometry[] = (flatten(feature(g)).features ?? []).map(f => f.geometry);
   const points: Point[] = [];
   const lineStrings: LineString[] = [];
-  for (const g of flat) {
-    if (g.type === "Point") {
-      points.push(g as Point);
-    } else if (g.type === "LineString") {
-      lineStrings.push(g);
+  const polygons: Polygon[] = [];
+  
+  for (const geom of flat) {
+    if (geom.type === "Point") {
+      points.push(geom as Point);
+    } else if (geom.type === "LineString") {
+      lineStrings.push(geom);
       // Extract vertices as points
-      for (const coord of g.coordinates) {
+      for (const coord of geom.coordinates) {
         points.push({ type: "Point", coordinates: coord });
       }
-    } else if (g.type === "Polygon") {
-      // Convert each ring to a linestring
-      for (const ring of g.coordinates) {
+    } else if (geom.type === "Polygon") {
+      polygons.push(geom);
+      // Extract rings as linestrings for crossing detection
+      for (const ring of geom.coordinates) {
         lineStrings.push({ type: "LineString", coordinates: ring });
-        // Extract vertices as points
+      }
+      // Extract vertices as points
+      for (const ring of geom.coordinates) {
         for (const coord of ring) {
           points.push({ type: "Point", coordinates: coord });
         }
       }
     }
   }
-  return { points, lineStrings };
+  return { points, lineStrings, polygons };
+}
+
+// Check if two line segments intersect in the planar (lon/lat) space
+function planarIntersection(a1: Position, a2: Position, b1: Position, b2: Position): Position | null {
+  const d1x = a2[0] - a1[0], d1y = a2[1] - a1[1];
+  const d2x = b2[0] - b1[0], d2y = b2[1] - b1[1];
+  const denom = d1x * d2y - d1y * d2x;
+  
+  if (Math.abs(denom) < 1e-14) return null; // parallel or colinear
+  
+  const dx = b1[0] - a1[0], dy = b1[1] - a1[1];
+  const t = (dx * d2y - dy * d2x) / denom;
+  const u = (dx * d1y - dy * d1x) / denom;
+  
+  if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
+    return [a1[0] + t * d1x, a1[1] + t * d1y];
+  }
+  return null;
 }
 
 // minimal distance between a list of points and a list of segments
@@ -65,6 +88,23 @@ function pointsToSegmentsMin(pointGeoms: Point[], segmentGeoms: LineString[]): D
   }
   
   return { distance: minDist, point1: bestPoint1, point2: bestPoint2 };
+}
+
+// Check for line-line segment intersections
+function lineToLineIntersection(lineA: LineString, lineB: LineString): Position | null {
+  const coordsA = lineA.coordinates;
+  const coordsB = lineB.coordinates;
+  
+  for (let i = 0; i < coordsA.length - 1; i++) {
+    for (let j = 0; j < coordsB.length - 1; j++) {
+      const intersection = planarIntersection(
+        coordsA[i], coordsA[i + 1],
+        coordsB[j], coordsB[j + 1]
+      );
+      if (intersection) return intersection;
+    }
+  }
+  return null;
 }
 
 function pointsToPointsMin(a: Point[], b: Point[]): DistanceResult {
@@ -109,11 +149,31 @@ export function distance(gA: Geometry, gB: Geometry): DistanceResult {
     return { distance: roundDistance(nearest.properties.pointDistance), point1: gA.coordinates, point2: nearest.geometry.coordinates };
   }
 
-  if (booleanIntersects(gA, gB)) return { distance: 0, point1: [0, 0], point2: [0, 0] };
+  const { points: pointsA, lineStrings: segA, polygons: polysA } = splitIntoFlatGeometries(gA);
+  const { points: pointsB, lineStrings: segB, polygons: polysB } = splitIntoFlatGeometries(gB);
 
-  const { points: pointsA, lineStrings: segA } = splitIntoPointsAndLineStrings(gA);
-  const { points: pointsB, lineStrings: segB } = splitIntoPointsAndLineStrings(gB);
+  // Check for point-in-polygon containment (both directions)
+  for (const [pts, polys] of [[pointsA, polysB], [pointsB, polysA]] as const) {
+    for (const pt of pts) {
+      for (const poly of polys) {
+        if (booleanPointInPolygon(pt.coordinates, poly)) {
+          return { distance: 0, point1: pt.coordinates, point2: pt.coordinates };
+        }
+      }
+    }
+  }
 
+  // Check for line-line segment intersections
+  for (const lineA of segA) {
+    for (const lineB of segB) {
+      const intersection = lineToLineIntersection(lineA, lineB);
+      if (intersection) {
+        return { distance: 0, point1: intersection, point2: intersection };
+      }
+    }
+  }
+
+  // Main distance computation
   const bestDistanceCandidates = [
     pointsToPointsMin(pointsA, pointsB),
     ...(segB.length > 0 ? [pointsToSegmentsMin(pointsA, segB)] : []),
