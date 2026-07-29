@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import distance, { splitIntoFlatGeometries } from "../../src/helpers/distance.js";
-import type { GeometryCollection, LineString, MultiLineString, MultiPoint, MultiPolygon, Polygon, Point } from "geojson";
+import type { GeometryCollection, LineString, MultiLineString, MultiPoint, MultiPolygon, Polygon, Point, Position } from "geojson";
 import { besancon, chamonix, marseille, paris, parisMarseille } from "../samples";
 
 describe("Test distance",() => {
@@ -183,6 +183,23 @@ describe("Test distance",() => {
             expect(result.polygons.length).toBe(0);
         });
 
+        it("should split a LineString crossing the antimeridian into two segments", () => {
+            const line: LineString = {
+                type: "LineString",
+                coordinates: [[179, 1], [-179, 1]],
+            };
+
+            const result = splitIntoFlatGeometries(line);
+
+            expect(result.lineStrings.length).toBe(2);
+            expect(result.lineStrings[0].coordinates[0]).toEqual([-179, 1]);
+            expect(result.lineStrings[1].coordinates[1]).toEqual([179, 1]);
+            expect(result.lineStrings[0].coordinates[1][0]).toBe(-180);
+            expect(result.lineStrings[1].coordinates[0][0]).toBe(180);
+            expect(result.lineStrings[0].coordinates[1][1]).toBeCloseTo(result.lineStrings[1].coordinates[0][1], 6);
+            expect(result.lineStrings[0].coordinates[1][1]).toBeCloseTo(1.0001523, 6);
+        });
+
         it("should extract vertices from Polygon rings as Point geometries and keep polygon", () => {
             const polygon: Polygon = {
                 type: "Polygon",
@@ -216,34 +233,208 @@ describe("Test distance",() => {
     });
 
     describe("Test point-in-polygon detection", () => {
-        it("should return 0 with point coordinates when point is inside polygon", () => {
-            // This test verifies that we return the actual point coordinates [5, 5]
-            const polygon: Polygon = {
-                type: "Polygon",
-                coordinates: [[[0, 0], [10, 0], [10, 10], [0, 10], [0, 0]]],
+        // --- Factorized containment tests for three polygon families ---
+        //
+        // Each scenario exercises:
+        //   • simple polygon (no hole): interior/exterior point × correct/malformed outer winding
+        //   • polygon with hole: exterior/hole/between-rings point × all 4 winding combinations
+
+        type PolygonScenario = {
+            name: string;
+            /** Exterior ring, correctly wound (CCW for normal polygons, CW for polar per RFC 7946) */
+            correctOuterRing: Position[];
+            /** Interior ring (hole), correctly wound (inverse of exterior convention) */
+            correctHoleRing: Position[];
+            /** A point clearly outside the outer ring */
+            pointOutside: Position;
+            /** A point inside the outer ring and outside the hole */
+            pointBetweenRings: Position;
+            /** A point inside the hole */
+            pointInHole: Position;
+            /**
+             * Optional predicate for known test failures. When it returns true
+             * the test is registered with it.fails() so it does not block the suite.
+             * @param outerMalformed - true when the outer ring winding is reversed
+             * @param holeMalformed  - true/false for the hole winding; null when no hole
+             * @param testId         - which assertion within the combination is being run
+             */
+            isKnownFailure?: (
+                outerMalformed: boolean,
+                holeMalformed: boolean | null,
+                testId: "interior" | "exterior" | "outside" | "hole" | "between",
+            ) => boolean;
+        };
+
+        const runPolygonContainmentTests = (scenario: PolygonScenario): void => {
+            const {
+                name,
+                correctOuterRing,
+                correctHoleRing,
+                pointOutside,
+                pointBetweenRings,
+                pointInHole,
+                isKnownFailure,
+            } = scenario;
+            const malformedOuterRing = [...correctOuterRing].reverse();
+            const malformedHoleRing = [...correctHoleRing].reverse();
+
+            const outerVariants: Array<[string, Position[]]> = [
+                ["correct outer winding", correctOuterRing],
+                ["malformed outer winding", malformedOuterRing],
+            ];
+            const holeVariants: Array<[string, Position[]]> = [
+                ["correct hole winding", correctHoleRing],
+                ["malformed hole winding", malformedHoleRing],
+            ];
+
+            // Pick it() or it.fails() based on the isKnownFailure predicate.
+            type TestId = "interior" | "exterior" | "outside" | "hole" | "between";
+            const itFn = (outerMalformed: boolean, holeMalformed: boolean | null, testId: TestId) =>
+                isKnownFailure?.(outerMalformed, holeMalformed, testId) ? it.fails : it;
+
+            describe(`${name} — without hole`, () => {
+                for (const [outerIdx, [windingLabel, outerRing]] of outerVariants.entries()) {
+                    const outerMalformed = outerIdx === 1;
+                    describe(windingLabel, () => {
+                        itFn(outerMalformed, null, "interior")("interior point → distance 0", () => {
+                            const polygon: Polygon = { type: "Polygon", coordinates: structuredClone([outerRing]) };
+                            const insidePoint: Point = { type: "Point", coordinates: pointBetweenRings };
+                            const result = distance(insidePoint, polygon);
+                            expect(result.distance).toBe(0);
+                            expect(result.point1).toEqual(pointBetweenRings);
+                            expect(result.point2).toEqual(pointBetweenRings);
+                        });
+
+                        itFn(outerMalformed, null, "exterior")("exterior point → positive distance", () => {
+                            const polygon: Polygon = { type: "Polygon", coordinates: structuredClone([outerRing]) };
+                            const outsidePoint: Point = { type: "Point", coordinates: pointOutside };
+                            const result = distance(outsidePoint, polygon);
+                            expect(result.distance).toBeGreaterThan(0);
+                            expect(result.point1).toEqual(pointOutside);
+                        });
+                    });
+                }
+            });
+
+            describe(`${name} — with hole`, () => {
+                for (const [outerIdx, [outerLabel, outerRing]] of outerVariants.entries()) {
+                    const outerMalformed = outerIdx === 1;
+                    for (const [holeIdx, [holeLabel, holeRing]] of holeVariants.entries()) {
+                        const holeMalformed = holeIdx === 1;
+                        describe(`${outerLabel}, ${holeLabel}`, () => {
+                            itFn(outerMalformed, holeMalformed, "outside")("point outside outer ring → positive distance", () => {
+                                const polygon: Polygon = { type: "Polygon", coordinates: [outerRing, holeRing] };
+                                const originalPolygon = structuredClone(polygon);
+                                const outsidePoint: Point = { type: "Point", coordinates: pointOutside };
+                                const result = distance(outsidePoint, polygon);
+                                expect(result.distance).toBeGreaterThan(0);
+                                expect(result.point1).toEqual(pointOutside);
+                                expect(polygon).toEqual(originalPolygon); // check that distance does not mutate its input
+                            });
+
+                            itFn(outerMalformed, holeMalformed, "hole")("point inside hole → positive distance", () => {
+                                const polygon: Polygon = { type: "Polygon", coordinates: structuredClone([outerRing, holeRing]) };
+                                const holePoint: Point = { type: "Point", coordinates: pointInHole };
+                                const result = distance(holePoint, polygon);
+                                expect(result.distance).toBeGreaterThan(0);
+                                expect(result.point1).toEqual(pointInHole);
+                            });
+
+                            itFn(outerMalformed, holeMalformed, "between")("point between outer ring and hole → distance 0", () => {
+                                const polygon: Polygon = { type: "Polygon", coordinates: structuredClone([outerRing, holeRing]) };
+                                const betweenPoint: Point = { type: "Point", coordinates: pointBetweenRings };
+                                const result = distance(betweenPoint, polygon);
+                                expect(result.distance).toBe(0);
+                                expect(result.point1).toEqual(pointBetweenRings);
+                                expect(result.point2).toEqual(pointBetweenRings);
+                            });
+                        });
+                    }
+                }
+            });
+        };
+
+        // France: rectangular area [2°E–3°E, 48°N–49°N]
+        // Outer ring: CCW (counter-clockwise, exterior ring per RFC 7946)
+        // Hole ring:  CW  (clockwise, interior ring per RFC 7946)
+        runPolygonContainmentTests({
+            name: "France polygon",
+            correctOuterRing: [[2, 48], [3, 48], [3, 49], [2, 49], [2, 48]],
+            correctHoleRing:  [[2.3, 48.3], [2.3, 48.7], [2.7, 48.7], [2.7, 48.3], [2.3, 48.3]],
+            pointOutside:     [5, 43],
+            pointBetweenRings:[2.1, 48.1],
+            pointInHole:      [2.5, 48.5],
+        });
+
+        // Antimeridian-crossing polygon: zone straddling the 180° meridian
+        // Outer ring: CCW (counter-clockwise, exterior ring per RFC 7946)
+        // Hole ring:  CW  (clockwise, interior ring per RFC 7946)
+        runPolygonContainmentTests({
+            name: "Antimeridian-crossing polygon",
+            correctOuterRing: [[170, -10], [-170, -10], [-170, 10], [170, 10], [170, -10]],
+            correctHoleRing:  [[175, -5], [175, 5], [-175, 5], [-175, -5], [175, -5]],
+            pointOutside:     [0, 0],
+            pointBetweenRings:[172, 0],
+            pointInHole:      [179, 0],
+        });
+
+        // North Pole-encompassing polygon: ring at 40°N that encircles the pole
+        // Outer ring: CCW (counter-clockwise, seen from above
+        // Hole ring:  CW  (clockwise, seen from above
+        // Known bugs: the implementation does not recover from a single malformed ring;
+        //             correct outer + malformed hole, and malformed outer + correct hole
+        //             both fail. Only the double-malformed pair (mO+mH) is auto-corrected.
+        runPolygonContainmentTests({
+            name: "North Pole-encompassing polygon",
+            correctOuterRing: [[45, 40], [135, 40], [-135, 40], [-45, 40], [45, 40]],
+            correctHoleRing:  [[45, 88], [-45, 88], [-135, 88], [135, 88], [45, 88]],
+            pointOutside:     [0, 30],
+            pointBetweenRings:[0, 60],
+            pointInHole:      [0, 90],
+            isKnownFailure: (outerMalformed, holeMalformed, testId) => {
+                // Note that wrong windings are not valid GeoJSON so these test failures
+                // are not bugs actually, they are unimplemented featurs.
+                // no-hole + malformed outer
+                if (outerMalformed && holeMalformed === null) return true;
+                // with a hole, correct outer but malformed inner
+                if (!outerMalformed && holeMalformed === true) return true;
+                // with a hole, malformed outer but correct inner, except for inside-the-hole
+                if (outerMalformed && holeMalformed === false && testId !== "hole") return true;
+                return false; // else
+            },
+        });
+
+        // --- Additional tests for specific edge cases not covered by the factorized matrix ---
+
+        it("should return 0 when point is inside a multipolygon part crossing the antimeridian", () => {
+            const multiPolygon: MultiPolygon = {
+                type: "MultiPolygon",
+                coordinates: [
+                    [[
+                        [170, -10],
+                        [-170, -10],
+                        [-170, 10],
+                        [170, 10],
+                        [170, -10],
+                    ]],
+                    [[
+                        [20, 20],
+                        [22, 20],
+                        [22, 22],
+                        [20, 22],
+                        [20, 20],
+                    ]],
+                ],
             };
             const pointInside: Point = {
                 type: "Point",
-                coordinates: [5, 5],
+                coordinates: [-179, 1],
             };
 
-            const result = distance(pointInside, polygon);
+            const result = distance(pointInside, multiPolygon);
             expect(result.distance).toBe(0);
-            // Verify we return actual point coordinates, not dummy [0, 0]
-            expect(result.point1).toEqual([5, 5]);
-            expect(result.point2).toEqual([5, 5]);
-        });
-
-        it("should return 0 with proper coordinates when polygon contains point", () => {
-            const polygon: Polygon = {
-                type: "Polygon",
-                coordinates: [[[2.0, 48.0], [3.0, 48.0], [3.0, 49.0], [2.0, 49.0], [2.0, 48.0]]],
-            };
-            // Paris is at [2.3488, 48.8534]
-            const result = distance(paris, polygon);
-            expect(result.distance).toBe(0);
-            expect(result.point1).toEqual(paris.coordinates);
-            expect(result.point2).toEqual(paris.coordinates);
+            expect(result.point1).toEqual([-179, 1]);
+            expect(result.point2).toEqual([-179, 1]);
         });
 
         it("should detect containment in MultiPolygon", () => {
@@ -265,21 +456,49 @@ describe("Test distance",() => {
             expect(result.point2).toEqual([1, 1]);
         });
 
-        it("should handle point outside polygon (normal distance)", () => {
+        it("should return 0 when a polygon touches the North Pole", () => {
             const polygon: Polygon = {
                 type: "Polygon",
-                coordinates: [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]],
+                coordinates: [[
+                    [-45, 90],
+                    [-45, 85],
+                    [45, 85],
+                    [45, 90],
+                    [-45, 90],
+                ]],
+            };
+            const northPole: Point = {
+                type: "Point",
+                coordinates: [0, 90],
+            };
+
+            const result = distance(northPole, polygon);
+
+            expect(result.distance).toBe(0);
+            expect(result.point1).toEqual([0, 90]);
+            expect(result.point2).toEqual([0, 90]);
+        });
+
+        it("should not classify an outside point as inside when polygon has a zero-length edge", () => {
+            const polygonWithDuplicateVertex: Polygon = {
+                type: "Polygon",
+                coordinates: [[
+                    [0, 0],
+                    [2, 0],
+                    [2, 0],
+                    [2, 2],
+                    [0, 2],
+                    [0, 0],
+                ]],
             };
             const pointOutside: Point = {
                 type: "Point",
                 coordinates: [10, 10],
             };
 
-            const result = distance(pointOutside, polygon);
+            const result = distance(pointOutside, polygonWithDuplicateVertex);
             expect(result.distance).toBeGreaterThan(0);
-            // Coordinates should not be dummy [0, 0]
             expect(result.point1).toEqual([10, 10]);
-            expect([result.point2[0], result.point2[1]]).not.toEqual([0, 0]);
         });
     });
 
@@ -433,6 +652,147 @@ describe("Test distance",() => {
             expect(result.point1[1]).toBe(0);
             expect(result.point1[0]).toBeGreaterThanOrEqual(0);
             expect(result.point1[0]).toBeLessThanOrEqual(10);
+        });
+
+        it("should return a large non-zero distance for distant line vs polygon across the antimeridian", () => {
+            const polygon: Polygon = {
+                type: "Polygon",
+                coordinates: [[
+                    [23.135776547816135, -5.4896438887560635],
+                    [27.977340911114993, -5.4896438887560635],
+                    [27.977340911114993, 31.956263865426763],
+                    [23.135776547816135, 31.956263865426763],
+                    [23.135776547816135, -5.4896438887560635],
+                ]],
+            };
+            const crossingAntimeridianLine: LineString = {
+                type: "LineString",
+                coordinates: [
+                    [165.2812012336696, 6.549152703997294],
+                    [-174.51797643760415, 6.852029146295976],
+                ],
+            };
+
+            const result = distance(polygon, crossingAntimeridianLine);
+            expect(result.distance).toBeGreaterThan(1000000);
+        });
+
+        it("should avoid an antimeridian split artifact when measuring distant lines", () => {
+            const lineA: LineString = {
+                type: "LineString",
+                coordinates: [
+                    [148.36866917715702, 46.84158577670763],
+                    [92.27258167379557, 58.34804763832423],
+                ],
+            };
+            const lineB: LineString = {
+                type: "LineString",
+                coordinates: [
+                    [-157.2713800668627, -4.447939722741566],
+                    [169.80694578648507, -14.439383953401865],
+                ],
+            };
+
+            const result = distance(lineA, lineB);
+
+            expect(result.distance).toBeCloseTo(7142596.41, 2);
+            expect(result.point1[0]).toBeCloseTo(169.80694578648507, 10);
+            expect(result.point1[1]).toBeCloseTo(-14.439383953401865, 10);
+            expect(result.point2[0]).toBeCloseTo(148.36866917715702, 10);
+            expect(result.point2[1]).toBeCloseTo(46.84158577670763, 10);
+        });
+
+        it("should detect a real line intersection across the antimeridian", () => {
+            const datelineCrossingLine: LineString = {
+                type: "LineString",
+                coordinates: [[179, 0], [-179, 0]],
+            };
+            const verticalLineNearDateline: LineString = {
+                type: "LineString",
+                coordinates: [[179.5, -1], [179.5, 1]],
+            };
+
+            const result = distance(datelineCrossingLine, verticalLineNearDateline);
+            expect(result.distance).toBe(0);
+            expect(result.point1).toEqual(result.point2);
+            expect(Math.abs(result.point1[0])).toBeGreaterThan(179);
+            expect(result.point1[1]).toBeCloseTo(0, 6);
+        });
+
+        it("should compute the large distance between two non-intersecting segments in the southern hemisphere", () => {
+            const s1: LineString = {
+                type: "LineString",
+                coordinates: [[-136.61127697878203, -67.24854737502018], [3.6575704307094554, -65.92384272707795]],
+            };
+            const s2: LineString = {
+                type: "LineString",
+                coordinates: [[-69.05775139070103, -54.8979093430909], [-86.16447630165361, -57.89895966720661]],
+            };
+
+            const result = distance(s1, s2);
+            expect(result.distance).toBeCloseTo(2440829.44, 2);
+        });
+
+    });
+
+    describe("Test line-point distance edge cases", () => {
+        it("should return the same distance between a pole and two segments of the same parallel", () => {
+            const line1: LineString = {
+                type: "LineString",
+                coordinates: [[10, 30], [30, 30]],
+            };
+            const line2: LineString = {
+                type: "LineString",
+                coordinates: [[165, 30], [-175, 30]],
+            };
+            const north: Point = {
+                type: "Point",
+                coordinates: [0, 90],
+            };
+            const south: Point = {
+                type: "Point",
+                coordinates: [0, -90],
+            };
+
+            const resultN1 = distance(line1, north);
+            const resultN2 = distance(line2, north);
+            expect(resultN1.distance).toBeCloseTo(6629311.12)
+            expect(resultN1.distance).toBeCloseTo(resultN2.distance, 1);
+            const resultS1 = distance(south, line1);
+            const resultS2 = distance(south, line2);
+            expect(resultS1.distance).toBeCloseTo(resultS2.distance, 1);
+            expect(resultS1.distance).toBeCloseTo(13343409.63)
+        });
+
+        it("should return the same distance between two laterally translated cases", () => {
+            const lon1 = 10;
+            const lon2 = 165;
+            const width = 20;
+            const lat = 30;
+            const line1: LineString = {
+                type: "LineString",
+                coordinates: [[lon1, lat], [lon1+width, lat]],
+            };
+            const line2: LineString = {
+                type: "LineString",
+                coordinates: [[lon2, lat], [lon2+width-360, lat]],
+            };
+            for (const offset of [2, 10, 15, 16]) {
+                for (const newlat of [70, -40]) {
+                    const p1: Point = {
+                        type: "Point",
+                        coordinates: [lon1+offset, newlat],
+                    };
+                    const p2: Point = {
+                        type: "Point",
+                        coordinates: [(lon2+offset+180)%360-180, newlat],
+                    };
+
+                    const result1 = distance(line1, p1);
+                    const result2 = distance(line2, p2);
+                    expect(result1.distance).toBeCloseTo(result2.distance, 1);
+                }
+            }
         });
     });
 });

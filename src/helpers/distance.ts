@@ -1,16 +1,23 @@
 import turfDistance from "@turf/distance";
 import { booleanPointInPolygon } from "@turf/boolean-point-in-polygon";
 import { flatten } from "@turf/flatten";
-import { feature } from "@turf/helpers";
+import lineToPolygon from "@turf/line-to-polygon";
+import { lineIntersect } from "@turf/line-intersect";
 import { nearestPointOnLine } from "@turf/nearest-point-on-line";
+import polygonToLine from "@turf/polygon-to-line";
+import { fixGeoJson } from "antimeridian-ts";
 import type {
   Geometry,
+  GeometryCollection,
   LineString,
+  MultiPoint,
+  MultiPolygon,
   Point,
   Polygon,
   Position,
 } from "geojson";
 import { distVincenty } from "node-vincenty";
+import { rewind } from "@turf/rewind";
 
 type FlattenedGeometry = Point | LineString | Polygon;
 
@@ -20,8 +27,85 @@ export interface DistanceResult {
   point2: Position;
 }
 
+// close the open polygon rings returned by fixGeoJSON
+function closePolygonRings(g: Polygon): Polygon;
+function closePolygonRings(g: MultiPolygon): MultiPolygon;
+function closePolygonRings<T extends Geometry>(g: T): T;
+function closePolygonRings(g: Geometry): Geometry {
+  if (g.type === "Polygon") {
+    const rebuilt = lineToPolygon(polygonToLine(g), { autoComplete: true }).geometry;
+    return rebuilt.type === "Polygon" ? rebuilt : g;
+  }
+  if (g.type === "MultiPolygon") {
+    // Rebuild each polygon independently to preserve MultiPolygon structure.
+    const coordinates = g.coordinates.map(polyCoordinates => {
+      return closePolygonRings({ type: "Polygon", coordinates: polyCoordinates }).coordinates;
+    });
+    return {
+      type: "MultiPolygon",
+      coordinates,
+    };
+  }
+  return g;
+}
+
+function handleAntimeridian(g : Exclude<Geometry, GeometryCollection | Point | MultiPoint>) {
+  // Use fixGeoJson with fixWinding to preserve polygon holes
+  // Use great-circle antimeridian splitting because closest-point and
+  // distance computations below use spherical geometry.
+  // antimeridian-ts may mutate ring arrays in some code paths; protect callers' geometry.
+  const fixed = fixGeoJson(rewind(structuredClone(g)), { fixWinding: true, greatCircle: true }) as Exclude<Geometry, GeometryCollection | Point | MultiPoint>;
+  return closePolygonRings(fixed);
+}
+
+function lineCrossesAntimeridian(coords: Position[]): boolean {
+  for (let i = 0; i < coords.length - 1; i++) {
+    if (Math.abs(coords[i + 1][0] - coords[i][0]) > 180) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function geometryCrossesAntimeridian(g: Geometry): boolean {
+  switch (g.type) {
+    case "LineString":
+      return lineCrossesAntimeridian(g.coordinates);
+    case "MultiLineString":
+    case "Polygon":
+      return g.coordinates.some(lineCrossesAntimeridian);
+    case "MultiPolygon":
+      return g.coordinates.some(poly => poly.some(lineCrossesAntimeridian));
+    default:
+      // This function is not called with GeometryCollection
+      return false;
+  }
+}
+
+function cutAntimeridian(g: Geometry): Geometry {
+  switch (g.type) {
+    case "GeometryCollection": {
+      // Recursively handle GeometryCollection to circumvent a bug in 
+      return {
+        ...g,
+        geometries: g.geometries.map(cutAntimeridian),
+      };
+    }
+    case "Point":
+    case "MultiPoint":
+      return g;
+    default: {
+      if (!geometryCrossesAntimeridian(g)) {
+        return g;
+      }
+      return handleAntimeridian(g);
+    }
+  }
+}
+
 export function splitIntoFlatGeometries(g: Geometry): { points: Point[]; lineStrings: LineString[]; polygons: Polygon[] } {
-  const flat: FlattenedGeometry[] = (flatten(feature(g)).features ?? []).map(f => f.geometry);
+  const normalized = cutAntimeridian(g);
+  const flat: FlattenedGeometry[] = (flatten(normalized).features ?? []).map(f => f.geometry);
   const points: Point[] = [];
   const lineStrings: LineString[] = [];
   const polygons: Polygon[] = [];
@@ -52,24 +136,6 @@ export function splitIntoFlatGeometries(g: Geometry): { points: Point[]; lineStr
   return { points, lineStrings, polygons };
 }
 
-// Check if two line segments intersect in the planar (lon/lat) space
-function planarIntersection(a1: Position, a2: Position, b1: Position, b2: Position): Position | null {
-  const d1x = a2[0] - a1[0], d1y = a2[1] - a1[1];
-  const d2x = b2[0] - b1[0], d2y = b2[1] - b1[1];
-  const denom = d1x * d2y - d1y * d2x;
-  
-  if (Math.abs(denom) < 1e-14) return null; // parallel or colinear
-  
-  const dx = b1[0] - a1[0], dy = b1[1] - a1[1];
-  const t = (dx * d2y - dy * d2x) / denom;
-  const u = (dx * d1y - dy * d1x) / denom;
-  
-  if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
-    return [a1[0] + t * d1x, a1[1] + t * d1y];
-  }
-  return null;
-}
-
 // minimal distance between a list of points and a list of segments
 function pointsToSegmentsMin(pointGeoms: Point[], segmentGeoms: LineString[]): DistanceResult {
   let minDist = Infinity;
@@ -93,17 +159,9 @@ function pointsToSegmentsMin(pointGeoms: Point[], segmentGeoms: LineString[]): D
 
 // Check for line-line segment intersections
 function lineToLineIntersection(lineA: LineString, lineB: LineString): Position | null {
-  const coordsA = lineA.coordinates;
-  const coordsB = lineB.coordinates;
-  
-  for (let i = 0; i < coordsA.length - 1; i++) {
-    for (let j = 0; j < coordsB.length - 1; j++) {
-      const intersection = planarIntersection(
-        coordsA[i], coordsA[i + 1],
-        coordsB[j], coordsB[j + 1]
-      );
-      if (intersection) return intersection;
-    }
+  const intersections = lineIntersect(lineA, lineB);
+  if (intersections.features.length > 0) {
+    return intersections.features[0].geometry.coordinates;
   }
   return null;
 }
@@ -136,19 +194,9 @@ const roundDistance = (km: number) => Number((km * 1000).toFixed(2));
  * @param {object} gB GeoJSON Geometry
  */
 export function distance(gA: Geometry, gB: Geometry): DistanceResult {
-  // Normalize: ensure gA is the Point when one input is a Point
-  if (gB.type === "Point" && gA.type !== "Point") {
-    const r = distance(gB, gA);
-    return { distance: r.distance, point1: r.point2, point2: r.point1 };
-  }
-
+  // fast-track for point-to-point distance
   if (gA.type === "Point" && gB.type === "Point")
     return { distance: roundDistance(turfDistance(gA, gB)), point1: gA.coordinates, point2: gB.coordinates };
-
-  if (gA.type === "Point" && gB.type === "LineString") {
-    const nearest = nearestPointOnLine(gB, gA.coordinates);
-    return { distance: roundDistance(nearest.properties.pointDistance), point1: gA.coordinates, point2: nearest.geometry.coordinates };
-  }
 
   const { points: pointsA, lineStrings: segA, polygons: polysA } = splitIntoFlatGeometries(gA);
   const { points: pointsB, lineStrings: segB, polygons: polysB } = splitIntoFlatGeometries(gB);
