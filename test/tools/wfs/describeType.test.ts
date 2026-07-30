@@ -115,16 +115,7 @@ describe("Test GpfDescribeTypeTool",() => {
             throw new Error("expected text content");
         }
         expect(textContent.text).toContain("Paramètres invalides");
-        expect(response.structuredContent).toMatchObject({
-            type: "urn:geocontext:problem:invalid-tool-params",
-            errors: expect.arrayContaining([
-                expect.objectContaining({
-                    name: "typename",
-                    code: "too_small",
-                    detail: "le nom du type ne doit pas être vide",
-                }),
-            ]),
-        });
+        expect(textContent.text).toContain("le nom du type ne doit pas être vide");
     });
 
     it("should return isError=true when execute fails", async () => {
@@ -148,8 +139,5 @@ describe("Test GpfDescribeTypeTool",() => {
         }
         expect(textContent.text).toContain("Le type 'BDTOPO_V3:not_found' est introuvable");
         expect(textContent.text).toContain("gpf_search_types");
-        expect(response.structuredContent).toMatchObject({
-            type: "urn:geocontext:problem:execution-error",
-        });
     });
 });

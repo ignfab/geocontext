@@ -3,6 +3,7 @@ import { vi, describe, it, expect, afterEach } from "vitest";
 import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 import type { GpfFeatureType } from "../../../src/wfs/catalog.js";
 import { ServiceResponseError } from "../../../src/helpers/http.js";
+import { expectErrorText } from "../helpers/errorAssertions";
 
 const mockGetFeatureType = vi.fn<(typename: string) => Promise<GpfFeatureType>>();
 const mockFetchJSONPost = vi.fn<(
@@ -327,16 +328,7 @@ describe("Test GpfGetFeaturesTool", () => {
       throw new Error("expected text content");
     }
     expect(textContent.text).toContain("Paramètres invalides");
-    expect(response.structuredContent).toMatchObject({
-      type: "urn:geocontext:problem:invalid-tool-params",
-      errors: expect.arrayContaining([
-        expect.objectContaining({
-          name: "typename",
-          code: "too_small",
-          detail: "le nom du type ne doit pas être vide",
-        }),
-      ]),
-    });
+    expect(textContent.text).toContain("le nom du type ne doit pas être vide");
     expect(tool.toolDefinition.outputSchema).toBeUndefined();
   });
 
@@ -373,16 +365,7 @@ describe("Test GpfGetFeaturesTool", () => {
     }
     expect(textContent.text).toContain("Paramètres invalides");
     expect(textContent.text).toContain("Un seul filtre spatial est autorisé");
-    expect(response.structuredContent).toMatchObject({
-      type: "urn:geocontext:problem:invalid-tool-params",
-      errors: expect.arrayContaining([
-        expect.objectContaining({
-          code: "custom",
-          name: "spatial_filters",
-          detail: expect.stringContaining("bbox_filter, intersects_point_filter"),
-        }),
-      ]),
-    });
+    expect(textContent.text).toContain("bbox_filter, intersects_point_filter");
     expect(mockGetFeatureType).not.toHaveBeenCalled();
     expect(mockFetchJSONPost).not.toHaveBeenCalled();
   });
@@ -403,17 +386,9 @@ describe("Test GpfGetFeaturesTool", () => {
     it.each(FILTER_DEPENDENT_EXTRAS)("should reject %s without a spatial filter as invalid tool parameters", async (extra) => {
       const response = await callWith({ spatial_extras: [extra] });
 
-      expect(response.isError).toBe(true);
-      expect(response.structuredContent).toMatchObject({
-        type: "urn:geocontext:problem:invalid-tool-params",
-        errors: [
-          expect.objectContaining({
-            code: "custom",
-            name: "spatial_extras",
-            detail: expect.stringContaining(`\`${extra}\` exige un filtre spatial`),
-          }),
-        ],
-      });
+      const errorText = expectErrorText(response);
+      expect(errorText).toContain("spatial_extras");
+      expect(errorText).toContain(`\`${extra}\` exige un filtre spatial`);
       expect(mockGetFeatureType).not.toHaveBeenCalled();
       expect(mockFetchJSONPost).not.toHaveBeenCalled();
     });
@@ -424,17 +399,10 @@ describe("Test GpfGetFeaturesTool", () => {
         spatial_extras: [extra],
       });
 
-      expect(response.isError).toBe(true);
-      expect(response.structuredContent).toMatchObject({
-        type: "urn:geocontext:problem:invalid-tool-params",
-        errors: [
-          expect.objectContaining({
-            code: "custom",
-            name: "spatial_extras",
-            detail: expect.stringContaining("intersects_point_filter"),
-          }),
-        ],
-      });
+      const errorText = expectErrorText(response);
+      expect(errorText).toContain("spatial_extras");
+      expect(errorText).toContain(`\`${extra}\``);
+      expect(errorText).toContain("intersects_point_filter");
       expect(mockGetFeatureType).not.toHaveBeenCalled();
       expect(mockFetchJSONPost).not.toHaveBeenCalled();
     });
@@ -473,16 +441,7 @@ describe("Test GpfGetFeaturesTool", () => {
       throw new Error("expected text content");
     }
     expect(textContent.text).toContain("Paramètres invalides");
-    expect(response.structuredContent).toMatchObject({
-      type: "urn:geocontext:problem:invalid-tool-params",
-      errors: expect.arrayContaining([
-        expect.objectContaining({
-          code: "unknown_parameter",
-          name: "cql_filter",
-          detail: expect.stringContaining("cql_filter"),
-        }),
-      ]),
-    });
+    expect(textContent.text).toContain("Le paramètre 'cql_filter' n'est pas reconnu.");
   });
 
   it("should build a POST request with query params and encoded body", async () => {
@@ -553,9 +512,6 @@ describe("Test GpfGetFeaturesTool", () => {
     }
     expect(textContent.text).toContain("catalogue embarqué est rejeté");
     expect(textContent.text).toContain("géométrique 'geometrie'");
-    expect(response.structuredContent).toMatchObject({
-      type: "urn:geocontext:problem:execution-error",
-    });
   });
 
   it("should return feature_ref for non point layers with geometry set to null", async () => {
@@ -800,12 +756,6 @@ describe("Test GpfGetFeaturesTool", () => {
     }
     expect(textContent.text).toContain("est introuvable");
     expect(textContent.text).toContain("localisant.404");
-    expect(response.structuredContent).toMatchObject({
-      type: "urn:geocontext:problem:feature-not-found",
-      errors: expect.arrayContaining([
-        expect.objectContaining({ code: "feature_not_found" }),
-      ]),
-    });
   });
 
   describe("extras that depend on the intersects_feature reference", () => {
@@ -909,9 +859,6 @@ describe("Test GpfGetFeaturesTool", () => {
     }
     expect(textContent.text).toContain("gpf_get_feature_by_id");
     expect(textContent.text).toContain("intersects_feature");
-    expect(response.structuredContent).toMatchObject({
-      type: "urn:geocontext:problem:execution-error",
-    });
     expect(requests).toHaveLength(0);
   });
 

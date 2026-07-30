@@ -50,6 +50,8 @@ describe("Test BaseTool error response", () => {
       expect.stringContaining("[tool] failed dummy_error_tool: Paramètres invalides"),
       expect.objectContaining({
         tool: "dummy_error_tool",
+        problem_type: "urn:geocontext:problem:invalid-tool-params",
+        problem_title: "Paramètres d’outil invalides",
         input: {
           lon: 600,
         },
@@ -61,15 +63,8 @@ describe("Test BaseTool error response", () => {
       type: "text",
       text: expect.stringContaining("Paramètres invalides"),
     });
-    expect(response.structuredContent).toMatchObject({
-      type: "urn:geocontext:problem:invalid-tool-params",
-      errors: expect.arrayContaining([
-        expect.objectContaining({
-          name: "lon",
-          code: "too_big",
-        }),
-      ]),
-    });
+    // Reserved for the success-path `outputSchema`; never set on errors.
+    expect(response.structuredContent).toBeUndefined();
   });
 
   it("should return normalized runtime errors", async () => {
@@ -99,16 +94,7 @@ describe("Test BaseTool error response", () => {
       type: "text",
       text: "runtime failure for lon=2.3",
     });
-    expect(response.structuredContent).toMatchObject({
-      type: "urn:geocontext:problem:execution-error",
-      detail: "runtime failure for lon=2.3",
-      errors: [
-        {
-          code: "execution_error",
-          detail: "runtime failure for lon=2.3",
-        },
-      ],
-    });
+    expect(response.structuredContent).toBeUndefined();
   });
 
   it("should keep the matching input in concurrent runtime error logs", async () => {
