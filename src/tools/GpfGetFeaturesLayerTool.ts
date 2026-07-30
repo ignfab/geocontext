@@ -120,6 +120,9 @@ class GpfGetFeaturesLayerTool extends BaseTool<GpfGetFeaturesLayerInput> {
     const featureType = await wfsClient.getFeatureType(compiledInput.typename);
     const spatialFilter = getSpatialFilter(compiledInput);
 
+    // Also check that the typename corresponds to a collection that has a geometry.
+    getGeometryProperty(featureType);
+
     // Also validate the reference feature's typename for an intersects_feature
     // filter — it is a SECOND typename the proxy would resolve at fetch time
     // (execute.ts resolveReferenceGeometry), and an unknown one would otherwise

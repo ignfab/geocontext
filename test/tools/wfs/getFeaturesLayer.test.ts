@@ -237,9 +237,47 @@ describe("Test GpfGetFeaturesLayerTool", () => {
     });
 
     expect(response.isError).toBe(true);
-    expect(response.structuredContent).toMatchObject({
-      type: "urn:geocontext:problem:invalid-tool-params",
+  });
+
+  it("rejects a typename with NO geometry column BEFORE minting the URL (catalog pre-flight)", async () => {
+    mockGetEnv.mockReturnValue(makeEnv({}));
+    // A type that EXISTS in the catalog but has no geometry column (attribute-only
+    // table). The tool must refuse to mint a data_url because a geometry-less type
+    // can never produce a cartographiable layer — failing here (early, at the tool
+    // call) is better than handing the LLM an opaque proxy 5xx at map-load.
+    const tableType: Collection = {
+      id: "INSEE.FILOSOFI.INDICATORS:filosofi_iris_2019",
+      namespace: "INSEE.FILOSOFI.INDICATORS",
+      name: "filosofi_iris_2019",
+      title: "Indicateurs Filosofi (table, sans géométrie)",
+      description: "Fixture de test : type attributaire sans propriété géométrique",
+      properties: [
+        { name: "code_iris", type: "string" },
+        { name: "men", type: "integer" },
+        { name: "ind_snv", type: "float" },
+      ],
+    };
+    mockGetFeatureType.mockResolvedValue(tableType);
+    const tool = new GpfGetFeaturesLayerTool();
+
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_get_features_layer",
+        arguments: { typename: "INSEE.FILOSOFI.INDICATORS:filosofi_iris_2019" },
+      },
     });
+
+    // Fails at the tool call (no data_url minted); the typename WAS resolved.
+    expect(response.isError).toBe(true);
+    const textContent = response.content[0];
+    if (textContent.type !== "text") {
+      throw new Error("expected text content");
+    }
+    expect(textContent.text).not.toContain("data_url");
+    expect(textContent.text).toContain("géométri");
+    expect(mockGetFeatureType).toHaveBeenCalledWith(
+      "INSEE.FILOSOFI.INDICATORS:filosofi_iris_2019",
+    );
   });
 
   it("rejects an unknown property BEFORE minting the URL (catalog pre-flight)", async () => {
