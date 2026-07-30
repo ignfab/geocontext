@@ -5,8 +5,8 @@ Ce document est généré automatiquement à partir des définitions de tools ex
 ## Contrat d’erreur MCP
 
 - En cas d'échec, chaque tool renvoie `isError: true`.
-- `content.text` contient le message de détail en français (aligné avec `structuredContent.detail`).
-- `structuredContent` contient l'objet canonique exploitable par un client.
+- `content.text` contient le message de détail en français.
+- Aucun `structuredContent` n'est renvoyé : ce champ est réservé au `outputSchema` du cas de succès.
 
 Exemple complet généré automatiquement à partir d'un appel de tool invalide (contrainte de validation) :
 
@@ -21,19 +21,7 @@ Exemple complet généré automatiquement à partir d'un appel de tool invalide 
         "type": "text",
         "text": "Paramètres invalides : Le paramètre 'text' est requis."
       }
-    ],
-    "structuredContent": {
-      "type": "urn:geocontext:problem:invalid-tool-params",
-      "title": "Paramètres d’outil invalides",
-      "detail": "Paramètres invalides : Le paramètre 'text' est requis.",
-      "errors": [
-        {
-          "code": "invalid_type",
-          "detail": "Le paramètre 'text' est requis.",
-          "name": "text"
-        }
-      ]
-    }
+    ]
   }
 }
 ```
@@ -180,7 +168,7 @@ Les coordonnées `lon/lat` retournées sont directement réutilisables dans tous
 | Cas | `content` | `structuredContent` | Relation entre `content` et `structuredContent` |
 | --- | --- | --- | --- |
 | Succès | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
-| Erreur | oui | oui | `content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`. |
+| Erreur | oui | non | `content[0].text` porte le message d'erreur ; aucun `structuredContent` n'est ajouté (réservé au `outputSchema` du cas de succès). |
 
 ## `altitude`
 
@@ -281,7 +269,7 @@ Renvoie l'altitude (en mètres) et la précision de la mesure (accuracy) d'un po
 | Cas | `content` | `structuredContent` | Relation entre `content` et `structuredContent` |
 | --- | --- | --- | --- |
 | Succès | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
-| Erreur | oui | oui | `content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`. |
+| Erreur | oui | non | `content[0].text` porte le message d'erreur ; aucun `structuredContent` n'est ajouté (réservé au `outputSchema` du cas de succès). |
 
 ## `adminexpress`
 
@@ -411,7 +399,7 @@ Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gp
 | Cas | `content` | `structuredContent` | Relation entre `content` et `structuredContent` |
 | --- | --- | --- | --- |
 | Succès | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
-| Erreur | oui | oui | `content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`. |
+| Erreur | oui | non | `content[0].text` porte le message d'erreur ; aucun `structuredContent` n'est ajouté (réservé au `outputSchema` du cas de succès). |
 
 ## `cadastre`
 
@@ -552,7 +540,7 @@ Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gp
 | Cas | `content` | `structuredContent` | Relation entre `content` et `structuredContent` |
 | --- | --- | --- | --- |
 | Succès | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
-| Erreur | oui | oui | `content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`. |
+| Erreur | oui | non | `content[0].text` porte le message d'erreur ; aucun `structuredContent` n'est ajouté (réservé au `outputSchema` du cas de succès). |
 
 ## `urbanisme`
 
@@ -690,7 +678,7 @@ Modèles d'URL Géoportail de l'Urbanisme :
 | Cas | `content` | `structuredContent` | Relation entre `content` et `structuredContent` |
 | --- | --- | --- | --- |
 | Succès | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
-| Erreur | oui | oui | `content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`. |
+| Erreur | oui | non | `content[0].text` porte le message d'erreur ; aucun `structuredContent` n'est ajouté (réservé au `outputSchema` du cas de succès). |
 
 ## `assiette_sup`
 
@@ -824,7 +812,7 @@ Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gp
 | Cas | `content` | `structuredContent` | Relation entre `content` et `structuredContent` |
 | --- | --- | --- | --- |
 | Succès | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
-| Erreur | oui | oui | `content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`. |
+| Erreur | oui | non | `content[0].text` porte le message d'erreur ; aucun `structuredContent` n'est ajouté (réservé au `outputSchema` du cas de succès). |
 
 ## `gpf_search_types`
 
@@ -954,7 +942,7 @@ Le paramètre `max_results` permet d'élargir le nombre de candidats retournés 
 | Cas | `content` | `structuredContent` | Relation entre `content` et `structuredContent` |
 | --- | --- | --- | --- |
 | Succès | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
-| Erreur | oui | oui | `content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`. |
+| Erreur | oui | non | `content[0].text` porte le message d'erreur ; aucun `structuredContent` n'est ajouté (réservé au `outputSchema` du cas de succès). |
 
 ## `gpf_describe_type`
 
@@ -1074,7 +1062,7 @@ Utiliser ce tool après `gpf_search_types` pour inspecter les propriétés dispo
 | Cas | `content` | `structuredContent` | Relation entre `content` et `structuredContent` |
 | --- | --- | --- | --- |
 | Succès | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
-| Erreur | oui | oui | `content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`. |
+| Erreur | oui | non | `content[0].text` porte le message d'erreur ; aucun `structuredContent` n'est ajouté (réservé au `outputSchema` du cas de succès). |
 
 ## `gpf_get_features`
 
@@ -1403,7 +1391,7 @@ Aucun `outputSchema` unique n'est exposé. La sortie est gérée par la sériali
 | Cas | `content` | `structuredContent` | Relation entre `content` et `structuredContent` |
 | --- | --- | --- | --- |
 | Succès | oui | non | `content[0].text` est la FeatureCollection stringifiée (propriétés attributaires uniquement) ; aucun `structuredContent` n'est ajouté. |
-| Erreur | oui | oui | `content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`. |
+| Erreur | oui | non | `content[0].text` porte le message d'erreur ; aucun `structuredContent` n'est ajouté (réservé au `outputSchema` du cas de succès). |
 
 ## `gpf_get_features_layer`
 
@@ -1735,7 +1723,7 @@ Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, 
 | Cas | `content` | `structuredContent` | Relation entre `content` et `structuredContent` |
 | --- | --- | --- | --- |
 | Succès | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
-| Erreur | oui | oui | `content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`. |
+| Erreur | oui | non | `content[0].text` porte le message d'erreur ; aucun `structuredContent` n'est ajouté (réservé au `outputSchema` du cas de succès). |
 
 ## `gpf_count_features`
 
@@ -2025,7 +2013,7 @@ Les noms de propriétés utilisés dans `where` **ne peuvent pas être devinés*
 | Cas | `content` | `structuredContent` | Relation entre `content` et `structuredContent` |
 | --- | --- | --- | --- |
 | Succès | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
-| Erreur | oui | oui | `content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`. |
+| Erreur | oui | non | `content[0].text` porte le message d'erreur ; aucun `structuredContent` n'est ajouté (réservé au `outputSchema` du cas de succès). |
 
 ## `gpf_get_feature_by_id`
 
@@ -2112,7 +2100,7 @@ Aucun `outputSchema` unique n'est exposé. La sortie est gérée par la sériali
 | Cas | `content` | `structuredContent` | Relation entre `content` et `structuredContent` |
 | --- | --- | --- | --- |
 | Succès | oui | oui | `content[0].text` est la FeatureCollection stringifiée, également exposée dans `structuredContent`. |
-| Erreur | oui | oui | `content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`. |
+| Erreur | oui | non | `content[0].text` porte le message d'erreur ; aucun `structuredContent` n'est ajouté (réservé au `outputSchema` du cas de succès). |
 
 ## `gpf_get_feature_by_id_layer`
 
@@ -2210,4 +2198,4 @@ Cet outil ne peut renvoyer qu'un unique objet (0 ou plusieurs résultats provoqu
 | Cas | `content` | `structuredContent` | Relation entre `content` et `structuredContent` |
 | --- | --- | --- | --- |
 | Succès | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
-| Erreur | oui | oui | `content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`. |
+| Erreur | oui | non | `content[0].text` porte le message d'erreur ; aucun `structuredContent` n'est ajouté (réservé au `outputSchema` du cas de succès). |
