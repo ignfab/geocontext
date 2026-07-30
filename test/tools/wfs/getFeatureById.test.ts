@@ -295,12 +295,6 @@ describe("Test GpfGetFeatureByIdTool", () => {
     }
     expect(textContent.text).toContain("est introuvable");
     expect(textContent.text).toContain("commune.404");
-    expect(response.structuredContent).toMatchObject({
-      type: "urn:geocontext:problem:feature-not-found",
-      errors: expect.arrayContaining([
-        expect.objectContaining({ code: "feature_not_found" }),
-      ]),
-    });
   });
 
   it("should fail clearly when multiple features are returned", async () => {
@@ -331,12 +325,6 @@ describe("Test GpfGetFeatureByIdTool", () => {
       throw new Error("expected text content");
     }
     expect(textContent.text).toContain("devrait être unique");
-    expect(response.structuredContent).toMatchObject({
-      type: "urn:geocontext:problem:feature-cardinality",
-      errors: expect.arrayContaining([
-        expect.objectContaining({ code: "feature_cardinality" }),
-      ]),
-    });
   });
 
   it("should fail clearly when the returned feature id mismatches", async () => {
@@ -366,12 +354,6 @@ describe("Test GpfGetFeatureByIdTool", () => {
       throw new Error("expected text content");
     }
     expect(textContent.text).toContain("au lieu de");
-    expect(response.structuredContent).toMatchObject({
-      type: "urn:geocontext:problem:feature-cardinality",
-      errors: expect.arrayContaining([
-        expect.objectContaining({ code: "feature_cardinality" }),
-      ]),
-    });
   });
 
   it("should fail clearly when execution returns an unexpected success payload", async () => {
@@ -394,10 +376,6 @@ describe("Test GpfGetFeatureByIdTool", () => {
     }
     expect(textContent.text).toContain("Réponse interne inattendue");
     expect(textContent.text).toContain("FeatureCollection");
-    expect(response.structuredContent).toMatchObject({
-      type: "urn:geocontext:problem:execution-error",
-      detail: expect.stringContaining("gpf_get_feature_by_id"),
-    });
   });
 
   it("should work on a geometry-less table when select and spatial_extras are empty", async () => {

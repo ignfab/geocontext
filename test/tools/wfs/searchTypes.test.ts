@@ -153,15 +153,6 @@ describe("Test GpfSearchTypesTool",() => {
             throw new Error("expected text content");
         }
         expect(textContent.text).toContain("Paramètres invalides");
-        expect(response.structuredContent).toMatchObject({
-            type: "urn:geocontext:problem:invalid-tool-params",
-            errors: expect.arrayContaining([
-                expect.objectContaining({
-                    name: "query",
-                    code: "too_small",
-                    detail: "la requête de recherche ne doit pas être vide",
-                }),
-            ]),
-        });
+        expect(textContent.text).toContain("la requête de recherche ne doit pas être vide");
     });
 });

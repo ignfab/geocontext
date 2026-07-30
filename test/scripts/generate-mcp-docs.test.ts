@@ -129,7 +129,7 @@ describe("generate-mcp-docs helpers", () => {
 
     expect(markdown).toContain("### Réponse MCP");
     expect(markdown).toContain("| Succès | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |");
-    expect(markdown).toContain("| Erreur | oui | oui | `content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`. |");
+    expect(markdown).toContain("| Erreur | oui | non | `content[0].text` porte le message d'erreur ; aucun `structuredContent` n'est ajouté (réservé au `outputSchema` du cas de succès). |");
   });
 
   it("should document the get features single-mode response contract", async () => {
@@ -228,11 +228,8 @@ describe("generate-mcp-docs helpers", () => {
             text: expect.stringContaining("Paramètres invalides"),
           },
         ],
-        structuredContent: {
-          type: "urn:geocontext:problem:invalid-tool-params",
-          title: "Paramètres d’outil invalides",
-        },
       },
     });
+    expect(example?.response.structuredContent).toBeUndefined();
   });
 });

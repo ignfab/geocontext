@@ -7,6 +7,7 @@ import { validateStructuredContentAgainstOutputSchema } from "../helpers/outputS
 import type { Env } from "../../../src/config/env.js";
 import { decodeToken } from "../../../src/proxy/token.js";
 import { PROXY_TOKEN_KIND } from "../../../src/wfs/schema.js";
+import { expectErrorText } from "../helpers/errorAssertions";
 
 // 32-byte key as 64 hex chars, decoded to a Buffer the way env.ts would.
 const SECRET_HEX = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
@@ -243,13 +244,7 @@ describe("Test GpfGetFeatureByIdLayerTool", () => {
       },
     });
 
-    expect(response.isError).toBe(true);
-    expect(response.structuredContent).toMatchObject({
-      type: "urn:geocontext:problem:invalid-tool-params",
-      errors: expect.arrayContaining([
-        expect.objectContaining({ name: "where", code: "unknown_parameter" }),
-      ]),
-    });
+    expect(expectErrorText(response)).toContain("Le paramètre 'where' n'est pas reconnu.");
   });
 
   it("rejects an unknown selected property BEFORE minting the URL", async () => {
@@ -306,12 +301,6 @@ describe("Test GpfGetFeatureByIdLayerTool", () => {
       },
     });
 
-    expect(response.isError).toBe(true);
-    expect(response.structuredContent).toMatchObject({
-      type: "urn:geocontext:problem:invalid-tool-params",
-      errors: expect.arrayContaining([
-        expect.objectContaining({ name: "feature_id" }),
-      ]),
-    });
+    expect(expectErrorText(response)).toContain("Le paramètre 'feature_id' est requis.");
   });
 });

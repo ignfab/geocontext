@@ -7,6 +7,7 @@ import { validateStructuredContentAgainstOutputSchema } from "../helpers/outputS
 import type { Env } from "../../../src/config/env.js";
 import { decodeToken } from "../../../src/proxy/token.js";
 import { PROXY_TOKEN_KIND } from "../../../src/wfs/schema.js";
+import { expectErrorText } from "../helpers/errorAssertions";
 
 // 32-byte key as 64 hex chars, decoded to a Buffer the way env.ts would.
 const SECRET_HEX = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
@@ -226,13 +227,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
       },
     });
 
-    expect(response.isError).toBe(true);
-    expect(response.structuredContent).toMatchObject({
-      type: "urn:geocontext:problem:invalid-tool-params",
-      errors: expect.arrayContaining([
-        expect.objectContaining({ name: "spatial_extras", code: "unknown_parameter" }),
-      ]),
-    });
+    expect(expectErrorText(response)).toContain("Le paramètre 'spatial_extras' n'est pas reconnu.");
     // Zod validation fails before the catalog pre-flight.
     expect(mockGetFeatureType).not.toHaveBeenCalled();
   });
@@ -252,8 +247,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
       },
     });
 
-    expect(response.isError).toBe(true);
-    expect(response.structuredContent?.type).toBe("urn:geocontext:problem:invalid-tool-params")
+    expect(expectErrorText(response)).toContain("Un seul filtre spatial est autorisé");
   });
 
   it("rejects a typename with NO geometry column BEFORE minting the URL (catalog pre-flight)", async () => {
@@ -433,11 +427,5 @@ describe("Test GpfGetFeaturesLayerTool", () => {
     }
     // FR message, not the EN codec message.
     expect(textContent.text).toContain("trop volumineuse");
-    expect(response.structuredContent).toMatchObject({
-      type: "urn:geocontext:problem:proxy-url-error",
-      errors: expect.arrayContaining([
-        expect.objectContaining({ code: "proxy_url_too_large" }),
-      ]),
-    });
   });
 });
