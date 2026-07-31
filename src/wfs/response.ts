@@ -148,9 +148,8 @@ export function transformFeatureCollectionResponse(
 
 // --- Feature Collection post-processing ---
 
-export type GpfGetFeatureCoreInput = {
+type FeatureCollectionPostProcessInput = {
   typename: string,
-  select?: string[],
   spatial_extras?: string[],
 }
 
@@ -164,7 +163,7 @@ export type GpfGetFeatureCoreInput = {
  * @param input GpfGetFeatures or GpfGetFeatureById input query.
  * @returns A FeatureCollection with the required transformations done.
  */
-export function postProcessFeatureCollection(featureCollection: GenericFeatureCollection, input: GpfGetFeatureCoreInput) {
+export function postProcessFeatureCollection(featureCollection: GenericFeatureCollection, input: FeatureCollectionPostProcessInput) {
   const transformed = transformFeatureCollectionResponse(featureCollection, input.spatial_extras);
   if (!Array.isArray(transformed.features)) {
     return transformed;
