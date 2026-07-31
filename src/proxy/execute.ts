@@ -74,20 +74,16 @@ export type GeometryFeatureQueryDeps = {
 
 /**
  * Appends the geometry column to a compiled `propertyName` selection so the WFS
- * returns full geometry. An empty/undefined selection means "all properties",
- * which already includes geometry, so it is left untouched.
+ * returns full geometry.
  *
- * @param propertyName Comma-separated selection from `compileQueryParts`, if any.
+ * @param propertyName Comma-separated selection from `compileQueryParts`.
  * @param geometryProperty Geometry property resolved for the feature type.
- * @returns A selection guaranteed to include the geometry column, or `undefined`.
+ * @returns A selection guaranteed to include the geometry column.
  */
 function ensureGeometrySelected(
-  propertyName: string | undefined,
+  propertyName: string,
   geometryProperty: CollectionProperty,
-): string | undefined {
-  if (!propertyName) {
-    return undefined;
-  }
+): string {
   const columns = propertyName.split(",");
   if (columns.includes(geometryProperty.name)) {
     return propertyName;

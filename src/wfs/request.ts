@@ -7,6 +7,7 @@
  */
 
 import { GPF_WFS_URL } from "./catalog.js";
+import { CompiledQuery } from "./queryPreparation.js";
 import type { GpfQueryFeaturesInput } from "./schema.js";
 
 // --- Transport Types ---
@@ -36,7 +37,7 @@ function buildBody(cqlFilter?: string) {
 // --- Public Builders ---
 
 /**
- * Builds the main WFS GetFeature or CountFeature request from normalized tool input and compiled query parts.
+ * Builds the main WFS GetFeature or CountFeatures request from normalized tool input and compiled query parts.
  *
  * @param input Normalized tool input.
  * @param compiled Compiled query fragments produced from the input and feature type.
@@ -44,7 +45,7 @@ function buildBody(cqlFilter?: string) {
  */
 export function buildMainRequest(
   input: GpfQueryFeaturesInput,
-  compiled: { cqlFilter?: string; propertyName?: string; sortBy?: string },
+  compiled: CompiledQuery,
 ): CompiledRequest {
   const query: Record<string, string> = {
     service: "WFS",
