@@ -219,17 +219,35 @@ export function compileQueryParts(
     fragments.push(compileWhereClause(featureType, clause));
   }
 
-  const isGetFeaturesQuery = "limit" in input;
+  const cqlFilter = fragments.length > 0 ? fragments.join(" AND ") : undefined;
 
-  const sortBy = isGetFeaturesQuery && input.order_by && input.order_by.length > 0
+  if (!("limit" in input)) {
+    // for CountFeatures: only return the required parts
+    return {
+      cqlFilter,
+      propertyName: "",
+    };
+  }
+
+  // for GetFeatures and GetFeatureById: compute sortBy, propertyName and
+  // ensure that geometryProperty is set when it is among the returned columns.
+
+  const sortBy = input.order_by && input.order_by.length > 0
     ? input.order_by.map((clause) => compileOrderByClause(featureType, clause)).join(",")
     : undefined;
 
-  const propertyName = isGetFeaturesQuery ? buildPropertyName(featureType, input.select, input.spatial_extras, geometryProperty) : "";
+  if (!geometryProperty && input.spatial_extras.length > 0) {
+    geometryProperty = getGeometryProperty(featureType);
+  }
+
+  const propertyName = buildPropertyName(featureType, input.select, input.spatial_extras, geometryProperty);
+
+  // geometryProperty must always be set if it is among the returned columns.
+  // It may also be set even if not required in the returned columns.
 
   return {
     geometryProperty,
-    cqlFilter: fragments.length > 0 ? fragments.join(" AND ") : undefined,
+    cqlFilter,
     propertyName,
     sortBy,
   };
