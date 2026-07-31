@@ -145,15 +145,18 @@ export function buildPropertyName(
     return selectedProperties.join(",");
   }
 
+  // If `select` is omitted, return every non-geometric property from the
+  // feature type, appending the geometry column only when it is required,
+  // for example when `spatial_extras` needs it to derive bbox/centroid/...
+  
   if (includeGeometry) {
-    // ensure that the geometric property exists
+    // Ensure that the geometric property exists and is unique.
     geometryProperty ?? getGeometryProperty(featureType);
-    return ""; // return all properties
+    return featureType.properties
+      .map((property: CollectionProperty) => property.name)
+      .join(","); // return all properties
   }
 
-  // If `select` is omitted, return every non-geometric property from the
-  // feature type, appending the geometry column only when `spatial_extras`
-  // needs it.
   const nonGeometryProperties = featureType.properties
     .filter((property: CollectionProperty) => !property.defaultCrs)
     .map((property: CollectionProperty) => property.name);
@@ -168,8 +171,7 @@ export function buildPropertyName(
 export function buildPropertyNameWithGeometry(
   featureType: Collection,
   select?: string[],
-  spatial_extras?: string[],
   geometryProperty: CollectionProperty = getGeometryProperty(featureType),
 ) {
-  return buildPropertyName(featureType, select, spatial_extras, geometryProperty, true);
+  return buildPropertyName(featureType, select, [], geometryProperty, true);
 }

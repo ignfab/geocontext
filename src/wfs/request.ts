@@ -58,6 +58,7 @@ export function buildMainRequest(
   };
 
   if (compiled.propertyName) {
+    // propertyName is always empty for CountFeatures and never empty for GetFeatures
     query.propertyName = compiled.propertyName;
   }
   if (compiled.sortBy) {

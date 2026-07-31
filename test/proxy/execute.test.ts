@@ -317,7 +317,7 @@ describe("proxy/execute · runGeometryFeatureByIdQuery", () => {
     // No `propertyName` is sent (WFS returns all props incl. geometry); srsName is
     // forced to WGS84 like the query path.
     expect(requests).toHaveLength(1);
-    expect(requests[0].query.propertyName).toBeUndefined();
+    expect(requests[0].query.propertyName).toBe("code_insee,population,geometrie");
     expect(requests[0].query.featureID).toBe("commune.1");
     expect(requests[0].query.srsName).toBe("EPSG:4326");
   });
