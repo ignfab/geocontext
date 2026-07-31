@@ -77,7 +77,7 @@ export function buildMainRequest(
  *
  * @param typename Typename of the target layer.
  * @param featureId Identifier of the target feature.
- * @param propertyName Optional comma-separated property list.
+ * @param propertyName Comma-separated property list.
  * @returns A POST request split into base URL, query-string parameters, and empty body.
  */
 export function buildGetFeatureByIdRequest(

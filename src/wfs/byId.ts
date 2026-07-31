@@ -15,7 +15,7 @@ import type {
   WfsFeatureResponse,
 } from "./types.js";
 import { buildGetFeatureByIdRequest } from "./request.js";
-import { buildPropertyName } from "./properties.js"
+import { buildPropertyName } from "./properties.js";
 import { postProcessFeatureCollection } from "./response.js";
 
 // --- Input Types ---
@@ -32,11 +32,6 @@ export type GetFeatureByIdExecutionInput = {
 
 // --- Internal Types ---
 
-type PropertySelectionInput = {
-  includeGeometry?: boolean;
-  select?: string[];
-};
-
 type FetchFeatureByIdInput = {
   typename: string;
   feature_id: string;
@@ -48,7 +43,7 @@ type FetchFeatureByIdInput = {
 /**
  * Executes the live WFS lookup targeting a single `featureID`.
  *
- * @param input Target layer, expected feature id, and optional property selection.
+ * @param input Target layer, expected feature id, and property selection.
  * @returns The raw FeatureCollection returned by the WFS service.
  */
 export async function fetchFeatureById(
@@ -140,7 +135,7 @@ export function requireSingleFeatureById(
  *
  * This function:
  * - loads the feature type from the embedded catalog
- * - builds the optional `propertyName` selection
+ * - builds the `propertyName` selection
  * - executes the WFS request for the requested `feature_id`
  * - enforces strict cardinality on the returned FeatureCollection
  * - attaches reusable `feature_ref` metadata to the final response

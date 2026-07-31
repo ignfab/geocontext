@@ -146,7 +146,7 @@ export function transformFeatureCollectionResponse(
   return { ...restCollection, features: transformedFeatures };
 }
 
-// --- Feature References ---
+// --- Feature Collection post-processing ---
 
 export type GpfGetFeatureCoreInput = {
   typename: string,
@@ -156,7 +156,7 @@ export type GpfGetFeatureCoreInput = {
 
 /**
  * Transforms a FeatureCollection obtained from upstream.
- * 
+ *
  * - Inject the exact queried typename into each `feature_ref`.
  * - Compute the required `spatial_extras`.
  *

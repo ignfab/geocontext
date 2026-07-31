@@ -12,7 +12,8 @@
  * This module reuses the WFS query-compilation primitives (`compileQueryParts`,
  * `buildMainRequest`, reference-geometry resolution) but:
  * - forces the geometry column into the request `propertyName` itself, without
- *   touching `buildPropertyName` (which stays coupled to the LLM `select`/`spatial_extras` knobs);
+ *   touching `buildPropertyName` / `buildPropertyNameWithGeometry`, which stay
+ *   coupled to the LLM `select`/`spatial_extras` knobs);
  * - returns the RAW FeatureCollection, never `postProcessFeatureCollection`;
  * - runs against an INJECTED WfsClient, so it is fully testable without network
  *   and lets the HTTP layer supply a size-bounded, rate-limited client.

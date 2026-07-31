@@ -40,7 +40,7 @@ import {
 // --- Re-exports ---
 
 export { geometryToEwkt } from "./geometry.js";
-export { validateSelectProperty, getGeometryProperty } from "./properties.js";
+export { getGeometryProperty } from "./properties.js";
 export { getSpatialFilter } from "./spatialFilter.js";
 
 // --- Internal Constants ---
@@ -124,7 +124,6 @@ function compileIsNullClause(property: CollectionProperty) {
  * Compiles a structured where clause into a CQL fragment.
  *
  * @param featureType Feature type definition loaded from the embedded catalog.
- * @param geometryProperty Geometry property already resolved for the feature type.
  * @param clause Raw where clause received from the tool input.
  * @returns A CQL predicate fragment.
  */
@@ -156,7 +155,6 @@ function compileWhereClause(featureType: Collection, clause: WhereClause) {
  * Compiles a structured sort clause into a WFS `sortBy` fragment.
  *
  * @param featureType Feature type definition loaded from the embedded catalog.
- * @param geometryProperty Geometry property already resolved for the feature type.
  * @param clause Raw order-by clause received from the tool input.
  * @returns A WFS `sortBy` fragment.
  */

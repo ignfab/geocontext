@@ -98,7 +98,7 @@ export function resolveNonGeometryProperty(featureType: Collection, propertyName
  * @param propertyName Raw selected property name.
  * @returns The validated non-geometric property name.
  */
-export function validateSelectProperty(featureType: Collection, propertyName: string) {
+function validateSelectProperty(featureType: Collection, propertyName: string) {
   return resolveNonGeometryProperty(
     featureType,
     propertyName,
@@ -127,7 +127,7 @@ export function buildPropertyName(
   featureType: Collection,
   select?: string[],
   spatial_extras?: string[],
-  geometryProperty?: CollectionProperty | undefined,
+  geometryProperty?: CollectionProperty,
   includeGeometry: boolean = (spatial_extras ?? []).length > 0,
 ) : string {
 
@@ -161,6 +161,10 @@ export function buildPropertyName(
   return nonGeometryProperties.join(",");
 }
 
+/**  
+ * `buildPropertyName` for cartographic callers: the geometry column is always  
+ * selected, and a geometry-less type must fail here rather than at map load.  
+ */
 export function buildPropertyNameWithGeometry(
   featureType: Collection,
   select?: string[],
