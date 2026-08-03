@@ -64,6 +64,7 @@ Tous les tools exposent les mêmes annotations MCP dans leur définition `tools/
 - [`gpf_count_features`](#gpf_count_features)
 - [`gpf_get_feature_by_id`](#gpf_get_feature_by_id)
 - [`gpf_get_feature_by_id_layer`](#gpf_get_feature_by_id_layer)
+- [`distance`](#distance)
 
 ## `geocode`
 
@@ -2199,6 +2200,135 @@ Cet outil ne peut renvoyer qu'un unique objet (0 ou plusieurs résultats provoqu
   },
   "required": [
     "data_url"
+  ]
+}
+```
+
+</details>
+
+### Réponse MCP
+
+| Cas | `content` | `structuredContent` | Relation entre `content` et `structuredContent` |
+| --- | --- | --- | --- |
+| Succès | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
+| Erreur | oui | oui | `content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`. |
+
+## `distance`
+
+Code Source : [src/tools/DistanceTool.ts](../src/tools/DistanceTool.ts)
+
+### Titre
+
+Distance entre deux points
+
+### Description du tool
+
+```
+Renvoie la distance (en mètres) entre deux points à partir de leur longitude et latitude.
+```
+
+### Schéma d’entrée
+
+| Champ | Type | Requis | Description |
+| --- | --- | --- | --- |
+| `arrival` | object | oui | Le point d'arrivée |
+| `departure` | object | oui | Le point de départ |
+| `profile` | string (enum) | non | Le type de chemin suivi : `direct` distance à vol d'oiseau (Terre ronde, précision à 0.5%), `vincenty` distance à vol d'oiseau (Terre ellipsoïde, plus précise et coûteuse, précision à 1mm). Par défaut : `direct`. Valeurs : direct, vincenty. Valeur par défaut : direct. |
+
+<details>
+<summary>Schéma d’entrée brut</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "departure": {
+      "type": "object",
+      "properties": {
+        "lon": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180,
+          "description": "La longitude du point de départ."
+        },
+        "lat": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90,
+          "description": "La latitude du point de départ."
+        }
+      },
+      "required": [
+        "lon",
+        "lat"
+      ],
+      "additionalProperties": false,
+      "description": "Le point de départ"
+    },
+    "arrival": {
+      "type": "object",
+      "properties": {
+        "lon": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180,
+          "description": "La longitude du point d'arrivée."
+        },
+        "lat": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90,
+          "description": "La latitude du point d'arrivée."
+        }
+      },
+      "required": [
+        "lon",
+        "lat"
+      ],
+      "additionalProperties": false,
+      "description": "Le point d'arrivée"
+    },
+    "profile": {
+      "type": "string",
+      "enum": [
+        "direct",
+        "vincenty"
+      ],
+      "default": "direct",
+      "description": "Le type de chemin suivi : `direct` distance à vol d'oiseau (Terre ronde, précision à 0.5%), `vincenty` distance à vol d'oiseau (Terre ellipsoïde, plus précise et coûteuse, précision à 1mm). Par défaut : `direct`."
+    }
+  },
+  "required": [
+    "departure",
+    "arrival"
+  ],
+  "additionalProperties": false,
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}
+```
+
+</details>
+
+### Schéma de sortie
+
+| Champ | Type | Requis | Description |
+| --- | --- | --- | --- |
+| `distance` | number | oui | La distance entre les deux points, en mètres. |
+
+<details>
+<summary>Schéma de sortie brut</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "distance": {
+      "type": "number",
+      "description": "La distance entre les deux points, en mètres."
+    }
+  },
+  "required": [
+    "distance"
   ]
 }
 ```
