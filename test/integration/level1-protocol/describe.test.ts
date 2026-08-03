@@ -9,18 +9,18 @@ import { expectToolCallToThrow } from "../helpers/level1-assertions.js";
 import { INTEGRATION_CONFIG } from "../config/shared.js";
 
 interface DescribeResult {
-  id: string;
-  namespace: string;
-  name: string;
   title: string;
   description: string;
-  properties: Array<{
-    name: string;
-    type: string;
+  required: string[];
+  properties: Record<string, {
+    type?: "string" | "boolean" | "integer" | "number";
     title?: string;
     description?: string;
-    enum?: string[];
-    defaultCrs?: string;
+    oneOf?: Array<{
+      const: string;
+      title: string;
+      description?: string;
+    }>;
   }>;
 }
 
@@ -32,15 +32,17 @@ describe("GPF Describe Type (integration)", () => {
       typename: "BDTOPO_V3:batiment",
     });
 
-    expect(result.id).toBe("BDTOPO_V3:batiment");
-    expect(result.name).toBe("batiment");
+    expect(result.title).toBe("Bâtiment");
     expect(result.properties).toBeDefined();
-    expect(result.properties.length).toBeGreaterThan(0);
+    const propNames = Object.keys(result.properties);
+    expect(propNames.length).toBeGreaterThan(0);
+    expect(result.required).toBeDefined();
 
     // Check that properties have expected fields
-    const firstProp = result.properties[0];
-    expect(firstProp.name).toBeDefined();
-    expect(firstProp.type).toBeDefined();
+    const firstPropName = propNames[0];
+    expect(firstPropName).toBeDefined();
+    const firstProp = result.properties[firstPropName];
+    expect(firstProp).toBeDefined();
   }, INTEGRATION_CONFIG.timeout);
 
   it("should return an error for empty typename", async () => {

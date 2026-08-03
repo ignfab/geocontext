@@ -950,7 +950,7 @@ Description d’un type GPF
 ```
 Renvoie le schéma détaillé d'un type GPF à partir de son identifiant (`typename`) : identifiants, description et liste des propriétés.
 Utiliser ce tool après `gpf_search_types` pour inspecter les propriétés disponibles avant d'appeler `gpf_get_features`.
-La sortie inclut notamment le type des propriétés, leur description, leurs valeurs possibles (`enum`) lorsqu'elles existent
+La sortie inclut notamment le type des propriétés, leur description, leurs valeurs possibles (`oneOf`) lorsqu'elles existent
 **IMPORTANT : Appel fortement recommandé si les noms exacts des propriétés ne sont pas connus : un nom de propriété incorrect provoque une erreur**.
 ```
 
@@ -985,12 +985,15 @@ La sortie inclut notamment le type des propriétés, leur description, leurs val
 
 | Champ | Type | Requis | Description |
 | --- | --- | --- | --- |
-| `description` | string | oui | La description du type GPF. |
-| `id` | string | oui | L'identifiant complet du type GPF. |
-| `name` | string | oui | Le nom court du type GPF. |
-| `namespace` | string | oui | L'espace de nommage du type GPF. |
-| `properties` | array | oui | La liste des propriétés du type GPF. |
-| `title` | string | oui | Le titre lisible du type GPF. |
+| `$schema` | string | oui |   |
+| `description` | string | oui |   |
+| `properties` | string | oui |   |
+| `required` | array | oui |   |
+| `title` | string | oui |   |
+| `type` | string | oui |   |
+| `x-ign-representedFeatures` | array | non |   |
+| `x-ign-selectionCriteria` | string | non |   |
+| `x-ign-theme` | string | non |   |
 
 <details>
 <summary>Schéma de sortie brut</summary>
@@ -999,74 +1002,47 @@ La sortie inclut notamment le type des propriétés, leur description, leurs val
 {
   "type": "object",
   "properties": {
-    "id": {
-      "type": "string",
-      "description": "L'identifiant complet du type GPF."
+    "$schema": {
+      "type": "string"
     },
-    "namespace": {
-      "type": "string",
-      "description": "L'espace de nommage du type GPF."
-    },
-    "name": {
-      "type": "string",
-      "description": "Le nom court du type GPF."
+    "type": {
+      "type": "string"
     },
     "title": {
-      "type": "string",
-      "description": "Le titre lisible du type GPF."
+      "type": "string"
+    },
+    "x-ign-theme": {
+      "type": "string"
     },
     "description": {
-      "type": "string",
-      "description": "La description du type GPF."
+      "type": "string"
+    },
+    "x-ign-selectionCriteria": {
+      "type": "string"
+    },
+    "x-ign-representedFeatures": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     },
     "properties": {
+      "type": "string"
+    },
+    "required": {
       "type": "array",
-      "description": "La liste des propriétés du type GPF.",
       "items": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "Le nom de la propriété."
-          },
-          "type": {
-            "type": "string",
-            "description": "Le type de la propriété."
-          },
-          "title": {
-            "type": "string",
-            "description": "Le titre lisible de la propriété."
-          },
-          "description": {
-            "type": "string",
-            "description": "La description de la propriété."
-          },
-          "enum": {
-            "type": "array",
-            "description": "Les valeurs possibles de la propriété.",
-            "items": {
-              "type": "string"
-            }
-          },
-          "defaultCrs": {
-            "type": "string",
-            "description": "Le système de coordonnées par défaut si la propriété est géométrique."
-          }
-        },
-        "required": [
-          "name",
-          "type"
-        ]
+        "type": "string"
       }
     }
   },
   "required": [
-    "id",
-    "namespace",
-    "name",
+    "$schema",
+    "type",
     "title",
     "description",
-    "properties"
+    "properties",
+    "required"
   ]
 }
 ```

@@ -6,21 +6,21 @@ import GpfDescribeTypeTool from "../../../src/tools/GpfDescribeTypeTool";
 
 describe("Test GpfDescribeTypeTool",() => {
     const mockCollection: OgcCollectionSchema = {
-        id: "BDTOPO_V3:batiment",
-        namespace: "BDTOPO_V3",
-        name: "batiment",
+        $schema: 'https://json-schema.org/draft/2020-12/schema',
+        'x-collection-id': '0',
+        type: "object",
         title: "Batiment",
         description: "Description de test",
-        properties: [
-            {
-                name: "hauteur",
-                type: "float",
-            },
-        ],
+        properties: {
+            hauteur: {
+                type: "number"
+            }
+        },
+        required: []
     };
 
     class TestableGpfDescribeTypeTool extends GpfDescribeTypeTool {
-        async execute() {
+        async execute(input: { typename: string }) {
             return mockCollection;
         }
     }
@@ -61,11 +61,13 @@ describe("Test GpfDescribeTypeTool",() => {
             throw new Error("expected text content");
         }
         expect(JSON.parse(textContent.text)).toMatchObject({
-            id: "BDTOPO_V3:batiment",
+            title: "Batiment",
+            description: "Description de test",
         });
         expect(response.structuredContent).toBeDefined();
         expect(response.structuredContent).toMatchObject({
-            id: "BDTOPO_V3:batiment",
+            title: "Batiment",
+            description: "Description de test",
         });
     });
 
