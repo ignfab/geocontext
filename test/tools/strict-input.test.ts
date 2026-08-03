@@ -4,6 +4,7 @@ import AdminexpressTool from "../../src/tools/AdminexpressTool";
 import AltitudeTool from "../../src/tools/AltitudeTool";
 import AssietteSupTool from "../../src/tools/AssietteSupTool";
 import CadastreTool from "../../src/tools/CadastreTool";
+import DistanceTool from "../../src/tools/DistanceTool";
 import GeocodeTool from "../../src/tools/GeocodeTool";
 import GpfCountFeaturesTool from "../../src/tools/GpfCountFeaturesTool";
 import GpfDescribeTypeTool from "../../src/tools/GpfDescribeTypeTool";
@@ -32,6 +33,14 @@ const strictInputCases = [
     label: "CadastreTool",
     tool: new CadastreTool(),
     validArguments: { lon: 2.3522, lat: 48.8566 },
+  },
+  {
+    label: "DistanceTool",
+    tool: new DistanceTool(),
+    validArguments: {
+      departure: { lon: 2.3522, lat: 48.8566 },
+      arrival: { lon: 2.2945, lat: 48.8584 },
+    },
   },
   {
     label: "GeocodeTool",
