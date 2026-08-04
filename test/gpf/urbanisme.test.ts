@@ -89,10 +89,12 @@ const assiettesFeatureCollection: {
 describe("Test getUrbanisme", () => {
     beforeEach(() => {
         mockGetFeatureType.mockResolvedValue({
-            id: "wfs_scot:scot",
-            properties: [
-                { name: "geometrie", type: "multipolygon", defaultCrs: "EPSG:4326" },
-            ],
+            properties: {
+                geometrie: {
+                    format: "geometry-multipolygon",
+                    "x-ogc-role": "primary-geometry",
+                },
+            },
         });
         mockFetchMultiTypename.mockResolvedValue(urbanismeFeatureCollection);
     });
@@ -153,10 +155,12 @@ describe("Test getUrbanisme", () => {
 describe("Test getAssiettesServitudes", () => {
     beforeEach(() => {
         mockGetFeatureType.mockResolvedValue({
-            id: "wfs_sup:assiette_sup_p",
-            properties: [
-                { name: "geometrie", type: "multipolygon", defaultCrs: "EPSG:4326" },
-            ],
+            properties: {
+                geometrie: {
+                    format: "geometry-multipolygon",
+                    "x-ogc-role": "primary-geometry",
+                },
+            },
         });
         mockFetchMultiTypename.mockResolvedValue(assiettesFeatureCollection);
     });

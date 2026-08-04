@@ -7,16 +7,11 @@ import {
   compileIntersectsFeatureSpatialFilter,
 } from "../../src/wfs/spatialCql";
 
-import type { OgcCollectionProperty } from "@ignfab/gpf-schema-store";
 import type { SpatialFilter } from "../../src/wfs/schema";
 
 // --- Shared fixtures ---
 
-const geometryProperty: OgcCollectionProperty = {
-  name: "the_geom",
-  type: "multipolygon",
-  defaultCrs: "EPSG:4326",
-};
+const geometryProperty = "the_geom";
 
 // --- compileBboxSpatialFilter ---
 

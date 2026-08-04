@@ -32,28 +32,31 @@ describe("Test GpfGetFeatureByIdTool", () => {
   }
 
   const polygonFeatureType: OgcCollectionSchema = {
-    id: "ADMINEXPRESS-COG.LATEST:commune",
-    namespace: "ADMINEXPRESS-COG.LATEST",
-    name: "commune",
+    $schema: "https://json-schema.org/draft/2020-12/schema",
+    type: "object",
     title: "Commune",
     description: "Description de test",
-    properties: [
-      { name: "code_insee", type: "string" },
-      { name: "nom_officiel", type: "string" },
-      { name: "geometrie", type: "multipolygon", defaultCrs: "EPSG:4326" },
-    ],
+    properties: {
+      code_insee: { type: "string" },
+      nom_officiel: { type: "string" },
+      geometrie: {
+        format: "geometry-multipolygon",
+        "x-ogc-role": "primary-geometry",
+      },
+    },
+    required: [],
   };
 
   const tableFeatureType: OgcCollectionSchema = {
-    id: "wfs_scot:doc_urba",
-    namespace: "wfs_scot",
-    name: "doc_urba",
+    $schema: "https://json-schema.org/draft/2020-12/schema",
+    type: "object",
     title: "Document d'urbanisme",
     description: "Description de test",
-    properties: [
-      { name: "partition", type: "string" },
-      { name: "idurba", type: "string" },
-    ],
+    properties: {
+      partition: { type: "string" },
+      idurba: { type: "string" },
+    },
+    required: [],
   };
 
   afterEach(() => {

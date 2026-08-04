@@ -5,10 +5,16 @@ import { formatScalarValue, normalizeWhereClause } from "../../src/wfs/attribute
 import type { WhereClause } from "../../src/wfs/schema";
 
 // Minimal catalog properties covering the coercion branches.
-const integerProperty: OgcCollectionProperty = { name: "population", type: "integer" };
-const floatProperty: OgcCollectionProperty = { name: "hauteur", type: "float" };
-const booleanProperty: OgcCollectionProperty = { name: "actif", type: "boolean" };
-const enumProperty: OgcCollectionProperty = { name: "nature", type: "string", enum: ["Chapelle", "Eglise"] };
+const integerProperty: OgcCollectionProperty = { type: "integer" };
+const floatProperty: OgcCollectionProperty = { type: "number" };
+const booleanProperty: OgcCollectionProperty = { type: "boolean" };
+const enumProperty: OgcCollectionProperty = {
+  type: "string",
+  oneOf: [
+    { const: "Chapelle", title: "Chapelle" },
+    { const: "Eglise", title: "Eglise" },
+  ],
+};
 
 describe("attributeFilter/normalizeWhereClause", () => {
   // --- Numeric coercion rejection (regression guard for the empty/hex silent-coercion bug) ---

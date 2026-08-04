@@ -68,10 +68,12 @@ const adminexpressFeatureCollection = {
 describe("Test getAdminUnits", () => {
     beforeEach(() => {
         mockGetFeatureType.mockResolvedValue({
-            id: "ADMINEXPRESS-COG.LATEST:arrondissement",
-            properties: [
-                { name: "geometrie", type: "multipolygon", defaultCrs: "EPSG:4326" },
-            ],
+            properties: {
+                geometrie: {
+                    format: "geometry-multipolygon",
+                    "x-ogc-role": "primary-geometry",
+                },
+            },
         });
         mockFetchMultiTypename.mockResolvedValue(adminexpressFeatureCollection);
     });

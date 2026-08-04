@@ -6,20 +6,26 @@ import type { GpfGetFeaturesInput } from "../../src/wfs/schema";
 
 describe("gpfGetFeatures/queryPreparation", () => {
   const featureType: OgcCollectionSchema = {
-    id: "ADMINEXPRESS-COG.LATEST:commune",
-    namespace: "ADMINEXPRESS-COG.LATEST",
-    name: "commune",
+    $schema: "https://json-schema.org/draft/2020-12/schema",
+    type: "object",
     title: "Commune",
     description: "Description de test",
-    properties: [
-      { name: "code_insee", type: "string" },
-      { name: "nature", type: "string", enum: ["Chapelle", "Eglise"] },
-      { name: "population", type: "integer" },
-      { name: "hauteur", type: "float" },
-      { name: "actif", type: "boolean" },
-      { name: "date_creation", type: "string" },
-      { name: "geometrie", type: "multipolygon", defaultCrs: "EPSG:4326" },
-    ],
+    properties: {
+      code_insee: { type: "string" },
+      nature: {
+        type: "string",
+        oneOf: [
+          { const: "Chapelle", title: "Chapelle" },
+          { const: "Eglise", title: "Eglise" },
+        ],
+      },
+      population: { type: "integer" },
+      hauteur: { type: "number" },
+      actif: { type: "boolean" },
+      date_creation: { type: "string" },
+      geometrie: { },
+    },
+    required: [],
   };
 
   const baseInput: GpfGetFeaturesInput = {
@@ -131,20 +137,21 @@ describe("gpfGetFeatures/queryPreparation", () => {
     }, featureType);
 
     expect(compiled.geometryProperty).toBeDefined();
-    expect(compiled.geometryProperty?.name).toEqual("geometrie");
+    expect(compiled.geometryProperty).toEqual(featureType.properties.geometrie);
   });
 
   it("should throw catalog desync error when spatial_extras is requested but the feature type has no geometry property", () => {
+    const { geometrie: _removedGeometry, ...nonGeometricProperties } = featureType.properties;
     const nonGeometricFeatureType: OgcCollectionSchema = {
       ...featureType,
-      properties: featureType.properties.filter((p) => !p.defaultCrs),
+      properties: nonGeometricProperties,
     };
 
     expect(() => compileQueryParts({
       ...baseInput,
       spatial_extras: ["bbox"],
     }, nonGeometricFeatureType)).toThrow(
-      `Le type '${nonGeometricFeatureType.id}' n'expose aucune propriété géométrique exploitable dans le catalogue embarqué.`
+      "Erreur du catalogue embarqué : la collection 'Commune' n'expose aucune propriété géométrique exploitable."
     );
   });
 

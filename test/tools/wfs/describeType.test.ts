@@ -7,7 +7,6 @@ import GpfDescribeTypeTool from "../../../src/tools/GpfDescribeTypeTool";
 describe("Test GpfDescribeTypeTool",() => {
     const mockCollection: OgcCollectionSchema = {
         $schema: 'https://json-schema.org/draft/2020-12/schema',
-        'x-collection-id': '0',
         type: "object",
         title: "Batiment",
         description: "Description de test",

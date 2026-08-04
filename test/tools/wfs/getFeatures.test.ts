@@ -29,6 +29,11 @@ const { default: GpfGetFeaturesTool } = await import(
 );
 
 describe("Test GpfGetFeaturesTool", () => {
+  const COMMUNE_TYPENAME = "ADMINEXPRESS-COG.LATEST:commune";
+  const POINT_ACCES_TYPENAME = "BDTOPO_V3:point_d_acces";
+  const LOCALISANT_TYPENAME = "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:localisant";
+  const DOC_URBA_TYPENAME = "wfs_scot:doc_urba";
+
   class RespondableGpfGetFeaturesTool extends GpfGetFeaturesTool {
     respond(data: unknown) {
       return this.createSuccessResponse(data);
@@ -36,54 +41,60 @@ describe("Test GpfGetFeaturesTool", () => {
   }
 
   const polygonFeatureType: OgcCollectionSchema = {
-    id: "ADMINEXPRESS-COG.LATEST:commune",
-    namespace: "ADMINEXPRESS-COG.LATEST",
-    name: "commune",
+    $schema: "https://json-schema.org/draft/2020-12/schema",
+    type: "object",
     title: "Commune",
     description: "Description de test",
-    properties: [
-      { name: "code_insee", type: "string" },
-      { name: "population", type: "integer" },
-      { name: "actif", type: "boolean" },
-      { name: "geometrie", type: "multipolygon", defaultCrs: "EPSG:4326" },
-    ],
+    properties: {
+      code_insee: { type: "string" },
+      population: { type: "integer" },
+      actif: { type: "boolean" },
+      geometrie: {
+        format: "geometry-multipolygon",
+        "x-ogc-role": "primary-geometry",
+      },
+    },
+    required: [],
   };
 
   const pointFeatureType: OgcCollectionSchema = {
-    id: "BDTOPO_V3:point_d_acces",
-    namespace: "BDTOPO_V3",
-    name: "point_d_acces",
+    $schema: "https://json-schema.org/draft/2020-12/schema",
+    type: "object",
     title: "Point d'acces",
     description: "Description de test",
-    properties: [
-      { name: "cleabs", type: "string" },
-      { name: "geometrie", type: "point", defaultCrs: "EPSG:4326" },
-    ],
+    properties: {
+      cleabs: { type: "string" },
+      geometrie: {
+        format: "geometry-multipolygon",
+        "x-ogc-role": "primary-geometry",
+      },
+    },
+    required: [],
   };
 
   const multipointFeatureType: OgcCollectionSchema = {
-    id: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:localisant",
-    namespace: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS",
-    name: "localisant",
+    $schema: "https://json-schema.org/draft/2020-12/schema",
+    type: "object",
     title: "Localisant",
     description: "Description de test",
-    properties: [
-      { name: "gid", type: "integer" },
-      { name: "idu", type: "string" },
-      { name: "geometrie", type: "multipoint", defaultCrs: "EPSG:4326" },
-    ],
+    properties: {
+      gid: { type: "integer" },
+      idu: { type: "string" },
+      geometrie: { format: "geometry-multipolygon", "x-ogc-role": "primary-geometry" },
+    },
+    required: [],
   };
 
   const tableFeatureType: OgcCollectionSchema = {
-    id: "wfs_scot:doc_urba",
-    namespace: "wfs_scot",
-    name: "doc_urba",
+    $schema: "https://json-schema.org/draft/2020-12/schema",
+    type: "object",
     title: "Document d'urbanisme",
     description: "Description de test",
-    properties: [
-      { name: "partition", type: "string" },
-      { name: "idurba", type: "string" },
-    ],
+    properties: {
+      partition: { type: "string" },
+      idurba: { type: "string" },
+    },
+    required: [],
   };
 
   const featureCollection: {
@@ -243,7 +254,7 @@ describe("Test GpfGetFeaturesTool", () => {
 
   it("should compile travel_time_filter into a WFS request using an isochrone geometry", async () => {
     const tool = new GpfGetFeaturesTool();
-    mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
+    mockFeatureTypes({ [COMMUNE_TYPENAME]: polygonFeatureType });
     const isochroneUrls = captureIsochroneRequests();
     const requests = captureRequests({ type: "FeatureCollection", features: [], totalFeatures: 0 });
 
@@ -384,7 +395,7 @@ describe("Test GpfGetFeaturesTool", () => {
 
   it("should build a POST request with query params and encoded body", async () => {
     const tool = new GpfGetFeaturesTool();
-    mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
+    mockFeatureTypes({ [COMMUNE_TYPENAME]: polygonFeatureType });
     const requests = captureRequests(featureCollection);
 
     const response = await tool.toolCall({
@@ -411,7 +422,7 @@ describe("Test GpfGetFeaturesTool", () => {
 
   it("should report live geometry property mismatches with a catalog desync hint", async () => {
     const tool = new GpfGetFeaturesTool();
-    mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
+    mockFeatureTypes({ [COMMUNE_TYPENAME]: polygonFeatureType });
     mockFetchJSONPost.mockRejectedValue(
       new ServiceResponseError(
         "Erreur HTTP du service (400 Bad Request): InvalidParameterValue: Illegal property name: geometrie",
@@ -457,7 +468,7 @@ describe("Test GpfGetFeaturesTool", () => {
 
   it("should return feature_ref for non point layers with geometry set to null", async () => {
     const tool = new GpfGetFeaturesTool();
-    mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
+    mockFeatureTypes({ [COMMUNE_TYPENAME]: polygonFeatureType });
     const requests = captureRequests({
       ...featureCollection,
       crs: null,
@@ -499,7 +510,7 @@ describe("Test GpfGetFeaturesTool", () => {
 
   it("should include the bbox when asked in spatial_extras", async () => {
     const tool = new GpfGetFeaturesTool();
-    mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
+    mockFeatureTypes({ [COMMUNE_TYPENAME]: polygonFeatureType });
     const requests = captureRequests({
       type: "FeatureCollection",
       features: [
@@ -546,7 +557,7 @@ describe("Test GpfGetFeaturesTool", () => {
 
   it("should not append the geometry column to propertyName when spatial_extras is empty", async () => {
     const tool = new GpfGetFeaturesTool();
-    mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
+    mockFeatureTypes({ [COMMUNE_TYPENAME]: polygonFeatureType });
     const requests = captureRequests(featureCollection);
 
     const response = await tool.toolCall({
@@ -568,7 +579,7 @@ describe("Test GpfGetFeaturesTool", () => {
 
   it("should request only non-geometric properties when select is omitted", async () => {
     const tool = new GpfGetFeaturesTool();
-    mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
+    mockFeatureTypes({ [COMMUNE_TYPENAME]: polygonFeatureType });
     const requests = captureRequests(featureCollection);
 
     const response = await tool.toolCall({
@@ -588,7 +599,7 @@ describe("Test GpfGetFeaturesTool", () => {
 
   it("should set point geometry to null and keep feature_ref", async () => {
     const tool = new GpfGetFeaturesTool();
-    mockFeatureTypes({ [pointFeatureType.id]: pointFeatureType });
+    mockFeatureTypes({ [POINT_ACCES_TYPENAME]: pointFeatureType });
     const requests = captureRequests({
       type: "FeatureCollection",
       features: [
@@ -630,8 +641,8 @@ describe("Test GpfGetFeaturesTool", () => {
   it("should resolve intersects_feature from MultiPoint references", async () => {
     const tool = new GpfGetFeaturesTool();
     mockFeatureTypes({
-      [polygonFeatureType.id]: polygonFeatureType,
-      [multipointFeatureType.id]: multipointFeatureType,
+      [COMMUNE_TYPENAME]: polygonFeatureType,
+      [LOCALISANT_TYPENAME]: multipointFeatureType,
     });
     const requests = captureRequests({
       type: "FeatureCollection",
@@ -668,8 +679,8 @@ describe("Test GpfGetFeaturesTool", () => {
   it("should report missing reference features clearly for intersects_feature", async () => {
     const tool = new GpfGetFeaturesTool();
     mockFeatureTypes({
-      [polygonFeatureType.id]: polygonFeatureType,
-      [multipointFeatureType.id]: multipointFeatureType,
+      [COMMUNE_TYPENAME]: polygonFeatureType,
+      [LOCALISANT_TYPENAME]: multipointFeatureType,
     });
     captureRequests({
       type: "FeatureCollection",
@@ -737,7 +748,7 @@ describe("Test GpfGetFeaturesTool", () => {
 
   it("should work on a geometry-less table when select and spatial_extras are empty", async () => {
     const tool = new GpfGetFeaturesTool();
-    mockFeatureTypes({ [tableFeatureType.id]: tableFeatureType });
+    mockFeatureTypes({ [DOC_URBA_TYPENAME]: tableFeatureType });
     const requests = captureRequests({
       type: "FeatureCollection",
       features: [
@@ -770,7 +781,7 @@ describe("Test GpfGetFeaturesTool", () => {
 
   it("should fail before WFS request on a geometry-less table when spatial_extras is not empty", async () => {
     const tool = new GpfGetFeaturesTool();
-    mockFeatureTypes({ [tableFeatureType.id]: tableFeatureType });
+    mockFeatureTypes({ [DOC_URBA_TYPENAME]: tableFeatureType });
 
     const response = await tool.toolCall({
       params: {

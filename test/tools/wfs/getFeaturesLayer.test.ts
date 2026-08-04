@@ -41,17 +41,20 @@ const { default: GpfGetFeaturesLayerTool } = await import(
 );
 
 const communeType: OgcCollectionSchema = {
-  id: "ADMINEXPRESS-COG.LATEST:commune",
-  namespace: "ADMINEXPRESS-COG.LATEST",
-  name: "commune",
+  $schema: "https://json-schema.org/draft/2020-12/schema",
+  type: "object",
   title: "Commune",
   description: "Fixture de test",
-  properties: [
-    { name: "code_insee", type: "string" },
-    { name: "nom_officiel", type: "string" },
-    { name: "population", type: "integer" },
-    { name: "geometrie", type: "multipolygon", defaultCrs: "EPSG:4326" },
-  ],
+  properties: {
+    code_insee: { type: "string" },
+    nom_officiel: { type: "string" },
+    population: { type: "integer" },
+    geometrie: {
+      format: "geometry-multipolygon",
+      "x-ogc-role": "primary-geometry",
+    },
+  },
+  required: [],
 };
 
 /**
@@ -247,16 +250,16 @@ describe("Test GpfGetFeaturesLayerTool", () => {
     // can never produce a cartographiable layer — failing here (early, at the tool
     // call) is better than handing the LLM an opaque proxy 5xx at map-load.
     const tableType: OgcCollectionSchema = {
-      id: "INSEE.FILOSOFI.INDICATORS:filosofi_iris_2019",
-      namespace: "INSEE.FILOSOFI.INDICATORS",
-      name: "filosofi_iris_2019",
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      type: "object",
       title: "Indicateurs Filosofi (table, sans géométrie)",
       description: "Fixture de test : type attributaire sans propriété géométrique",
-      properties: [
-        { name: "code_iris", type: "string" },
-        { name: "men", type: "integer" },
-        { name: "ind_snv", type: "float" },
-      ],
+      properties: {
+        code_iris: { type: "string" },
+        men: { type: "integer" },
+        ind_snv: { type: "number" },
+      },
+      required: [],
     };
     mockGetFeatureType.mockResolvedValue(tableType);
     const tool = new GpfGetFeaturesLayerTool();
@@ -347,15 +350,15 @@ describe("Test GpfGetFeaturesLayerTool", () => {
     // pre-flight must catch that here (getGeometryProperty), not defer it to an opaque
     // proxy 5xx at map-load — symmetric with the main typename's geometry check.
     const tableType: OgcCollectionSchema = {
-      id: "wfs_scot:doc_urba",
-      namespace: "wfs_scot",
-      name: "doc_urba",
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      type: "object",
       title: "Document d'urbanisme (table, sans géométrie)",
       description: "Fixture de test : type attributaire sans géométrie",
-      properties: [
-        { name: "partition", type: "string" },
-        { name: "idurba", type: "string" },
-      ],
+      properties: {
+        partition: { type: "string" },
+        idurba: { type: "string" },
+      },
+      required: [],
     };
     mockGetFeatureType.mockImplementation(async (typename: string) => {
       if (typename === "ADMINEXPRESS-COG.LATEST:commune") return communeType;
