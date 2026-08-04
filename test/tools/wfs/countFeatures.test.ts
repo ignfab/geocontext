@@ -1,6 +1,7 @@
 import { vi, describe, it, expect, afterEach } from "vitest";
 
 import type { Collection } from "@ignfab/gpf-schema-store";
+import { ServiceResponseError } from "../../../src/helpers/http";
 
 const mockGetFeatureType = vi.fn<(typename: string) => Promise<Collection>>();
 const mockFetchJSONPost = vi.fn<(
@@ -159,6 +160,52 @@ describe("Test GpfCountFeaturesTool", () => {
     }
     expect(JSON.parse(textContent.text)).toEqual({
       numberMatched: 12,
+    });
+  });
+
+  it("should report live geometry property mismatches with a catalog desync hint", async () => {
+    const tool = new GpfCountFeaturesTool();
+    mockFeatureTypes({ [polygonFeatureType.id]: polygonFeatureType });
+    mockFetchJSONPost.mockRejectedValue(
+      new ServiceResponseError(
+        "Erreur HTTP du service (400 Bad Request): InvalidParameterValue: Illegal property name: geometrie",
+        {
+          http: {
+            status: 400,
+            statusText: "400 Bad Request",
+          },
+          service: {
+            code: "InvalidParameterValue",
+            detail: "Illegal property name: geometrie",
+          },
+        },
+      ),
+    );
+
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_count_features",
+        arguments: {
+          typename: "ADMINEXPRESS-COG.LATEST:commune",
+          bbox_filter: {
+            west: 2.1,
+            south: 48.7,
+            east: 2.5,
+            north: 48.9,
+          },
+        },
+      },
+    });
+
+    expect(response.isError).toBe(true);
+    const textContent = response.content[0];
+    if (textContent.type !== "text") {
+      throw new Error("expected text content");
+    }
+    expect(textContent.text).toContain("catalogue embarqué est rejeté");
+    expect(textContent.text).toContain("géométrique 'geometrie'");
+    expect(response.structuredContent).toMatchObject({
+      type: "urn:geocontext:problem:execution-error",
     });
   });
 

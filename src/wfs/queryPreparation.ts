@@ -226,6 +226,7 @@ export function compileQueryParts(
     // for CountFeatures: only return the required parts
     return {
       cqlFilter,
+      geometryProperty,
       propertyName: "",
     };
   }
