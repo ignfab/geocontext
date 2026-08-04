@@ -897,9 +897,9 @@ Le paramètre `max_results` permet d'élargir le nombre de candidats retournés 
       "items": {
         "type": "object",
         "properties": {
-          "id": {
+          "typename": {
             "type": "string",
-            "description": "L'identifiant complet du type GPF."
+            "description": "L'identifiant du type GPF."
           },
           "title": {
             "type": "string",
@@ -912,10 +912,29 @@ Le paramètre `max_results` permet d'élargir le nombre de candidats retournés 
           "score": {
             "type": "number",
             "description": "Le score de pertinence de la recherche."
+          },
+          "queryTerms": {
+            "type": "array",
+            "description": "Les termes de la requête qui ont produit ce résultat.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "terms": {
+            "type": "array",
+            "description": "Les termes indexés correspondant à la requête.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "match": {
+            "type": "object",
+            "description": "Détail des correspondances : associe chaque terme indexé aux champs où il a été trouvé.",
+            "properties": {}
           }
         },
         "required": [
-          "id",
+          "typename",
           "title",
           "description"
         ]
@@ -987,7 +1006,6 @@ La sortie inclut notamment le type des propriétés, leur description, leurs val
 | --- | --- | --- | --- |
 | `$schema` | string | oui |   |
 | `description` | string | oui |   |
-| `properties` | string | oui |   |
 | `required` | array | oui |   |
 | `title` | string | oui |   |
 | `type` | string | oui |   |
@@ -1026,9 +1044,6 @@ La sortie inclut notamment le type des propriétés, leur description, leurs val
         "type": "string"
       }
     },
-    "properties": {
-      "type": "string"
-    },
     "required": {
       "type": "array",
       "items": {
@@ -1041,7 +1056,6 @@ La sortie inclut notamment le type des propriétés, leur description, leurs val
     "type",
     "title",
     "description",
-    "properties",
     "required"
   ]
 }

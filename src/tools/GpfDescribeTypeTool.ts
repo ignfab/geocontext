@@ -4,7 +4,7 @@
 
 import BaseTool from "./BaseTool.js";
 import { z } from "zod";
-import type { OgcCollectionSchema, OgcCollectionProperty } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 import { zOgcCollectionSchema } from "@ignfab/gpf-schema-store";
 
 import { wfsSchemaStore } from "../wfs/catalog.js";
@@ -21,10 +21,16 @@ const gpfDescribeTypeInputSchema = z.object({
     .describe("Le nom du type à décrire (de la forme `prefixe:nom`)."),
 }).strict();
 
+// FIXME: when mcp-framework is removed, remove this patch which is only here
+// because mcp-framework does not accept z.record field types.
+const gpfDescribeTypeOutput = zOgcCollectionSchema
+  .omit({ properties: true })
+  .catchall(z.unknown());
+
+
 // --- Types ---
 
 type GpfDescribeTypeInput = z.infer<typeof gpfDescribeTypeInputSchema>;
-
 
 // --- Tool ---
 
@@ -38,7 +44,7 @@ class GpfDescribeTypeTool extends BaseTool<GpfDescribeTypeInput> {
     "La sortie inclut notamment le type des propriétés, leur description, leurs valeurs possibles (`oneOf`) lorsqu'elles existent",
     "**IMPORTANT : Appel fortement recommandé si les noms exacts des propriétés ne sont pas connus : un nom de propriété incorrect provoque une erreur**."
   ].join("\n");
-  protected outputSchemaShape = zOgcCollectionSchema;
+  protected outputSchemaShape = gpfDescribeTypeOutput;
 
   schema = gpfDescribeTypeInputSchema;
 
