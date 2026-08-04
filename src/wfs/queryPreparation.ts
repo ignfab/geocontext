@@ -221,7 +221,8 @@ export function compileQueryParts(
 
   const cqlFilter = fragments.length > 0 ? fragments.join(" AND ") : undefined;
 
-  if (!("limit" in input)) {
+  // TODO: use a more solid guard that will not break at the first contract change
+  if (!("spatial_extras" in input)) {
     // for CountFeatures: only return the required parts
     return {
       cqlFilter,
