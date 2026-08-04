@@ -124,6 +124,30 @@ describe("gpfGetFeatures/queryPreparation", () => {
     expect(compiled.propertyName).toEqual("code_insee,population,geometrie");
   });
 
+  it("should set geometryProperty when spatial_extras is requested without a spatial filter", () => {
+    const compiled = compileQueryParts({
+      ...baseInput,
+      spatial_extras: ["bbox"],
+    }, featureType);
+
+    expect(compiled.geometryProperty).toBeDefined();
+    expect(compiled.geometryProperty?.name).toEqual("geometrie");
+  });
+
+  it("should throw catalog desync error when spatial_extras is requested but the feature type has no geometry property", () => {
+    const nonGeometricFeatureType: Collection = {
+      ...featureType,
+      properties: featureType.properties.filter((p) => !p.defaultCrs),
+    };
+
+    expect(() => compileQueryParts({
+      ...baseInput,
+      spatial_extras: ["bbox"],
+    }, nonGeometricFeatureType)).toThrow(
+      `Le type '${nonGeometricFeatureType.id}' n'expose aucune propriété géométrique exploitable dans le catalogue embarqué.`
+    );
+  });
+
   it("should build sortBy from structured order_by", () => {
     const compiled = compileQueryParts({
       ...baseInput,

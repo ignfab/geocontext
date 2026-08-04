@@ -4,7 +4,7 @@ import {
   mapToFlatItems,
   mapToFlatItemsWithGeometry,
   transformFeatureCollectionResponse,
-  attachFeatureRefs,
+  postProcessFeatureCollection,
 } from "../../src/wfs/response";
 
 describe("wfs_engine/response", () => {
@@ -111,23 +111,23 @@ describe("wfs_engine/response", () => {
     });
   });
 
-  // --- attachFeatureRefs ---
+  // --- postProcessFeatureCollection ---
 
-  describe("attachFeatureRefs", () => {
+  describe("postProcessFeatureCollection", () => {
     it("should pass through when transformed result has no features array", () => {
       const input = { type: "FeatureCollection" };
-      const result = attachFeatureRefs(input, "TEST:type");
+      const result = postProcessFeatureCollection(input, { typename: "TEST:type" });
       expect(result).toEqual({ type: "FeatureCollection" });
     });
 
     it("should inject typename into feature_ref for features with string id", () => {
-      const result = attachFeatureRefs(
+      const result = postProcessFeatureCollection(
         {
           features: [
             { id: "commune.1", geometry: { type: "Point", coordinates: [2.35, 48.85] }, properties: { nom: "Test" } },
           ],
         },
-        "ADMINEXPRESS-COG.LATEST:commune",
+        { typename: "ADMINEXPRESS-COG.LATEST:commune" },
       );
 
       const features = getFeatures(result);
@@ -139,13 +139,13 @@ describe("wfs_engine/response", () => {
     });
 
     it("should skip features without feature_ref (non-string id)", () => {
-      const result = attachFeatureRefs(
+      const result = postProcessFeatureCollection(
         {
           features: [
             { id: 42, properties: { name: "no-string-id" } },
           ],
         },
-        "TEST:type",
+        { typename: "TEST:type" },
       );
 
       const features = getFeatures(result);
@@ -154,7 +154,7 @@ describe("wfs_engine/response", () => {
     });
 
     it("should inject typename into feature_ref for multiple features", () => {
-      const result = attachFeatureRefs(
+      const result = postProcessFeatureCollection(
         {
           features: [
             { id: "commune.1", geometry: null, properties: { nom: "A" } },
@@ -162,7 +162,7 @@ describe("wfs_engine/response", () => {
             { id: 42, properties: { nom: "C" } },
           ],
         },
-        "ADMINEXPRESS-COG.LATEST:commune",
+        { typename: "ADMINEXPRESS-COG.LATEST:commune" },
       );
 
       const features = getFeatures(result);

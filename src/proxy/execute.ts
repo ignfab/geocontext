@@ -6,14 +6,15 @@
  * for `intersects_feature` / `travel_time` filters.
  *
  * Unlike the LLM-facing `executeQueryFeatures` (which strips geometry to `null`
- * via `attachFeatureRefs` to save tokens), the proxy needs the OPPOSITE: a
+ * via `postProcessFeatureCollection` to save tokens), the proxy needs the OPPOSITE: a
  * FeatureCollection with FULL geometry, because MCP Carto renders it on a map.
  *
  * This module reuses the WFS query-compilation primitives (`compileQueryParts`,
  * `buildMainRequest`, reference-geometry resolution) but:
  * - forces the geometry column into the request `propertyName` itself, without
- *   touching `buildSelectList` (which stays coupled to the LLM `select`/`spatial_extras` knobs);
- * - returns the RAW FeatureCollection, never `attachFeatureRefs`;
+ *   touching `buildPropertyName` / `buildPropertyNameWithGeometry`, which stay
+ *   coupled to the LLM `select`/`spatial_extras` knobs);
+ * - returns the RAW FeatureCollection, never `postProcessFeatureCollection`;
  * - runs against an INJECTED WfsClient, so it is fully testable without network
  *   and lets the HTTP layer supply a size-bounded, rate-limited client.
  */
@@ -31,7 +32,8 @@ import {
   getSpatialFilter,
   type ResolvedFeatureGeometryRef,
 } from "../wfs/queryPreparation.js";
-import { buildPropertyName, requireSingleFeatureById } from "../wfs/byId.js";
+import { requireSingleFeatureById } from "../wfs/byId.js";
+import { buildPropertyNameWithGeometry } from "../wfs/properties.js"
 import { resolveFeatureGeometryEwkt } from "../wfs/referenceGeometry.js";
 import { rethrowIdentifiedCatalogDesyncError } from "../wfs/catalogDesync.js";
 import { ServiceResponseError, extractJsonServiceError } from "../helpers/http.js";
@@ -72,20 +74,16 @@ export type GeometryFeatureQueryDeps = {
 
 /**
  * Appends the geometry column to a compiled `propertyName` selection so the WFS
- * returns full geometry. An empty/undefined selection means "all properties",
- * which already includes geometry, so it is left untouched.
+ * returns full geometry.
  *
- * @param propertyName Comma-separated selection from `compileQueryParts`, if any.
+ * @param propertyName Comma-separated selection from `compileQueryParts`.
  * @param geometryProperty Geometry property resolved for the feature type.
- * @returns A selection guaranteed to include the geometry column, or `undefined`.
+ * @returns A selection guaranteed to include the geometry column.
  */
 function ensureGeometrySelected(
-  propertyName: string | undefined,
+  propertyName: string,
   geometryProperty: CollectionProperty,
-): string | undefined {
-  if (!propertyName) {
-    return undefined;
-  }
+): string {
   const columns = propertyName.split(",");
   if (columns.includes(geometryProperty.name)) {
     return propertyName;
@@ -255,7 +253,7 @@ export type GeometryFeatureByIdQueryDeps = {
  *   returned;
  * - requests WGS84 (`EPSG:4326`, [lon, lat]) like the query path;
  * - enforces strict cardinality (0 or >1 results throw);
- * - returns the untransformed single-feature collection — never `attachFeatureRefs`
+ * - returns the untransformed single-feature collection — never `postProcessFeatureCollection`
  *   (which would null the geometry).
  *
  * @param input Validated by-id layer input (`{ typename, feature_id, select? }`).
@@ -272,10 +270,7 @@ export async function runGeometryFeatureByIdQuery(
   // Validate `select` against the same embedded catalog used at URL generation,
   // then force the geometry column into the WFS selection. Re-validating here is
   // required because decoded proxy tokens remain untrusted input.
-  const propertyName = buildPropertyName(featureType, {
-    includeGeometry: true,
-    select: input.select,
-  });
+  const propertyName = buildPropertyNameWithGeometry(featureType, input.select);
   const request = buildGetFeatureByIdRequest(
     input.typename,
     input.feature_id,

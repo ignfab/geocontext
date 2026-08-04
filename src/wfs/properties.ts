@@ -8,7 +8,6 @@
  */
 
 import type { Collection, CollectionProperty } from "@ignfab/gpf-schema-store";
-import type { GpfGetFeaturesInput } from "./schema.js";
 
 // --- Property Listing ---
 
@@ -78,14 +77,13 @@ function getPropertyOrThrow(featureType: Collection, propertyName: string) {
  * of the feature type.
  *
  * @param featureType Feature type definition loaded from the embedded catalog.
- * @param geometryProperty Geometry property already resolved for the feature type.
  * @param propertyName Exact property name requested by the caller.
  * @param message Error message template used when the property is geometric.
  * @returns The matching non-geometric property metadata.
  */
-export function resolveNonGeometryProperty(featureType: Collection, geometryProperty: CollectionProperty, propertyName: string, message: string) {
+export function resolveNonGeometryProperty(featureType: Collection, propertyName: string, message: string) {
   const property = getPropertyOrThrow(featureType, propertyName);
-  if (property.name === geometryProperty.name || property.defaultCrs) {
+  if (property.defaultCrs) {
     throw new Error(message.replace("{property}", property.name));
   }
   return property;
@@ -97,14 +95,12 @@ export function resolveNonGeometryProperty(featureType: Collection, geometryProp
  * Validates a selected property name and returns the exact property name to expose.
  *
  * @param featureType Feature type definition loaded from the embedded catalog.
- * @param geometryProperty Geometry property already resolved for the feature type.
  * @param propertyName Raw selected property name.
  * @returns The validated non-geometric property name.
  */
-export function validateSelectProperty(featureType: Collection, geometryProperty: CollectionProperty, propertyName: string) {
+function validateSelectProperty(featureType: Collection, propertyName: string) {
   return resolveNonGeometryProperty(
     featureType,
-    geometryProperty,
     propertyName,
     "La propriété '{property}' est géométrique. `select` accepte uniquement des propriétés non géométriques."
   ).name;
@@ -121,42 +117,61 @@ export function validateSelectProperty(featureType: Collection, geometryProperty
  * - when `spatial_extras` is non-empty, the geometry column is appended so elements of GPF_GET_FEATURES_SPATIAL_EXTRAS (bbox, centroid, ...) can be derived
  *
  * @param featureType Feature type definition loaded from the embedded catalog.
+ * @param select The list of selected non-geometric properties.
+ * @param spatial_extras The list of selected extra properties to compute on the geometry.
  * @param geometryProperty Geometry property already resolved for the feature type.
- * @param input Normalized tool input.
+ * @param includeGeometry Override boolean to force including the geometry in the return query.
  * @returns The list of property names to expose in the WFS `propertyName` parameter.
  */
-export function buildSelectList(
+export function buildPropertyName(
   featureType: Collection,
-  geometryProperty: CollectionProperty,
-  input: GpfGetFeaturesInput,
-) {
-  const shouldIncludeGeometry = (input.spatial_extras ?? []).length > 0;
+  select?: string[],
+  spatial_extras?: string[],
+  geometryProperty?: CollectionProperty,
+  includeGeometry: boolean = (spatial_extras ?? []).length > 0,
+) : string {
 
   // If `select` is specified, only the requested properties are returned
   // after validation against the embedded catalog.
-  if (input.select && input.select.length > 0) {
-    const selectedProperties = input.select.map((propertyName) =>
-      validateSelectProperty(featureType, geometryProperty, propertyName),
+  if (select && select.length > 0) {
+    const selectedProperties = select.map((propertyName) =>
+      validateSelectProperty(featureType, propertyName),
     );
 
-    // Include geometry when `spatial_extras` needs it to derive bbox/centroid/...
-    if (shouldIncludeGeometry) {
-      return [...selectedProperties, geometryProperty.name];
+    if (includeGeometry) {
+      return [...selectedProperties, (geometryProperty ?? getGeometryProperty(featureType)).name].join(",");
     }
 
-    return selectedProperties;
+    return selectedProperties.join(",");
   }
 
   // If `select` is omitted, return every non-geometric property from the
-  // feature type, appending the geometry column only when `spatial_extras`
-  // needs it.
+  // feature type, appending the geometry column only when it is required,
+  // for example when `spatial_extras` needs it to derive bbox/centroid/...
+  
+  if (includeGeometry) {
+    // Ensure that the geometric property exists and is unique.
+    geometryProperty ?? getGeometryProperty(featureType);
+    return featureType.properties
+      .map((property: CollectionProperty) => property.name)
+      .join(","); // return all properties
+  }
+
   const nonGeometryProperties = featureType.properties
     .filter((property: CollectionProperty) => !property.defaultCrs)
     .map((property: CollectionProperty) => property.name);
 
-  if (shouldIncludeGeometry) {
-    return [...nonGeometryProperties, geometryProperty.name];
-  }
+  return nonGeometryProperties.join(",");
+}
 
-  return nonGeometryProperties;
+/**  
+ * `buildPropertyName` for cartographic callers: the geometry column is always  
+ * selected, and a geometry-less type must fail here rather than at map load.  
+ */
+export function buildPropertyNameWithGeometry(
+  featureType: Collection,
+  select?: string[],
+  geometryProperty: CollectionProperty = getGeometryProperty(featureType),
+) {
+  return buildPropertyName(featureType, select, [], geometryProperty, true);
 }

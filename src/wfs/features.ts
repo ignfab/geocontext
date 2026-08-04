@@ -28,7 +28,7 @@ import {
   buildMainRequest,
   type CompiledRequest,
 } from "./request.js";
-import { attachFeatureRefs } from "./response.js";
+import { postProcessFeatureCollection } from "./response.js";
 import type { GpfQueryFeaturesInput } from "./schema.js";
 
 // --- Types ---
@@ -197,12 +197,14 @@ export async function executeQueryFeatures(input: GpfQueryFeaturesInput) {
   } catch (error: unknown) {
     // Rewrite an embedded-catalog geometry-column desync into a clear diagnostic
     // (shared with the proxy path); any other error passes through unchanged.
-    rethrowIdentifiedCatalogDesyncError(error, compiled.geometryProperty.name, input.typename);
+    if (compiled.geometryProperty) {
+      rethrowIdentifiedCatalogDesyncError(error, compiled.geometryProperty.name, input.typename);
+    }
     throw error;
   }
 
   if (isGetFeaturesQuery) {
-    return attachFeatureRefs(featureCollection, input.typename, input.spatial_extras);
+    return postProcessFeatureCollection(featureCollection, input);
   } else {
     return {
       numberMatched: getMatchedFeatureCount(featureCollection),

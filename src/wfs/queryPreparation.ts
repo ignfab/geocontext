@@ -11,8 +11,7 @@
 import type { Collection, CollectionProperty } from "@ignfab/gpf-schema-store";
 
 import {
-  validateSelectProperty,
-  buildSelectList,
+  buildPropertyName,
   resolveNonGeometryProperty,
   getGeometryProperty,
 } from "./properties.js";
@@ -41,7 +40,7 @@ import {
 // --- Re-exports ---
 
 export { geometryToEwkt } from "./geometry.js";
-export { validateSelectProperty, getGeometryProperty } from "./properties.js";
+export { getGeometryProperty } from "./properties.js";
 export { getSpatialFilter } from "./spatialFilter.js";
 
 // --- Internal Constants ---
@@ -64,9 +63,9 @@ export type ResolvedFeatureGeometryRef = {
 };
 
 export type CompiledQuery = {
-  geometryProperty: CollectionProperty;
+  geometryProperty?: CollectionProperty;
+  propertyName: string;
   cqlFilter?: string;
-  propertyName?: string;
   sortBy?: string;
 };
 
@@ -125,14 +124,12 @@ function compileIsNullClause(property: CollectionProperty) {
  * Compiles a structured where clause into a CQL fragment.
  *
  * @param featureType Feature type definition loaded from the embedded catalog.
- * @param geometryProperty Geometry property already resolved for the feature type.
  * @param clause Raw where clause received from the tool input.
  * @returns A CQL predicate fragment.
  */
-function compileWhereClause(featureType: Collection, geometryProperty: CollectionProperty, clause: WhereClause) {
+function compileWhereClause(featureType: Collection, clause: WhereClause) {
   const property = resolveNonGeometryProperty(
     featureType,
-    geometryProperty,
     clause.property,
     "La propriété '{property}' est géométrique. Utiliser un filtre spatial dédié (`bbox_filter`, `intersects_point_filter`, `dwithin_point_filter`, `intersects_feature_filter` ou `travel_time_filter`)."
   );
@@ -158,14 +155,12 @@ function compileWhereClause(featureType: Collection, geometryProperty: Collectio
  * Compiles a structured sort clause into a WFS `sortBy` fragment.
  *
  * @param featureType Feature type definition loaded from the embedded catalog.
- * @param geometryProperty Geometry property already resolved for the feature type.
  * @param clause Raw order-by clause received from the tool input.
  * @returns A WFS `sortBy` fragment.
  */
-function compileOrderByClause(featureType: Collection, geometryProperty: CollectionProperty, clause: OrderByClause) {
+function compileOrderByClause(featureType: Collection, clause: OrderByClause) {
   const property = resolveNonGeometryProperty(
     featureType,
-    geometryProperty,
     clause.property,
     "La propriété '{property}' est géométrique. Utiliser une propriété non géométrique pour `order_by`."
   );
@@ -187,13 +182,14 @@ export function compileQueryParts(
   featureType: Collection,
   resolvedGeometryRef?: ResolvedFeatureGeometryRef,
 ): CompiledQuery {
-  const geometryProperty = getGeometryProperty(featureType);
+  let geometryProperty: undefined | CollectionProperty;
   const spatialFilter = getSpatialFilter(input);
   const fragments: string[] = [];
 
   // Keep the spatial predicate first: the GeoPlateforme GeoServer is sensitive
   // to filter ordering and may reject equivalent filters when attributes come first.
   if (spatialFilter) {
+    geometryProperty = getGeometryProperty(featureType);
     switch (spatialFilter.operator) {
       case "bbox":
         fragments.push(compileBboxSpatialFilter(geometryProperty, spatialFilter));
@@ -220,21 +216,41 @@ export function compileQueryParts(
   }
 
   for (const clause of input.where ?? []) {
-    fragments.push(compileWhereClause(featureType, geometryProperty, clause));
+    fragments.push(compileWhereClause(featureType, clause));
   }
 
-  const isGetFeaturesQuery = "limit" in input;
+  const cqlFilter = fragments.length > 0 ? fragments.join(" AND ") : undefined;
 
-  const sortBy = isGetFeaturesQuery && input.order_by && input.order_by.length > 0
-    ? input.order_by.map((clause) => compileOrderByClause(featureType, geometryProperty, clause)).join(",")
+  // TODO: use a more solid guard that will not break at the first contract change
+  if (!("spatial_extras" in input)) {
+    // for CountFeatures: only return the required parts
+    return {
+      cqlFilter,
+      geometryProperty,
+      propertyName: "",
+    };
+  }
+
+  // for GetFeatures and GetFeatureById: compute sortBy, propertyName and
+  // ensure that geometryProperty is set when it is among the returned columns.
+
+  const sortBy = input.order_by && input.order_by.length > 0
+    ? input.order_by.map((clause) => compileOrderByClause(featureType, clause)).join(",")
     : undefined;
 
-  const propertyNames = isGetFeaturesQuery ? buildSelectList(featureType, geometryProperty, input) : [];
+  if (!geometryProperty && input.spatial_extras.length > 0) {
+    geometryProperty = getGeometryProperty(featureType);
+  }
+
+  const propertyName = buildPropertyName(featureType, input.select, input.spatial_extras, geometryProperty);
+
+  // geometryProperty must always be set if it is among the returned columns.
+  // It may also be set even if not required in the returned columns.
 
   return {
     geometryProperty,
-    cqlFilter: fragments.length > 0 ? fragments.join(" AND ") : undefined,
-    propertyName: propertyNames.length > 0 ? propertyNames.join(",") : undefined,
+    cqlFilter,
+    propertyName,
     sortBy,
   };
 }
