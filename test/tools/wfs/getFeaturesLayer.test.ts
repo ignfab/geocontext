@@ -237,6 +237,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
     });
 
     expect(response.isError).toBe(true);
+    expect(response.structuredContent?.type).toBe("urn:geocontext:problem:invalid-tool-params")
   });
 
   it("rejects a typename with NO geometry column BEFORE minting the URL (catalog pre-flight)", async () => {
