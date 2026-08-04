@@ -1,6 +1,7 @@
 import { vi, describe, it, expect, afterEach } from "vitest";
 
 import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
+import { validateStructuredContentAgainstOutputSchema } from "../helpers/outputSchema";
 
 import type { Env } from "../../../src/config/env.js";
 import { decodeToken } from "../../../src/proxy/token.js";
@@ -145,6 +146,12 @@ describe("Test GpfGetFeaturesLayerTool", () => {
     }
     const payload = JSON.parse(textContent.text);
     expect(payload).toEqual(response.structuredContent);
+    expect(
+      validateStructuredContentAgainstOutputSchema(
+        tool.toolDefinition.outputSchema,
+        response.structuredContent,
+      ),
+    ).toBeNull();
 
     const url = new URL(payload.data_url);
     expect(url.pathname.startsWith("/api/v1/proxy/")).toBe(true);

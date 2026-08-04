@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest";
 import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 
 import GpfDescribeTypeTool from "../../../src/tools/GpfDescribeTypeTool";
+import { validateStructuredContentAgainstOutputSchema } from "../helpers/outputSchema";
 
 describe("Test GpfDescribeTypeTool",() => {
     const mockCollection: OgcCollectionSchema = {
@@ -68,6 +69,29 @@ describe("Test GpfDescribeTypeTool",() => {
             title: "Batiment",
             description: "Description de test",
         });
+    });
+
+    it("should return a payload that validates against its outputSchema", async () => {
+        const tool = new TestableGpfDescribeTypeTool();
+        const response = await tool.toolCall({
+            params: {
+                name: "gpf_describe_type",
+                arguments: {
+                    typename: "BDTOPO_V3:batiment",
+                },
+            },
+        });
+
+        expect(response.isError).toBeUndefined();
+        expect(response.structuredContent).toBeDefined();
+        expect(tool.toolDefinition.outputSchema).toBeDefined();
+
+        expect(
+            validateStructuredContentAgainstOutputSchema(
+                tool.toolDefinition.outputSchema,
+                response.structuredContent,
+            ),
+        ).toBeNull();
     });
 
     it("should return isError=true for invalid input", async () => {

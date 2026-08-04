@@ -2,6 +2,7 @@ import { vi, describe, it, expect, afterEach } from "vitest";
 
 import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 import { ServiceResponseError } from "../../../src/helpers/http.js";
+import { validateStructuredContentAgainstOutputSchema } from "../helpers/outputSchema";
 
 const mockGetFeatureType = vi.fn<(typename: string) => Promise<OgcCollectionSchema>>();
 const mockFetchJSONPost = vi.fn<(
@@ -163,6 +164,12 @@ describe("Test GpfGetFeatureByIdTool", () => {
       feature_id: "commune.1",
     });
     expect(results.features[0].geometry_name).toBeUndefined();
+    expect(
+      validateStructuredContentAgainstOutputSchema(
+        tool.toolDefinition.outputSchema,
+        response.structuredContent,
+      ),
+    ).toBeNull();
   });
 
   it("should include the bbox when asked in spatial_extras", async () => {

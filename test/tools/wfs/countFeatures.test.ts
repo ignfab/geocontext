@@ -2,6 +2,7 @@ import { vi, describe, it, expect, afterEach } from "vitest";
 
 import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 import { ServiceResponseError } from "../../../src/helpers/http";
+import { validateStructuredContentAgainstOutputSchema } from "../helpers/outputSchema";
 
 const mockGetFeatureType = vi.fn<(typename: string) => Promise<OgcCollectionSchema>>();
 const mockFetchJSONPost = vi.fn<(
@@ -129,6 +130,12 @@ describe("Test GpfCountFeaturesTool", () => {
     }
     expect(JSON.parse(textContent.text)).toEqual({ numberMatched: 34877 });
     expect(response.structuredContent).toEqual({ numberMatched: 34877 });
+    expect(
+      validateStructuredContentAgainstOutputSchema(
+        tool.toolDefinition.outputSchema,
+        response.structuredContent,
+      ),
+    ).toBeNull();
   });
 
   it("should apply travel_time_filter before returning the count", async () => {

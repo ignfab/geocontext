@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 import GpfSearchTypesTool from "../../../src/tools/GpfSearchTypesTool";
+import { validateStructuredContentAgainstOutputSchema } from "../helpers/outputSchema";
 
 describe("Test GpfSearchTypesTool",() => {
     class TestableGpfSearchTypesTool extends GpfSearchTypesTool {
@@ -89,6 +90,12 @@ describe("Test GpfSearchTypesTool",() => {
                 },
             ],
         });
+        expect(
+            validateStructuredContentAgainstOutputSchema(
+                tool.toolDefinition.outputSchema,
+                response.structuredContent,
+            ),
+        ).toBeNull();
     });
 
     it("should include MiniSearch metadata fields in text and structuredContent when present", async () => {

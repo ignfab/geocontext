@@ -2,6 +2,7 @@ import { vi, describe, it, expect, afterEach } from "vitest";
 
 import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 import { ServiceResponseError } from "../../../src/helpers/http.js";
+import { validateStructuredContentAgainstOutputSchema } from "../helpers/outputSchema";
 
 const mockGetFeatureType = vi.fn<(typename: string) => Promise<OgcCollectionSchema>>();
 const mockFetchJSONPost = vi.fn<(
@@ -250,6 +251,12 @@ describe("Test GpfGetFeaturesTool", () => {
       type: "FeatureCollection",
       features: expect.any(Array),
     });
+    expect(
+      validateStructuredContentAgainstOutputSchema(
+        tool.toolDefinition.outputSchema,
+        response.structuredContent,
+      ),
+    ).toBeNull();
   });
 
   it("should compile travel_time_filter into a WFS request using an isochrone geometry", async () => {
