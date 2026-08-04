@@ -1,7 +1,7 @@
 // --- Imports ---
 
 import {
-    Collection,
+    OgcCollectionSchema,
     CollectionSearchResult,
     getCollectionCatalog,
     MiniSearchCollectionSearchEngine,
@@ -98,7 +98,7 @@ export class WfsSchemaStore {
     constructor(options: { miniSearch?: MiniSearchOptions } = {}) {
         const searchEngineOptions = createMiniSearchEngineOptions(options.miniSearch);
         this.catalog = getCollectionCatalog({
-            engineFactory: (items: Collection[]) => new MiniSearchCollectionSearchEngine(items, searchEngineOptions),
+            engineFactory: (items: OgcCollectionSchema[]) => new MiniSearchCollectionSearchEngine(items, searchEngineOptions),
         });
     }
 
@@ -108,7 +108,7 @@ export class WfsSchemaStore {
         });
     }
 
-    async getFeatureType(name: string): Promise<Collection> {
+    async getFeatureType(name: string): Promise<OgcCollectionSchema> {
         const featureType = this.catalog.getById(name);
         if (featureType) {
             return featureType;

@@ -8,7 +8,7 @@
  * - a small façade over lower-level helpers reused elsewhere in the engine
  */
 
-import type { Collection, CollectionProperty } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionSchema, CollectionProperty } from "@ignfab/gpf-schema-store";
 
 import {
   buildPropertyName,
@@ -127,7 +127,7 @@ function compileIsNullClause(property: CollectionProperty) {
  * @param clause Raw where clause received from the tool input.
  * @returns A CQL predicate fragment.
  */
-function compileWhereClause(featureType: Collection, clause: WhereClause) {
+function compileWhereClause(featureType: OgcCollectionSchema, clause: WhereClause) {
   const property = resolveNonGeometryProperty(
     featureType,
     clause.property,
@@ -158,7 +158,7 @@ function compileWhereClause(featureType: Collection, clause: WhereClause) {
  * @param clause Raw order-by clause received from the tool input.
  * @returns A WFS `sortBy` fragment.
  */
-function compileOrderByClause(featureType: Collection, clause: OrderByClause) {
+function compileOrderByClause(featureType: OgcCollectionSchema, clause: OrderByClause) {
   const property = resolveNonGeometryProperty(
     featureType,
     clause.property,
@@ -179,7 +179,7 @@ function compileOrderByClause(featureType: Collection, clause: OrderByClause) {
  */
 export function compileQueryParts(
   input: GpfQueryFeaturesInput,
-  featureType: Collection,
+  featureType: OgcCollectionSchema,
   resolvedGeometryRef?: ResolvedFeatureGeometryRef,
 ): CompiledQuery {
   let geometryProperty: undefined | CollectionProperty;

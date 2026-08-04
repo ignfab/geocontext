@@ -1,11 +1,11 @@
 import { describe, it, expect } from "vitest";
 
-import type { Collection } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 
 import GpfDescribeTypeTool from "../../../src/tools/GpfDescribeTypeTool";
 
 describe("Test GpfDescribeTypeTool",() => {
-    const mockCollection: Collection = {
+    const mockCollection: OgcCollectionSchema = {
         id: "BDTOPO_V3:batiment",
         namespace: "BDTOPO_V3",
         name: "batiment",

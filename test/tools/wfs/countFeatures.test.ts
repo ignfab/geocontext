@@ -1,9 +1,9 @@
 import { vi, describe, it, expect, afterEach } from "vitest";
 
-import type { Collection } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 import { ServiceResponseError } from "../../../src/helpers/http";
 
-const mockGetFeatureType = vi.fn<(typename: string) => Promise<Collection>>();
+const mockGetFeatureType = vi.fn<(typename: string) => Promise<OgcCollectionSchema>>();
 const mockFetchJSONPost = vi.fn<(
   url: string,
   body?: string,
@@ -41,7 +41,7 @@ describe("Test GpfCountFeaturesTool", () => {
     }
   }
 
-  const polygonFeatureType: Collection = {
+  const polygonFeatureType: OgcCollectionSchema = {
     id: "ADMINEXPRESS-COG.LATEST:commune",
     namespace: "ADMINEXPRESS-COG.LATEST",
     name: "commune",
@@ -55,7 +55,7 @@ describe("Test GpfCountFeaturesTool", () => {
     ],
   };
 
-  function mockFeatureTypes(featureTypes: Record<string, Collection>) {
+  function mockFeatureTypes(featureTypes: Record<string, OgcCollectionSchema>) {
     mockGetFeatureType.mockImplementation(async (typename: string) => {
       const featureType = featureTypes[typename];
       if (!featureType) {

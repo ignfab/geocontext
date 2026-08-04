@@ -12,7 +12,7 @@
  * (that lives in `byId.ts`) — it is one step of query preparation.
  */
 
-import type { Collection } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 
 import {
   getGeometryProperty,
@@ -31,7 +31,7 @@ import type { WfsFeatureCollectionResponse } from "./types.js";
  * single implementation.
  */
 export type ReferenceGeometryClient = {
-  getFeatureType(typename: string): Promise<Collection>;
+  getFeatureType(typename: string): Promise<OgcCollectionSchema>;
   fetchFeatureCollection(request: CompiledRequest): Promise<WfsFeatureCollectionResponse>;
 };
 

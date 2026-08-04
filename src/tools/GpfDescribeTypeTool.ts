@@ -4,7 +4,7 @@
 
 import BaseTool from "./BaseTool.js";
 import { z } from "zod";
-import type { Collection } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 
 import { wfsSchemaStore } from "../wfs/catalog.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
@@ -70,7 +70,7 @@ class GpfDescribeTypeTool extends BaseTool<GpfDescribeTypeInput> {
     });
 
     try {
-      const featureType: Collection = await wfsSchemaStore.getFeatureType(input.typename);
+      const featureType: OgcCollectionSchema = await wfsSchemaStore.getFeatureType(input.typename);
       return featureType;
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : String(e);

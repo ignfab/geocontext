@@ -1,6 +1,6 @@
 import { vi, describe, it, expect, afterEach } from "vitest";
 
-import type { Collection } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 
 import type { Env } from "../../../src/config/env.js";
 import { decodeToken } from "../../../src/proxy/token.js";
@@ -11,7 +11,7 @@ const SECRET_HEX = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789ab
 const SECRET = Buffer.from(SECRET_HEX, "hex");
 
 const mockGetEnv = vi.fn<() => Env>();
-const mockGetFeatureType = vi.fn<(typename: string) => Promise<Collection>>();
+const mockGetFeatureType = vi.fn<(typename: string) => Promise<OgcCollectionSchema>>();
 
 vi.doMock("../../../src/config/env.js", async () => {
   const actual = await vi.importActual<typeof import("../../../src/config/env.js")>(
@@ -40,7 +40,7 @@ const { default: GpfGetFeaturesLayerTool } = await import(
   "../../../src/tools/GpfGetFeaturesLayerTool"
 );
 
-const communeType: Collection = {
+const communeType: OgcCollectionSchema = {
   id: "ADMINEXPRESS-COG.LATEST:commune",
   namespace: "ADMINEXPRESS-COG.LATEST",
   name: "commune",
@@ -246,7 +246,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
     // table). The tool must refuse to mint a data_url because a geometry-less type
     // can never produce a cartographiable layer — failing here (early, at the tool
     // call) is better than handing the LLM an opaque proxy 5xx at map-load.
-    const tableType: Collection = {
+    const tableType: OgcCollectionSchema = {
       id: "INSEE.FILOSOFI.INDICATORS:filosofi_iris_2019",
       namespace: "INSEE.FILOSOFI.INDICATORS",
       name: "filosofi_iris_2019",
@@ -346,7 +346,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
     // defaultCrs), so the proxy could not resolve a reference geometry from it. The
     // pre-flight must catch that here (getGeometryProperty), not defer it to an opaque
     // proxy 5xx at map-load — symmetric with the main typename's geometry check.
-    const tableType: Collection = {
+    const tableType: OgcCollectionSchema = {
       id: "wfs_scot:doc_urba",
       namespace: "wfs_scot",
       name: "doc_urba",

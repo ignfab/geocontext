@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { Collection } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 
 import { runGeometryFeatureQuery, runGeometryFeatureByIdQuery, type WfsClientLike, type TravelTimeResolver } from "../../src/proxy/execute";
 import type { CompiledRequest } from "../../src/wfs/request";
@@ -9,7 +9,7 @@ import { ServiceResponseError } from "../../src/helpers/http";
 
 // --- Test catalog ---
 
-const communeType: Collection = {
+const communeType: OgcCollectionSchema = {
   id: "ADMINEXPRESS-COG.LATEST:commune",
   namespace: "ADMINEXPRESS-COG.LATEST",
   name: "commune",
@@ -22,7 +22,7 @@ const communeType: Collection = {
   ],
 };
 
-const departementType: Collection = {
+const departementType: OgcCollectionSchema = {
   id: "ADMINEXPRESS-COG.LATEST:departement",
   namespace: "ADMINEXPRESS-COG.LATEST",
   name: "departement",
@@ -59,7 +59,7 @@ const baseInput: GpfGetFeaturesInput = {
 
 /** Builds a WfsClientLike double, recording the requests it executes. */
 function makeClient(overrides?: {
-  featureTypes?: Record<string, Collection>;
+  featureTypes?: Record<string, OgcCollectionSchema>;
   responses?: WfsFeatureCollectionResponse[];
 }) {
   const featureTypes = overrides?.featureTypes ?? {

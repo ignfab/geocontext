@@ -1,9 +1,9 @@
 import { vi, describe, it, expect, afterEach } from "vitest";
 
-import type { Collection } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 import { ServiceResponseError } from "../../../src/helpers/http.js";
 
-const mockGetFeatureType = vi.fn<(typename: string) => Promise<Collection>>();
+const mockGetFeatureType = vi.fn<(typename: string) => Promise<OgcCollectionSchema>>();
 const mockFetchJSONPost = vi.fn<(
   url: string,
   body?: string,
@@ -31,7 +31,7 @@ describe("Test GpfGetFeatureByIdTool", () => {
     }
   }
 
-  const polygonFeatureType: Collection = {
+  const polygonFeatureType: OgcCollectionSchema = {
     id: "ADMINEXPRESS-COG.LATEST:commune",
     namespace: "ADMINEXPRESS-COG.LATEST",
     name: "commune",
@@ -44,7 +44,7 @@ describe("Test GpfGetFeatureByIdTool", () => {
     ],
   };
 
-  const tableFeatureType: Collection = {
+  const tableFeatureType: OgcCollectionSchema = {
     id: "wfs_scot:doc_urba",
     namespace: "wfs_scot",
     name: "doc_urba",

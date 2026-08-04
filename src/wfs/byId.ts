@@ -5,7 +5,7 @@
  * concerns such as schema exposure and response formatting.
  */
 
-import type { Collection } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 
 import {
   wfsClient,
@@ -152,7 +152,7 @@ export function requireSingleFeatureById(
 export async function executeGetFeatureById(
   input: GetFeatureByIdExecutionInput,
 ) {
-  const featureType: Collection = await wfsClient.getFeatureType(input.typename);
+  const featureType: OgcCollectionSchema = await wfsClient.getFeatureType(input.typename);
   const propertyName = buildPropertyName(featureType, input.select, input.spatial_extras);
   const featureCollection = await fetchFeatureById({
     typename: input.typename,
