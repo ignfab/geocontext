@@ -9,10 +9,18 @@
 import type { WfsFeatureCollectionResponse } from "./types.js";
 import { centroid } from "@turf/centroid";
 import { bbox } from "@turf/bbox";
+import { GpfGetFeaturesInput } from "./schema.js";
 import { AllGeoJSON } from "@turf/helpers";
 
+// ---  Internal types ---
 
-function deriveGeometry(geometry: unknown, spatial_extras: string[] = []) {
+type FeatureCollectionPostProcessInput = Omit<GpfGetFeaturesInput, "limit">;
+
+// --- spatial_extra handling  ---
+
+function deriveFromGeometry(geometry: unknown, input: FeatureCollectionPostProcessInput) {
+  const spatial_extras = input.spatial_extras;
+
   const ret : Record<string, unknown> = {};
 
   if (spatial_extras.length === 0) {
@@ -113,11 +121,12 @@ export function getMatchedFeatureCount(featureCollection: WfsFeatureCollectionRe
  * and exposes lightweight `feature_ref` objects reusable by follow-up requests.
  *
  * @param featureCollection Raw FeatureCollection returned by the WFS endpoint.
+ * @param input Normalized get-features/by-id input carrying `typename` and requested `spatial_extras`.
  * @returns A transformed FeatureCollection with raw geometry fields removed and optional `feature_ref` metadata.
  */
 export function transformFeatureCollectionResponse(
   featureCollection: GenericFeatureCollection,
-  spatial_extras: string[] = [],
+  input: FeatureCollectionPostProcessInput,
 ): TransformedFeatureCollection {
   if (!Array.isArray(featureCollection.features)) {
     return featureCollection;
@@ -129,7 +138,7 @@ export function transformFeatureCollectionResponse(
     const nextFeature: Record<string, unknown> = {
       ...rest,
       geometry: null,
-      ...deriveGeometry(_geometry, spatial_extras),
+      ...deriveFromGeometry(_geometry, input),
     };
 
     if (typeof feature.id === "string") {
@@ -148,11 +157,6 @@ export function transformFeatureCollectionResponse(
 
 // --- Feature Collection post-processing ---
 
-type FeatureCollectionPostProcessInput = {
-  typename: string,
-  spatial_extras?: string[],
-}
-
 /**
  * Transforms a FeatureCollection obtained from upstream.
  *
@@ -164,7 +168,7 @@ type FeatureCollectionPostProcessInput = {
  * @returns A FeatureCollection with the required transformations done.
  */
 export function postProcessFeatureCollection(featureCollection: GenericFeatureCollection, input: FeatureCollectionPostProcessInput) {
-  const transformed = transformFeatureCollectionResponse(featureCollection, input.spatial_extras);
+  const transformed = transformFeatureCollectionResponse(featureCollection, input);
   if (!Array.isArray(transformed.features)) {
     return transformed;
   }

@@ -19,8 +19,9 @@ describe("wfs_engine/response", () => {
 
   describe("transformFeatureCollectionResponse", () => {
     it("should pass through a FeatureCollection without a features array", () => {
-      const input = { type: "FeatureCollection", totalFeatures: 0 };
-      expect(transformFeatureCollectionResponse(input)).toEqual(input);
+      const featureCollection = { type: "FeatureCollection", totalFeatures: 0 };
+      const input = { typename: "TEST:type", spatial_extras: [] };
+      expect(transformFeatureCollectionResponse(featureCollection, input)).toEqual(featureCollection);
     });
 
     it("should remove geometry and geometry_name, set geometry to null, and add feature_ref", () => {
@@ -35,7 +36,7 @@ describe("wfs_engine/response", () => {
             properties: { code_insee: "94080" },
           },
         ],
-      });
+      }, { typename: "TEST:type", spatial_extras: [] });
 
       expect(result).not.toHaveProperty("crs");
       const features = getFeatures(result);
@@ -54,7 +55,7 @@ describe("wfs_engine/response", () => {
         features: [
           { id: 42, properties: { name: "test" } },
         ],
-      });
+      }, { typename: "TEST:type", spatial_extras: [] });
 
       const features = getFeatures(result);
 
@@ -80,7 +81,7 @@ describe("wfs_engine/response", () => {
             properties: { code_insee: "94080" },
           },
         ],
-      }, ["bbox"]);
+      }, { typename: "TEST:type", spatial_extras: ["bbox"] });
 
       const features = getFeatures(result);
 
@@ -101,7 +102,7 @@ describe("wfs_engine/response", () => {
             properties: { code_insee: "94080" },
           },
         ],
-      }, ["centroid", "bbox"]);
+      }, { typename: "TEST:type", spatial_extras: ["centroid", "bbox"] });
 
       const features = getFeatures(result);
       expect(features[0].bbox).toStrictEqual([2.3, 48.8, 2.4, 48.9]);
@@ -116,7 +117,7 @@ describe("wfs_engine/response", () => {
   describe("postProcessFeatureCollection", () => {
     it("should pass through when transformed result has no features array", () => {
       const input = { type: "FeatureCollection" };
-      const result = postProcessFeatureCollection(input, { typename: "TEST:type" });
+      const result = postProcessFeatureCollection(input, { typename: "TEST:type", spatial_extras: [] });
       expect(result).toEqual({ type: "FeatureCollection" });
     });
 
@@ -127,7 +128,7 @@ describe("wfs_engine/response", () => {
             { id: "commune.1", geometry: { type: "Point", coordinates: [2.35, 48.85] }, properties: { nom: "Test" } },
           ],
         },
-        { typename: "ADMINEXPRESS-COG.LATEST:commune" },
+        { typename: "ADMINEXPRESS-COG.LATEST:commune", spatial_extras: [] }
       );
 
       const features = getFeatures(result);
@@ -145,7 +146,7 @@ describe("wfs_engine/response", () => {
             { id: 42, properties: { name: "no-string-id" } },
           ],
         },
-        { typename: "TEST:type" },
+        { typename: "TEST:type", spatial_extras: ["bbox"] }
       );
 
       const features = getFeatures(result);
@@ -162,7 +163,7 @@ describe("wfs_engine/response", () => {
             { id: 42, properties: { nom: "C" } },
           ],
         },
-        { typename: "ADMINEXPRESS-COG.LATEST:commune" },
+        { typename: "ADMINEXPRESS-COG.LATEST:commune", spatial_extras: [] },
       );
 
       const features = getFeatures(result);
