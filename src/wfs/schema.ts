@@ -18,17 +18,6 @@ export const DEFAULT_LIMIT = 100;
 export const MAX_LIMIT = 5000;
 export const WHERE_OPERATORS = ["eq", "ne", "lt", "lte", "gt", "gte", "in", "is_null"] as const;
 export const ORDER_DIRECTIONS = ["asc", "desc"] as const;
-export const GPF_GET_FEATURES_SPATIAL_FILTER_KEYS = [
-  "bbox_filter",
-  "intersects_point_filter",
-  "dwithin_point_filter",
-  "intersects_feature_filter",
-  "travel_time_filter"
-] as const;
-export const GPF_SPATIAL_FILTER_DOCNAMES = GPF_GET_FEATURES_SPATIAL_FILTER_KEYS
-  .map((name) => `\`${name}\``)
-  .join(", ")
-  .replace(/, ([^,]*)$/, ' ou $1')
 
 export const GPF_GET_FEATURES_SPATIAL_EXTRAS = [
   "centroid",
@@ -126,6 +115,13 @@ const gpfSpatialFilterInputSchema = z.object({
     .describe("Filtre spatial par temps de trajet depuis un point (`profile` voiture ou piéton). Exclusif avec les autres filtres spatiaux."),
 })
 
+export const GPF_GET_FEATURES_SPATIAL_FILTER_KEYS =
+  gpfSpatialFilterInputSchema.keyof().options;
+export const GPF_SPATIAL_FILTER_DOCNAMES = GPF_GET_FEATURES_SPATIAL_FILTER_KEYS
+  .map((name) => `\`${name}\``)
+  .join(", ")
+  .replace(/, ([^,]*)$/, ' ou $1');
+
 const gpfGeometryExtraInputSchema = z.object({
   spatial_extras: z
     .array(z.enum(GPF_GET_FEATURES_SPATIAL_EXTRAS))
@@ -152,12 +148,15 @@ export type WhereClause = z.infer<typeof whereClauseSchema>;
 
 export type OrderByClause = z.infer<typeof orderBySchema>;
 
-export type SpatialFilter =
-  | ({ operator: "bbox" } & z.infer<typeof bboxFilterSchema>)
-  | ({ operator: "intersects_point" } & z.infer<typeof intersectsPointFilterSchema>)
-  | ({ operator: "dwithin_point" } & z.infer<typeof dwithinPointFilterSchema>)
-  | ({ operator: "intersects_feature" } & z.infer<typeof intersectsFeatureFilterSchema>)
-  | ({ operator: "travel_time" } & z.infer<typeof travelTimeFilterSchema>);
+type SpatialFilterKey = (typeof GPF_GET_FEATURES_SPATIAL_FILTER_KEYS)[number];
+type SpatialFilterInput = z.infer<typeof gpfSpatialFilterInputSchema>;
+
+type SpatialFilterEntry<K extends SpatialFilterKey> =
+  K extends `${infer Operator}_filter`
+    ? { operator: Operator } & SpatialFilterInput[K]
+    : never;
+
+export type SpatialFilter = SpatialFilterEntry<SpatialFilterKey>;
 
 // --- `gpf_get_features` ---
 
