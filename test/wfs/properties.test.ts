@@ -6,7 +6,6 @@ import {
   validateSelectProperty,
   buildPropertyName,
 } from "../../src/wfs/properties";
-import type { GpfGetFeaturesInput } from "../../src/wfs/schema";
 
 // --- Test fixtures ---
 

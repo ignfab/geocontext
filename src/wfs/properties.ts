@@ -9,18 +9,6 @@
 
 import type { OgcCollectionSchema, OgcCollectionProperty } from "@ignfab/gpf-schema-store";
 
-// --- Property Listing ---
-
-/**
- * Lists available property names for a feature type, mainly for error reporting.
- *
- * @param featureType Feature type definition loaded from the embedded catalog.
- * @returns A comma-separated list of property names.
- */
-function getPropertyList(featureType: OgcCollectionSchema) {
-  return Object.keys(featureType.properties).join(", ");
-}
-
 // --- Geometry Resolution ---
 
 /**

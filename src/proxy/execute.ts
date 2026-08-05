@@ -19,7 +19,7 @@
  *   and lets the HTTP layer supply a size-bounded, rate-limited client.
  */
 
-import type { OgcCollectionSchema, OgcCollectionProperty } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 
 import {
   buildGetFeatureByIdRequest,

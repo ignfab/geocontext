@@ -20,7 +20,7 @@ describe("Test GpfDescribeTypeTool",() => {
     };
 
     class TestableGpfDescribeTypeTool extends GpfDescribeTypeTool {
-        async execute(input: { typename: string }) {
+        async execute(_: { typename: string }) {
             return mockCollection;
         }
     }

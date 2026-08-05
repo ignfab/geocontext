@@ -8,7 +8,7 @@
  * - a small façade over lower-level helpers reused elsewhere in the engine
  */
 
-import type { OgcCollectionSchema, OgcCollectionProperty } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 
 import {
   buildPropertyName,
