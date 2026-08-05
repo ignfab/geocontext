@@ -8,13 +8,9 @@ import type {
 } from "./schema.js";
 import { GPF_GET_FEATURES_SPATIAL_FILTER_KEYS } from "./schema.js";
 
-const FILTER_KEY_TO_OPERATOR = {
-  bbox_filter: "bbox",
-  intersects_point_filter: "intersects_point",
-  dwithin_point_filter: "dwithin_point",
-  intersects_feature_filter: "intersects_feature",
-  travel_time_filter: "travel_time",
-} as const satisfies Record<(typeof GPF_GET_FEATURES_SPATIAL_FILTER_KEYS)[number], string>;
+const FILTER_KEY_TO_OPERATOR = Object.fromEntries(
+  GPF_GET_FEATURES_SPATIAL_FILTER_KEYS.map((key) => [key, key.replace(/_filter$/, "")]),
+) as Record<(typeof GPF_GET_FEATURES_SPATIAL_FILTER_KEYS)[number], string>;
 
 /**
  * Reads the already-validated spatial filter from normalized tool input and
