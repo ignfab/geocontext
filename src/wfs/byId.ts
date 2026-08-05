@@ -15,46 +15,7 @@ import type {
 import { buildGetFeatureByIdRequest } from "./request.js";
 import { buildPropertyName } from "./properties.js";
 import { postProcessFeatureCollection } from "./response.js";
-
-// --- Input Types ---
-
-/**
- * Normalized execution input for the strict by-id `results` flow.
- */
-export type GetFeatureByIdExecutionInput = {
-  typename: string;
-  feature_id: string;
-  select?: string[];
-  spatial_extras?: string[];
-};
-
-// --- Internal Types ---
-
-type FetchFeatureByIdInput = {
-  typename: string;
-  feature_id: string;
-  propertyName: string;
-};
-
-// --- Live Lookup ---
-
-/**
- * Executes the live WFS lookup targeting a single `featureID`.
- *
- * @param input Target layer, expected feature id, and property selection.
- * @returns The raw FeatureCollection returned by the WFS service.
- */
-export async function fetchFeatureById(
-  input: FetchFeatureByIdInput,
-): Promise<WfsFeatureCollectionResponse> {
-  const request = buildGetFeatureByIdRequest(
-    input.typename,
-    input.feature_id,
-    input.propertyName,
-  );
-
-  return wfsClient.fetchFeatureCollection(request);
-}
+import { GpfGetFeatureByIdInput } from "./schema.js";
 
 // --- Cardinality Errors ---
 
@@ -99,7 +60,7 @@ export class FeatureCardinalityError extends Error {
  */
 export function requireSingleFeatureById(
   featureCollection: WfsFeatureCollectionResponse,
-  input: Pick<GetFeatureByIdExecutionInput, "typename" | "feature_id">,
+  input: Pick<GpfGetFeatureByIdInput, "typename" | "feature_id">,
 ): WfsFeatureResponse {
   if (!Array.isArray(featureCollection.features)) {
     throw new FeatureCardinalityError("Le service WFS n'a pas retourné de collection d'objets exploitable.");
@@ -148,15 +109,12 @@ export function requireSingleFeatureById(
  * @returns A transformed FeatureCollection containing exactly one feature.
  */
 export async function executeGetFeatureById(
-  input: GetFeatureByIdExecutionInput,
+  input: GpfGetFeatureByIdInput,
 ) {
   const featureType = await wfsClient.getFeatureType(input.typename);
   const propertyName = buildPropertyName(featureType, input.select, input.spatial_extras);
-  const featureCollection = await fetchFeatureById({
-    typename: input.typename,
-    feature_id: input.feature_id,
-    propertyName,
-  });
+  const request = buildGetFeatureByIdRequest(input.typename, input.feature_id, propertyName);
+  const featureCollection = await wfsClient.fetchFeatureCollection(request);
   const firstFeature = requireSingleFeatureById(featureCollection, input);
 
   const singleFeatureCollection = {
