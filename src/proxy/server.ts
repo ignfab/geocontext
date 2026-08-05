@@ -235,6 +235,18 @@ function createRequestHandler() {
         return;
       }
 
+      // TODO: minimal probe to unblock the k8s deployment — replace with a real liveness/readiness 
+      // split (/ready → 503 on SIGTERM, so a draining pod leaves the Service before its listener closes).
+      // Health probe (Kubernetes liveness/readiness, docker healthcheck): fixed path
+      // outside PROXY_ENDPOINT, answered without decoding a token or calling the WFS.
+      // Same path and body as the MCP image (mcp-framework serves /health by default),
+      // so one probe configuration fits both.
+      if (url.pathname === "/health") {
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ ok: true }));
+        return;
+      }
+
       const token = extractLayerToken(url.pathname, PROXY_ENDPOINT);
       if (token === undefined) {
         sendJsonError(res, 404, "Ressource introuvable.");
