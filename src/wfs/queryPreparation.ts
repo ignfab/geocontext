@@ -22,7 +22,7 @@ import type {
   OrderByClause,
   WhereClause,
 } from "./schema.js";
-import { GPF_SPATIAL_FILTER_DOCNAMES } from "./schema.js"
+import { GPF_SPATIAL_FILTER_DOCNAMES, queryIsGetFeaturesInput } from "./schema.js"
 
 import {
   formatScalarValue,
@@ -223,8 +223,7 @@ export function compileQueryParts(
 
   const cqlFilter = fragments.length > 0 ? fragments.join(" AND ") : undefined;
 
-  // TODO: use a more solid guard that will not break at the first contract change
-  if (!("spatial_extras" in input)) {
+  if (!queryIsGetFeaturesInput(input)) {
     // for CountFeatures: only return the required parts
     return {
       cqlFilter,

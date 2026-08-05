@@ -185,7 +185,7 @@ export const gpfGetFeaturesInputObjectSchema = gpfTypenameInputSchema
     .optional()
     .describe("Liste ordonnée des critères de tri."),
 }))
-  .merge(gpfGeometryExtraInputSchema)
+  .merge(gpfGeometryExtraInputSchema.required()) // must never be optional to ensure queryIsGetFeaturesInput correctness
   .strict();
 
 export const gpfGetFeaturesInputSchema = gpfGetFeaturesInputObjectSchema
@@ -331,10 +331,15 @@ export const gpfCountFeaturesPublishedInputSchema = generatePublishedInputSchema
 
 export type GpfQueryFeaturesInput = GpfGetFeaturesInput | GpfCountFeaturesInput
 
+/** Checks whether the input is that of a GetFeatures / GetFeatureById, instead of a CountFeatures request */
+export function queryIsGetFeaturesInput(input: GpfQueryFeaturesInput) : input is GpfGetFeaturesInput {
+  return "spatial_extras" in input;
+}
+
 // --- `gpf_get_feature_by_id` ---
 
 export const gpfGetFeatureByIdInputObjectSchema = gpfFeatureByIdCoreInputSchema
-  .merge(gpfGeometryExtraInputSchema)
+  .merge(gpfGeometryExtraInputSchema.required())  // must never be optional to ensure queryIsGetFeaturesInput correctness
   .strict();
 
 export const gpfGetFeatureByIdInputSchema = gpfGetFeatureByIdInputObjectSchema;

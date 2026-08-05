@@ -27,7 +27,7 @@ import {
   type CompiledRequest,
 } from "./request.js";
 import { postProcessFeatureCollection } from "./response.js";
-import type { GpfQueryFeaturesInput } from "./schema.js";
+import { queryIsGetFeaturesInput, type GpfQueryFeaturesInput } from "./schema.js";
 
 // --- Types ---
 
@@ -185,7 +185,7 @@ export async function executeQueryFeatures(input: GpfQueryFeaturesInput) {
 
   let featureCollection: WfsFeatureCollectionResponse;
 
-  const isGetFeaturesQuery = "limit" in input
+  const isGetFeaturesQuery = queryIsGetFeaturesInput(input);
 
   try {
     logger.debug(

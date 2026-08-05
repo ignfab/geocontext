@@ -3,7 +3,8 @@ import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 import type { GpfFeatureType } from "../../src/wfs/catalog";
 
 import { compileQueryParts, geometryToEwkt } from "../../src/wfs/queryPreparation";
-import type { GpfGetFeaturesInput } from "../../src/wfs/schema";
+import type { GpfGetFeaturesInput, GpfCountFeaturesInput } from "../../src/wfs/schema";
+import { queryIsGetFeaturesInput } from "../../src/wfs/schema";
 
 describe("gpfGetFeatures/queryPreparation", () => {
   const featureType: OgcCollectionSchema = {
@@ -200,4 +201,24 @@ describe("gpfGetFeatures/queryPreparation", () => {
     expect(geometryToEwkt({ type: "LineString", coordinates: [[2.3, 48.8], [2.4, 48.9]] })).toEqual("SRID=4326;LINESTRING(2.3 48.8,2.4 48.9)");
   });
 
+});
+
+describe("queryIsGetFeaturesInput", () => {
+  const getFeaturesInput: GpfGetFeaturesInput = {
+    typename: "ADMINEXPRESS-COG.LATEST:commune",
+    limit: 10,
+    spatial_extras: [],
+  };
+
+  const countFeaturesInput: GpfCountFeaturesInput = {
+    typename: "ADMINEXPRESS-COG.LATEST:commune",
+  };
+
+  it("returns true for a GpfGetFeaturesInput", () => {
+    expect(queryIsGetFeaturesInput(getFeaturesInput)).toBe(true);
+  });
+
+  it("returns false for a GpfCountFeaturesInput", () => {
+    expect(queryIsGetFeaturesInput(countFeaturesInput)).toBe(false);
+  });
 });
