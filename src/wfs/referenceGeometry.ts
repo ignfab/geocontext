@@ -22,6 +22,7 @@ import {
 import { buildGetFeatureByIdRequest, type CompiledRequest } from "./request.js";
 import { requireSingleFeatureById } from "./byId.js";
 import type { WfsFeatureCollectionResponse } from "./types.js";
+import { isGeometryLike } from "../helpers/geojson.js";
 
 /**
  * Minimal WFS client surface needed to resolve a reference feature's geometry:
@@ -34,27 +35,6 @@ export type ReferenceGeometryClient = {
   getFeatureType(typename: string): Promise<GpfFeatureType>;
   fetchFeatureCollection(request: CompiledRequest): Promise<WfsFeatureCollectionResponse>;
 };
-
-type GeometryLike = {
-  type: string;
-  coordinates: unknown;
-};
-
-/**
- * Narrow guard for the minimal GeoJSON geometry shape `geometryToEwkt` requires.
- *
- * @param value Unknown feature geometry value.
- * @returns `true` when the value looks like a GeoJSON geometry object.
- */
-function isGeometryLike(value: unknown): value is GeometryLike {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "type" in value &&
-    typeof value.type === "string" &&
-    "coordinates" in value
-  );
-}
 
 /**
  * Fetches a single reference feature by id (requesting only its geometry column)

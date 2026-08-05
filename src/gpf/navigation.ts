@@ -3,6 +3,8 @@ import logger from "../logger.js";
 import type { JsonFetcher } from "../helpers/http.js";
 import { RateLimiter } from "../helpers/RateLimiter.js";
 import { getEnv } from "../config/env.js";
+import { Geometry } from "geojson";
+import { isGeometryLike } from "../helpers/geojson.js";
 
 export const NAVIGATION_SOURCE = "Géoplateforme (calcul d'isochrone)";
 export const NAVIGATION_ISOCHRONE_URL = "https://data.geopf.fr/navigation/isochrone";
@@ -12,14 +14,6 @@ export const TRAVEL_TIME_PROFILES = ["car", "pedestrian"] as const;
 
 export type TravelTimeProfile = typeof TRAVEL_TIME_PROFILES[number];
 
-type GeoJsonGeometryLike = {
-  type: string;
-  coordinates: unknown;
-};
-
-type RawIsochroneResponse = {
-  geometry?: unknown;
-};
 
 export type TravelTimeGeometryInput = {
   lon: number;
@@ -28,23 +22,13 @@ export type TravelTimeGeometryInput = {
   profile: TravelTimeProfile;
 };
 
-function isGeoJsonGeometryLike(value: unknown): value is GeoJsonGeometryLike {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "type" in value &&
-    typeof value.type === "string" &&
-    "coordinates" in value
-  );
-}
-
 export class NavigationIsochroneClient {
   constructor(
     private rateLimiter: RateLimiter,
-    private fetcher: JsonFetcher<RawIsochroneResponse> = fetchJSONGet,
+    private fetcher: JsonFetcher<{geometry?: unknown}> = fetchJSONGet,
   ) {}
 
-  async getTravelTimeGeometry(input: TravelTimeGeometryInput): Promise<GeoJsonGeometryLike> {
+  async getTravelTimeGeometry(input: TravelTimeGeometryInput): Promise<Geometry> {
     await this.rateLimiter.limit();
     logger.debug(`[gpf:navigation] getTravelTimeGeometry(${JSON.stringify(input)})...`);
 
@@ -62,7 +46,7 @@ export class NavigationIsochroneClient {
     }).toString()}`;
 
     const json = await this.fetcher(url);
-    if (!isGeoJsonGeometryLike(json.geometry)) {
+    if (!isGeometryLike(json.geometry)) {
       throw new Error("Le service d'isochrone n'a pas renvoyé de géométrie GeoJSON exploitable.");
     }
 
