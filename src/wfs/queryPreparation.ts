@@ -37,10 +37,10 @@ import {
   compileIntersectsFeatureSpatialFilter,
   compileIntersectsPointSpatialFilter,
 } from "./spatialCql.js";
+import { Geometry } from "geojson";
 
 // --- Re-exports ---
 
-export { geometryToEwkt } from "./geometry.js";
 export { getGeometryName } from "./properties.js";
 export { getSpatialFilter } from "./spatialFilter.js";
 
@@ -58,10 +58,6 @@ type OrderedComparisonClause = Extract<ReturnType<typeof normalizeWhereClause>, 
 type InClause = Extract<ReturnType<typeof normalizeWhereClause>, { operator: "in" }>;
 
 // --- Public Types ---
-
-export type ResolvedFeatureGeometryRef = {
-  geometry_ewkt: string;
-};
 
 export type CompiledQuery = {
   geometryName?: string;
@@ -182,7 +178,7 @@ function compileOrderByClause(featureType: GpfFeatureType, clause: OrderByClause
 export function compileQueryParts(
   input: GpfQueryFeaturesInput,
   featureType: GpfFeatureType,
-  resolvedGeometryRef?: ResolvedFeatureGeometryRef,
+  resolvedGeometryRef?: Geometry,
 ): CompiledQuery {
   let geometryName: string | undefined;
   const spatialFilter = getSpatialFilter(input);
@@ -206,13 +202,13 @@ export function compileQueryParts(
         if (!resolvedGeometryRef) {
           throw new Error("Le filtre spatial `intersects_feature` exige la résolution préalable de la géométrie de référence.");
         }
-        fragments.push(compileIntersectsFeatureSpatialFilter(geometryName, resolvedGeometryRef.geometry_ewkt));
+        fragments.push(compileIntersectsFeatureSpatialFilter(geometryName, resolvedGeometryRef));
         break;
       case "travel_time":
         if (!resolvedGeometryRef) {
           throw new Error("Le filtre spatial `travel_time` exige la résolution préalable de la géométrie d'isochrone.");
         }
-        fragments.push(compileIntersectsFeatureSpatialFilter(geometryName, resolvedGeometryRef.geometry_ewkt));
+        fragments.push(compileIntersectsFeatureSpatialFilter(geometryName, resolvedGeometryRef));
         break;
     }
   }
