@@ -195,7 +195,7 @@ export async function executeQueryFeatures(input: GpfQueryFeaturesInput) {
   }
 
   if (isGetFeaturesQuery) {
-    return postProcessFeatureCollection(featureCollection, input);
+    return postProcessFeatureCollection(featureCollection, input, compiled.resolvedGeometryRef);
   } else {
     return {
       numberMatched: getMatchedFeatureCount(featureCollection),

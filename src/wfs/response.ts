@@ -18,7 +18,7 @@ type FeatureCollectionPostProcessInput = Omit<GpfGetFeaturesInput, "limit">;
 
 // --- spatial_extra handling  ---
 
-function deriveFromGeometry(geometry: unknown, input: FeatureCollectionPostProcessInput) {
+function deriveFromGeometry(geometry: unknown, input: FeatureCollectionPostProcessInput, resolvedGeometryRef?: ResolvedFeatureGeometryRef) {
   const spatial_extras = input.spatial_extras;
 
   const ret : Record<string, unknown> = {};
@@ -122,11 +122,13 @@ export function getMatchedFeatureCount(featureCollection: WfsFeatureCollectionRe
  *
  * @param featureCollection Raw FeatureCollection returned by the WFS endpoint.
  * @param input Normalized get-features/by-id input carrying `typename` and requested `spatial_extras`.
+ * @param resolvedGeometryRef Resolved geometry for spatial-filter-dependent extras, when available.
  * @returns A transformed FeatureCollection with raw geometry fields removed and optional `feature_ref` metadata.
  */
 export function transformFeatureCollectionResponse(
   featureCollection: GenericFeatureCollection,
   input: FeatureCollectionPostProcessInput,
+  resolvedGeometryRef?: ResolvedFeatureGeometryRef,
 ): TransformedFeatureCollection {
   if (!Array.isArray(featureCollection.features)) {
     return featureCollection;
@@ -138,7 +140,7 @@ export function transformFeatureCollectionResponse(
     const nextFeature: Record<string, unknown> = {
       ...rest,
       geometry: null,
-      ...deriveFromGeometry(_geometry, input),
+      ...deriveFromGeometry(_geometry, input, resolvedGeometryRef),
     };
 
     if (typeof feature.id === "string") {
@@ -165,10 +167,11 @@ export function transformFeatureCollectionResponse(
  *
  * @param featureCollection Raw FeatureCollection returned by the WFS endpoint.
  * @param input GpfGetFeatures or GpfGetFeatureById input query.
+ * @param resolvedGeometryRef The spatial filter resolved geometry, if any.
  * @returns A FeatureCollection with the required transformations done.
  */
-export function postProcessFeatureCollection(featureCollection: GenericFeatureCollection, input: FeatureCollectionPostProcessInput) {
-  const transformed = transformFeatureCollectionResponse(featureCollection, input);
+export function postProcessFeatureCollection(featureCollection: GenericFeatureCollection, input: FeatureCollectionPostProcessInput, resolvedGeometryRef?: ResolvedFeatureGeometryRef) {
+  const transformed = transformFeatureCollectionResponse(featureCollection, input, resolvedGeometryRef);
   if (!Array.isArray(transformed.features)) {
     return transformed;
   }
