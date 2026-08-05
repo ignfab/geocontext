@@ -125,17 +125,19 @@ describe("compileDwithinSpatialFilter", () => {
 
 describe("compileIntersectsFeatureSpatialFilter", () => {
   it("should compile an intersects_feature filter with EWKT geometry", () => {
-    const ewkt = "SRID=4326;MULTIPOLYGON(((2 48,2.2 48,2.2 48.2,2 48)))";
-
-    const result = compileIntersectsFeatureSpatialFilter(geometryName, ewkt);
+    const geometry = {
+      type: "MultiPolygon" as const,
+      coordinates: [[[[2, 48], [2.2, 48], [2.2, 48.2], [2, 48]]]]
+    };
+    const result = compileIntersectsFeatureSpatialFilter(geometryName, geometry);
 
     expect(result).toEqual("INTERSECTS(the_geom,SRID=4326;MULTIPOLYGON(((2 48,2.2 48,2.2 48.2,2 48))))");
   });
 
   it("should compile with a POINT EWKT", () => {
-    const ewkt = "SRID=4326;POINT(2.3522 48.8566)";
+    const geometry = { type: "Point" as const, coordinates: [2.3522, 48.8566] }
 
-    const result = compileIntersectsFeatureSpatialFilter(geometryName, ewkt);
+    const result = compileIntersectsFeatureSpatialFilter(geometryName, geometry);
 
     expect(result).toEqual("INTERSECTS(the_geom,SRID=4326;POINT(2.3522 48.8566))");
   });
