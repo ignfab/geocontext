@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { geometryToEwkt } from "../../src/wfs/geometry";
+import { Geometry } from "geojson";
+import { isGeometryLike } from "../../src/helpers/geojson";
 
 describe("geometryToEwkt", () => {
   // --- Point and MultiPoint (already partially covered via queryPreparation tests) ---
@@ -25,7 +27,7 @@ describe("geometryToEwkt", () => {
   // --- Previously uncovered types ---
 
   it("should serialize a MultiLineString", () => {
-    const geometry = {
+    const geometry: Geometry = {
       type: "MultiLineString",
       coordinates: [
         [[2.3, 48.8], [2.4, 48.9]],
@@ -39,7 +41,7 @@ describe("geometryToEwkt", () => {
   });
 
   it("should serialize a Polygon with a single ring", () => {
-    const geometry = {
+    const geometry: Geometry = {
       type: "Polygon",
       coordinates: [
         [[2.0, 48.0], [2.2, 48.0], [2.2, 48.2], [2.0, 48.0]],
@@ -52,7 +54,7 @@ describe("geometryToEwkt", () => {
   });
 
   it("should serialize a Polygon with multiple rings (outer + hole)", () => {
-    const geometry = {
+    const geometry: Geometry = {
       type: "Polygon",
       coordinates: [
         [[0, 0], [10, 0], [10, 10], [0, 10], [0, 0]],
@@ -66,7 +68,7 @@ describe("geometryToEwkt", () => {
   });
 
   it("should serialize a MultiPolygon with a single polygon", () => {
-    const geometry = {
+    const geometry: Geometry = {
       type: "MultiPolygon",
       coordinates: [
         [[[2, 48], [2.2, 48], [2.2, 48.2], [2, 48]]],
@@ -79,7 +81,7 @@ describe("geometryToEwkt", () => {
   });
 
   it("should serialize a MultiPolygon with multiple polygons", () => {
-    const geometry = {
+    const geometry: Geometry = {
       type: "MultiPolygon",
       coordinates: [
         [[[0, 0], [1, 0], [1, 1], [0, 0]]],
@@ -94,13 +96,37 @@ describe("geometryToEwkt", () => {
 
   it("should throw for an unsupported geometry type", () => {
     expect(() =>
-      geometryToEwkt({ type: "GeometryCollection", coordinates: [] }),
+      geometryToEwkt({ type: "GeometryCollection", geometries: [] }),
     ).toThrow("Le type de géométrie 'GeometryCollection' n'est pas supporté pour `intersects_feature`.");
   });
+});
 
-  it("should throw for a completely unknown type", () => {
-    expect(() =>
-      geometryToEwkt({ type: "CustomType", coordinates: null }),
-    ).toThrow("Le type de géométrie 'CustomType' n'est pas supporté pour `intersects_feature`.");
+describe("isGeometryLike", () => {
+  it("returns true for a Point geometry", () => {
+    expect(isGeometryLike({ type: "Point", coordinates: [2.35, 48.85] })).toBe(true);
+  });
+
+  it("returns true for a Polygon geometry", () => {
+    expect(isGeometryLike({ type: "Polygon", coordinates: [[[0, 0], [1, 0], [1, 1], [0, 0]]] })).toBe(true);
+  });
+
+  it("returns false for null", () => {
+    expect(isGeometryLike(null)).toBe(false);
+  });
+
+  it("returns false for a primitive", () => {
+    expect(isGeometryLike("Point")).toBe(false);
+  });
+
+  it("returns false when type is missing", () => {
+    expect(isGeometryLike({ coordinates: [0, 0] })).toBe(false);
+  });
+
+  it("returns false when coordinates is missing", () => {
+    expect(isGeometryLike({ type: "Point" })).toBe(false);
+  });
+
+  it("returns false when type is not a string", () => {
+    expect(isGeometryLike({ type: 42, coordinates: [] })).toBe(false);
   });
 });

@@ -5,6 +5,8 @@
  * in spatial CQL predicates such as `intersects_feature`.
  */
 
+import { Geometry } from "geojson";
+
 // --- Coordinate Serialization ---
 
 /**
@@ -25,7 +27,7 @@ function positionToWkt(position: [number, number]) {
  * @param geometry Geometry object exposing a GeoJSON `type` and `coordinates`.
  * @returns The EWKT representation of the geometry.
  */
-export function geometryToEwkt(geometry: { type: string; coordinates: unknown }) {
+export function geometryToEwkt(geometry: Geometry) {
   switch (geometry.type) {
     case "Point":
       return `SRID=4326;POINT(${positionToWkt(geometry.coordinates as [number, number])})`;
