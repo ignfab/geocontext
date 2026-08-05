@@ -37,6 +37,7 @@ vi.mock("../../src/helpers/RateLimiter", () => ({
 
 import { getProxyWfsClient, resolveProxyTravelTimeGeometry } from "../../src/proxy/transport";
 import { resetEnv } from "../../src/config/env";
+import { geometryToEwkt } from "../../src/wfs/geometry";
 
 const TEST_SECRET = "a".repeat(64);
 
@@ -136,7 +137,7 @@ describe("proxy/transport · resolveProxyTravelTimeGeometry", () => {
     expect(label).toBe("d'isochrone"); // names the isochrone leg in the 502 message
     // The dedicated GPF_NAVIGATION_PROXY rate limiter is invoked.
     expect(rateLimit).toHaveBeenCalled();
-    expect(result.geometry_ewkt).toMatch(/^SRID=4326;POLYGON/);
+    expect(geometryToEwkt(result)).toMatch(/^SRID=4326;POLYGON/);
   });
 
   it("throws defensively if called without a travel_time filter", async () => {

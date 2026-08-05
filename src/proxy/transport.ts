@@ -13,8 +13,7 @@ import { wfsSchemaStore } from "../wfs/catalog.js";
 import type { WfsTransportLike } from "../wfs/execution.js";
 import type { CompiledRequest } from "../wfs/request.js";
 import type { WfsFeatureCollectionResponse } from "../wfs/types.js";
-import { getSpatialFilter, geometryToEwkt } from "../wfs/queryPreparation.js";
-import type { ResolvedFeatureGeometryRef } from "../wfs/queryPreparation.js";
+import { getSpatialFilter } from "../wfs/queryPreparation.js";
 import type { GpfGetFeaturesInput } from "../wfs/schema.js";
 import { NavigationIsochroneClient } from "../gpf/navigation.js";
 import type {
@@ -25,6 +24,7 @@ import type {
 import { fetchJSONPostWithLimit, fetchJSONGetWithLimit } from "../helpers/http.js";
 import { RateLimiter } from "../helpers/RateLimiter.js";
 import { getEnv } from "../config/env.js";
+import { Geometry } from "geojson";
 
 // --- Proxy Transport ---
 
@@ -107,16 +107,16 @@ function getProxyIsochroneClient(): NavigationIsochroneClient {
 
 /**
  * Reference-geometry resolver for the `travel_time` spatial filter: turns the
- * isochrone into a reference geometry (EWKT) that is fed INTO the WFS query — the
+ * isochrone into a reference geometry that is fed INTO the WFS query — the
  * sibling of `intersects_feature`'s reference-geometry resolution
- * (`resolveFeatureGeometryEwkt`). It does NOT fetch features itself (that is the
+ * (`resolveFeatureGeometry`). It does NOT fetch features itself (that is the
  * WFS transport's job). Backed by the proxy isochrone client (bounded fetch +
  * `GPF_NAVIGATION_PROXY` rate limiter), and injected into `runGeometryFeatureQuery`
  * so it only fires for travel_time inputs.
  */
 export const resolveProxyTravelTimeGeometry: TravelTimeResolver = async (
   input: GpfGetFeaturesInput,
-): Promise<ResolvedFeatureGeometryRef> => {
+): Promise<Geometry> => {
   const spatialFilter = getSpatialFilter(input);
   if (spatialFilter?.operator !== "travel_time") {
     // Guarded by the caller (runGeometryFeatureQuery only calls this for travel_time);
@@ -124,14 +124,12 @@ export const resolveProxyTravelTimeGeometry: TravelTimeResolver = async (
     throw new Error("resolveProxyTravelTimeGeometry appelé sans filtre `travel_time`.");
   }
 
-  const geometry = await getProxyIsochroneClient().getTravelTimeGeometry({
+  return await getProxyIsochroneClient().getTravelTimeGeometry({
     lon: spatialFilter.lon,
     lat: spatialFilter.lat,
     minutes: spatialFilter.minutes,
     profile: spatialFilter.profile,
   });
-
-  return { geometry_ewkt: geometryToEwkt(geometry) };
 };
 
 // --- Default Engine Dependencies ---

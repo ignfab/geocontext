@@ -147,7 +147,7 @@ class GpfGetFeaturesLayerTool extends BaseTool<GpfGetFeaturesLayerInput> {
     compileQueryParts(
       compiledInput,
       featureType,
-      needsResolvedRef ? { geometry_ewkt: "SRID=4326;POINT(0 0)" } : undefined,
+      needsResolvedRef ? { type: "Point" as const, coordinates: [0, 0] } : undefined,
     );
 
     logger.info(`[tool] execute ${this.name} ...`, {

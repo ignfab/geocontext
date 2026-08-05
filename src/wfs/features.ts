@@ -8,14 +8,12 @@
 
 import { navigationIsochroneClient } from "../gpf/navigation.js";
 import logger from "../logger.js";
-import { resolveFeatureGeometryEwkt } from "./referenceGeometry.js";
+import { resolveFeatureGeometry } from "./referenceGeometry.js";
 import { rethrowIdentifiedCatalogDesyncError } from "./catalogDesync.js";
 import {
   compileQueryParts,
-  geometryToEwkt,
   getSpatialFilter,
   type CompiledQuery,
-  type ResolvedFeatureGeometryRef,
 } from "./queryPreparation.js";
 import {
   wfsClient,
@@ -28,6 +26,7 @@ import {
 } from "./request.js";
 import { postProcessFeatureCollection } from "./response.js";
 import { queryIsGetFeaturesInput, type GpfQueryFeaturesInput } from "./schema.js";
+import { Geometry } from "geojson";
 
 // --- Types ---
 
@@ -68,51 +67,45 @@ export function ensureIntersectsFeatureTargetsOtherTypename(
 // --- Reference Geometry ---
 
 /**
- * Resolves the geometry of a reference feature when `intersects_feature` is used,
- * then converts it to EWKT for CQL compilation.
+ * Resolves the geometry of a reference feature when `intersects_feature` is used.
  *
  * @param input Normalized tool input.
  * @returns The resolved reference geometry, or `undefined` when no reference feature is needed.
  */
 export async function resolveIntersectsFeatureGeometry(
   input: GpfQueryFeaturesInput,
-): Promise<ResolvedFeatureGeometryRef | undefined> {
+): Promise<Geometry | undefined> {
   const spatialFilter = getSpatialFilter(input);
   if (!spatialFilter || spatialFilter.operator !== "intersects_feature") {
     return undefined;
   }
 
-  return resolveFeatureGeometryEwkt(wfsClient, {
+  return resolveFeatureGeometry(wfsClient, {
     typename: spatialFilter.typename,
     feature_id: spatialFilter.feature_id,
   });
 }
 
 /**
- * Resolves the travel-time isochrone geometry when `travel_time_filter` is used,
- * then converts it to EWKT for CQL compilation.
+ * Resolves the travel-time isochrone geometry when `travel_time_filter` is used.
  *
  * @param input Normalized tool input.
  * @returns The resolved isochrone geometry, or `undefined` when no travel-time filter is requested.
  */
 export async function resolveTravelTimeGeometry(
   input: GpfQueryFeaturesInput,
-): Promise<ResolvedFeatureGeometryRef | undefined> {
+): Promise<Geometry | undefined> {
   const spatialFilter = getSpatialFilter(input);
   if (!spatialFilter || spatialFilter.operator !== "travel_time") {
     return undefined;
   }
 
-  const geometry = await navigationIsochroneClient.getTravelTimeGeometry({
+  return await navigationIsochroneClient.getTravelTimeGeometry({
     lon: spatialFilter.lon,
     lat: spatialFilter.lat,
     minutes: spatialFilter.minutes,
     profile: spatialFilter.profile,
   });
-
-  return {
-    geometry_ewkt: geometryToEwkt(geometry),
-  };
 }
 
 /**
@@ -123,7 +116,7 @@ export async function resolveTravelTimeGeometry(
  */
 export async function resolveSpatialFilterGeometry(
   input: GpfQueryFeaturesInput,
-): Promise<ResolvedFeatureGeometryRef | undefined> {
+): Promise<Geometry | undefined> {
   const spatialFilter = getSpatialFilter(input);
 
   switch (spatialFilter?.operator) {

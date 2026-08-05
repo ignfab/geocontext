@@ -2,9 +2,10 @@ import { describe, expect, it } from "vitest";
 import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 import type { GpfFeatureType } from "../../src/wfs/catalog";
 
-import { compileQueryParts, geometryToEwkt } from "../../src/wfs/queryPreparation";
+import { compileQueryParts } from "../../src/wfs/queryPreparation";
 import type { GpfGetFeaturesInput, GpfCountFeaturesInput } from "../../src/wfs/schema";
 import { queryIsGetFeaturesInput } from "../../src/wfs/schema";
+import { geometryToEwkt } from "../../src/wfs/geometry";
 
 describe("gpfGetFeatures/queryPreparation", () => {
   const featureType: OgcCollectionSchema = {
@@ -119,7 +120,8 @@ describe("gpfGetFeatures/queryPreparation", () => {
         feature_id: "commune.1",
       },
     }, wrappedFeatureType, {
-      geometry_ewkt: "SRID=4326;MULTIPOLYGON(((2 48,2.2 48,2.2 48.2,2 48,2 48)))",
+      type: "MultiPolygon" as const,
+      coordinates: [[[[2, 48], [2.2, 48], [2.2, 48.2], [2, 48], [2, 48]]]]
     });
 
     expect(compiled.cqlFilter).toEqual("INTERSECTS(geometrie,SRID=4326;MULTIPOLYGON(((2 48,2.2 48,2.2 48.2,2 48,2 48))))");
@@ -134,9 +136,12 @@ describe("gpfGetFeatures/queryPreparation", () => {
         minutes: 15,
         profile: "pedestrian",
       },
-    }, wrappedFeatureType, {
-      geometry_ewkt: "SRID=4326;POLYGON((2 48,2.2 48,2.2 48.2,2 48))",
-    });
+    }, wrappedFeatureType,
+    {
+      type: "Polygon" as const,
+      coordinates: [[[2, 48], [2.2, 48], [2.2, 48.2], [2, 48]]]
+    }
+  );
 
     expect(compiled.cqlFilter).toEqual("INTERSECTS(geometrie,SRID=4326;POLYGON((2 48,2.2 48,2.2 48.2,2 48)))");
   });

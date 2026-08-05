@@ -10,7 +10,7 @@
  *
  * Owned here (client-agnostic) so the LLM path (`executeQueryFeatures`) and the
  * proxy path (`runGeometryFeatureQuery`) share ONE detection string + message —
- * mirroring `resolveFeatureGeometryEwkt`. A maintainer updating the upstream
+ * mirroring `resolveFeatureGeometry`. A maintainer updating the upstream
  * wording (or the diagnostic) then touches a single place instead of two copies
  * that can silently drift.
  */
