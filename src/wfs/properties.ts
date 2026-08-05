@@ -55,26 +55,6 @@ export function getGeometryName(featureType: OgcCollectionSchema) : string {
   return geometryProperties[0];
 }
 
-// --- Generic Property Resolution ---
-
-/**
- * Loads a property by exact name and throws a descriptive error when it does not exist.
- *
- * @param featureType Feature type definition loaded from the embedded catalog.
- * @param propertyName Exact property name requested by the caller.
- * @returns The matching property metadata.
- */
-function getPropertyOrThrow(featureType: OgcCollectionSchema, propertyName: string) : OgcCollectionProperty {
-  const property = featureType.properties[propertyName]
-  if (!property) {
-    throw new Error(
-      `La propriété '${propertyName}' n'existe pas pour '${featureType.title}'. ` +
-      `Appelle \`gpf_describe_type\` pour obtenir la liste des propriétés disponibles.`,
-    );
-  }
-  return property;
-}
-
 // --- Non-Geometry Validation ---
 
 /**
@@ -87,9 +67,19 @@ function getPropertyOrThrow(featureType: OgcCollectionSchema, propertyName: stri
  * @returns The matching non-geometric property metadata.
  */
 export function resolveNonGeometryProperty(featureType: OgcCollectionSchema, propertyName: string, message: string) {
-  const property = getPropertyOrThrow(featureType, propertyName);
+  const property = featureType.properties[propertyName]
+  if (!property) {
+    const nonGeometryProperties = (Object.entries(featureType.properties))
+      .filter(([_propertyName, property]) => Boolean((property as OgcCollectionProperty).type))
+      .map(([propertyName]) => propertyName);
+    throw new Error(
+      `La propriété '${propertyName}' n'existe pas pour '${featureType.title}'. ` +
+      `Propriétés non géométriques disponibles : ${nonGeometryProperties.join(", ")}. ` +
+      `Appelle \`gpf_describe_type\` pour obtenir la signification de ces propriétés.`,
+    );
+  }
   if (!property.type) { // identifies a geometric property
-    throw new Error(`La propriété ${propertyName} est géométrique. ` + message);
+    throw new Error(`La propriété '${propertyName}' est géométrique. ` + message);
   }
   return property;
 }
