@@ -64,6 +64,7 @@ export type CompiledQuery = {
   propertyName: string;
   cqlFilter?: string;
   sortBy?: string;
+  resolvedGeometryRef?: ResolvedFeatureGeometryRef;
 };
 
 // --- Attribute Compilation ---
@@ -225,6 +226,7 @@ export function compileQueryParts(
       cqlFilter,
       geometryName,
       propertyName: "",
+      resolvedGeometryRef
     };
   }
 
@@ -249,5 +251,6 @@ export function compileQueryParts(
     cqlFilter,
     propertyName,
     sortBy,
+    resolvedGeometryRef,
   };
 }

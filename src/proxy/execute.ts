@@ -204,6 +204,7 @@ export async function runGeometryFeatureQuery(
     cqlFilter: compiled.cqlFilter,
     propertyName: ensureGeometrySelected(compiled.propertyName, geometryName),
     sortBy: compiled.sortBy,
+    resolvedGeometryRef
   });
 
   // Request WGS84 lon/lat, matching the convention the /gpf modules already

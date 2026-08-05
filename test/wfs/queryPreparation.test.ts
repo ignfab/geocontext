@@ -127,6 +127,24 @@ describe("gpfGetFeatures/queryPreparation", () => {
     expect(compiled.cqlFilter).toEqual("INTERSECTS(geometrie,SRID=4326;MULTIPOLYGON(((2 48,2.2 48,2.2 48.2,2 48,2 48))))");
   });
 
+  it("should propagate resolvedGeometryRef in GetFeatures output for intersects_feature", () => {
+    const resolvedGeometryRef = {
+      geometry: { type: "MultiPolygon" as const, coordinates: [[[[2, 48], [2.2, 48], [2.2, 48.2], [2, 48], [2, 48]]]] },
+      geometry_ewkt: "SRID=4326;MULTIPOLYGON(((2 48,2.2 48,2.2 48.2,2 48,2 48)))",
+    };
+
+    const compiled = compileQueryParts({
+      ...baseInput,
+      intersects_feature_filter: {
+        typename: "ADMINEXPRESS-COG.LATEST:commune",
+        feature_id: "commune.1",
+      },
+      spatial_extras: ["intersection_area"],
+    }, featureType, resolvedGeometryRef);
+
+    expect(compiled.resolvedGeometryRef).toBe(resolvedGeometryRef);
+  });
+
   it("should compile travel_time with resolved isochrone geometry", () => {
     const compiled = compileQueryParts({
       ...baseInput,
