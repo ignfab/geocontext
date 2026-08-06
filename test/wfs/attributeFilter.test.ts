@@ -73,6 +73,11 @@ describe("attributeFilter/normalizeWhereClause", () => {
     expect(() => normalizeWhereClause(enumProperty, clause)).toThrow(/parmi/);
   });
 
+  it("mentions gpf_describe_types in the enum rejection error", () => {
+    const clause = { property: "nature", operator: "eq", value: "Mosquée" } as WhereClause;
+    expect(() => normalizeWhereClause(enumProperty, clause)).toThrow(/gpf_describe_types/);
+  });
+
   it("accepts a value inside the property enum", () => {
     const clause = { property: "nature", operator: "eq", value: "Eglise" } as WhereClause;
     expect(normalizeWhereClause(enumProperty, clause)).toMatchObject({ operator: "eq", value: "Eglise" });
