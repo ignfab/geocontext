@@ -140,7 +140,7 @@ describe("gpfGetFeatures/queryPreparation", () => {
         feature_id: "commune.1",
       },
       spatial_extras: ["intersection_area"],
-    }, featureType, resolvedGeometryRef);
+    }, wrappedFeatureType, resolvedGeometryRef);
 
     expect(compiled.resolvedGeometryRef).toBe(resolvedGeometryRef);
   });
@@ -204,6 +204,16 @@ describe("gpfGetFeatures/queryPreparation", () => {
     }, asFeatureType("ADMINEXPRESS-COG.LATEST:commune", nonGeometricFeatureType))).toThrow(
       "Erreur du catalogue embarqué : le type 'ADMINEXPRESS-COG.LATEST:commune' n'expose aucune propriété géométrique exploitable."
     );
+  });
+
+  it.each([
+    "distance_to_filter",
+    "intersection_area",
+  ] as const)("should reject %s without any spatial filter", (spatialExtra) => {
+    expect(() => compileQueryParts({
+      ...baseInput,
+      spatial_extras: [spatialExtra],
+    }, wrappedFeatureType)).toThrow(`Impossible de demander ${spatialExtra} sans spécifier de filtre géométrique`);
   });
 
   it("should build sortBy from structured order_by", () => {

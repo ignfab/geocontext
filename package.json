@@ -51,15 +51,21 @@
     "deps:outdated": "npm outdated",
     "deps:audit": "npm audit",
     "inspect:mcp": "mcp-inspector -- node --use-env-proxy dist/index.js",
-    "inspect:mcp:cli": "mcp-inspector --cli node --use-env-proxy dist/index.js"
+    "inspect:mcp:cli": "mcp-inspector --cli node --use-env-proxy dist/index.js --"
   },
   "dependencies": {
     "@ignfab/gpf-schema-store": "^0.2.2",
     "@rgrove/parse-xml": "^4.2.3",
+    "@turf/area": "^7.4.0",
     "@turf/bbox": "^7.3.5",
+    "@turf/bbox-clip": "^7.4.0",
+    "@turf/bbox-polygon": "^7.4.0",
     "@turf/centroid": "^7.3.5",
+    "@turf/circle": "^7.4.0",
     "@turf/distance": "^7.3.5",
     "@turf/helpers": "^7.3.5",
+    "@turf/intersect": "^7.4.0",
+    "@turf/length": "^7.4.0",
     "jsts": "^2.12.1",
     "mcp-framework": "^0.2.22",
     "node-fetch": "^3.3.2",
