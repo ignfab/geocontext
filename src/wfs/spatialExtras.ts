@@ -6,7 +6,6 @@ import { intersect } from "@turf/intersect";
 import { circle } from "@turf/circle"
 import { bboxPolygon } from "@turf/bbox-polygon"
 import { Geometry, MultiPolygon, Point, Polygon, Position } from "geojson";
-import { ResolvedFeatureGeometryRef } from "./queryPreparation.js";
 import distance from "../helpers/distance.js";
 import { feature, featureCollection } from "@turf/helpers";
 import { getSpatialFilter } from "./spatialFilter.js";
@@ -16,7 +15,7 @@ import { bboxClip } from "@turf/bbox-clip";
 export type FeatureCollectionPostProcessInput = Omit<GpfGetFeaturesInput, "limit">;
 
 /** Extract the geometry of the unique spatial filter, if any, otherwise return undefined */
-function spatialFilterToGeometry(spatialFilter: SpatialFilter, resolvedGeometryRef?: ResolvedFeatureGeometryRef) : Geometry {
+function spatialFilterToGeometry(spatialFilter: SpatialFilter, resolvedGeometryRef?: Geometry) : Geometry {
   switch (spatialFilter.operator) {
     case "bbox": {
       return bboxPolygon([spatialFilter.west, spatialFilter.south, spatialFilter.east, spatialFilter.north]).geometry;
@@ -32,14 +31,14 @@ function spatialFilterToGeometry(spatialFilter: SpatialFilter, resolvedGeometryR
     }
     case "intersects_feature":
     case "travel_time":
-      return resolvedGeometryRef!.geometry;
+      return resolvedGeometryRef!;
     default: // Make a compile-time error if a filter is missing from the switch
       const noFilter: never = spatialFilter; 
       throw new Error(`Unhandled filter case: ${noFilter}`)
   }
 }
 
-function spatialFilterToCentroid(spatialFilter: SpatialFilter, resolvedGeometryRef?: ResolvedFeatureGeometryRef) : Point {
+function spatialFilterToCentroid(spatialFilter: SpatialFilter, resolvedGeometryRef?: Geometry) : Point {
   switch (spatialFilter.operator) {
     case "dwithin_point" :
     case "intersects_point": {
@@ -89,7 +88,7 @@ function geometryToPolygons(geom: Geometry) : Polygon | MultiPolygon | null {
 }
 
 /** Return the 3D intersection between a geometry and a spatial filter. null if the intersection is not 3D. */
-function intersection3DWithSpatialFilter(geom: Geometry, spatialFilter: SpatialFilter, resolvedGeometryRef?: ResolvedFeatureGeometryRef) : Polygon | MultiPolygon | null {
+function intersection3DWithSpatialFilter(geom: Geometry, spatialFilter: SpatialFilter, resolvedGeometryRef?: Geometry) : Polygon | MultiPolygon | null {
   const geo = geometryToPolygons(geom);
   if (!geo) {
     return null;
@@ -118,7 +117,7 @@ function intersection3DWithSpatialFilter(geom: Geometry, spatialFilter: SpatialF
   }
 }
 
-export function deriveFromGeometry(geometry: unknown, input: FeatureCollectionPostProcessInput, resolvedGeometryRef?: ResolvedFeatureGeometryRef) {
+export function deriveFromGeometry(geometry: unknown, input: FeatureCollectionPostProcessInput, resolvedGeometryRef?: Geometry) {
   const spatial_extras = input.spatial_extras;
 
   const ret : Record<string, unknown> = {};

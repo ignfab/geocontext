@@ -19,19 +19,40 @@ export const MAX_LIMIT = 5000;
 export const WHERE_OPERATORS = ["eq", "ne", "lt", "lte", "gt", "gte", "in", "is_null"] as const;
 export const ORDER_DIRECTIONS = ["asc", "desc"] as const;
 
-export const GPF_GET_FEATURES_SPATIAL_EXTRAS = [
+export const GPF_GET_FEATURE_BY_ID_SPATIAL_EXTRAS = [
   "centroid",
   "bbox",
   "length",
   "area",
+] as const;
+export const GPF_SPATIAL_EXTRAS_REQUIRING_FILTER = [
   "distance_to_filter",
   "intersection_area",
 ] as const;
+export const GPF_GET_FEATURES_SPATIAL_EXTRAS = [
+  ...GPF_GET_FEATURE_BY_ID_SPATIAL_EXTRAS,
+  ...GPF_SPATIAL_EXTRAS_REQUIRING_FILTER,
+] as const;
+
+export type SpatialExtraRequiringFilterOption = typeof GPF_SPATIAL_EXTRAS_REQUIRING_FILTER[number];
+
+export type SpatialExtraOptions = typeof GPF_GET_FEATURES_SPATIAL_EXTRAS[number];
+
+export function spatialExtraRequiresFilter(
+  extra: SpatialExtraOptions,
+): extra is SpatialExtraRequiringFilterOption {
+  return GPF_SPATIAL_EXTRAS_REQUIRING_FILTER.includes(extra as SpatialExtraRequiringFilterOption);
+}
+
 export const GPF_SPATIAL_EXTRAS_DOCNAMES = GPF_GET_FEATURES_SPATIAL_EXTRAS
   .map((name) => `\`${name}\``)
   .join(", ")
-  .replace(/, ([^,]*)$/, ' et $1')
-export type SpatialExtraOptions = typeof GPF_GET_FEATURES_SPATIAL_EXTRAS[number];
+  .replace(/, ([^,]*)$/, ' et $1');
+
+export const GPF_GET_FEATURE_BY_ID_SPATIAL_EXTRAS_DOCNAMES = GPF_GET_FEATURE_BY_ID_SPATIAL_EXTRAS
+  .map((name) => `\`${name}\``)
+  .join(", ")
+  .replace(/, ([^,]*)$/, ' et $1');
 
 // --- Shared Clauses ---
 
@@ -127,21 +148,51 @@ export const GPF_SPATIAL_FILTER_DOCNAMES = GPF_GET_FEATURES_SPATIAL_FILTER_KEYS
   .join(", ")
   .replace(/, ([^,]*)$/, ' ou $1');
 
-const gpfGeometryExtraInputSchema = z.object({
+const SPATIAL_EXTRAS_BASE_DESCRIPTION_LINES = [
+  "`centroid` est le centroïde (moyenne arithmétique des sommets) de la géométrie.",
+  "`bbox` est la boîte englobante de la géométrie.",
+  "`length` est renvoyé en m et ne peut être utilisé qu'avec des géométries linéaires (LineString, MultiLineString).",
+  "`area` est renvoyé en m² et ne peut être utilisé qu'avec des géométries surfaciques (Polygon, MultiPolygon).",
+] as const;
+
+function buildSpatialExtrasDescription(
+  target: string,
+  allowedExtrasDocNames: string,
+  filterDependentDescriptionLine: string,
+) {
+  const optionalFilterLine = filterDependentDescriptionLine
+    ? `${filterDependentDescriptionLine}\n`
+    : "";
+  return `Éléments calculés depuis la géométrie à renvoyer pour ${target}. Peut inclure ${allowedExtrasDocNames}, aucun par défaut.\n`+
+    `${SPATIAL_EXTRAS_BASE_DESCRIPTION_LINES.join("\n")}\n`+
+    optionalFilterLine+
+    "Si une valeur n'est pas calculable, elle sera remplacée par `null` dans la réponse.";
+}
+
+const gpfGetFeaturesGeometryExtraInputSchema = z.object({
   spatial_extras: z
     .array(z.enum(GPF_GET_FEATURES_SPATIAL_EXTRAS))
     .default([])
     .transform((val) => [...new Set(val)])
-    .describe(`Éléments calculés depuis la géométrie à renvoyer pour chaque objet. Peut inclure ${GPF_SPATIAL_EXTRAS_DOCNAMES}, aucun par défaut.\n`+
-      "`centroid` est le centroïde (moyenne arithmétique des sommets) de la géométrie.\n"+
-      "`bbox` est la boîte englobante de la géométrie.\n"+
-      "`length` est renvoyé en m et ne peut être utilisé qu'avec des géométries linéaires (LineString, MultiLineString).\n"+
-      "`area` est renvoyé en m² et ne peut être utilisé qu'avec des géométries surfaciques (Polygon, MultiPolygon).\n"+
+    .describe(buildSpatialExtrasDescription(
+      "chaque objet",
+      GPF_SPATIAL_EXTRAS_DOCNAMES,
       "`distance_to_filter` est la distance (en m) entre la géométrie de l'objet renvoyé et le centroïde du filtre (qui doit être défini).\n"+
-      "`intersection_area` est l'aire d'intersection (en m²) entre la géométrie de l'objet renvoyé, qui doit être surfacique, et le filtre (qui doit être défini).\n"+
-      "Si une valeur n'est pas calculable, elle sera remplacée par `null` dans la réponse."
-    ),
-})
+      "`intersection_area` est l'aire d'intersection (en m²) entre la géométrie de l'objet renvoyé, qui doit être surfacique, et le filtre (qui doit être défini)."
+    )),
+});
+
+const gpfGetFeatureByIdGeometryExtraInputSchema = z.object({
+  spatial_extras: z
+    .array(z.enum(GPF_GET_FEATURE_BY_ID_SPATIAL_EXTRAS))
+    .default([])
+    .transform((val) => [...new Set(val)])
+    .describe(buildSpatialExtrasDescription(
+      "l'objet",
+      GPF_GET_FEATURE_BY_ID_SPATIAL_EXTRAS_DOCNAMES,
+      "",
+    )),
+});
 
 function assertSpatialFilterExclusion(input : Record<string, unknown>, ctx : z.RefinementCtx) {
   const usedSpatialFilters = GPF_GET_FEATURES_SPATIAL_FILTER_KEYS.filter((key) => input[key] !== undefined);
@@ -197,7 +248,7 @@ export const gpfGetFeaturesInputObjectSchema = gpfTypenameInputSchema
     .optional()
     .describe("Liste ordonnée des critères de tri."),
 }))
-  .merge(gpfGeometryExtraInputSchema.required()) // must never be optional to ensure queryIsGetFeaturesInput correctness
+  .merge(gpfGetFeaturesGeometryExtraInputSchema.required()) // must never be optional to ensure queryIsGetFeaturesInput correctness
   .strict();
 
 export const gpfGetFeaturesInputSchema = gpfGetFeaturesInputObjectSchema
@@ -351,7 +402,7 @@ export function queryIsGetFeaturesInput(input: GpfQueryFeaturesInput) : input is
 // --- `gpf_get_feature_by_id` ---
 
 export const gpfGetFeatureByIdInputObjectSchema = gpfFeatureByIdCoreInputSchema
-  .merge(gpfGeometryExtraInputSchema.required())  // must never be optional to ensure queryIsGetFeaturesInput correctness
+  .merge(gpfGetFeatureByIdGeometryExtraInputSchema.required())  // must never be optional to ensure queryIsGetFeaturesInput correctness
   .strict();
 
 export const gpfGetFeatureByIdInputSchema = gpfGetFeatureByIdInputObjectSchema;
