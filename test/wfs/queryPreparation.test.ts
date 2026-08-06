@@ -4,8 +4,11 @@ import type { GpfFeatureType } from "../../src/wfs/catalog";
 
 import { compileQueryParts } from "../../src/wfs/queryPreparation";
 import type { GpfGetFeaturesInput, GpfCountFeaturesInput } from "../../src/wfs/schema";
-import { queryIsGetFeaturesInput } from "../../src/wfs/schema";
 import { geometryToEwkt } from "../../src/wfs/geometry";
+import {
+  GPF_SPATIAL_EXTRAS_REQUIRING_FILTER,
+  queryIsGetFeaturesInput,
+} from "../../src/wfs/schema";
 
 describe("gpfGetFeatures/queryPreparation", () => {
   const featureType: OgcCollectionSchema = {
@@ -129,8 +132,8 @@ describe("gpfGetFeatures/queryPreparation", () => {
 
   it("should propagate resolvedGeometryRef in GetFeatures output for intersects_feature", () => {
     const resolvedGeometryRef = {
-      geometry: { type: "MultiPolygon" as const, coordinates: [[[[2, 48], [2.2, 48], [2.2, 48.2], [2, 48], [2, 48]]]] },
-      geometry_ewkt: "SRID=4326;MULTIPOLYGON(((2 48,2.2 48,2.2 48.2,2 48,2 48)))",
+      type: "MultiPolygon" as const,
+      coordinates: [[[[2, 48], [2.2, 48], [2.2, 48.2], [2, 48], [2, 48]]]]
     };
 
     const compiled = compileQueryParts({
@@ -206,10 +209,7 @@ describe("gpfGetFeatures/queryPreparation", () => {
     );
   });
 
-  it.each([
-    "distance_to_filter",
-    "intersection_area",
-  ] as const)("should reject %s without any spatial filter", (spatialExtra) => {
+  it.each(GPF_SPATIAL_EXTRAS_REQUIRING_FILTER)("should reject %s without any spatial filter", (spatialExtra) => {
     expect(() => compileQueryParts({
       ...baseInput,
       spatial_extras: [spatialExtra],

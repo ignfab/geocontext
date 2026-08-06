@@ -7,8 +7,8 @@
  */
 
 import type { WfsFeatureCollectionResponse } from "./types.js";
-import { ResolvedFeatureGeometryRef } from "./queryPreparation.js";
 import { deriveFromGeometry, type FeatureCollectionPostProcessInput } from "./spatialExtras.js"
+import { Geometry } from "geojson";
 
 // --- Response Types ---
 
@@ -85,7 +85,7 @@ export function getMatchedFeatureCount(featureCollection: WfsFeatureCollectionRe
 export function transformFeatureCollectionResponse(
   featureCollection: GenericFeatureCollection,
   input: FeatureCollectionPostProcessInput,
-  resolvedGeometryRef?: ResolvedFeatureGeometryRef,
+  resolvedGeometryRef?: Geometry,
 ): TransformedFeatureCollection {
   if (!Array.isArray(featureCollection.features)) {
     return featureCollection;
@@ -127,7 +127,7 @@ export function transformFeatureCollectionResponse(
  * @param resolvedGeometryRef The spatial filter resolved geometry, if any.
  * @returns A FeatureCollection with the required transformations done.
  */
-export function postProcessFeatureCollection(featureCollection: GenericFeatureCollection, input: FeatureCollectionPostProcessInput, resolvedGeometryRef?: ResolvedFeatureGeometryRef) {
+export function postProcessFeatureCollection(featureCollection: GenericFeatureCollection, input: FeatureCollectionPostProcessInput, resolvedGeometryRef?: Geometry) {
   const transformed = transformFeatureCollectionResponse(featureCollection, input, resolvedGeometryRef);
   if (!Array.isArray(transformed.features)) {
     return transformed;
