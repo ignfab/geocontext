@@ -7,8 +7,10 @@
  * - non-geometry validation for select/order/filter compilation
  */
 
-import type { OgcCollectionProperty } from "@ignfab/gpf-schema-store";
 import type { GpfFeatureType } from "./catalog.js";
+import type { OgcCollectionProperty } from "@ignfab/gpf-schema-store";
+import { Geometry } from "geojson";
+import { SpatialExtraOptions } from "./schema.js";
 
 // --- Geometry Resolution ---
 
@@ -47,6 +49,37 @@ export function getGeometryName(featureType: GpfFeatureType) : string {
     throw new Error(`Le type '${featureType.typename}' expose plusieurs propriétés géométriques dans le catalogue embarqué : ${geometryProperties.join(", ")}.`);
   }
   return geometryProperties[0];
+}
+
+function getGeometryType(featureType: GpfFeatureType, geometryName: string) : Geometry["type"] {
+  const format = featureType.schema.properties[geometryName].format;
+  switch(format) {
+    case "geometry-point":                         return "Point";
+    case "geometry-multipoint":
+    case "geometry-point-or-multipoint":           return "MultiPoint";
+    case "geometry-linestring":                    return "LineString";
+    case "geometry-multilinestring":
+    case "geometry-linestring-or-multilinestring": return "MultiLineString"
+    case "geometry-polygon":                       return "Polygon";
+    case "geometry-multipolygon":
+    case "geometry-polygon-or-multipolygon" :      return "MultiPolygon";
+    case "geometry-geometrycollection":
+    case "geometry-any":                           return "GeometryCollection"
+    default: {
+      throw new Error(`Format interdit pour une propriété géométrique: "${format}" dans typename "${featureType.typename}"`);
+    }
+  }
+}
+function getGeometryTypeDimension(geometryType: Geometry["type"]) {
+  switch (geometryType) {
+    case "Point":
+    case "MultiPoint": return "ponctuelle";
+    case "LineString":
+    case "MultiLineString": return "linéaire";
+    case "Polygon":
+    case "MultiPolygon": return "surfacique";
+    case "GeometryCollection": return "?";
+  }
 }
 
 // --- Non-Geometry Validation ---
@@ -96,6 +129,33 @@ export function validateSelectProperty(featureType: GpfFeatureType, propertyName
   return propertyName;
 }
 
+// --- Spatial Extras Validation ---
+
+function validateSpatialExtras(featureType: GpfFeatureType, geometryName: string, spatial_extras?: SpatialExtraOptions[]) {
+  if (!spatial_extras) {
+    return;
+  }
+  const geometryType = getGeometryType(featureType, geometryName);
+  const dimensionName = getGeometryTypeDimension(geometryType)
+  if (geometryType == "Point" && spatial_extras.includes("bbox")) {
+    const errorEnding = spatial_extras.includes("centroid") ?
+      "ce qui est redondant avec le calcul du `centroid`, aussi demandé" :
+      ": pour avoir cette information, demandez à la place le calcul du `centroid`."
+    throw new Error(`La géométrie de l'objet sera de type Point, or vous avez demandé sa \`bbox\` ${errorEnding}. Retirez \`bbox\` de spatial_extras.`)
+  }
+  for (const { required, extras } of [
+    { required: "linéaire", extras: ["length"] },
+    { required: "surfacique", extras: ["area", "intersection_area"] },
+  ]) {
+    if (dimensionName != required && dimensionName != "?") {
+      const faultyExtra = spatial_extras.filter(x => extras.includes(x));
+      if (faultyExtra.length > 0) {
+        throw new Error(`\`${faultyExtra[0]}\` ne peut être calculé que sur une géométrie ${required}, or la géométrie renvoyée sera ${dimensionName}. Retirez \`${faultyExtra[0]}\` de spatial_extras.`);
+      }
+    }
+  }
+}
+
 // --- Property Selection ---
 
 /**
@@ -116,7 +176,7 @@ export function validateSelectProperty(featureType: GpfFeatureType, propertyName
 export function buildPropertyName(
   featureType: GpfFeatureType,
   select?: string[],
-  spatial_extras?: string[],
+  spatial_extras?: SpatialExtraOptions[],
   geometryName?: string,
   includeGeometry: boolean = (spatial_extras ?? []).length > 0,
 ) : string {
@@ -129,7 +189,9 @@ export function buildPropertyName(
     );
 
     if (includeGeometry) {
-      return [...selectedProperties, (geometryName ?? getGeometryName(featureType))].join(",");
+      geometryName = geometryName ?? getGeometryName(featureType);
+      validateSpatialExtras(featureType, geometryName, spatial_extras);
+      return [...selectedProperties, geometryName].join(",");
     }
 
     return selectedProperties.join(",");
@@ -141,7 +203,8 @@ export function buildPropertyName(
   
   if (includeGeometry) {
     // Ensure that the geometric property exists and is unique.
-    geometryName ?? getGeometryName(featureType);
+    geometryName = geometryName ?? getGeometryName(featureType);
+    validateSpatialExtras(featureType, geometryName, spatial_extras);
     return (Object.entries(featureType.schema.properties))
       .map(([propertyName]) => propertyName)
       .join(","); // return all properties

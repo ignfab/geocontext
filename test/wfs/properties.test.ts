@@ -88,6 +88,42 @@ const noGeometryCollection: OgcCollectionSchema = {
   required: [],
 };
 
+const pointGeometryCollection: OgcCollectionSchema = {
+  ...singleGeometryCollection,
+  title: "PointGeo",
+  properties: {
+    ...singleGeometryCollection.properties,
+    geometry: {
+      format: "geometry-point",
+      "x-ogc-role": "primary-geometry",
+    },
+  },
+};
+
+const lineGeometryCollection: OgcCollectionSchema = {
+  ...singleGeometryCollection,
+  title: "LineGeo",
+  properties: {
+    ...singleGeometryCollection.properties,
+    geometry: {
+      format: "geometry-linestring",
+      "x-ogc-role": "primary-geometry",
+    },
+  },
+};
+
+const polygonGeometryCollection: OgcCollectionSchema = {
+  ...singleGeometryCollection,
+  title: "PolygonGeo",
+  properties: {
+    ...singleGeometryCollection.properties,
+    geometry: {
+      format: "geometry-polygon",
+      "x-ogc-role": "primary-geometry",
+    },
+  },
+};
+
 function asFeatureType(typename: string, schema: OgcCollectionSchema): GpfFeatureType {
   return { typename, schema };
 }
@@ -212,5 +248,33 @@ describe("buildPropertyName", () => {
     expect(() => buildPropertyName(asFeatureType("SINGLE:GEO", singleGeometryCollection), ["geometry"])).toThrow(
       "La propriété 'geometry' est géométrique. `select` accepte uniquement des propriétés non géométriques.",
     );
+  });
+
+  it("should reject bbox for point geometries", () => {
+    expect(() => buildPropertyName(asFeatureType("POINT:GEO", pointGeometryCollection), undefined, ["bbox"])).toThrow(
+      "La géométrie de l'objet sera de type Point, or vous avez demandé sa `bbox`",
+    );
+  });
+
+  it("should reject length for non-linear geometries", () => {
+    expect(() => buildPropertyName(asFeatureType("POINT:GEO", pointGeometryCollection), undefined, ["length"])).toThrow(
+      "`length` ne peut être calculé que sur une géométrie linéaire",
+    );
+  });
+
+  it("should reject area and intersection_area for non-surface geometries", () => {
+    expect(() => buildPropertyName(asFeatureType("LINE:GEO", lineGeometryCollection), undefined, ["area"])).toThrow(
+      "`area` ne peut être calculé que sur une géométrie surfacique",
+    );
+    expect(() => buildPropertyName(asFeatureType("LINE:GEO", lineGeometryCollection), undefined, ["intersection_area"])).toThrow(
+      "`intersection_area` ne peut être calculé que sur une géométrie surfacique",
+    );
+  });
+
+  it("should accept length for linear geometries and area for surface geometries", () => {
+    expect(buildPropertyName(asFeatureType("LINE:GEO", lineGeometryCollection), ["name"], ["length"]))
+      .toEqual("name,geometry");
+    expect(buildPropertyName(asFeatureType("POLY:GEO", polygonGeometryCollection), ["name"], ["area", "intersection_area"]))
+      .toEqual("name,geometry");
   });
 });

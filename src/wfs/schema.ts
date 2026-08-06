@@ -21,12 +21,17 @@ export const ORDER_DIRECTIONS = ["asc", "desc"] as const;
 
 export const GPF_GET_FEATURES_SPATIAL_EXTRAS = [
   "centroid",
-  "bbox"
+  "bbox",
+  "length",
+  "area",
+  "distance_to_filter",
+  "intersection_area",
 ] as const;
 export const GPF_SPATIAL_EXTRAS_DOCNAMES = GPF_GET_FEATURES_SPATIAL_EXTRAS
   .map((name) => `\`${name}\``)
   .join(", ")
   .replace(/, ([^,]*)$/, ' et $1')
+export type SpatialExtraOptions = typeof GPF_GET_FEATURES_SPATIAL_EXTRAS[number];
 
 // --- Shared Clauses ---
 
@@ -127,7 +132,15 @@ const gpfGeometryExtraInputSchema = z.object({
     .array(z.enum(GPF_GET_FEATURES_SPATIAL_EXTRAS))
     .default([])
     .transform((val) => [...new Set(val)])
-    .describe(`Éléments calculés depuis la géométrie à renvoyer pour chaque objet. Peut inclure ${GPF_SPATIAL_EXTRAS_DOCNAMES}, aucun par défaut.`),
+    .describe(`Éléments calculés depuis la géométrie à renvoyer pour chaque objet. Peut inclure ${GPF_SPATIAL_EXTRAS_DOCNAMES}, aucun par défaut.\n`+
+      "`centroid` est le centroïde (moyenne arithmétique des sommets) de la géométrie.\n"+
+      "`bbox` est la boîte englobante de la géométrie.\n"+
+      "`length` est renvoyé en m et ne peut être utilisé qu'avec des géométries linéaires (LineString, MultiLineString).\n"+
+      "`area` est renvoyé en m² et ne peut être utilisé qu'avec des géométries surfaciques (Polygon, MultiPolygon).\n"+
+      "`distance_to_filter` est la distance (en m) entre la géométrie de l'objet renvoyé et le centroïde du filtre (qui doit être défini).\n"+
+      "`intersection_area` est l'aire d'intersection (en m²) entre la géométrie de l'objet renvoyé, qui doit être surfacique, et le filtre (qui doit être défini).\n"+
+      "Si une valeur n'est pas calculable, elle sera remplacée par `null` dans la réponse."
+    ),
 })
 
 function assertSpatialFilterExclusion(input : Record<string, unknown>, ctx : z.RefinementCtx) {
