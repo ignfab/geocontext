@@ -55,7 +55,7 @@ export type DetailedCollectionSearchMatch = CollectionSearchMatch & {
 
 export class FeatureTypeNotFoundError extends Error {
     constructor(name: string) {
-        super(`Le type '${name}' est introuvable`);
+        super(`Le type '${name}' n'existe pas. Utilise le tool gpf_search_types pour trouver les types existants et pertinents pour ta recherche.`);
         this.name = "FeatureTypeNotFoundError";
     }
 }
