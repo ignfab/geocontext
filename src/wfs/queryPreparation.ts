@@ -22,7 +22,11 @@ import type {
   OrderByClause,
   WhereClause,
 } from "./schema.js";
-import { GPF_SPATIAL_FILTER_DOCNAMES, queryIsGetFeaturesInput } from "./schema.js"
+import {
+  GPF_SPATIAL_FILTER_DOCNAMES,
+  queryIsGetFeaturesInput,
+  spatialExtraRequiresFilter,
+} from "./schema.js"
 
 import {
   formatScalarValue,
@@ -64,7 +68,7 @@ export type CompiledQuery = {
   propertyName: string;
   cqlFilter?: string;
   sortBy?: string;
-  resolvedGeometryRef?: ResolvedFeatureGeometryRef;
+  resolvedGeometryRef?: Geometry;
 };
 
 // --- Attribute Compilation ---
@@ -215,8 +219,7 @@ export function compileQueryParts(
         break;
     }
   } else if (spatialExtras.length > 0) {
-    const extraRequiringFilter = ["distance_to_filter", "intersection_area"];
-    const faultyExtra = spatialExtras.filter(x => extraRequiringFilter.includes(x));
+    const faultyExtra = spatialExtras.filter(spatialExtraRequiresFilter);
     if (faultyExtra.length > 0) {
       throw new Error(`Impossible de demander ${faultyExtra} sans spécifier de filtre géométrique (à choisir parmi ${GPF_SPATIAL_FILTER_DOCNAMES}).`);
     }
