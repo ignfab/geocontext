@@ -88,11 +88,18 @@ describe("Test GpfGetFeatureByIdTool", () => {
         spatial_extras: {
           type: "array",
           items: {
-            enum: ["centroid", "bbox"],
+            enum: ["centroid", "bbox", "length", "area", "distance_to_filter", "intersection_area"],
             type: "string",
           },
           default: [],
-          description: "Éléments calculés depuis la géométrie à renvoyer pour chaque objet. Peut inclure `centroid` et `bbox`, aucun par défaut.",
+          description: "Éléments calculés depuis la géométrie à renvoyer pour chaque objet. Peut inclure `centroid`, `bbox`, `length`, `area`, `distance_to_filter` et `intersection_area`, aucun par défaut.\n"+
+            "`centroid` est le centroïde (moyenne arithmétique des sommets) de la géométrie.\n"+
+            "`bbox` est la boîte englobante de la géométrie.\n"+
+            "`length` est renvoyé en m et ne peut être utilisé qu'avec des géométries linéaires (LineString, MultiLineString).\n"+
+            "`area` est renvoyé en m² et ne peut être utilisé qu'avec des géométries surfaciques (Polygon, MultiPolygon).\n"+
+            "`distance_to_filter` est la distance (en m) entre la géométrie de l'objet renvoyé et le centroïde du filtre (qui doit être défini).\n"+
+            "`intersection_area` est l'aire d'intersection (en m²) entre la géométrie de l'objet renvoyé, qui doit être surfacique, et le filtre (qui doit être défini).\n"+
+            "Si une valeur n'est pas calculable, elle sera remplacée par `null` dans la réponse.",
         },
         select: {
           type: "array",

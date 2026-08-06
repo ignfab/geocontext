@@ -12,6 +12,14 @@ import {
   expectToolCallToThrow,
 } from "../helpers/level1-assertions.js";
 import { INTEGRATION_CONFIG } from "../config/shared.js";
+import { besancon } from "../samples.js";
+
+interface AdminexpressResult {
+  results: Array<{
+    type: string;
+    feature_ref: { typename: string; feature_id: string };
+  }>;
+}
 
 interface GetFeaturesResult {
   type: "FeatureCollection";
@@ -26,6 +34,7 @@ interface GetFeaturesResult {
     };
     bbox?: GeoJSON.BBox;
     centroid?: { lon: number, lat: number };
+    intersection_area?: number | null;
   }>;
   totalFeatures?: number;
   numberMatched?: number;
@@ -73,5 +82,31 @@ describe("GetFeatures (integration)", () => {
     expect(first.bbox).toBeDefined();
     expect((first.bbox as GeoJSON.BBox)[0]).toBeCloseTo(2.22421717);
     expect(first.centroid).toBeUndefined();
+  }, INTEGRATION_CONFIG.timeout);
+
+  it("should return a positive intersection_area with intersects_feature_filter", async () => {
+    // Regression test: intersection_area was always 0 for intersects_feature_filter
+    // because compileQueryParts omitted resolvedGeometryRef from its GetFeatures return value.
+    // Uses Besançon (25056), fully inside the Doubs département obtained dynamically via adminexpress.
+    const adminResult = await callTool<AdminexpressResult>(getHandle().client, "adminexpress", {
+      lon: besancon.lon,
+      lat: besancon.lat,
+    });
+    const deptRef = adminResult.results.find((r) => r.type === "departement")?.feature_ref;
+    expect(deptRef).toBeDefined();
+
+    const result = await callTool<GetFeaturesResult>(getHandle().client, "gpf_get_features", {
+      typename: "ADMINEXPRESS-COG.LATEST:commune",
+      intersects_feature_filter: deptRef,
+      where: [{ property: "code_insee", operator: "eq", value: "25056" }],
+      spatial_extras: ["intersection_area"],
+      limit: 1,
+    });
+
+    expectFeatureCollectionWithFeatures(result);
+
+    const first = result.features[0];
+    expect(typeof first.intersection_area).toBe("number");
+    expect(first.intersection_area as number).toBeGreaterThan(0);
   }, INTEGRATION_CONFIG.timeout);
 });

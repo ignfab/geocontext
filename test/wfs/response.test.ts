@@ -110,6 +110,101 @@ describe("wfs_engine/response", () => {
       expect(features0centroid.centroid?.lon).toBeCloseTo(2.35);
       expect(features0centroid.centroid?.lat).toBeCloseTo(48.85);
     });
+
+    it("should compute length on linear geometries and area on surface geometries", () => {
+      const lineResult = transformFeatureCollectionResponse({
+        type: "FeatureCollection",
+        features: [
+          {
+            id: "line.1",
+            geometry: {
+              type: "LineString",
+              coordinates: [[2.3, 48.8], [2.31, 48.81]],
+            },
+            properties: { name: "line" },
+          },
+        ],
+      }, { typename: "TEST:type", spatial_extras: ["length", "area"] });
+
+      const lineFeatures = getFeatures(lineResult);
+      expect(lineFeatures[0].length as number).toBeCloseTo(1331.4584991460265, 6);
+      expect(lineFeatures[0].area).toBeNull();
+
+      const polygonResult = transformFeatureCollectionResponse({
+        type: "FeatureCollection",
+        features: [
+          {
+            id: "poly.1",
+            geometry: {
+              type: "Polygon",
+              coordinates: [[[2.3, 48.8], [2.4, 48.8], [2.4, 48.9], [2.3, 48.9], [2.3, 48.8]]],
+            },
+            properties: { name: "poly" },
+          },
+        ],
+      }, { typename: "TEST:type", spatial_extras: ["length", "area"] });
+
+      const polygonFeatures = getFeatures(polygonResult);
+      expect(polygonFeatures[0].length).toBeNull();
+      expect(polygonFeatures[0].area as number).toBeCloseTo(81361416.69722056, 6);
+    });
+
+    it("should compute non-zero distance_to_filter and intersection_area when a spatial filter is provided", () => {
+      const result = transformFeatureCollectionResponse({
+        type: "FeatureCollection",
+        features: [
+          {
+            id: "poly.1",
+            geometry: {
+              type: "Polygon",
+              coordinates: [[[2.3, 48.8], [2.4, 48.8], [2.4, 48.9], [2.3, 48.9], [2.3, 48.8]]],
+            },
+            properties: { name: "poly" },
+          },
+        ],
+      }, {
+        typename: "TEST:type",
+        spatial_extras: ["distance_to_filter", "intersection_area"],
+        bbox_filter: {
+          west: 2.36,
+          south: 48.86,
+          east: 2.46,
+          north: 48.96,
+        },
+      });
+
+      const features = getFeatures(result);
+      expect(features[0].distance_to_filter as number).toBeCloseTo(1330.6551992128234, 6);
+      expect(features[0].intersection_area as number).toBeCloseTo(13010026.562313082, 6);
+    });
+
+    it("should compute non-zero distance_to_filter for an off-center point in a bbox filter", () => {
+      const result = transformFeatureCollectionResponse({
+        type: "FeatureCollection",
+        features: [
+          {
+            id: "point.1",
+            geometry: {
+              type: "Point",
+              coordinates: [2.39, 48.88],
+            },
+            properties: { name: "offcenter" },
+          },
+        ],
+      }, {
+        typename: "TEST:type",
+        spatial_extras: ["distance_to_filter"],
+        bbox_filter: {
+          west: 2.3,
+          south: 48.8,
+          east: 2.5,
+          north: 49.0,
+        },
+      });
+
+      const features = getFeatures(result);
+      expect(features[0].distance_to_filter as number).toBeCloseTo(2340.9971606708805, 6);
+    });
   });
 
   // --- postProcessFeatureCollection ---

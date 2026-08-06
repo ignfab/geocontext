@@ -7,51 +7,8 @@
  */
 
 import type { WfsFeatureCollectionResponse } from "./types.js";
-import { centroid } from "@turf/centroid";
-import { bbox } from "@turf/bbox";
-import { GpfGetFeaturesInput } from "./schema.js";
-import { AllGeoJSON } from "@turf/helpers";
-
-// ---  Internal types ---
-
-type FeatureCollectionPostProcessInput = Omit<GpfGetFeaturesInput, "limit">;
-
-// --- spatial_extra handling  ---
-
-function deriveFromGeometry(geometry: unknown, input: FeatureCollectionPostProcessInput, resolvedGeometryRef?: ResolvedFeatureGeometryRef) {
-  const spatial_extras = input.spatial_extras;
-
-  const ret : Record<string, unknown> = {};
-
-  if (spatial_extras.length === 0) {
-    return ret;
-  }
-
-  const geo = geometry as AllGeoJSON;
-
-  if (spatial_extras.includes("centroid")) {
-    try {
-      const centr : GeoJSON.Position = centroid(geo).geometry.coordinates;
-      ret.centroid = {
-        lon: centr[0],
-        lat: centr[1],
-      };
-    } catch {
-      ret.centroid = null
-    }
-  }
-
-  if (spatial_extras.includes("bbox")) {
-    try {
-      const bb : GeoJSON.BBox = bbox(geo);
-      ret.bbox = bb;
-    } catch {
-      ret.bbox = null
-    }
-  }
-
-  return ret;
-}
+import { ResolvedFeatureGeometryRef } from "./queryPreparation.js";
+import { deriveFromGeometry, type FeatureCollectionPostProcessInput } from "./spatialExtras.js"
 
 // --- Response Types ---
 
