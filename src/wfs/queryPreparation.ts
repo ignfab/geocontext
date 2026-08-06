@@ -182,7 +182,9 @@ export function compileQueryParts(
   resolvedGeometryRef?: Geometry,
 ): CompiledQuery {
   let geometryName: string | undefined;
+  const isGetFeatures = queryIsGetFeaturesInput(input);
   const spatialFilter = getSpatialFilter(input);
+  const spatialExtras = isGetFeatures ? input.spatial_extras : [];
   const fragments: string[] = [];
 
   // Keep the spatial predicate first: the GeoPlateforme GeoServer is sensitive
@@ -212,6 +214,12 @@ export function compileQueryParts(
         fragments.push(compileIntersectsFeatureSpatialFilter(geometryName, resolvedGeometryRef));
         break;
     }
+  } else if (spatialExtras.length > 0) {
+    const extraRequiringFilter = ["distance_to_filter", "intersection_area"];
+    const faultyExtra = spatialExtras.filter(x => extraRequiringFilter.includes(x));
+    if (faultyExtra.length > 0) {
+      throw new Error(`Impossible de demander ${faultyExtra} sans spécifier de filtre géométrique (à choisir parmi ${GPF_SPATIAL_FILTER_DOCNAMES}).`);
+    }
   }
 
   for (const clause of input.where ?? []) {
@@ -220,7 +228,7 @@ export function compileQueryParts(
 
   const cqlFilter = fragments.length > 0 ? fragments.join(" AND ") : undefined;
 
-  if (!queryIsGetFeaturesInput(input)) {
+  if (!isGetFeatures) {
     // for CountFeatures: only return the required parts
     return {
       cqlFilter,
