@@ -929,7 +929,7 @@ Le paramètre `max_results` permet d'élargir le nombre de candidats retournés 
           },
           "match": {
             "type": "object",
-            "description": "Détail des correspondances : associe chaque terme indexé aux champs où il a été trouvé.",
+            "description": "Détail des correspondances : pour chaque terme de la requête, liste les champs indexés où il a été trouvé.\nChamps possibles :\n- `namespace` : préfixe du type (ex. \"ADMINEXPRESS-COG.LATEST\", \"BDTOPO_V3\")\n- `name` : nom du type (ex. \"commune\", \"departement\")\n- `identifierTokens` : identifiant complet décomposé en mots-clés\n- `title` : titre lisible du type\n- `description` : description détaillée du type\n- `propertyNames` : noms des propriétés disponibles (ex. \"id_parcelle\", \"surface\", \"nature_culture\" pour CADASTRALPARCELS.PARCELLAIRE_EXPRESS:parcelle)\n- `propertyTitles` : titres des propriétés (ex. \"Code INSEE\", \"Nom officiel\", \"Population\")\n- `propertyDescriptions` : descriptions des propriétés (ex. \"Identifiant INSEE unique\", \"Superficie de la commune\")\n- `oneOfConsts` : valeurs énumérées constantes (ex. \"résidentiel\", \"commercial\", \"industriel\" pour BDTOPO_V3:batiment)\n- `oneOfDescriptions` : descriptions des valeurs énumérées (ex. \"Route à voie unique\", \"Route à deux voies\", \"Autoroute\" pour BDTOPO_V3:route)\n- `representedFeatures` : objets géographiques représentés (ex. \"zone administrative\" pour ADMINEXPRESS-COG.LATEST:region)\n- `selectionCriteria` : critères de sélection personnalisés du type (ex. \"navigable\" pour BDTOPO_V3:cours_eau)",
             "properties": {}
           }
         },
@@ -967,9 +967,9 @@ Description d’un type GPF
 ### Description du tool
 
 ```
-Renvoie le schéma détaillé d'un type GPF à partir de son identifiant (`typename`) : identifiants, description et liste des propriétés.
+Renvoie le schéma détaillé d'un type GPF à partir de son identifiant (`typename`).
+Ce schéma contient notamment la description du type et un champ `properties` qui détaille, pour chaque propriété, son type, sa description et la liste des ses valeurs possibles (`oneOf`) lorsqu'elle est fixée.
 Utiliser ce tool après `gpf_search_types` pour inspecter les propriétés disponibles avant d'appeler `gpf_get_features`.
-La sortie inclut notamment le type des propriétés, leur description, leurs valeurs possibles (`oneOf`) lorsqu'elles existent
 **IMPORTANT : Appel fortement recommandé si les noms exacts des propriétés ne sont pas connus : un nom de propriété incorrect provoque une erreur**.
 ```
 

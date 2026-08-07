@@ -38,7 +38,22 @@ const gpfSearchTypeResultSchema = z.object({
   score: z.number().describe("Le score de pertinence de la recherche.").optional(),
   queryTerms: z.array(z.string()).optional().describe("Les termes de la requête qui ont produit ce résultat."),
   terms: z.array(z.string()).optional().describe("Les termes indexés correspondant à la requête."),
-  match: z.object({}).catchall(z.array(z.string())).optional().describe("Détail des correspondances : associe chaque terme indexé aux champs où il a été trouvé."),
+  match: z.object({}).catchall(z.array(z.string())).optional().describe(
+    "Détail des correspondances : pour chaque terme de la requête, liste les champs indexés où il a été trouvé.\n" +
+    "Champs possibles :\n" +
+    "- `namespace` : préfixe du type (ex. \"ADMINEXPRESS-COG.LATEST\", \"BDTOPO_V3\")\n" +
+    "- `name` : nom du type (ex. \"commune\", \"departement\")\n" +
+    "- `identifierTokens` : identifiant complet décomposé en mots-clés\n" +
+    "- `title` : titre lisible du type\n" +
+    "- `description` : description détaillée du type\n" +
+    "- `propertyNames` : noms des propriétés disponibles (ex. \"id_parcelle\", \"surface\", \"nature_culture\" pour CADASTRALPARCELS.PARCELLAIRE_EXPRESS:parcelle)\n" +
+    "- `propertyTitles` : titres des propriétés (ex. \"Code INSEE\", \"Nom officiel\", \"Population\")\n" +
+    "- `propertyDescriptions` : descriptions des propriétés (ex. \"Identifiant INSEE unique\", \"Superficie de la commune\")\n" +
+    "- `oneOfConsts` : valeurs énumérées constantes (ex. \"résidentiel\", \"commercial\", \"industriel\" pour BDTOPO_V3:batiment)\n" +
+    "- `oneOfDescriptions` : descriptions des valeurs énumérées (ex. \"Route à voie unique\", \"Route à deux voies\", \"Autoroute\" pour BDTOPO_V3:route)\n" +
+    "- `representedFeatures` : objets géographiques représentés (ex. \"zone administrative\" pour ADMINEXPRESS-COG.LATEST:region)\n" +
+    "- `selectionCriteria` : critères de sélection personnalisés du type (ex. \"navigable\" pour BDTOPO_V3:cours_eau)"
+  ),
 });
 
 const gpfSearchTypesOutputSchema = z.object({
