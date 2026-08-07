@@ -39,9 +39,9 @@ class GpfDescribeTypeTool extends BaseTool<GpfDescribeTypeInput> {
   title = "Description d’un type GPF";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
   description = [
-    "Renvoie le schéma détaillé d'un type GPF à partir de son identifiant (`typename`) : identifiants, description et liste des propriétés.",
+    "Renvoie le schéma détaillé d'un type GPF à partir de son identifiant (`typename`).",
+    "Ce schéma contient notamment la description du type et un champ `properties` qui détaille, pour chaque propriété, son type, sa description et la liste des ses valeurs possibles (`oneOf`) lorsqu'elle est fixée.",
     "Utiliser ce tool après `gpf_search_types` pour inspecter les propriétés disponibles avant d'appeler `gpf_get_features`.",
-    "La sortie inclut notamment le type des propriétés, leur description, leurs valeurs possibles (`oneOf`) lorsqu'elles existent",
     "**IMPORTANT : Appel fortement recommandé si les noms exacts des propriétés ne sont pas connus : un nom de propriété incorrect provoque une erreur**."
   ].join("\n");
   protected outputSchemaShape = gpfDescribeTypeOutput;
