@@ -126,6 +126,15 @@ describe("Test WfsSchemaStore",() => {
             expect(batimentResult).toBeDefined();
             expect(batimentResult?.score).toEqual(expect.any(Number));
         });
+
+        it("should include MiniSearch detailed metadata", async () => {
+            const featureTypes = await wfsSchemaStore.searchFeatureTypesWithScores("bâtiments bdtopo");
+            const batimentResult = featureTypes.find((featureType) => featureType.id === "BDTOPO_V3:batiment");
+
+            expect(batimentResult).toBeDefined();
+            expect(batimentResult?.queryTerms).toBeDefined();
+            expect(batimentResult?.queryTerms?.length).toBeGreaterThan(0);
+        });
     });
 
     describe("getFeatureType",() => {
