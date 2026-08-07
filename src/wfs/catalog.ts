@@ -7,7 +7,6 @@ import {
     CollectionCatalogOptions,
     MiniSearchCollectionSearchOptions,
 } from '@ignfab/gpf-schema-store';
-import type { MatchInfo } from 'minisearch';
 import { z } from 'zod';
 import { getEnv } from '../config/env.js';
 
@@ -44,7 +43,7 @@ type MiniSearchOptions = MiniSearchCollectionSearchOptions;
 export type DetailedCollectionSearchMatch = CollectionSearchMatch & {
     queryTerms?: string[];
     terms?: string[];
-    match?: MatchInfo;
+    match?: Record<string, Array<typeof MINISEARCH_INDEXED_OPTION_KEYS[number]>>;
 };
 
 // --- Errors ---

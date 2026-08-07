@@ -33,7 +33,7 @@ describe("Test GpfSearchTypesTool",() => {
                         score: 42.5,
                         queryTerms: ["batiment"],
                         terms: ["batiment"],
-                        match: { batiment: ["name", "title"] },
+                        match: { batiment: ["name", "title"] as ("name" | "title")[] },
                     },
                 ],
             };
