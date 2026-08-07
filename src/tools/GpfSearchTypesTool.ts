@@ -76,16 +76,28 @@ class GpfSearchTypesTool extends BaseTool<GpfSearchTypesInput> {
     const maxResults = input.max_results || 10;
     const featureTypes = await wfsSchemaStore.searchFeatureTypesWithScores(input.query, maxResults);
     const results = await Promise.all(featureTypes.map(async ({ id, score, queryTerms, terms, match }: DetailedCollectionSearchMatch) => {
-      const schema = await wfsSchemaStore.getFeatureType(id);
-      return {
-        typename: id,
-        title: schema.title,
-        description: schema.description,
-        score,
-        queryTerms,
-        terms,
-        match,
-      };
+      try {
+        const schema = await wfsSchemaStore.getFeatureType(id);
+        return {
+          typename: id,
+          title: schema.title,
+          description: schema.description,
+          score,
+          queryTerms,
+          terms,
+          match,
+        };
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : String(e);
+        return {
+          typename: id,
+          description: `${message}. Détails du type introuvable à cause d'une erreur de synchronisation du catalogue : utilise gpf_describe_type pour obtenir plus d'information sur le type.`,
+          score,
+          queryTerms,
+          terms,
+          match,
+        }
+      }
     }));
 
     return {
