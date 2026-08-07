@@ -251,12 +251,6 @@ describe("Test GpfGetFeaturesTool", () => {
       type: "FeatureCollection",
       features: expect.any(Array),
     });
-    expect(
-      validateStructuredContentAgainstOutputSchema(
-        tool.toolDefinition.outputSchema,
-        response.structuredContent,
-      ),
-    ).toBeNull();
   });
 
   it("should compile travel_time_filter into a WFS request using an isochrone geometry", async () => {
@@ -326,6 +320,12 @@ describe("Test GpfGetFeaturesTool", () => {
         }),
       ]),
     });
+    expect(
+      validateStructuredContentAgainstOutputSchema(
+        tool.toolDefinition.outputSchema,
+        response.structuredContent,
+      ),
+    ).toBeNull();
   });
 
   it("should reject multiple spatial filters as invalid tool parameters", async () => {
