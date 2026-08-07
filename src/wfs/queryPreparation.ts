@@ -129,12 +129,12 @@ function compileIsNullClause(propertyName: string) {
  * @returns A CQL predicate fragment.
  */
 function compileWhereClause(featureType: OgcCollectionSchema, clause: WhereClause) {
-  const _property = resolveNonGeometryProperty(
+  const property = resolveNonGeometryProperty(
     featureType,
     clause.property,
     `Utiliser un filtre spatial dédié (${GPF_SPATIAL_FILTER_DOCNAMES}).`
   );
-  const normalized = normalizeWhereClause(_property, clause);
+  const normalized = normalizeWhereClause(property, clause);
   const propertyName = clause.property;
 
   switch (normalized.operator) {
