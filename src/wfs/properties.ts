@@ -55,7 +55,7 @@ export function getGeometryName(featureType: OgcCollectionSchema) : string {
  * @returns The matching non-geometric property metadata.
  */
 export function resolveNonGeometryProperty(featureType: OgcCollectionSchema, propertyName: string, message: string) {
-  const property = featureType.properties[propertyName]
+  const property = Object.hasOwn(featureType.properties, propertyName) ? featureType.properties[propertyName] : undefined;
   if (!property) {
     const nonGeometryProperties = (Object.entries(featureType.properties))
       .filter(([_propertyName, property]) => Boolean((property as OgcCollectionProperty).type))

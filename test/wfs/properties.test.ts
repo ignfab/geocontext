@@ -113,6 +113,16 @@ describe("resolveNonGeometryProperty", () => {
     expect((thrown as Error).message).toContain("Propriétés non géométriques disponibles : name, population");
   });
 
+  it("should throw 'n'existe pas' and not 'est géométrique' for prototype property 'toString'", () => {
+    expect(() =>
+      resolveNonGeometryProperty(
+        singleGeometryCollection,
+        "toString",
+        "Error message",
+      ),
+    ).toThrow("La propriété 'toString' n'existe pas");
+  });
+
   it("should throw when the property is geometric", () => {
     expect(() =>
       resolveNonGeometryProperty(
