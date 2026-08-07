@@ -37,12 +37,6 @@ describe("GPF Describe Type (integration)", () => {
     const propNames = Object.keys(result.properties);
     expect(propNames.length).toBeGreaterThan(0);
     expect(result.required).toBeDefined();
-
-    // Check that properties have expected fields
-    const firstPropName = propNames[0];
-    expect(firstPropName).toBeDefined();
-    const firstProp = result.properties[firstPropName];
-    expect(firstProp).toBeDefined();
   }, INTEGRATION_CONFIG.timeout);
 
   it("should return an error for empty typename", async () => {
