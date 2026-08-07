@@ -2,7 +2,6 @@ import { vi, describe, it, expect, afterEach } from "vitest";
 
 import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 import { ServiceResponseError } from "../../../src/helpers/http.js";
-import { validateStructuredContentAgainstOutputSchema } from "../helpers/outputSchema";
 
 const mockGetFeatureType = vi.fn<(typename: string) => Promise<OgcCollectionSchema>>();
 const mockFetchJSONPost = vi.fn<(
@@ -320,12 +319,7 @@ describe("Test GpfGetFeaturesTool", () => {
         }),
       ]),
     });
-    expect(
-      validateStructuredContentAgainstOutputSchema(
-        tool.toolDefinition.outputSchema,
-        response.structuredContent,
-      ),
-    ).toBeNull();
+    expect(tool.toolDefinition.outputSchema).toBeUndefined();
   });
 
   it("should reject multiple spatial filters as invalid tool parameters", async () => {
