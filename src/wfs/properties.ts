@@ -37,7 +37,12 @@ export function getGeometryName(featureType: OgcCollectionSchema) : string {
     throw new Error(`Erreur du catalogue embarqué : la collection '${featureType.title}' n'expose aucune propriété géométrique exploitable.`);
   }
   if (geometryProperties.length > 1) {
-    // TODO: should we silently return the unique property identified by "x-ogc-role": 'primary-geometry'?
+    const primaryGeometryProperties = geometryProperties.filter(
+      (propertyName) => (featureType.properties[propertyName] as OgcCollectionProperty)["x-ogc-role"] === "primary-geometry",
+    );
+    if (primaryGeometryProperties.length === 1) {
+      return primaryGeometryProperties[0];
+    }
     throw new Error(`La collection '${featureType.title}' expose plusieurs propriétés géométriques dans le catalogue embarqué : ${geometryProperties.join(", ")}.`);
   }
   return geometryProperties[0];

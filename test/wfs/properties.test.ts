@@ -26,6 +26,12 @@ const altitudeProperty: OgcCollectionProperty = {
   format: "geometry-any"
 };
 
+const anotherPrimaryGeometryProperty: OgcCollectionProperty = {
+  // This is forbidden by OGC API Features: test here for malformed collections.
+  format: "geometry-any",
+  "x-ogc-role": "primary-geometry",
+};
+
 const singleGeometryCollection: OgcCollectionSchema = {
   type: "object",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -48,6 +54,19 @@ const multipleGeometryCollection: OgcCollectionSchema = {
     geometry: geometryProperty,
     name: nameProperty,
     altitude: altitudeProperty,
+  },
+  required: [],
+};
+
+const ambiguousGeometryCollection: OgcCollectionSchema = {
+  type: "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  title: "AmbiguousGeo",
+  description: "description de la collection AmbiguousGeo",
+  properties: {
+    geometry: geometryProperty,
+    name: nameProperty,
+    contour: anotherPrimaryGeometryProperty,
   },
   required: [],
 };
@@ -78,9 +97,14 @@ describe("getGeometryName", () => {
     );
   });
 
-  it("should throw when multiple geometry properties exist", () => {
-    expect(() => getGeometryName(multipleGeometryCollection)).toThrow(
-      "La collection 'MultiGeo' expose plusieurs propriétés géométriques dans le catalogue embarqué : geometry, altitude.",
+  it("should return the property marked 'x-ogc-role': 'primary-geometry' when multiple geometry properties exist", () => {
+    const result = getGeometryName(multipleGeometryCollection);
+    expect(result).toEqual("geometry");
+  });
+
+  it("should throw when multiple geometry properties exist and none, or more than one, is marked 'x-ogc-role': 'primary-geometry'", () => {
+    expect(() => getGeometryName(ambiguousGeometryCollection)).toThrow(
+      "La collection 'AmbiguousGeo' expose plusieurs propriétés géométriques dans le catalogue embarqué : geometry, contour.",
     );
   });
 });
