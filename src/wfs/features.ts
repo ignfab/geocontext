@@ -6,8 +6,6 @@
  * hit counting, and FeatureCollection post-processing.
  */
 
-import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
-
 import { navigationIsochroneClient } from "../gpf/navigation.js";
 import logger from "../logger.js";
 import { resolveFeatureGeometryEwkt } from "./referenceGeometry.js";
@@ -157,7 +155,7 @@ export async function prepareQueryFeaturesRequest(
   ensureIntersectsFeatureTargetsOtherTypename(input);
   // Get the feature type definition from the embedded catalog to access
   // property definitions and the geometry column name.
-  const featureType: OgcCollectionSchema = await wfsClient.getFeatureType(input.typename);
+  const featureType = await wfsClient.getFeatureType(input.typename);
   // Resolve external geometries needed by the selected spatial filter.
   const resolvedGeometryRef = await resolveSpatialFilterGeometry(input);
   // Compile query fragments from the normalized input, feature type, and

@@ -1,9 +1,10 @@
 import { vi, describe, it, expect, afterEach } from "vitest";
 
 import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
+import type { GpfFeatureType } from "../../../src/wfs/catalog.js";
 import { ServiceResponseError } from "../../../src/helpers/http.js";
 
-const mockGetFeatureType = vi.fn<(typename: string) => Promise<OgcCollectionSchema>>();
+const mockGetFeatureType = vi.fn<(typename: string) => Promise<GpfFeatureType>>();
 const mockFetchJSONPost = vi.fn<(
   url: string,
   body?: string,
@@ -125,11 +126,14 @@ describe("Test GpfGetFeaturesTool", () => {
 
   function mockFeatureTypes(featureTypes: Record<string, OgcCollectionSchema>) {
     mockGetFeatureType.mockImplementation(async (typename: string) => {
-      const featureType = featureTypes[typename];
-      if (!featureType) {
+      const schema = featureTypes[typename];
+      if (!schema) {
         throw new Error(`unexpected typename ${typename}`);
       }
-      return featureType;
+      return {
+        typename,
+        schema,
+      };
     });
   }
 

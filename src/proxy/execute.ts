@@ -19,7 +19,7 @@
  *   and lets the HTTP layer supply a size-bounded, rate-limited client.
  */
 
-import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
+import type { GpfFeatureType } from "../wfs/catalog.js";
 
 import {
   buildGetFeatureByIdRequest,
@@ -48,7 +48,7 @@ import type { GpfGetFeaturesInput, GpfGetFeatureByIdLayerInput } from "../wfs/sc
  * tests inject a double.
  */
 export type WfsClientLike = {
-  getFeatureType(typename: string): Promise<OgcCollectionSchema>;
+  getFeatureType(typename: string): Promise<GpfFeatureType>;
   fetchFeatureCollection(request: CompiledRequest): Promise<WfsFeatureCollectionResponse>;
 };
 
@@ -194,7 +194,7 @@ export async function runGeometryFeatureQuery(
   deps: GeometryFeatureQueryDeps,
 ): Promise<WfsFeatureCollectionResponse> {
   const { wfsClient } = deps;
-  const featureType: OgcCollectionSchema = await wfsClient.getFeatureType(input.typename);
+  const featureType = await wfsClient.getFeatureType(input.typename);
   const geometryName = getGeometryName(featureType);
 
   const resolvedGeometryRef = await resolveReferenceGeometry(input, deps);
@@ -265,7 +265,7 @@ export async function runGeometryFeatureByIdQuery(
   deps: GeometryFeatureByIdQueryDeps,
 ): Promise<WfsFeatureCollectionResponse> {
   const { wfsClient } = deps;
-  const featureType: OgcCollectionSchema = await wfsClient.getFeatureType(input.typename);
+  const featureType = await wfsClient.getFeatureType(input.typename);
 
   // Validate `select` against the same embedded catalog used at URL generation,
   // then force the geometry column into the WFS selection. Re-validating here is

@@ -89,11 +89,19 @@ const assiettesFeatureCollection: {
 describe("Test getUrbanisme", () => {
     beforeEach(() => {
         mockGetFeatureType.mockResolvedValue({
-            properties: {
-                geometrie: {
-                    format: "geometry-multipolygon",
-                    "x-ogc-role": "primary-geometry",
+            typename: "wfs_du:document",
+            schema: {
+                $schema: "https://json-schema.org/draft/2020-12/schema",
+                type: "object",
+                title: "Mock",
+                description: "Mock",
+                properties: {
+                    geometrie: {
+                        format: "geometry-multipolygon",
+                        "x-ogc-role": "primary-geometry",
+                    },
                 },
+                required: [],
             },
         });
         mockFetchMultiTypename.mockResolvedValue(urbanismeFeatureCollection);
@@ -155,11 +163,19 @@ describe("Test getUrbanisme", () => {
 describe("Test getAssiettesServitudes", () => {
     beforeEach(() => {
         mockGetFeatureType.mockResolvedValue({
-            properties: {
-                geometrie: {
-                    format: "geometry-multipolygon",
-                    "x-ogc-role": "primary-geometry",
+            typename: "wfs_sup:assiette_sup_s",
+            schema: {
+                $schema: "https://json-schema.org/draft/2020-12/schema",
+                type: "object",
+                title: "Mock",
+                description: "Mock",
+                properties: {
+                    geometrie: {
+                        format: "geometry-multipolygon",
+                        "x-ogc-role": "primary-geometry",
+                    },
                 },
+                required: [],
             },
         });
         mockFetchMultiTypename.mockResolvedValue(assiettesFeatureCollection);

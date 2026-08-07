@@ -1,5 +1,6 @@
 import { vi, describe, expect, afterEach, it } from "vitest";
 import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
+import type { GpfFeatureType } from "../../src/wfs/catalog.js";
 import { getMatchedFeatureCount } from "../../src/wfs/response.js";
 
 const mockPost = vi.fn<(request: any) => Promise<unknown>>();
@@ -125,14 +126,20 @@ describe("WfsClient", () => {
       type: "FeatureCollection",
       features: [],
     }));
-    const getFeatureType = vi.fn(async () => featureType);
+    const getFeatureType = vi.fn(async (typename: string) => ({
+      typename,
+      schema: featureType,
+    } satisfies GpfFeatureType));
 
     const client = new WfsClient(
       { post },
       { getFeatureType },
     );
 
-    await expect(client.getFeatureType("BDTOPO_V3:batiment")).resolves.toEqual(featureType);
+    await expect(client.getFeatureType("BDTOPO_V3:batiment")).resolves.toEqual({
+      typename: "BDTOPO_V3:batiment",
+      schema: featureType,
+    });
     await expect(client.fetchFeatureCollection({
       method: "POST",
       url: "https://data.geopf.fr/wfs",

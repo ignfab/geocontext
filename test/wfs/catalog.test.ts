@@ -141,7 +141,7 @@ describe("Test WfsSchemaStore",() => {
         it("should return the feature type with BDTOPO_V3:batiment", async () => {
             const featureType = await wfsSchemaStore.getFeatureType("BDTOPO_V3:batiment");
             expect(featureType).toBeDefined();
-            expect(featureType?.title).toEqual("Bâtiment");
+            expect(featureType?.schema.title).toEqual("Bâtiment");
         });
 
         it("should throw an error if the feature type does not exist", async () => {

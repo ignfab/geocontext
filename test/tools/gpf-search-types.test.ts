@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
+import type { GpfFeatureType } from "../../src/wfs/catalog.js";
 import GpfSearchTypesTool from "../../src/tools/GpfSearchTypesTool.js";
 import { wfsSchemaStore } from "../../src/wfs/catalog.js";
 import { validateStructuredContentAgainstOutputSchema } from "./helpers/outputSchema.js";
@@ -38,7 +39,10 @@ describe("Test GpfSearchTypesTool", () => {
     // First call succeeds, second call throws an error
     vi.mocked(wfsSchemaStore).getFeatureType.mockImplementation(async (id: string) => {
       if (id === "ADMINEXPRESS-COG.LATEST:commune") {
-        return mockFeatureTypeSuccess;
+        return {
+          typename: id,
+          schema: mockFeatureTypeSuccess,
+        } satisfies GpfFeatureType;
       }
       throw new Error("Synchronization error: catalog out of sync");
     });

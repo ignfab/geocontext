@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { OgcCollectionSchema, OgcCollectionProperty } from "@ignfab/gpf-schema-store";
+import type { GpfFeatureType } from "../../src/wfs/catalog";
 import {
   getGeometryName,
   resolveNonGeometryProperty,
@@ -83,28 +84,32 @@ const noGeometryCollection: OgcCollectionSchema = {
   required: [],
 };
 
+function asFeatureType(typename: string, schema: OgcCollectionSchema): GpfFeatureType {
+  return { typename, schema };
+}
+
 // --- Tests ---
 
 describe("getGeometryName", () => {
   it("should return the geometry property when there is exactly one", () => {
-    const result = getGeometryName(singleGeometryCollection);
+    const result = getGeometryName(asFeatureType("SINGLE:GEO", singleGeometryCollection));
     expect(result).toEqual("geometry");
   });
 
   it("should throw when no geometry property exists", () => {
-    expect(() => getGeometryName(noGeometryCollection)).toThrow(
-      "Erreur du catalogue embarqué : la collection 'NoGeo' n'expose aucune propriété géométrique exploitable.",
+    expect(() => getGeometryName(asFeatureType("NO_GEO:TYPE", noGeometryCollection))).toThrow(
+      "Erreur du catalogue embarqué : le type 'NO_GEO:TYPE' n'expose aucune propriété géométrique exploitable."
     );
   });
 
   it("should return the property marked 'x-ogc-role': 'primary-geometry' when multiple geometry properties exist", () => {
-    const result = getGeometryName(multipleGeometryCollection);
+    const result = getGeometryName(asFeatureType("MULTI:GEO", multipleGeometryCollection));
     expect(result).toEqual("geometry");
   });
 
   it("should throw when multiple geometry properties exist and none, or more than one, is marked 'x-ogc-role': 'primary-geometry'", () => {
-    expect(() => getGeometryName(ambiguousGeometryCollection)).toThrow(
-      "La collection 'AmbiguousGeo' expose plusieurs propriétés géométriques dans le catalogue embarqué : geometry, contour.",
+    expect(() => getGeometryName(asFeatureType("AMBIGUOUS:GEO", ambiguousGeometryCollection))).toThrow(
+      "Le type 'AMBIGUOUS:GEO' expose plusieurs propriétés géométriques dans le catalogue embarqué : geometry, contour."
     );
   });
 });
@@ -112,7 +117,7 @@ describe("getGeometryName", () => {
 describe("resolveNonGeometryProperty", () => {
   it("should return the property when it is non-geometric", () => {
     const result = resolveNonGeometryProperty(
-      singleGeometryCollection,
+      asFeatureType("SINGLE:GEO", singleGeometryCollection),
       "name",
       "Error message",
     );
@@ -124,7 +129,7 @@ describe("resolveNonGeometryProperty", () => {
 
     try {
       resolveNonGeometryProperty(
-        singleGeometryCollection,
+        asFeatureType("SINGLE:GEO", singleGeometryCollection),
         "invalid_prop",
         "Error message",
       );
@@ -140,7 +145,7 @@ describe("resolveNonGeometryProperty", () => {
   it("should throw 'n'existe pas' and not 'est géométrique' for prototype property 'toString'", () => {
     expect(() =>
       resolveNonGeometryProperty(
-        singleGeometryCollection,
+        asFeatureType("SINGLE:GEO", singleGeometryCollection),
         "toString",
         "Error message",
       ),
@@ -150,7 +155,7 @@ describe("resolveNonGeometryProperty", () => {
   it("should throw when the property is geometric", () => {
     expect(() =>
       resolveNonGeometryProperty(
-        singleGeometryCollection,
+        asFeatureType("SINGLE:GEO", singleGeometryCollection),
         "geometry",
         "Error message",
       ),
@@ -160,47 +165,47 @@ describe("resolveNonGeometryProperty", () => {
 
 describe("validateSelectProperty", () => {
   it("should keep resolveNonGeometryProperty semantics for success and failure paths", () => {
-    expect(validateSelectProperty(singleGeometryCollection, "name")).toBe("name");
+    expect(validateSelectProperty(asFeatureType("SINGLE:GEO", singleGeometryCollection), "name")).toBe("name");
     expect(() =>
-      validateSelectProperty(singleGeometryCollection, "geometry"),
+      validateSelectProperty(asFeatureType("SINGLE:GEO", singleGeometryCollection), "geometry"),
     ).toThrow(
       "La propriété 'geometry' est géométrique. `select` accepte uniquement des propriétés non géométriques.",
     );
     expect(() =>
-      validateSelectProperty(singleGeometryCollection, "invalid_prop"),
+      validateSelectProperty(asFeatureType("SINGLE:GEO", singleGeometryCollection), "invalid_prop"),
     ).toThrow(/Propriétés non géométriques disponibles : name, population/);
   });
 });
 
 describe("buildPropertyName", () => {
   it("should return all non-geometric properties when select is omitted", () => {
-    const result = buildPropertyName(singleGeometryCollection);
+    const result = buildPropertyName(asFeatureType("SINGLE:GEO", singleGeometryCollection));
     expect(result).toEqual("name,population");
   });
 
   it("should include geometry when spatial_extras is provided", () => {
-    const result = buildPropertyName(singleGeometryCollection, undefined, ["bbox"]);
+    const result = buildPropertyName(asFeatureType("SINGLE:GEO", singleGeometryCollection), undefined, ["bbox"]);
     expect(result).toEqual("geometry,name,population");
   });
 
   it("should return only selected non-geometric properties when select is specified", () => {
-    const result = buildPropertyName(singleGeometryCollection, ["name"]);
+    const result = buildPropertyName(asFeatureType("SINGLE:GEO", singleGeometryCollection), ["name"]);
     expect(result).toEqual("name");
   });
 
   it("should append geometry to selected properties when spatial_extras is provided", () => {
-    const result = buildPropertyName(singleGeometryCollection, ["name", "population"], ["bbox", "centroid"]);
+    const result = buildPropertyName(asFeatureType("SINGLE:GEO", singleGeometryCollection), ["name", "population"], ["bbox", "centroid"]);
     expect(result).toEqual("name,population,geometry");
   });
 
   it("should throw when a selected property does not exist", () => {
-    expect(() => buildPropertyName(singleGeometryCollection, ["invalid_prop"])).toThrow(
+    expect(() => buildPropertyName(asFeatureType("SINGLE:GEO", singleGeometryCollection), ["invalid_prop"])).toThrow(
       /La propriété 'invalid_prop' n'existe pas/,
     );
   });
 
   it("should throw when a selected property is geometric", () => {
-    expect(() => buildPropertyName(singleGeometryCollection, ["geometry"])).toThrow(
+    expect(() => buildPropertyName(asFeatureType("SINGLE:GEO", singleGeometryCollection), ["geometry"])).toThrow(
       "La propriété 'geometry' est géométrique. `select` accepte uniquement des propriétés non géométriques.",
     );
   });

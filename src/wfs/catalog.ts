@@ -10,6 +10,11 @@ import {
 import { z } from 'zod';
 import { getEnv } from '../config/env.js';
 
+export type GpfFeatureType = {
+    typename: string;
+    schema: OgcCollectionSchema;
+};
+
 // --- Constants ---
 
 export const GPF_WFS_URL = "https://data.geopf.fr/wfs";
@@ -117,10 +122,10 @@ export class WfsSchemaStore {
         return this.catalog.search(query, { limit: maxResults });
     }
 
-    async getFeatureType(name: string): Promise<OgcCollectionSchema> {
-        const featureType = this.catalog.getCollectionSchema(name);
-        if (featureType) {
-            return featureType;
+    async getFeatureType(name: string): Promise<GpfFeatureType> {
+        const schema = this.catalog.getCollectionSchema(name);
+        if (schema) {
+            return { typename: name, schema };
         }
         throw new FeatureTypeNotFoundError(name);
     }

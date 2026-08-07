@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
+import type { GpfFeatureType } from "../../src/wfs/catalog.js";
 
 import { runGeometryFeatureQuery, runGeometryFeatureByIdQuery, type WfsClientLike, type TravelTimeResolver } from "../../src/proxy/execute";
 import type { CompiledRequest } from "../../src/wfs/request";
@@ -79,7 +80,10 @@ function makeClient(overrides?: {
     getFeatureType: vi.fn(async (typename: string) => {
       const found = featureTypes[typename];
       if (!found) throw new Error(`unknown typename ${typename}`);
-      return found;
+      return {
+        typename,
+        schema: found,
+      } satisfies GpfFeatureType;
     }),
     fetchFeatureCollection: vi.fn(async (request: CompiledRequest) => {
       requests.push(request);
@@ -273,7 +277,7 @@ describe("proxy/execute · runGeometryFeatureQuery", () => {
     // live WFS that uses a different geom name for this type rejects it. That opaque
     // upstream string must become a clear "catalogue désynchronisé" message.
     const client: WfsClientLike = {
-      getFeatureType: vi.fn(async () => communeType),
+      getFeatureType: vi.fn(async (typename: string) => ({ typename, schema: communeType })),
       fetchFeatureCollection: vi.fn(async () => {
         throw new ServiceResponseError("Illegal property name: geometrie", {
           http: { status: 400, statusText: "Bad Request" },
@@ -293,7 +297,7 @@ describe("proxy/execute · runGeometryFeatureQuery", () => {
       service: { code: "SomethingElse", detail: "not a geometry issue" },
     });
     const client: WfsClientLike = {
-      getFeatureType: vi.fn(async () => communeType),
+      getFeatureType: vi.fn(async (typename: string) => ({ typename, schema: communeType })),
       fetchFeatureCollection: vi.fn(async () => {
         throw upstream;
       }),

@@ -92,11 +92,11 @@ class GpfSearchTypesTool extends BaseTool<GpfSearchTypesInput> {
     const featureTypes = await wfsSchemaStore.searchFeatureTypesWithScores(input.query, maxResults);
     const results = await Promise.all(featureTypes.map(async ({ id, score, queryTerms, terms, match }: DetailedCollectionSearchMatch) => {
       try {
-        const schema = await wfsSchemaStore.getFeatureType(id);
+        const featureType = await wfsSchemaStore.getFeatureType(id);
         return {
           typename: id,
-          title: schema.title,
-          description: schema.description,
+          title: featureType.schema.title,
+          description: featureType.schema.description,
           score,
           queryTerms,
           terms,
