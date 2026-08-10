@@ -929,7 +929,7 @@ Le paramètre `max_results` permet d'élargir le nombre de candidats retournés 
           },
           "match": {
             "type": "object",
-            "description": "Détail des correspondances : pour chaque terme de la requête, liste les champs indexés où il a été trouvé.\nChamps possibles :\n- `namespace` : préfixe du type (ex. \"ADMINEXPRESS-COG.LATEST\", \"BDTOPO_V3\")\n- `name` : nom du type (ex. \"commune\", \"departement\")\n- `identifierTokens` : identifiant complet décomposé en mots-clés\n- `title` : titre lisible du type\n- `description` : description détaillée du type\n- `propertyNames` : noms des propriétés disponibles (ex. \"id_parcelle\", \"surface\", \"nature_culture\" pour CADASTRALPARCELS.PARCELLAIRE_EXPRESS:parcelle)\n- `propertyTitles` : titres des propriétés (ex. \"Code INSEE\", \"Nom officiel\", \"Population\")\n- `propertyDescriptions` : descriptions des propriétés (ex. \"Identifiant INSEE unique\", \"Superficie de la commune\")\n- `oneOfConsts` : valeurs énumérées constantes (ex. \"résidentiel\", \"commercial\", \"industriel\" pour BDTOPO_V3:batiment)\n- `oneOfDescriptions` : descriptions des valeurs énumérées (ex. \"Route à voie unique\", \"Route à deux voies\", \"Autoroute\" pour BDTOPO_V3:route)\n- `representedFeatures` : objets géographiques représentés (ex. \"zone administrative\" pour ADMINEXPRESS-COG.LATEST:region)\n- `selectionCriteria` : critères de sélection personnalisés du type (ex. \"navigable\" pour BDTOPO_V3:cours_eau)",
+            "description": "Détail des correspondances : associe chaque terme indexé aux champs où il a été trouvé.\nChamps possibles :\n- `namespace` : préfixe du type (ex. \"ADMINEXPRESS-COG.LATEST\", \"BDTOPO_V3\")\n- `name` : nom du type (ex. \"commune\", \"departement\")\n- `identifierTokens` : identifiant complet décomposé en mots-clés\n- `title` : titre lisible du type\n- `description` : description détaillée du type\n- `propertyNames` : noms des propriétés disponibles (ex. \"numero\", \"section\", \"code_insee\" pour CADASTRALPARCELS.PARCELLAIRE_EXPRESS:parcelle)\n- `propertyTitles` : titres des propriétés (ex. \"Superficie cadastrale\", \"Code Insee de la commune\", \"Population\" pour BDTOPO_V3:commune)\n- `propertyDescriptions` : descriptions des propriétés (ex. \"Identifiant de l'objet hydrographique.\", \"Précise si le cours d'eau est permanent ou pas.\" pour BDTOPO_V3:cours_d_eau)\n- `oneOfConsts` : valeurs énumérées constantes (ex. \"Agricole\", \"Industriel\", \"Résidentiel\" pour BDTOPO_V3:batiment, propriété usage_1)\n- `oneOfDescriptions` : descriptions des valeurs énumérées (ex. \"Zone de vignes.\", \"Culture de houblon.\" pour BDTOPO_V3:zone_de_vegetation, propriété nature)\n- `representedFeatures` : objets géographiques représentés (ex. \"Piscine découverte\", \"Terrain de rugby\", \"Vélodrome (piste)\" pour BDTOPO_V3:terrain_de_sport)\n- `selectionCriteria` : texte libre décrivant les critères de sélection du type (ex. \"Toutes les emprises de parcs et de réserves naturelles nationales ou régionales sont retenues.\" pour BDTOPO_V3:parc_ou_reserve)",
             "properties": {}
           }
         },
@@ -1004,6 +1004,7 @@ Utiliser ce tool après `gpf_search_types` pour inspecter les propriétés dispo
 
 | Champ | Type | Requis | Description |
 | --- | --- | --- | --- |
+| `$id` | string | oui |   |
 | `$schema` | string | oui |   |
 | `description` | string | oui |   |
 | `required` | array | oui |   |
@@ -1022,6 +1023,10 @@ Utiliser ce tool après `gpf_search_types` pour inspecter les propriétés dispo
   "properties": {
     "$schema": {
       "type": "string"
+    },
+    "$id": {
+      "type": "string",
+      "format": "uri"
     },
     "type": {
       "type": "string"
@@ -1053,6 +1058,7 @@ Utiliser ce tool après `gpf_search_types` pour inspecter les propriétés dispo
   },
   "required": [
     "$schema",
+    "$id",
     "type",
     "title",
     "description",
