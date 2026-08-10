@@ -8,6 +8,7 @@ import { validateStructuredContentAgainstOutputSchema } from "../helpers/outputS
 describe("Test GpfDescribeTypeTool",() => {
     const mockCollection: OgcCollectionSchema = {
         $schema: 'https://json-schema.org/draft/2020-12/schema',
+        $id: 'https://example.test/BDTOPO_V3/batiment.json',
         type: "object",
         title: "Batiment",
         description: "Description de test",

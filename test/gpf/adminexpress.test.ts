@@ -71,6 +71,7 @@ describe("Test getAdminUnits", () => {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
           schema: {
               $schema: "https://json-schema.org/draft/2020-12/schema",
+              $id: "https://example.test/ADMINEXPRESS-COG.LATEST/commune.json",
               type: "object",
               title: "Mock",
               description: "Mock",

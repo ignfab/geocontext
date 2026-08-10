@@ -36,6 +36,7 @@ const anotherPrimaryGeometryProperty: OgcCollectionProperty = {
 const singleGeometryCollection: OgcCollectionSchema = {
   type: "object",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.test/SINGLE/GEO.json",
   title: "SingleGeo",
   description: "description de la collection SingleGeo",
   properties: {
@@ -49,6 +50,7 @@ const singleGeometryCollection: OgcCollectionSchema = {
 const multipleGeometryCollection: OgcCollectionSchema = {
   type: "object",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.test/MULTI/GEO.json",
   title: "MultiGeo",
   description: "description de la collection MultiGeo",
   properties: {
@@ -62,6 +64,7 @@ const multipleGeometryCollection: OgcCollectionSchema = {
 const ambiguousGeometryCollection: OgcCollectionSchema = {
   type: "object",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.test/AMBIGUOUS/GEO.json",
   title: "AmbiguousGeo",
   description: "description de la collection AmbiguousGeo",
   properties: {
@@ -75,6 +78,7 @@ const ambiguousGeometryCollection: OgcCollectionSchema = {
 const noGeometryCollection: OgcCollectionSchema = {
   type: "object",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.test/NO_GEO/TYPE.json",
   title: "NoGeo",
   description: "description de la collection NoGeo",
   properties: {

@@ -92,6 +92,7 @@ describe("Test getUrbanisme", () => {
             typename: "wfs_du:document",
             schema: {
                 $schema: "https://json-schema.org/draft/2020-12/schema",
+                $id: "https://example.test/wfs_du/document.json",
                 type: "object",
                 title: "Mock",
                 description: "Mock",
@@ -166,6 +167,7 @@ describe("Test getAssiettesServitudes", () => {
             typename: "wfs_sup:assiette_sup_s",
             schema: {
                 $schema: "https://json-schema.org/draft/2020-12/schema",
+                $id: "https://example.test/wfs_sup/assiette_sup_s.json",
                 type: "object",
                 title: "Mock",
                 description: "Mock",

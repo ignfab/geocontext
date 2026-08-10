@@ -66,6 +66,7 @@ describe("Test getParcellaireExpress", () => {
             typename: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:commune",
             schema: {
                 $schema: "https://json-schema.org/draft/2020-12/schema",
+                $id: "https://example.test/CADASTRALPARCELS.PARCELLAIRE_EXPRESS/commune.json",
                 type: "object",
                 title: "Mock",
                 description: "Mock",

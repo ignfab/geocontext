@@ -12,6 +12,7 @@ import { ServiceResponseError } from "../../src/helpers/http";
 
 const communeType: OgcCollectionSchema = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
+  $id: "https://example.test/ADMINEXPRESS-COG.LATEST/commune.json",
   type: "object",
   title: "Commune",
   description: "Test feature type",
@@ -28,6 +29,7 @@ const communeType: OgcCollectionSchema = {
 
 const departementType: OgcCollectionSchema = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
+  $id: "https://example.test/ADMINEXPRESS-COG.LATEST/departement.json",
   type: "object",
   title: "Département",
   description: "Test reference feature type",

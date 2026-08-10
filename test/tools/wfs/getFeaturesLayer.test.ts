@@ -48,6 +48,7 @@ const { default: GpfGetFeaturesLayerTool } = await import(
 
 const communeType: OgcCollectionSchema = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
+  $id: "https://example.test/ADMINEXPRESS-COG.LATEST/commune.json",
   type: "object",
   title: "Commune",
   description: "Fixture de test",
@@ -263,6 +264,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
     // call) is better than handing the LLM an opaque proxy 5xx at map-load.
     const tableType: OgcCollectionSchema = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
+      $id: "https://example.test/INSEE.FILOSOFI.INDICATORS/filosofi_iris_2019.json",
       type: "object",
       title: "Indicateurs Filosofi (table, sans géométrie)",
       description: "Fixture de test : type attributaire sans propriété géométrique",
@@ -363,6 +365,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
     // proxy 5xx at map-load — symmetric with the main typename's geometry check.
     const tableType: OgcCollectionSchema = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
+      $id: "https://example.test/wfs_scot/doc_urba.json",
       type: "object",
       title: "Document d'urbanisme (table, sans géométrie)",
       description: "Fixture de test : type attributaire sans géométrie",

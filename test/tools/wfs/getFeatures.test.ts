@@ -43,6 +43,7 @@ describe("Test GpfGetFeaturesTool", () => {
 
   const polygonFeatureType: OgcCollectionSchema = {
     $schema: "https://json-schema.org/draft/2020-12/schema",
+    $id: "https://example.test/ADMINEXPRESS-COG.LATEST/commune.json",
     type: "object",
     title: "Commune",
     description: "Description de test",
@@ -60,6 +61,7 @@ describe("Test GpfGetFeaturesTool", () => {
 
   const pointFeatureType: OgcCollectionSchema = {
     $schema: "https://json-schema.org/draft/2020-12/schema",
+    $id: "https://example.test/BDTOPO_V3/point_d_acces.json",
     type: "object",
     title: "Point d'acces",
     description: "Description de test",
@@ -75,6 +77,7 @@ describe("Test GpfGetFeaturesTool", () => {
 
   const multipointFeatureType: OgcCollectionSchema = {
     $schema: "https://json-schema.org/draft/2020-12/schema",
+    $id: "https://example.test/CADASTRALPARCELS.PARCELLAIRE_EXPRESS/localisant.json",
     type: "object",
     title: "Localisant",
     description: "Description de test",
@@ -88,6 +91,7 @@ describe("Test GpfGetFeaturesTool", () => {
 
   const tableFeatureType: OgcCollectionSchema = {
     $schema: "https://json-schema.org/draft/2020-12/schema",
+    $id: "https://example.test/wfs_scot/doc_urba.json",
     type: "object",
     title: "Document d'urbanisme",
     description: "Description de test",

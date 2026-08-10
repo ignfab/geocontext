@@ -47,6 +47,7 @@ describe("Test GpfCountFeaturesTool", () => {
 
   const polygonFeatureType: OgcCollectionSchema = {
     $schema: "https://json-schema.org/draft/2020-12/schema",
+    $id: "https://example.test/ADMINEXPRESS-COG.LATEST/commune.json",
     type: "object",
     title: "Commune",
     description: "Description de test",
