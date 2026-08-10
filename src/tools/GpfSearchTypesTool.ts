@@ -106,12 +106,13 @@ class GpfSearchTypesTool extends BaseTool<GpfSearchTypesInput> {
         const message = e instanceof Error ? e.message : String(e);
         return {
           typename: id,
-          description: `${message}. Détails du type introuvable à cause d'une erreur de synchronisation du catalogue : utilise gpf_describe_type pour obtenir plus d'information sur le type.`,
+          title: `Erreur: ${message}`,
+          description: "Détails du type introuvable à cause d'une erreur de synchronisation du catalogue.",
           score,
           queryTerms,
           terms,
           match,
-        }
+        };
       }
     }));
 

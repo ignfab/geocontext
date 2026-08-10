@@ -83,17 +83,15 @@ describe("Test GpfSearchTypesTool", () => {
     expect(parsedContent.results[1]).toMatchObject({
       typename: "ADMINEXPRESS-COG.LATEST:departement",
     });
-    expect(parsedContent.results[1].description).toContain("Synchronization error: catalog out of sync");
-    expect(parsedContent.results[1].description).toContain("gpf_describe_type");
+    expect(parsedContent.results[1].description).toContain("Détails du type introuvable à cause d'une erreur de synchronisation du catalogue.");
+    expect(parsedContent.results[1].title).toContain("Synchronization error");
 
     // Verify structured content matches output schema
-    if (response.structuredContent !== undefined) {
-      expect(
-        validateStructuredContentAgainstOutputSchema(
-          tool.toolDefinition.outputSchema,
-          response.structuredContent,
-        ),
-      ).toBeNull();
-    }
+    expect(
+      validateStructuredContentAgainstOutputSchema(
+        tool.toolDefinition.outputSchema,
+        response.structuredContent,
+      ),
+    ).toBeNull();
   });
 });
