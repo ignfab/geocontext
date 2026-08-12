@@ -23,22 +23,22 @@ import { ServiceResponseError } from "../helpers/http.js";
  * the original afterwards (`rethrowIdentifiedCatalogDesyncError(...); throw error;`).
  *
  * @param error Error thrown by the WFS fetch.
- * @param geometryPropertyName Geometry column forced into the request from the embedded catalog.
+ * @param geometryName Geometry column forced into the request from the embedded catalog.
  * @param typename Layer being queried, for the diagnostic.
  * @throws {Error} A catalog-desync diagnostic when the error matches; otherwise returns.
  */
 export function rethrowIdentifiedCatalogDesyncError(
   error: unknown,
-  geometryPropertyName: string,
+  geometryName: string,
   typename: string,
 ): void {
   if (
     error instanceof ServiceResponseError &&
     error.serviceCode === "InvalidParameterValue" &&
-    error.serviceDetail === `Illegal property name: ${geometryPropertyName}`
+    error.serviceDetail === `Illegal property name: ${geometryName}`
   ) {
     throw new Error(
-      `Le champ géométrique '${geometryPropertyName}' issu du catalogue embarqué est rejeté par le WFS live pour '${typename}'. Le catalogue embarqué est probablement désynchronisé. Détail : ${error.message}`,
+      `Le champ géométrique '${geometryName}' issu du catalogue embarqué est rejeté par le WFS live pour '${typename}'. Le catalogue embarqué est probablement désynchronisé. Détail : ${error.message}`,
     );
   }
 }

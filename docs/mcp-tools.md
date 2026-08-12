@@ -897,9 +897,9 @@ Le paramètre `max_results` permet d'élargir le nombre de candidats retournés 
       "items": {
         "type": "object",
         "properties": {
-          "id": {
+          "typename": {
             "type": "string",
-            "description": "L'identifiant complet du type GPF."
+            "description": "L'identifiant du type GPF."
           },
           "title": {
             "type": "string",
@@ -912,10 +912,29 @@ Le paramètre `max_results` permet d'élargir le nombre de candidats retournés 
           "score": {
             "type": "number",
             "description": "Le score de pertinence de la recherche."
+          },
+          "queryTerms": {
+            "type": "array",
+            "description": "Les termes de la requête qui ont produit ce résultat.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "terms": {
+            "type": "array",
+            "description": "Les termes indexés correspondant à la requête.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "match": {
+            "type": "object",
+            "description": "Détail des correspondances : associe chaque terme indexé aux champs où il a été trouvé.\nChamps possibles :\n- `namespace` : préfixe du type (ex. \"ADMINEXPRESS-COG.LATEST\", \"BDTOPO_V3\")\n- `name` : nom du type (ex. \"commune\", \"departement\")\n- `identifierTokens` : identifiant complet décomposé en mots-clés\n- `title` : titre lisible du type\n- `description` : description détaillée du type\n- `propertyNames` : noms des propriétés disponibles (ex. \"numero\", \"section\", \"code_insee\" pour CADASTRALPARCELS.PARCELLAIRE_EXPRESS:parcelle)\n- `propertyTitles` : titres des propriétés (ex. \"Superficie cadastrale\", \"Code Insee de la commune\", \"Population\" pour BDTOPO_V3:commune)\n- `propertyDescriptions` : descriptions des propriétés (ex. \"Identifiant de l'objet hydrographique.\", \"Précise si le cours d'eau est permanent ou pas.\" pour BDTOPO_V3:cours_d_eau)\n- `oneOfConsts` : valeurs énumérées constantes (ex. \"Agricole\", \"Industriel\", \"Résidentiel\" pour BDTOPO_V3:batiment, propriété usage_1)\n- `oneOfDescriptions` : descriptions des valeurs énumérées (ex. \"Zone de vignes.\", \"Culture de houblon.\" pour BDTOPO_V3:zone_de_vegetation, propriété nature)\n- `representedFeatures` : objets géographiques représentés (ex. \"Piscine découverte\", \"Terrain de rugby\", \"Vélodrome (piste)\" pour BDTOPO_V3:terrain_de_sport)\n- `selectionCriteria` : texte libre décrivant les critères de sélection du type (ex. \"Toutes les emprises de parcs et de réserves naturelles nationales ou régionales sont retenues.\" pour BDTOPO_V3:parc_ou_reserve)",
+            "properties": {}
           }
         },
         "required": [
-          "id",
+          "typename",
           "title",
           "description"
         ]
@@ -948,9 +967,9 @@ Description d’un type GPF
 ### Description du tool
 
 ```
-Renvoie le schéma détaillé d'un type GPF à partir de son identifiant (`typename`) : identifiants, description et liste des propriétés.
+Renvoie le schéma détaillé d'un type GPF à partir de son identifiant (`typename`).
+Ce schéma contient notamment la description du type et un champ `properties` qui détaille, pour chaque propriété, son type, sa description et la liste des ses valeurs possibles (`oneOf`) lorsqu'elle est fixée.
 Utiliser ce tool après `gpf_search_types` pour inspecter les propriétés disponibles avant d'appeler `gpf_get_features`.
-La sortie inclut notamment le type des propriétés, leur description, leurs valeurs possibles (`enum`) lorsqu'elles existent
 **IMPORTANT : Appel fortement recommandé si les noms exacts des propriétés ne sont pas connus : un nom de propriété incorrect provoque une erreur**.
 ```
 
@@ -985,12 +1004,15 @@ La sortie inclut notamment le type des propriétés, leur description, leurs val
 
 | Champ | Type | Requis | Description |
 | --- | --- | --- | --- |
-| `description` | string | oui | La description du type GPF. |
-| `id` | string | oui | L'identifiant complet du type GPF. |
-| `name` | string | oui | Le nom court du type GPF. |
-| `namespace` | string | oui | L'espace de nommage du type GPF. |
-| `properties` | array | oui | La liste des propriétés du type GPF. |
-| `title` | string | oui | Le titre lisible du type GPF. |
+| `$id` | string | oui |   |
+| `$schema` | string | oui |   |
+| `description` | string | oui |   |
+| `required` | array | oui |   |
+| `title` | string | oui |   |
+| `type` | string | oui |   |
+| `x-ign-representedFeatures` | array | non |   |
+| `x-ign-selectionCriteria` | string | non |   |
+| `x-ign-theme` | string | non |   |
 
 <details>
 <summary>Schéma de sortie brut</summary>
@@ -999,74 +1021,48 @@ La sortie inclut notamment le type des propriétés, leur description, leurs val
 {
   "type": "object",
   "properties": {
-    "id": {
-      "type": "string",
-      "description": "L'identifiant complet du type GPF."
+    "$schema": {
+      "type": "string"
     },
-    "namespace": {
+    "$id": {
       "type": "string",
-      "description": "L'espace de nommage du type GPF."
+      "format": "uri"
     },
-    "name": {
-      "type": "string",
-      "description": "Le nom court du type GPF."
+    "type": {
+      "type": "string"
     },
     "title": {
-      "type": "string",
-      "description": "Le titre lisible du type GPF."
+      "type": "string"
+    },
+    "x-ign-theme": {
+      "type": "string"
     },
     "description": {
-      "type": "string",
-      "description": "La description du type GPF."
+      "type": "string"
     },
-    "properties": {
+    "x-ign-selectionCriteria": {
+      "type": "string"
+    },
+    "x-ign-representedFeatures": {
       "type": "array",
-      "description": "La liste des propriétés du type GPF.",
       "items": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "Le nom de la propriété."
-          },
-          "type": {
-            "type": "string",
-            "description": "Le type de la propriété."
-          },
-          "title": {
-            "type": "string",
-            "description": "Le titre lisible de la propriété."
-          },
-          "description": {
-            "type": "string",
-            "description": "La description de la propriété."
-          },
-          "enum": {
-            "type": "array",
-            "description": "Les valeurs possibles de la propriété.",
-            "items": {
-              "type": "string"
-            }
-          },
-          "defaultCrs": {
-            "type": "string",
-            "description": "Le système de coordonnées par défaut si la propriété est géométrique."
-          }
-        },
-        "required": [
-          "name",
-          "type"
-        ]
+        "type": "string"
+      }
+    },
+    "required": {
+      "type": "array",
+      "items": {
+        "type": "string"
       }
     }
   },
   "required": [
-    "id",
-    "namespace",
-    "name",
+    "$schema",
+    "$id",
+    "type",
     "title",
     "description",
-    "properties"
+    "required"
   ]
 }
 ```

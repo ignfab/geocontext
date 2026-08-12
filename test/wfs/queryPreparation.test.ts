@@ -1,26 +1,44 @@
 import { describe, expect, it } from "vitest";
-import type { Collection } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
+import type { GpfFeatureType } from "../../src/wfs/catalog";
 
 import { compileQueryParts, geometryToEwkt } from "../../src/wfs/queryPreparation";
 import type { GpfGetFeaturesInput } from "../../src/wfs/schema";
 
 describe("gpfGetFeatures/queryPreparation", () => {
-  const featureType: Collection = {
-    id: "ADMINEXPRESS-COG.LATEST:commune",
-    namespace: "ADMINEXPRESS-COG.LATEST",
-    name: "commune",
+  const featureType: OgcCollectionSchema = {
+    $schema: "https://json-schema.org/draft/2020-12/schema",
+    $id: "https://example.test/ADMINEXPRESS-COG.LATEST/commune.json",
+    type: "object",
     title: "Commune",
     description: "Description de test",
-    properties: [
-      { name: "code_insee", type: "string" },
-      { name: "nature", type: "string", enum: ["Chapelle", "Eglise"] },
-      { name: "population", type: "integer" },
-      { name: "hauteur", type: "float" },
-      { name: "actif", type: "boolean" },
-      { name: "date_creation", type: "string" },
-      { name: "geometrie", type: "multipolygon", defaultCrs: "EPSG:4326" },
-    ],
+    properties: {
+      code_insee: { type: "string" },
+      nature: {
+        type: "string",
+        oneOf: [
+          { const: "Chapelle", title: "Chapelle" },
+          { const: "Eglise", title: "Eglise" },
+        ],
+      },
+      population: { type: "integer" },
+      hauteur: { type: "number" },
+      actif: { type: "boolean" },
+      date_creation: { type: "string", format: "date" },
+      updated_at: { type: "string", format: "date-time" },
+      geometrie: {
+        format: "geometry-multipolygon",
+        "x-ogc-role": "primary-geometry",
+      },
+    },
+    required: [],
   };
+
+  function asFeatureType(typename: string, schema: OgcCollectionSchema): GpfFeatureType {
+    return { typename, schema };
+  }
+
+  const wrappedFeatureType = asFeatureType("ADMINEXPRESS-COG.LATEST:commune", featureType);
 
   const baseInput: GpfGetFeaturesInput = {
     typename: "ADMINEXPRESS-COG.LATEST:commune",
@@ -36,9 +54,24 @@ describe("gpfGetFeatures/queryPreparation", () => {
         { property: "population", operator: "gt", value: "1000" },
         { property: "actif", operator: "is_null" },
       ],
-    }, featureType);
+    }, wrappedFeatureType);
 
     expect(compiled.cqlFilter).toEqual("code_insee = '94080' AND population > 1000 AND actif IS NULL");
+  });
+
+  it("should compile where clauses with date filters (end-to-end)", () => {
+    const compiled = compileQueryParts({
+      ...baseInput,
+      where: [
+        { property: "code_insee", operator: "eq", value: "75056" },
+        { property: "date_creation", operator: "gte", value: "2020-01-01" },
+        { property: "updated_at", operator: "lt", value: "2026-07-30T12:00:00Z" },
+      ],
+    }, wrappedFeatureType);
+
+    expect(compiled.cqlFilter).toEqual(
+      "code_insee = '75056' AND date_creation >= '2020-01-01' AND updated_at < '2026-07-30T12:00:00Z'"
+    );
   });
 
   it("should compile bbox in lon lat order", () => {
@@ -50,7 +83,7 @@ describe("gpfGetFeatures/queryPreparation", () => {
         east: 2.5,
         north: 48.8,
       },
-    }, featureType);
+    }, wrappedFeatureType);
 
     expect(compiled.cqlFilter).toEqual("BBOX(geometrie,2.4,48.7,2.5,48.8,'EPSG:4326')");
   });
@@ -62,7 +95,7 @@ describe("gpfGetFeatures/queryPreparation", () => {
         lon: 2.3522,
         lat: 48.8566,
       },
-    }, featureType);
+    }, wrappedFeatureType);
 
     const dwithin = compileQueryParts({
       ...baseInput,
@@ -71,7 +104,7 @@ describe("gpfGetFeatures/queryPreparation", () => {
         lat: 48.8566,
         distance_m: 250,
       },
-    }, featureType);
+    }, wrappedFeatureType);
 
     expect(intersects.cqlFilter).toEqual("INTERSECTS(geometrie,SRID=4326;POINT(2.3522 48.8566))");
     expect(dwithin.cqlFilter).toEqual("DWITHIN(geometrie,SRID=4326;POINT(2.3522 48.8566),250,meters)");
@@ -84,7 +117,7 @@ describe("gpfGetFeatures/queryPreparation", () => {
         typename: "ADMINEXPRESS-COG.LATEST:commune",
         feature_id: "commune.1",
       },
-    }, featureType, {
+    }, wrappedFeatureType, {
       geometry_ewkt: "SRID=4326;MULTIPOLYGON(((2 48,2.2 48,2.2 48.2,2 48,2 48)))",
     });
 
@@ -100,7 +133,7 @@ describe("gpfGetFeatures/queryPreparation", () => {
         minutes: 15,
         profile: "pedestrian",
       },
-    }, featureType, {
+    }, wrappedFeatureType, {
       geometry_ewkt: "SRID=4326;POLYGON((2 48,2.2 48,2.2 48.2,2 48))",
     });
 
@@ -111,7 +144,7 @@ describe("gpfGetFeatures/queryPreparation", () => {
     expect(() => compileQueryParts({
       ...baseInput,
       select: ["geometrie"],
-    }, featureType)).toThrow("`select` accepte uniquement");
+    }, wrappedFeatureType)).toThrow("`select` accepte uniquement");
   });
 
   it("should append geometry to propertyName when spatial_extras is set and select is provided", () => {
@@ -119,32 +152,33 @@ describe("gpfGetFeatures/queryPreparation", () => {
       ...baseInput,
       spatial_extras: ["bbox"],
       select: ["code_insee", "population"],
-    }, featureType);
+    }, wrappedFeatureType);
 
     expect(compiled.propertyName).toEqual("code_insee,population,geometrie");
   });
 
-  it("should set geometryProperty when spatial_extras is requested without a spatial filter", () => {
+  it("should set geometryName when spatial_extras is requested without a spatial filter", () => {
     const compiled = compileQueryParts({
       ...baseInput,
       spatial_extras: ["bbox"],
-    }, featureType);
+    }, wrappedFeatureType);
 
-    expect(compiled.geometryProperty).toBeDefined();
-    expect(compiled.geometryProperty?.name).toEqual("geometrie");
+    expect(compiled.geometryName).toBeDefined();
+    expect(compiled.geometryName).toEqual("geometrie");
   });
 
   it("should throw catalog desync error when spatial_extras is requested but the feature type has no geometry property", () => {
-    const nonGeometricFeatureType: Collection = {
+    const { geometrie: _removedGeometry, ...nonGeometricProperties } = featureType.properties;
+    const nonGeometricFeatureType: OgcCollectionSchema = {
       ...featureType,
-      properties: featureType.properties.filter((p) => !p.defaultCrs),
+      properties: nonGeometricProperties,
     };
 
     expect(() => compileQueryParts({
       ...baseInput,
       spatial_extras: ["bbox"],
-    }, nonGeometricFeatureType)).toThrow(
-      `Le type '${nonGeometricFeatureType.id}' n'expose aucune propriété géométrique exploitable dans le catalogue embarqué.`
+    }, asFeatureType("ADMINEXPRESS-COG.LATEST:commune", nonGeometricFeatureType))).toThrow(
+      "Erreur du catalogue embarqué : le type 'ADMINEXPRESS-COG.LATEST:commune' n'expose aucune propriété géométrique exploitable."
     );
   });
 
@@ -155,7 +189,7 @@ describe("gpfGetFeatures/queryPreparation", () => {
         { property: "population", direction: "desc" },
         { property: "code_insee", direction: "asc" },
       ],
-    }, featureType);
+    }, wrappedFeatureType);
 
     expect(compiled.sortBy).toEqual("population D,code_insee A");
   });

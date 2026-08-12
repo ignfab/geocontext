@@ -1,14 +1,23 @@
 import { describe, expect, it } from "vitest";
-import type { CollectionProperty } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionProperty } from "@ignfab/gpf-schema-store";
 
 import { formatScalarValue, normalizeWhereClause } from "../../src/wfs/attributeFilter";
 import type { WhereClause } from "../../src/wfs/schema";
 
 // Minimal catalog properties covering the coercion branches.
-const integerProperty: CollectionProperty = { name: "population", type: "integer" };
-const floatProperty: CollectionProperty = { name: "hauteur", type: "float" };
-const booleanProperty: CollectionProperty = { name: "actif", type: "boolean" };
-const enumProperty: CollectionProperty = { name: "nature", type: "string", enum: ["Chapelle", "Eglise"] };
+const integerProperty: OgcCollectionProperty = { type: "integer" };
+const floatProperty: OgcCollectionProperty = { type: "number" };
+const booleanProperty: OgcCollectionProperty = { type: "boolean" };
+const enumProperty: OgcCollectionProperty = {
+  type: "string",
+  oneOf: [
+    { const: "Chapelle", title: "Chapelle" },
+    { const: "Eglise", title: "Eglise" },
+  ],
+};
+const dateProperty: OgcCollectionProperty = { type: "string", format: "date" };
+const dateTimeProperty: OgcCollectionProperty = { type: "string", format: "date-time" };
+const stringProperty: OgcCollectionProperty = { type: "string" };
 
 describe("attributeFilter/normalizeWhereClause", () => {
   // --- Numeric coercion rejection (regression guard for the empty/hex silent-coercion bug) ---
@@ -82,6 +91,47 @@ describe("attributeFilter/normalizeWhereClause", () => {
   it("rejects ordered operators on a non-numeric, non-date property", () => {
     const clause = { property: "nature", operator: "gt", value: "Eglise" } as WhereClause;
     expect(() => normalizeWhereClause(enumProperty, clause)).toThrow(/numérique ou de date/);
+  });
+
+  // --- Date property recognition and coercion ---
+
+  it("accepts valid dates on a date property with format='date'", () => {
+    const clause = { property: "created_at", operator: "eq", value: "2026-07-30" } as WhereClause;
+    expect(normalizeWhereClause(dateProperty, clause)).toMatchObject({
+      operator: "eq",
+      value: "2026-07-30",
+    });
+  });
+
+  it("accepts valid dates on a date property with format='date-time'", () => {
+    const clause = { property: "updated_at", operator: "gte", value: "2026-07-30T12:00:00Z" } as WhereClause;
+    expect(normalizeWhereClause(dateTimeProperty, clause)).toMatchObject({
+      operator: "gte",
+      value: "2026-07-30T12:00:00Z",
+    });
+  });
+
+  it("accepts ISO 8601 date-time format on a date property", () => {
+    const clause = { property: "timestamp", operator: "lte", value: "2026-12-31T23:59:59" } as WhereClause;
+    expect(normalizeWhereClause(dateProperty, clause)).toMatchObject({
+      operator: "lte",
+      value: "2026-12-31T23:59:59",
+    });
+  });
+
+  it("rejects invalid date strings on a date property", () => {
+    const clause = { property: "created_at", operator: "eq", value: "not-a-date" } as WhereClause;
+    expect(() => normalizeWhereClause(dateProperty, clause)).toThrow(/date sérialisée/);
+  });
+
+  it("rejects malformed dates on a date property with ordered operators", () => {
+    const clause = { property: "created_at", operator: "gt", value: "2026-13-40" } as WhereClause;
+    expect(() => normalizeWhereClause(dateProperty, clause)).toThrow(/date valide/);
+  });
+
+  it("does not treat a string property without date format as a date property", () => {
+    const clause = { property: "name", operator: "gt", value: "2026-07-30" } as WhereClause;
+    expect(() => normalizeWhereClause(stringProperty, clause)).toThrow(/numérique ou de date/);
   });
 
   // --- Clause-shape guards ---

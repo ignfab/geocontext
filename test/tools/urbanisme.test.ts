@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 
 import AssietteSupTool from "../../src/tools/AssietteSupTool";
 import UrbanismeTool from "../../src/tools/UrbanismeTool";
+import { validateStructuredContentAgainstOutputSchema } from "./helpers/outputSchema";
 import { chamonix, mairieLoray } from "../samples";
 
 describe("Test UrbanismeTool",() => {
@@ -103,6 +104,12 @@ describe("Test UrbanismeTool",() => {
             ]),
         });
         expect(payload).toMatchObject(response.structuredContent as Record<string, unknown>);
+        expect(
+            validateStructuredContentAgainstOutputSchema(
+                tool.toolDefinition.outputSchema,
+                response.structuredContent,
+            ),
+        ).toBeNull();
     });
 
     it("should return isError=true for invalid input", async () => {
@@ -237,6 +244,12 @@ describe("Test AssietteSupTool",() => {
             ]),
         });
         expect(payload).toMatchObject(response.structuredContent as Record<string, unknown>);
+        expect(
+            validateStructuredContentAgainstOutputSchema(
+                tool.toolDefinition.outputSchema,
+                response.structuredContent,
+            ),
+        ).toBeNull();
     });
 
     it("should return isError=true for invalid input", async () => {

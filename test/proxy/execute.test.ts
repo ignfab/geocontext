@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import type { Collection } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
+import type { GpfFeatureType } from "../../src/wfs/catalog.js";
 
 import { runGeometryFeatureQuery, runGeometryFeatureByIdQuery, type WfsClientLike, type TravelTimeResolver } from "../../src/proxy/execute";
 import type { CompiledRequest } from "../../src/wfs/request";
@@ -9,29 +10,37 @@ import { ServiceResponseError } from "../../src/helpers/http";
 
 // --- Test catalog ---
 
-const communeType: Collection = {
-  id: "ADMINEXPRESS-COG.LATEST:commune",
-  namespace: "ADMINEXPRESS-COG.LATEST",
-  name: "commune",
+const communeType: OgcCollectionSchema = {
+  $schema: "https://json-schema.org/draft/2020-12/schema",
+  $id: "https://example.test/ADMINEXPRESS-COG.LATEST/commune.json",
+  type: "object",
   title: "Commune",
   description: "Test feature type",
-  properties: [
-    { name: "code_insee", type: "string" },
-    { name: "population", type: "integer" },
-    { name: "geometrie", type: "multipolygon", defaultCrs: "EPSG:4326" },
-  ],
+  properties: {
+    code_insee: { type: "string" },
+    population: { type: "integer" },
+    geometrie: {
+    format: "geometry-multipolygon",
+    "x-ogc-role": "primary-geometry",
+  },
+  },
+  required: [],
 };
 
-const departementType: Collection = {
-  id: "ADMINEXPRESS-COG.LATEST:departement",
-  namespace: "ADMINEXPRESS-COG.LATEST",
-  name: "departement",
+const departementType: OgcCollectionSchema = {
+  $schema: "https://json-schema.org/draft/2020-12/schema",
+  $id: "https://example.test/ADMINEXPRESS-COG.LATEST/departement.json",
+  type: "object",
   title: "Département",
   description: "Test reference feature type",
-  properties: [
-    { name: "code_insee", type: "string" },
-    { name: "geom", type: "multipolygon", defaultCrs: "EPSG:4326" },
-  ],
+  properties: {
+    code_insee: { type: "string" },
+    geom: {
+      format: "geometry-multipolygon",
+      "x-ogc-role": "primary-geometry",
+    },
+  },
+  required: [],
 };
 
 // A feature collection WITH geometry, as the live WFS returns it.
@@ -59,7 +68,7 @@ const baseInput: GpfGetFeaturesInput = {
 
 /** Builds a WfsClientLike double, recording the requests it executes. */
 function makeClient(overrides?: {
-  featureTypes?: Record<string, Collection>;
+  featureTypes?: Record<string, OgcCollectionSchema>;
   responses?: WfsFeatureCollectionResponse[];
 }) {
   const featureTypes = overrides?.featureTypes ?? {
@@ -73,7 +82,10 @@ function makeClient(overrides?: {
     getFeatureType: vi.fn(async (typename: string) => {
       const found = featureTypes[typename];
       if (!found) throw new Error(`unknown typename ${typename}`);
-      return found;
+      return {
+        typename,
+        schema: found,
+      } satisfies GpfFeatureType;
     }),
     fetchFeatureCollection: vi.fn(async (request: CompiledRequest) => {
       requests.push(request);
@@ -267,7 +279,7 @@ describe("proxy/execute · runGeometryFeatureQuery", () => {
     // live WFS that uses a different geom name for this type rejects it. That opaque
     // upstream string must become a clear "catalogue désynchronisé" message.
     const client: WfsClientLike = {
-      getFeatureType: vi.fn(async () => communeType),
+      getFeatureType: vi.fn(async (typename: string) => ({ typename, schema: communeType })),
       fetchFeatureCollection: vi.fn(async () => {
         throw new ServiceResponseError("Illegal property name: geometrie", {
           http: { status: 400, statusText: "Bad Request" },
@@ -287,7 +299,7 @@ describe("proxy/execute · runGeometryFeatureQuery", () => {
       service: { code: "SomethingElse", detail: "not a geometry issue" },
     });
     const client: WfsClientLike = {
-      getFeatureType: vi.fn(async () => communeType),
+      getFeatureType: vi.fn(async (typename: string) => ({ typename, schema: communeType })),
       fetchFeatureCollection: vi.fn(async () => {
         throw upstream;
       }),

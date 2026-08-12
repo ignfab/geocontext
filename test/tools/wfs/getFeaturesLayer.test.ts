@@ -1,6 +1,8 @@
 import { vi, describe, it, expect, afterEach } from "vitest";
 
-import type { Collection } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
+import type { GpfFeatureType } from "../../../src/wfs/catalog.js";
+import { validateStructuredContentAgainstOutputSchema } from "../helpers/outputSchema";
 
 import type { Env } from "../../../src/config/env.js";
 import { decodeToken } from "../../../src/proxy/token.js";
@@ -11,7 +13,11 @@ const SECRET_HEX = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789ab
 const SECRET = Buffer.from(SECRET_HEX, "hex");
 
 const mockGetEnv = vi.fn<() => Env>();
-const mockGetFeatureType = vi.fn<(typename: string) => Promise<Collection>>();
+const mockGetFeatureType = vi.fn<(typename: string) => Promise<GpfFeatureType>>();
+
+function asFeatureType(typename: string, schema: OgcCollectionSchema): GpfFeatureType {
+  return { typename, schema };
+}
 
 vi.doMock("../../../src/config/env.js", async () => {
   const actual = await vi.importActual<typeof import("../../../src/config/env.js")>(
@@ -40,18 +46,22 @@ const { default: GpfGetFeaturesLayerTool } = await import(
   "../../../src/tools/GpfGetFeaturesLayerTool"
 );
 
-const communeType: Collection = {
-  id: "ADMINEXPRESS-COG.LATEST:commune",
-  namespace: "ADMINEXPRESS-COG.LATEST",
-  name: "commune",
+const communeType: OgcCollectionSchema = {
+  $schema: "https://json-schema.org/draft/2020-12/schema",
+  $id: "https://example.test/ADMINEXPRESS-COG.LATEST/commune.json",
+  type: "object",
   title: "Commune",
   description: "Fixture de test",
-  properties: [
-    { name: "code_insee", type: "string" },
-    { name: "nom_officiel", type: "string" },
-    { name: "population", type: "integer" },
-    { name: "geometrie", type: "multipolygon", defaultCrs: "EPSG:4326" },
-  ],
+  properties: {
+    code_insee: { type: "string" },
+    nom_officiel: { type: "string" },
+    population: { type: "integer" },
+    geometrie: {
+      format: "geometry-multipolygon",
+      "x-ogc-role": "primary-geometry",
+    },
+  },
+  required: [],
 };
 
 /**
@@ -104,7 +114,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
     // stdio + a locally-run proxy (secret + base URL set) is a valid dev setup: the
     // tool must produce a URL, proving the gate no longer keys on TRANSPORT_TYPE.
     mockGetEnv.mockReturnValue(makeEnv({ TRANSPORT_TYPE: "stdio" }));
-    mockGetFeatureType.mockResolvedValue(communeType);
+    mockGetFeatureType.mockResolvedValue(asFeatureType("ADMINEXPRESS-COG.LATEST:commune", communeType));
     const tool = new GpfGetFeaturesLayerTool();
 
     const response = await tool.toolCall({
@@ -121,7 +131,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
 
   it("builds an opaque data_url that round-trips back to the tagged query params", async () => {
     mockGetEnv.mockReturnValue(makeEnv({}));
-    mockGetFeatureType.mockResolvedValue(communeType);
+    mockGetFeatureType.mockResolvedValue(asFeatureType("ADMINEXPRESS-COG.LATEST:commune", communeType));
     const tool = new GpfGetFeaturesLayerTool();
 
     const response = await tool.toolCall({
@@ -142,6 +152,12 @@ describe("Test GpfGetFeaturesLayerTool", () => {
     }
     const payload = JSON.parse(textContent.text);
     expect(payload).toEqual(response.structuredContent);
+    expect(
+      validateStructuredContentAgainstOutputSchema(
+        tool.toolDefinition.outputSchema,
+        response.structuredContent,
+      ),
+    ).toBeNull();
 
     const url = new URL(payload.data_url);
     expect(url.pathname.startsWith("/api/v1/proxy/")).toBe(true);
@@ -163,7 +179,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
 
   it("does not build a double slash when the base URL has a trailing slash", async () => {
     mockGetEnv.mockReturnValue(makeEnv({ PROXY_PUBLIC_BASE_URL: "https://proxy.example.test/" }));
-    mockGetFeatureType.mockResolvedValue(communeType);
+    mockGetFeatureType.mockResolvedValue(asFeatureType("ADMINEXPRESS-COG.LATEST:commune", communeType));
     const tool = new GpfGetFeaturesLayerTool();
 
     const response = await tool.toolCall({
@@ -181,7 +197,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
 
   it("preserves an ingress path prefix on the public base URL", async () => {
     mockGetEnv.mockReturnValue(makeEnv({ PROXY_PUBLIC_BASE_URL: "https://example.test/published/proxy" }));
-    mockGetFeatureType.mockResolvedValue(communeType);
+    mockGetFeatureType.mockResolvedValue(asFeatureType("ADMINEXPRESS-COG.LATEST:commune", communeType));
     const tool = new GpfGetFeaturesLayerTool();
 
     const response = await tool.toolCall({
@@ -246,19 +262,20 @@ describe("Test GpfGetFeaturesLayerTool", () => {
     // table). The tool must refuse to mint a data_url because a geometry-less type
     // can never produce a cartographiable layer — failing here (early, at the tool
     // call) is better than handing the LLM an opaque proxy 5xx at map-load.
-    const tableType: Collection = {
-      id: "INSEE.FILOSOFI.INDICATORS:filosofi_iris_2019",
-      namespace: "INSEE.FILOSOFI.INDICATORS",
-      name: "filosofi_iris_2019",
+    const tableType: OgcCollectionSchema = {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      $id: "https://example.test/INSEE.FILOSOFI.INDICATORS/filosofi_iris_2019.json",
+      type: "object",
       title: "Indicateurs Filosofi (table, sans géométrie)",
       description: "Fixture de test : type attributaire sans propriété géométrique",
-      properties: [
-        { name: "code_iris", type: "string" },
-        { name: "men", type: "integer" },
-        { name: "ind_snv", type: "float" },
-      ],
+      properties: {
+        code_iris: { type: "string" },
+        men: { type: "integer" },
+        ind_snv: { type: "number" },
+      },
+      required: [],
     };
-    mockGetFeatureType.mockResolvedValue(tableType);
+    mockGetFeatureType.mockResolvedValue(asFeatureType("wfs_scot:doc_urba", tableType));
     const tool = new GpfGetFeaturesLayerTool();
 
     const response = await tool.toolCall({
@@ -283,7 +300,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
 
   it("rejects an unknown property BEFORE minting the URL (catalog pre-flight)", async () => {
     mockGetEnv.mockReturnValue(makeEnv({}));
-    mockGetFeatureType.mockResolvedValue(communeType);
+    mockGetFeatureType.mockResolvedValue(asFeatureType("ADMINEXPRESS-COG.LATEST:commune", communeType));
     const tool = new GpfGetFeaturesLayerTool();
 
     const response = await tool.toolCall({
@@ -312,7 +329,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
     mockGetEnv.mockReturnValue(makeEnv({}));
     // The target type is known; the reference type in the spatial filter is not.
     mockGetFeatureType.mockImplementation(async (typename: string) => {
-      if (typename === "ADMINEXPRESS-COG.LATEST:commune") return communeType;
+      if (typename === "ADMINEXPRESS-COG.LATEST:commune") return asFeatureType(typename, communeType);
       throw new Error(`FeatureTypeNotFound: ${typename}`);
     });
     const tool = new GpfGetFeaturesLayerTool();
@@ -342,24 +359,25 @@ describe("Test GpfGetFeaturesLayerTool", () => {
 
   it("rejects an intersects_feature reference type that has NO geometry column BEFORE minting (catalog pre-flight)", async () => {
     mockGetEnv.mockReturnValue(makeEnv({}));
-    // Reference type EXISTS but is an attribute-only table (no property carries a
-    // defaultCrs), so the proxy could not resolve a reference geometry from it. The
-    // pre-flight must catch that here (getGeometryProperty), not defer it to an opaque
+    // Reference type EXISTS but is an attribute-only table (no property is geometric),
+    // so the proxy could not resolve a reference geometry from it. The
+    // pre-flight must catch that here (getGeometryName), not defer it to an opaque
     // proxy 5xx at map-load — symmetric with the main typename's geometry check.
-    const tableType: Collection = {
-      id: "wfs_scot:doc_urba",
-      namespace: "wfs_scot",
-      name: "doc_urba",
+    const tableType: OgcCollectionSchema = {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      $id: "https://example.test/wfs_scot/doc_urba.json",
+      type: "object",
       title: "Document d'urbanisme (table, sans géométrie)",
       description: "Fixture de test : type attributaire sans géométrie",
-      properties: [
-        { name: "partition", type: "string" },
-        { name: "idurba", type: "string" },
-      ],
+      properties: {
+        partition: { type: "string" },
+        idurba: { type: "string" },
+      },
+      required: [],
     };
     mockGetFeatureType.mockImplementation(async (typename: string) => {
-      if (typename === "ADMINEXPRESS-COG.LATEST:commune") return communeType;
-      if (typename === "wfs_scot:doc_urba") return tableType;
+      if (typename === "ADMINEXPRESS-COG.LATEST:commune") return asFeatureType(typename, communeType);
+      if (typename === "wfs_scot:doc_urba") return asFeatureType(typename, tableType);
       throw new Error(`FeatureTypeNotFound: ${typename}`);
     });
     const tool = new GpfGetFeaturesLayerTool();
@@ -389,7 +407,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
 
   it("translates an oversized query into a FR proxy-url error", async () => {
     mockGetEnv.mockReturnValue(makeEnv({}));
-    mockGetFeatureType.mockResolvedValue(communeType);
+    mockGetFeatureType.mockResolvedValue(asFeatureType("ADMINEXPRESS-COG.LATEST:commune", communeType));
     const tool = new GpfGetFeaturesLayerTool();
 
     // Many where clauses on a VALID catalog property (so the catalog pre-flight passes)

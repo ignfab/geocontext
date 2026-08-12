@@ -4,7 +4,7 @@
 
 import BaseTool from "./BaseTool.js";
 import { z } from "zod";
-import type { Collection } from "@ignfab/gpf-schema-store";
+import { zOgcCollectionSchema } from "@ignfab/gpf-schema-store";
 
 import { wfsSchemaStore } from "../wfs/catalog.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
@@ -20,27 +20,16 @@ const gpfDescribeTypeInputSchema = z.object({
     .describe("Le nom du type à décrire (de la forme `prefixe:nom`)."),
 }).strict();
 
+// FIXME: when mcp-framework is removed, remove this patch which is only here
+// because mcp-framework does not accept z.record field types.
+const gpfDescribeTypeOutput = zOgcCollectionSchema
+  .omit({ properties: true })
+  .catchall(z.unknown());
+
+
 // --- Types ---
 
 type GpfDescribeTypeInput = z.infer<typeof gpfDescribeTypeInputSchema>;
-
-const gpfPropertySchema = z.object({
-  name: z.string().describe("Le nom de la propriété."),
-  type: z.string().describe("Le type de la propriété."),
-  title: z.string().describe("Le titre lisible de la propriété.").optional(),
-  description: z.string().describe("La description de la propriété.").optional(),
-  enum: z.array(z.string()).describe("Les valeurs possibles de la propriété.").optional(),
-  defaultCrs: z.string().describe("Le système de coordonnées par défaut si la propriété est géométrique.").optional(),
-});
-
-const gpfDescribeTypeOutputSchema = z.object({
-  id: z.string().describe("L'identifiant complet du type GPF."),
-  namespace: z.string().describe("L'espace de nommage du type GPF."),
-  name: z.string().describe("Le nom court du type GPF."),
-  title: z.string().describe("Le titre lisible du type GPF."),
-  description: z.string().describe("La description du type GPF."),
-  properties: z.array(gpfPropertySchema).describe("La liste des propriétés du type GPF."),
-});
 
 // --- Tool ---
 
@@ -49,17 +38,17 @@ class GpfDescribeTypeTool extends BaseTool<GpfDescribeTypeInput> {
   title = "Description d’un type GPF";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
   description = [
-    "Renvoie le schéma détaillé d'un type GPF à partir de son identifiant (`typename`) : identifiants, description et liste des propriétés.",
+    "Renvoie le schéma détaillé d'un type GPF à partir de son identifiant (`typename`).",
+    "Ce schéma contient notamment la description du type et un champ `properties` qui détaille, pour chaque propriété, son type, sa description et la liste des ses valeurs possibles (`oneOf`) lorsqu'elle est fixée.",
     "Utiliser ce tool après `gpf_search_types` pour inspecter les propriétés disponibles avant d'appeler `gpf_get_features`.",
-    "La sortie inclut notamment le type des propriétés, leur description, leurs valeurs possibles (`enum`) lorsqu'elles existent",
     "**IMPORTANT : Appel fortement recommandé si les noms exacts des propriétés ne sont pas connus : un nom de propriété incorrect provoque une erreur**."
   ].join("\n");
-  protected outputSchemaShape = gpfDescribeTypeOutputSchema;
+  protected outputSchemaShape = gpfDescribeTypeOutput;
 
   schema = gpfDescribeTypeInputSchema;
 
   /**
-   * Loads the detailed schema description for one WFS typename.
+   * Loads the detailed schema description for one GPF typename.
    *
    * @param input Normalized tool input.
    * @returns The detailed feature type description from the embedded catalog.
@@ -70,8 +59,8 @@ class GpfDescribeTypeTool extends BaseTool<GpfDescribeTypeInput> {
     });
 
     try {
-      const featureType: Collection = await wfsSchemaStore.getFeatureType(input.typename);
-      return featureType;
+      const featureType = await wfsSchemaStore.getFeatureType(input.typename);
+      return featureType.schema;
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : String(e);
       throw new Error(`${message}. Utiliser gpf_search_types pour trouver un type valide.`);

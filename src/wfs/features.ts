@@ -6,8 +6,6 @@
  * hit counting, and FeatureCollection post-processing.
  */
 
-import type { Collection } from "@ignfab/gpf-schema-store";
-
 import { navigationIsochroneClient } from "../gpf/navigation.js";
 import logger from "../logger.js";
 import { resolveFeatureGeometryEwkt } from "./referenceGeometry.js";
@@ -157,7 +155,7 @@ export async function prepareQueryFeaturesRequest(
   ensureIntersectsFeatureTargetsOtherTypename(input);
   // Get the feature type definition from the embedded catalog to access
   // property definitions and the geometry column name.
-  const featureType: Collection = await wfsClient.getFeatureType(input.typename);
+  const featureType = await wfsClient.getFeatureType(input.typename);
   // Resolve external geometries needed by the selected spatial filter.
   const resolvedGeometryRef = await resolveSpatialFilterGeometry(input);
   // Compile query fragments from the normalized input, feature type, and
@@ -197,8 +195,8 @@ export async function executeQueryFeatures(input: GpfQueryFeaturesInput) {
   } catch (error: unknown) {
     // Rewrite an embedded-catalog geometry-column desync into a clear diagnostic
     // (shared with the proxy path); any other error passes through unchanged.
-    if (compiled.geometryProperty) {
-      rethrowIdentifiedCatalogDesyncError(error, compiled.geometryProperty.name, input.typename);
+    if (compiled.geometryName) {
+      rethrowIdentifiedCatalogDesyncError(error, compiled.geometryName, input.typename);
     }
     throw error;
   }

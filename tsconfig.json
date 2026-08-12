@@ -27,7 +27,13 @@
         // Autorise des imports par défaut même quand le module n’en expose pas vraiment un.
         "allowSyntheticDefaultImports": true,
         // Rend les imports CommonJS/ESM plus compatibles.
-        "esModuleInterop": true
+        "esModuleInterop": true,
+        // Erreur sur les variables/types/imports locaux déclarés mais jamais utilisés.
+        "noUnusedLocals": true,
+        // Erreur sur les paramètres de fonctions déclarés mais jamais utilisés.
+        "noUnusedParameters": true,
+        // Garanties plus strictes.
+        "strict": true
     },
     "include": [
         "./src/**/*"

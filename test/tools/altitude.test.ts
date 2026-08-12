@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 import AltitudeTool from "../../src/tools/AltitudeTool";
+import { validateStructuredContentAgainstOutputSchema } from "./helpers/outputSchema";
 import { paris } from "../samples";
 
 describe("Test AltitudeTool",() => {
@@ -61,6 +62,12 @@ describe("Test AltitudeTool",() => {
             lon: c[0],
             lat: c[1],
         });
+        expect(
+            validateStructuredContentAgainstOutputSchema(
+                tool.toolDefinition.outputSchema,
+                response.structuredContent,
+            ),
+        ).toBeNull();
     });
 
     it("should reject out-of-range coordinates at the tool boundary", async () => {

@@ -7,6 +7,7 @@ import { z } from "zod";
 
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import { wfsSchemaStore } from "../wfs/catalog.js";
+import type { DetailedCollectionSearchMatch } from "../wfs/catalog.js";
 import logger from "../logger.js";
 
 // --- Schema ---
@@ -31,10 +32,28 @@ const gpfSearchTypesInputSchema = z.object({
 type GpfSearchTypesInput = z.infer<typeof gpfSearchTypesInputSchema>;
 
 const gpfSearchTypeResultSchema = z.object({
-  id: z.string().describe("L'identifiant complet du type GPF."),
+  typename: z.string().describe("L'identifiant du type GPF."),
   title: z.string().describe("Le titre lisible du type GPF."),
   description: z.string().describe("La description du type GPF."),
   score: z.number().describe("Le score de pertinence de la recherche.").optional(),
+  queryTerms: z.array(z.string()).optional().describe("Les termes de la requête qui ont produit ce résultat."),
+  terms: z.array(z.string()).optional().describe("Les termes indexés correspondant à la requête."),
+  match: z.object({}).catchall(z.array(z.string())).optional().describe(
+    "Détail des correspondances : associe chaque terme indexé aux champs où il a été trouvé.\n" +
+    "Champs possibles :\n" +
+    "- `namespace` : préfixe du type (ex. \"ADMINEXPRESS-COG.LATEST\", \"BDTOPO_V3\")\n" +
+    "- `name` : nom du type (ex. \"commune\", \"departement\")\n" +
+    "- `identifierTokens` : identifiant complet décomposé en mots-clés\n" +
+    "- `title` : titre lisible du type\n" +
+    "- `description` : description détaillée du type\n" +
+    "- `propertyNames` : noms des propriétés disponibles (ex. \"numero\", \"section\", \"code_insee\" pour CADASTRALPARCELS.PARCELLAIRE_EXPRESS:parcelle)\n" +
+    "- `propertyTitles` : titres des propriétés (ex. \"Superficie cadastrale\", \"Code Insee de la commune\", \"Population\" pour BDTOPO_V3:commune)\n" +
+    "- `propertyDescriptions` : descriptions des propriétés (ex. \"Identifiant de l'objet hydrographique.\", \"Précise si le cours d'eau est permanent ou pas.\" pour BDTOPO_V3:cours_d_eau)\n" +
+    "- `oneOfConsts` : valeurs énumérées constantes (ex. \"Agricole\", \"Industriel\", \"Résidentiel\" pour BDTOPO_V3:batiment, propriété usage_1)\n" +
+    "- `oneOfDescriptions` : descriptions des valeurs énumérées (ex. \"Zone de vignes.\", \"Culture de houblon.\" pour BDTOPO_V3:zone_de_vegetation, propriété nature)\n" +
+    "- `representedFeatures` : objets géographiques représentés (ex. \"Piscine découverte\", \"Terrain de rugby\", \"Vélodrome (piste)\" pour BDTOPO_V3:terrain_de_sport)\n" +
+    "- `selectionCriteria` : texte libre décrivant les critères de sélection du type (ex. \"Toutes les emprises de parcs et de réserves naturelles nationales ou régionales sont retenues.\" pour BDTOPO_V3:parc_ou_reserve)"
+  ),
 });
 
 const gpfSearchTypesOutputSchema = z.object({
@@ -71,13 +90,34 @@ class GpfSearchTypesTool extends BaseTool<GpfSearchTypesInput> {
 
     const maxResults = input.max_results || 10;
     const featureTypes = await wfsSchemaStore.searchFeatureTypesWithScores(input.query, maxResults);
+    const results = await Promise.all(featureTypes.map(async ({ id, score, queryTerms, terms, match }: DetailedCollectionSearchMatch) => {
+      try {
+        const featureType = await wfsSchemaStore.getFeatureType(id);
+        return {
+          typename: id,
+          title: featureType.schema.title,
+          description: featureType.schema.description,
+          score,
+          queryTerms,
+          terms,
+          match,
+        };
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : String(e);
+        return {
+          typename: id,
+          title: `Erreur: ${message}`,
+          description: "Détails du type introuvable à cause d'une erreur de synchronisation du catalogue.",
+          score,
+          queryTerms,
+          terms,
+          match,
+        };
+      }
+    }));
+
     return {
-      results: featureTypes.map(({ collection, score }) => ({
-        id: collection.id,
-        title: collection.title,
-        description: collection.description,
-        ...(score !== undefined ? { score } : {}),
-      })),
+      results,
     };
   }
 }
