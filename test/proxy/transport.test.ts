@@ -113,7 +113,7 @@ describe("proxy/transport · resolveProxyTravelTimeGeometry", () => {
     travel_time_filter: { lon: 2.35, lat: 48.85, minutes: 15, profile: "pedestrian" },
   };
 
-  it("resolves the isochrone through the BOUNDED fetch (PROXY_UPSTREAM_TIMEOUT + PROXY_MAX_RESPONSE_BYTES) and returns EWKT", async () => {
+  it("resolves the isochrone through the BOUNDED fetch (PROXY_UPSTREAM_TIMEOUT + PROXY_MAX_RESPONSE_BYTES)", async () => {
     // The real NavigationIsochroneClient runs; only its fetcher is mocked. This is
     // the regression guard: the travel_time leg must NOT use the unbounded
     // fetchJSONGet (HTTP_TIMEOUT only) — it must go through fetchJSONGetWithLimit
