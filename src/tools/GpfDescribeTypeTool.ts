@@ -7,7 +7,7 @@ import { z } from "zod";
 import { zOgcCollectionSchema } from "@ignfab/gpf-schema-store";
 
 import { wfsSchemaStore } from "../wfs/catalog.js";
-import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
+import { READ_ONLY_CLOSED_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import logger from "../logger.js";
 
 // --- Schema ---
@@ -36,7 +36,7 @@ type GpfDescribeTypeInput = z.infer<typeof gpfDescribeTypeInputSchema>;
 class GpfDescribeTypeTool extends BaseTool<GpfDescribeTypeInput> {
   name = "gpf_describe_type";
   title = "Description d’un type GPF";
-  annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
+  annotations = READ_ONLY_CLOSED_WORLD_TOOL_ANNOTATIONS;
   description = [
     "Renvoie le schéma détaillé d'un type GPF à partir de son identifiant (`typename`).",
     "Ce schéma contient notamment la description du type et un champ `properties` qui détaille, pour chaque propriété, son type, sa description et la liste des ses valeurs possibles (`oneOf`) lorsqu'elle est fixée.",
