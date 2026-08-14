@@ -21,7 +21,6 @@ export const EXPECTED_TOOL_NAMES = [
   "assiette_sup",
   "gpf_search_types",
   "gpf_describe_type",
-  "gpf_describe_type_details",
   "gpf_get_features",
   "gpf_get_feature_by_id",
   "gpf_count_features",
