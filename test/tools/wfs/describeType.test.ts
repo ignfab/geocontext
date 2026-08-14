@@ -101,7 +101,7 @@ describe("Test GpfDescribeTypeTool", () => {
     });
   });
 
-  it("should include a short description cut for non-geometry properties", async () => {
+  it("should include a description for non-geometry properties", async () => {
     const tool = new GpfDescribeTypeTool();
     mockGetFeatureType.mockResolvedValue({ typename: COMMUNE_TYPENAME, schema: communeType });
 
@@ -116,45 +116,10 @@ describe("Test GpfDescribeTypeTool", () => {
 
     expect(response.isError).toBeUndefined();
     const payload = response.structuredContent as {
-      properties: Array<{ name: string; description_cut?: string }>;
+      properties: Array<{ name: string; description?: string }>;
     };
-    const descriptionCut = payload.properties.find((p) => p.name === "code_insee")?.description_cut;
-    expect(descriptionCut).toEqual("Code INSEE officiel de la commune");
-  });
-
-  it("should keep successful output for long descriptions by allowing 103 chars", async () => {
-    const tool = new GpfDescribeTypeTool();
-    mockGetFeatureType.mockResolvedValue({
-      typename: COMMUNE_TYPENAME,
-      schema: {
-        ...communeType,
-        properties: {
-          ...communeType.properties,
-          code_insee: {
-            type: "string",
-            description: "X".repeat(150),
-          },
-        },
-      },
-    });
-
-    const response = await tool.toolCall({
-      params: {
-        name: "gpf_describe_type",
-        arguments: {
-          typename: COMMUNE_TYPENAME,
-        },
-      },
-    });
-
-    expect(response.isError).toBeUndefined();
-    const payload = response.structuredContent as {
-      properties: Array<{ name: string; description_cut?: string }>;
-    };
-    const descriptionCut = payload.properties.find((p) => p.name === "code_insee")?.description_cut;
-    expect(descriptionCut).toBeDefined();
-    expect(descriptionCut?.length).toBe(101);
-    expect(descriptionCut?.endsWith("…")).toBe(true);
+    const description = payload.properties.find((p) => p.name === "code_insee")?.description;
+    expect(description).toEqual("Code INSEE officiel de la commune");
   });
 
   it("should return a payload that validates against its outputSchema", async () => {
@@ -226,5 +191,44 @@ describe("Test GpfDescribeTypeTool", () => {
     expect(response.structuredContent).toMatchObject({
       type: "urn:geocontext:problem:execution-error",
     });
+  });
+
+  it("should select the primary geometry when several geometries exist", async () => {
+    const multiGeometryType: OgcCollectionSchema = {
+      ...communeType,
+      properties: {
+        code_insee: {
+          type: "string",
+          description: "Code INSEE officiel de la commune",
+        },
+        geometrie: {
+          format: "geometry-multipolygon",
+          "x-ogc-role": "primary-geometry",
+        },
+        emprise: {
+          format: "geometry-point",
+        },
+      },
+    };
+
+    const tool = new GpfDescribeTypeTool();
+    mockGetFeatureType.mockResolvedValue({ typename: COMMUNE_TYPENAME, schema: multiGeometryType });
+
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_describe_type",
+        arguments: {
+          typename: COMMUNE_TYPENAME,
+        },
+      },
+    });
+
+    expect(response.isError).toBeUndefined();
+    const payload = response.structuredContent as {
+      geometry_kind?: string;
+      properties: Array<{ name: string }>;
+    };
+    expect(payload.geometry_kind).toEqual("multipolygon");
+    expect(payload.properties.map((p) => p.name)).toEqual(["code_insee"]);
   });
 });

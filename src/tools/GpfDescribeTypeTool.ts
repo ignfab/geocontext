@@ -23,9 +23,9 @@ const gpfDescribeTypeInputSchema = z.object({
 
 const gpfPropertySchema = z.object({
   name: z.string().describe("Le nom de la propriété."),
-  description_cut: z.string().max(101).optional().describe("La description de la propriété, tronquée à 100 caractères (terminaison si troncature : …)."),
+  description: z.string().optional().describe("La description de la propriété."),
   oneOf: z.array(z.string()).optional().describe("La liste des valeurs possibles, si elle existe.")
-})
+});
 
 const ogcGeometryKind = [
   "point",
@@ -43,11 +43,11 @@ const ogcGeometryKind = [
 
 const gpfDescribeTypeOutput = z.object({
   typename: z.string().describe("L'identifiant du type (de la forme `prefixe:nom`)."),
-  url: z.string().url().describe("Le lien vers le schéma complet du type. Pour des recherches simples, gpf_describe_type et gpf_describe_type_details suffisent, ne télécharge le schéma complet que lorsque les résultats ne sont pas satisfaisants."),
+  url: z.string().url().describe("Le lien vers le schéma complet du type. Pour des recherches simples, gpf_describe_type suffit, ne télécharge le schéma complet que lorsque les résultats ne sont pas assez complets pour ta recherche."),
   description: z.string().optional().describe("La description du contenu du type."),
-  geometry_kind: z.enum(ogcGeometryKind).optional().describe("Le type de la géométrie, si elle existe. Cela peut être un type GeoJSON en minuscules, une union comme \"point-or-multipoint\" ou encore \"any\". Ce champ est indéfini lorsque le schéma n'a pas de propriété géométrique.\n Note : si tu as besoin d'une propriété géométrique dans une requête, utilise `spatial_extra` si c'est possible ; sinon, utilise un tool `_layer` pour télécharger la géométrie."),
-  properties: z.array(gpfPropertySchema).describe("La liste des propriétés non géométriques du schéma, avec un début de description. Utilise gpf_describe_type_details pour avoir plus d'information sur des propriétés choisies, incluant la description complète de la propriété, de son type et de ses valeurs possibles."),
-})
+  geometry_kind: z.enum(ogcGeometryKind).optional().describe("Le type de la géométrie, si elle existe. Cela peut être un type GeoJSON en minuscules, une union comme \"point-or-multipoint\" ou encore \"any\". Ce champ est indéfini lorsque le schéma n'a pas de propriété géométrique.\n Note : si tu as besoin d'une propriété géométrique dans une requête, utilise préférentiellement un `spatial_extra` adapté ; rabats-toi sur un tool `_layer` pour faire des calculs géomatiques avancés seulement si nécessaire."),
+  properties: z.array(gpfPropertySchema).describe("La liste des propriétés non géométriques du schéma."),
+});
 
 // --- Types ---
 
@@ -55,13 +55,6 @@ type GpfDescribeTypeInput = z.infer<typeof gpfDescribeTypeInputSchema>;
 type GpfDescribeTypeOutput = z.infer<typeof gpfDescribeTypeOutput>;
 
 // --- Utility ---
-
-function truncateDescription(s: string, len: number) {
-   if (s.length > len) {
-      return s.substring(0, len) + "…";
-   }
-   return s;
-}
 
 function summarizeSchema(featureType: GpfFeatureType) : GpfDescribeTypeOutput {
   const schema = featureType.schema;
@@ -73,10 +66,9 @@ function summarizeSchema(featureType: GpfFeatureType) : GpfDescribeTypeOutput {
     .filter((name: string) => !geometricPropertyNames.includes(name))
     .map((name: string) => {
       const property = schema.properties[name];
-      const description_cut = property.description ? truncateDescription(property.description, 100) : undefined
       return {
         name,
-        description_cut,
+        description: property.description,
         oneOf: property.oneOf?.map((v: OgcCollectionPropertyEnumValue) => v.const),
       };
     });
@@ -85,6 +77,7 @@ function summarizeSchema(featureType: GpfFeatureType) : GpfDescribeTypeOutput {
     typename: featureType.typename,
     url: schema["$id"],
     description: schema.description,
+    // slice(9) below to remove the mandatory starting "geometry-" prefix
     geometry_kind: geometry_kind?.slice(9) as GpfDescribeTypeOutput["geometry_kind"],
     properties: shortProperties,
   };
@@ -99,7 +92,7 @@ class GpfDescribeTypeTool extends BaseTool<GpfDescribeTypeInput> {
   description = [
     "Renvoie un résumé du schéma d'un type GPF à partir de son identifiant (`typename`).",
     "Ce schéma contient notamment la description du type et un champ `properties` qui recense la liste des propriétés avec un début de description et la liste des ses valeurs possibles (`oneOf`) lorsqu'elle est fixée.",
-    "Utiliser ce tool après `gpf_search_types` pour inspecter les propriétés disponibles. Utilise ensuite `gpf_describe_type_details` pour comprendre vraiment ce que signifient les propriétés qui t'intéressent, avant d'appeler `gpf_get_features`.",
+    "Utiliser ce tool après `gpf_search_types` pour inspecter les propriétés disponibles avant d'appeler `gpf_get_features`. Si le résumé ne suffit pas, télécharger le schéma complet via l'`url` renvoyée.",
     "**IMPORTANT : Appel fortement recommandé si les noms exacts des propriétés ne sont pas connus : un nom de propriété incorrect provoque une erreur**."
   ].join("\n");
   protected outputSchemaShape = gpfDescribeTypeOutput;
@@ -121,10 +114,10 @@ class GpfDescribeTypeTool extends BaseTool<GpfDescribeTypeInput> {
   }
 
   /**
-   * Loads the detailed schema description for one GPF typename.
+   * Loads and summarizes the schema description for one GPF typename.
    *
    * @param input Normalized tool input.
-   * @returns The detailed feature type description from the embedded catalog.
+   * @returns The summarized feature type description from the embedded catalog.
    */
   async execute(input: GpfDescribeTypeInput) {
     logger.info(`[tool] execute ${this.name} ...`, {
