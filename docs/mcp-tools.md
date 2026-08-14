@@ -38,17 +38,6 @@ Exemple complet généré automatiquement à partir d'un appel de tool invalide 
 }
 ```
 
-## Annotations MCP
-
-Tous les tools exposent les mêmes annotations MCP dans leur définition `tools/list` :
-
-| Annotation | Valeur | Signification |
-| --- | --- | --- |
-| `readOnlyHint` | oui | Le tool consulte des données sans modifier d'état côté serveur. |
-| `destructiveHint` | non | Le tool n'est pas signalé comme destructif. |
-| `idempotentHint` | oui | Répéter le même appel ne déclenche pas d'effet de bord supplémentaire attendu. |
-| `openWorldHint` | oui | Le tool interroge des sources externes ou ouvertes, dont le contenu peut évoluer. |
-
 ## Liste des tools
 
 - [`geocode`](#geocode)
@@ -64,6 +53,7 @@ Tous les tools exposent les mêmes annotations MCP dans leur définition `tools/
 - [`gpf_count_features`](#gpf_count_features)
 - [`gpf_get_feature_by_id`](#gpf_get_feature_by_id)
 - [`gpf_get_feature_by_id_layer`](#gpf_get_feature_by_id_layer)
+- [`gpf_describe_type_details`](#gpf_describe_type_details)
 
 ## `geocode`
 
@@ -967,9 +957,9 @@ Description d’un type GPF
 ### Description du tool
 
 ```
-Renvoie le schéma détaillé d'un type GPF à partir de son identifiant (`typename`).
-Ce schéma contient notamment la description du type et un champ `properties` qui détaille, pour chaque propriété, son type, sa description et la liste des ses valeurs possibles (`oneOf`) lorsqu'elle est fixée.
-Utiliser ce tool après `gpf_search_types` pour inspecter les propriétés disponibles avant d'appeler `gpf_get_features`.
+Renvoie un résumé du schéma d'un type GPF à partir de son identifiant (`typename`).
+Ce schéma contient notamment la description du type et un champ `properties` qui recense la liste des propriétés avec un début de description et la liste des ses valeurs possibles (`oneOf`) lorsqu'elle est fixée.
+Utiliser ce tool après `gpf_search_types` pour inspecter les propriétés disponibles. Utilise ensuite `gpf_describe_type_details` pour comprendre vraiment ce que signifient les propriétés qui t'intéressent, avant d'appeler `gpf_get_features`.
 **IMPORTANT : Appel fortement recommandé si les noms exacts des propriétés ne sont pas connus : un nom de propriété incorrect provoque une erreur**.
 ```
 
@@ -1004,15 +994,11 @@ Utiliser ce tool après `gpf_search_types` pour inspecter les propriétés dispo
 
 | Champ | Type | Requis | Description |
 | --- | --- | --- | --- |
-| `$id` | string | oui |   |
-| `$schema` | string | oui |   |
-| `description` | string | oui |   |
-| `required` | array | oui |   |
-| `title` | string | oui |   |
-| `type` | string | oui |   |
-| `x-ign-representedFeatures` | array | non |   |
-| `x-ign-selectionCriteria` | string | non |   |
-| `x-ign-theme` | string | non |   |
+| `description` | string | non | La description du contenu du type. |
+| `geometry_kind` | string (enum) | non | Le type de la géométrie, si elle existe. Cela peut être un type GeoJSON en minuscules, une union comme "point-or-multipoint" ou encore "any". Ce champ est indéfini lorsque le schéma n'a pas de propriété géométrique.<br> Note : si tu as besoin d'une propriété géométrique dans une requête, utilise `spatial_extra` si c'est possible ; sinon, utilise un tool `_layer` pour télécharger la géométrie. Valeurs : point, multipoint, point-or-multipoint, linestring, multilinestring, linestring-or-multilinestring, polygon, multipolygon, polygon-or-multipolygon, geometrycollection, any. |
+| `properties` | array | oui | La liste des propriétés non géométriques du schéma, avec un début de description. Utilise gpf_describe_type_details pour avoir plus d'information sur des propriétés choisies, incluant la description complète de la propriété, de son type et de ses valeurs possibles. |
+| `typename` | string | oui | L'identifiant du type (de la forme `prefixe:nom`). |
+| `url` | string | oui | Le lien vers le schéma complet du type. Pour des recherches simples, gpf_describe_type et gpf_describe_type_details suffisent, ne télécharge le schéma complet que lorsque les résultats ne sont pas satisfaisants. |
 
 <details>
 <summary>Schéma de sortie brut</summary>
@@ -1021,48 +1007,69 @@ Utiliser ce tool après `gpf_search_types` pour inspecter les propriétés dispo
 {
   "type": "object",
   "properties": {
-    "$schema": {
-      "type": "string"
-    },
-    "$id": {
+    "typename": {
       "type": "string",
+      "description": "L'identifiant du type (de la forme `prefixe:nom`)."
+    },
+    "url": {
+      "type": "string",
+      "description": "Le lien vers le schéma complet du type. Pour des recherches simples, gpf_describe_type et gpf_describe_type_details suffisent, ne télécharge le schéma complet que lorsque les résultats ne sont pas satisfaisants.",
       "format": "uri"
     },
-    "type": {
-      "type": "string"
-    },
-    "title": {
-      "type": "string"
-    },
-    "x-ign-theme": {
-      "type": "string"
-    },
     "description": {
-      "type": "string"
+      "type": "string",
+      "description": "La description du contenu du type."
     },
-    "x-ign-selectionCriteria": {
-      "type": "string"
+    "geometry_kind": {
+      "type": "string",
+      "description": "Le type de la géométrie, si elle existe. Cela peut être un type GeoJSON en minuscules, une union comme \"point-or-multipoint\" ou encore \"any\". Ce champ est indéfini lorsque le schéma n'a pas de propriété géométrique.\n Note : si tu as besoin d'une propriété géométrique dans une requête, utilise `spatial_extra` si c'est possible ; sinon, utilise un tool `_layer` pour télécharger la géométrie.",
+      "enum": [
+        "point",
+        "multipoint",
+        "point-or-multipoint",
+        "linestring",
+        "multilinestring",
+        "linestring-or-multilinestring",
+        "polygon",
+        "multipolygon",
+        "polygon-or-multipolygon",
+        "geometrycollection",
+        "any"
+      ]
     },
-    "x-ign-representedFeatures": {
+    "properties": {
       "type": "array",
+      "description": "La liste des propriétés non géométriques du schéma, avec un début de description. Utilise gpf_describe_type_details pour avoir plus d'information sur des propriétés choisies, incluant la description complète de la propriété, de son type et de ses valeurs possibles.",
       "items": {
-        "type": "string"
-      }
-    },
-    "required": {
-      "type": "array",
-      "items": {
-        "type": "string"
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Le nom de la propriété."
+          },
+          "description_cut": {
+            "type": "string",
+            "description": "Les 100 premiers caractères de la description de la propriété.",
+            "maxLength": 103
+          },
+          "oneOf": {
+            "type": "array",
+            "description": "La liste des valeurs possibles, si elle existe.",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "name"
+        ]
       }
     }
   },
   "required": [
-    "$schema",
-    "$id",
-    "type",
-    "title",
-    "description",
-    "required"
+    "typename",
+    "url",
+    "properties"
   ]
 }
 ```
@@ -2199,6 +2206,156 @@ Cet outil ne peut renvoyer qu'un unique objet (0 ou plusieurs résultats provoqu
   },
   "required": [
     "data_url"
+  ]
+}
+```
+
+</details>
+
+### Réponse MCP
+
+| Cas | `content` | `structuredContent` | Relation entre `content` et `structuredContent` |
+| --- | --- | --- | --- |
+| Succès | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
+| Erreur | oui | oui | `content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`. |
+
+## `gpf_describe_type_details`
+
+Code Source : [src/tools/GpfDescribeTypeDetailsTool.ts](../src/tools/GpfDescribeTypeDetailsTool.ts)
+
+### Titre
+
+Description des propriétés d’un type GPF
+
+### Description du tool
+
+```
+Renvoie la description complète, le type et la liste des descriptions des valeurs possibles (`oneOf`) de propriétés choisies d'un type GPF.
+Nécessite la liste de propriétés à renvoyer : les noms des propriétés doivent être obtenus par un appel préalable à `gpf_describe_type`.
+Si certaines propriétés disposent de plus de renseignements dans le schéma du type, une indication `extra_detail_fields` mentionne ces champs supplémentaires (y compris ceux des valeurs `oneOf`). Ceux-ci peuvent être demandés avec l'option `extra_details`.
+```
+
+### Schéma d’entrée
+
+| Champ | Type | Requis | Description |
+| --- | --- | --- | --- |
+| `extra_details` | boolean | oui | Si demandé, renvoie la totalité du schéma de référence pour les propriétés demandées (cela peut être volumineux). Sinon, ne renvoie que le nom, le type et la description des propriétés, ainsi que la liste des valeurs possibles (`oneOf`) lorsqu'elle existe et la description de ces valeurs. Valeur par défaut : false. |
+| `select` | array | oui | La liste des propriétés non géométriques sur lesquelles des détails sont requis. |
+| `typename` | string | oui | Le nom du type à décrire (de la forme `prefixe:nom`). |
+
+<details>
+<summary>Schéma d’entrée brut</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "typename": {
+      "type": "string",
+      "description": "Le nom du type à décrire (de la forme `prefixe:nom`).",
+      "minLength": 1
+    },
+    "select": {
+      "type": "array",
+      "description": "La liste des propriétés non géométriques sur lesquelles des détails sont requis.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "extra_details": {
+      "type": "boolean",
+      "description": "Si demandé, renvoie la totalité du schéma de référence pour les propriétés demandées (cela peut être volumineux). Sinon, ne renvoie que le nom, le type et la description des propriétés, ainsi que la liste des valeurs possibles (`oneOf`) lorsqu'elle existe et la description de ces valeurs.",
+      "default": false
+    }
+  },
+  "required": [
+    "typename",
+    "select",
+    "extra_details"
+  ]
+}
+```
+
+</details>
+
+### Schéma de sortie
+
+| Champ | Type | Requis | Description |
+| --- | --- | --- | --- |
+| `properties` | array | oui | La liste des propriétés non géométriques demandées avec leurs détails. |
+| `typename` | string | oui | L'identifiant du type. |
+
+<details>
+<summary>Schéma de sortie brut</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "typename": {
+      "type": "string",
+      "description": "L'identifiant du type."
+    },
+    "properties": {
+      "type": "array",
+      "description": "La liste des propriétés non géométriques demandées avec leurs détails.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Le nom de la propriété."
+          },
+          "description": {
+            "type": "string",
+            "description": "La description de la propriété."
+          },
+          "type": {
+            "type": "string",
+            "description": "Le type de la propriété."
+          },
+          "required": {
+            "type": "boolean",
+            "description": "Indique si la propriété est obligatoirement présente pour tous les objets du type."
+          },
+          "oneOf": {
+            "type": "array",
+            "description": "La liste des valeurs possibles, si elle existe.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "const": {
+                  "type": "string",
+                  "description": "La valeur possible."
+                },
+                "description": {
+                  "type": "string",
+                  "description": "La signification de cette valeur."
+                }
+              },
+              "required": [
+                "const"
+              ]
+            }
+          },
+          "extra_detail_fields": {
+            "type": "array",
+            "description": "La liste des champs supplémentaires disponibles pour cette propriété (ou pour ses valeurs `oneOf`). Ces champs peuvent être demandés via `extra_details`.",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "name",
+          "required"
+        ]
+      }
+    }
+  },
+  "required": [
+    "typename",
+    "properties"
   ]
 }
 ```

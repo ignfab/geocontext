@@ -18,7 +18,7 @@ import type { GpfFeatureType } from "./catalog.js";
  * @param featureType Feature type definition loaded from the embedded catalog.
  * @returns The list of spatial properties.
  */
-function getGeometryProperties(featureType: GpfFeatureType) {
+export function getGeometryProperties(featureType: GpfFeatureType) {
   return Object.entries(featureType.schema.properties).filter(([_key, property]) => {
     // only geometric properties do not have a `type` field
     // (see OGC API Features, /req/schemas/properties A and B)
