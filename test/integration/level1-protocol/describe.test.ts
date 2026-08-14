@@ -9,18 +9,29 @@ import { expectToolCallToThrow } from "../helpers/level1-assertions.js";
 import { INTEGRATION_CONFIG } from "../config/shared.js";
 
 interface DescribeResult {
-  title: string;
+  typename: string;
+  url: string;
   description: string;
-  required: string[];
-  properties: Record<string, {
-    type?: "string" | "boolean" | "integer" | "number";
-    title?: string;
+  geometry_kind?: string;
+  properties: Array<{
+    name: string;
+    description_cut?: string;
+    oneOf?: string[];
+  }>;
+}
+
+interface DescribeDetailsResult {
+  typename: string;
+  properties: Array<{
+    name: string;
+    type?: string;
+    required: boolean;
     description?: string;
     oneOf?: Array<{
       const: string;
-      title: string;
       description?: string;
     }>;
+    extra_detail_fields?: string[];
   }>;
 }
 
@@ -32,11 +43,33 @@ describe("GPF Describe Type (integration)", () => {
       typename: "BDTOPO_V3:batiment",
     });
 
-    expect(result.title).toBe("Bâtiment");
+    expect(result.typename).toBe("BDTOPO_V3:batiment");
+    expect(result.url).toContain("BDTOPO_V3");
     expect(result.properties).toBeDefined();
-    const propNames = Object.keys(result.properties);
-    expect(propNames.length).toBeGreaterThan(0);
-    expect(result.required).toBeDefined();
+    expect(result.properties.length).toBeGreaterThan(0);
+    expect(result.properties[0].name).toBeDefined();
+  }, INTEGRATION_CONFIG.timeout);
+
+  it("should describe selected properties with gpf_describe_type_details", async () => {
+    const summary = await callTool<DescribeResult>(getHandle().client, "gpf_describe_type", {
+      typename: "BDTOPO_V3:batiment",
+    });
+
+    expect(summary.properties.length).toBeGreaterThan(0);
+    const selectedPropertyNames = summary.properties.slice(0, 2).map((property) => property.name);
+
+    const result = await callTool<DescribeDetailsResult>(
+      getHandle().client,
+      "gpf_describe_type_details",
+      {
+        typename: "BDTOPO_V3:batiment",
+        select: selectedPropertyNames,
+      },
+    );
+
+    expect(result.typename).toBe("BDTOPO_V3:batiment");
+    expect(result.properties.length).toBe(selectedPropertyNames.length);
+    expect(result.properties.map((property) => property.name)).toEqual(selectedPropertyNames);
   }, INTEGRATION_CONFIG.timeout);
 
   it("should return an error for empty typename", async () => {
