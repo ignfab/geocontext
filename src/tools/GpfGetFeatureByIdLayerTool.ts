@@ -27,7 +27,7 @@
 
 import BaseTool from "./BaseTool.js";
 
-import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
+import { READ_ONLY_CLOSED_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import { getEnv } from "../config/env.js";
 import { encodeToken } from "../proxy/token.js";
 import { buildDataUrl } from "../proxy/dataUrl.js";
@@ -55,7 +55,7 @@ const GPF_GET_FEATURE_BY_ID_LAYER_TOOL_DESCRIPTION = [
 class GpfGetFeatureByIdLayerTool extends BaseTool<GpfGetFeatureByIdLayerInput> {
   name = "gpf_get_feature_by_id_layer";
   title = "Couche cartographiable d’un objet GPF par identifiant";
-  annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
+  annotations = READ_ONLY_CLOSED_WORLD_TOOL_ANNOTATIONS;
   description = GPF_GET_FEATURE_BY_ID_LAYER_TOOL_DESCRIPTION;
   protected outputSchemaShape = gpfGetFeaturesLayerOutputSchema;
 

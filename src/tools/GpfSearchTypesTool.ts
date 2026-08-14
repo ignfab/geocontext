@@ -5,7 +5,7 @@
 import BaseTool from "./BaseTool.js";
 import { z } from "zod";
 
-import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
+import { READ_ONLY_CLOSED_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import { wfsSchemaStore } from "../wfs/catalog.js";
 import type { DetailedCollectionSearchMatch } from "../wfs/catalog.js";
 import logger from "../logger.js";
@@ -73,7 +73,7 @@ const GPF_SEARCH_TYPES_TOOL_DESCRIPTION = [
 class GpfSearchTypesTool extends BaseTool<GpfSearchTypesInput> {
   name = "gpf_search_types";
   title = "Recherche de types GPF";
-  annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
+  annotations = READ_ONLY_CLOSED_WORLD_TOOL_ANNOTATIONS;
   description = GPF_SEARCH_TYPES_TOOL_DESCRIPTION;
   protected outputSchemaShape = gpfSearchTypesOutputSchema;
 

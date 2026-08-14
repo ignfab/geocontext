@@ -38,17 +38,6 @@ Exemple complet généré automatiquement à partir d'un appel de tool invalide 
 }
 ```
 
-## Annotations MCP
-
-Tous les tools exposent les mêmes annotations MCP dans leur définition `tools/list` :
-
-| Annotation | Valeur | Signification |
-| --- | --- | --- |
-| `readOnlyHint` | oui | Le tool consulte des données sans modifier d'état côté serveur. |
-| `destructiveHint` | non | Le tool n'est pas signalé comme destructif. |
-| `idempotentHint` | oui | Répéter le même appel ne déclenche pas d'effet de bord supplémentaire attendu. |
-| `openWorldHint` | oui | Le tool interroge des sources externes ou ouvertes, dont le contenu peut évoluer. |
-
 ## Liste des tools
 
 - [`geocode`](#geocode)

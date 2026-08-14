@@ -7,7 +7,7 @@ import { z } from "zod";
 import { zOgcCollectionSchema } from "@ignfab/gpf-schema-store";
 
 import { wfsSchemaStore } from "../wfs/catalog.js";
-import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
+import { READ_ONLY_CLOSED_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import logger from "../logger.js";
 
 // --- Schemas ---
@@ -42,7 +42,7 @@ const GPF_DESCRIBE_TYPE_TOOL_DESCRIPTION = [
 class GpfDescribeTypeTool extends BaseTool<GpfDescribeTypeInput> {
   name = "gpf_describe_type";
   title = "Description d’un type GPF";
-  annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
+  annotations = READ_ONLY_CLOSED_WORLD_TOOL_ANNOTATIONS;
   description = GPF_DESCRIBE_TYPE_TOOL_DESCRIPTION;
   protected outputSchemaShape = gpfDescribeTypeOutputSchema;
 
