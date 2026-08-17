@@ -46,7 +46,8 @@ const gpfDescribeTypeOutput = z.object({
   url: z.string().url().describe("Le lien vers le schéma complet du type. Pour des recherches simples, gpf_describe_type suffit, ne télécharge le schéma complet que lorsque les résultats ne sont pas assez complets pour ta recherche."),
   description: z.string().optional().describe("La description du contenu du type."),
   geometry_kind: z.enum(ogcGeometryKind).optional().describe("Le type de la géométrie, si elle existe. Cela peut être un type GeoJSON en minuscules, une union comme \"point-or-multipoint\" ou encore \"any\". Ce champ est indéfini lorsque le schéma n'a pas de propriété géométrique.\n Note : si tu as besoin d'une propriété géométrique dans une requête, utilise préférentiellement un `spatial_extra` adapté ; rabats-toi sur un tool `_layer` pour faire des calculs géomatiques avancés seulement si nécessaire."),
-  properties: z.array(gpfPropertySchema).describe("La liste des propriétés non géométriques du schéma."),
+  properties: z.array(gpfPropertySchema).describe("La liste des propriétés non-géométriques du schéma."),
+  required: z.array(z.string()).describe("La liste des propriétés non-géométriques toujours présentes. Toute propriété qui n'est pas dans cette liste est donc facultative."),
 });
 
 // --- Types ---
@@ -72,6 +73,9 @@ function summarizeSchema(featureType: GpfFeatureType) : GpfDescribeTypeOutput {
         oneOf: property.oneOf?.map((v: OgcCollectionPropertyEnumValue) => v.const),
       };
     });
+  const required = schema.required.filter(
+    (name: string) => !geometricPropertyNames.includes(name),
+  );
 
   return {
     typename: featureType.typename,
@@ -80,6 +84,7 @@ function summarizeSchema(featureType: GpfFeatureType) : GpfDescribeTypeOutput {
     // slice(9) below to remove the mandatory starting "geometry-" prefix
     geometry_kind: geometry_kind?.slice(9) as GpfDescribeTypeOutput["geometry_kind"],
     properties: shortProperties,
+    required,
   };
 }
 

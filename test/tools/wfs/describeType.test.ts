@@ -93,6 +93,7 @@ describe("Test GpfDescribeTypeTool", () => {
       typename: COMMUNE_TYPENAME,
       url: "https://example.test/ADMINEXPRESS-COG.LATEST/commune.json",
       geometry_kind: "multipolygon",
+      required: ["code_insee"],
     });
     expect(parsed.properties).toHaveLength(2);
     expect(parsed.properties.find((p: { name: string }) => p.name === "geometrie")).toBeUndefined();
@@ -209,6 +210,7 @@ describe("Test GpfDescribeTypeTool", () => {
           format: "geometry-point",
         },
       },
+      required: ["code_insee", "geometrie"],
     };
 
     const tool = new GpfDescribeTypeTool();
@@ -227,8 +229,10 @@ describe("Test GpfDescribeTypeTool", () => {
     const payload = response.structuredContent as {
       geometry_kind?: string;
       properties: Array<{ name: string }>;
+      required: string[];
     };
     expect(payload.geometry_kind).toEqual("multipolygon");
     expect(payload.properties.map((p) => p.name)).toEqual(["code_insee"]);
+    expect(payload.required).toEqual(["code_insee"]);
   });
 });
