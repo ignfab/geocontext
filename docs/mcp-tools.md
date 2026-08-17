@@ -996,7 +996,8 @@ Utiliser ce tool après `gpf_search_types` pour inspecter les propriétés dispo
 | --- | --- | --- | --- |
 | `description` | string | non | La description du contenu du type. |
 | `geometry_kind` | string (enum) | non | Le type de la géométrie, si elle existe. Cela peut être un type GeoJSON en minuscules, une union comme "point-or-multipoint" ou encore "any". Ce champ est indéfini lorsque le schéma n'a pas de propriété géométrique. Valeurs : point, multipoint, point-or-multipoint, linestring, multilinestring, linestring-or-multilinestring, polygon, multipolygon, polygon-or-multipolygon, geometrycollection, any. |
-| `properties` | array | oui | La liste des propriétés non géométriques du schéma. |
+| `properties` | array | oui | La liste des propriétés non-géométriques du schéma. |
+| `required` | array | oui | La liste des propriétés non-géométriques toujours présentes. Toute propriété qui n'est pas dans cette liste est donc facultative. |
 | `typename` | string | oui | L'identifiant du type (de la forme `prefixe:nom`). |
 | `url` | string | oui | Le lien vers le schéma complet du type, à ne télécharger que lorsque le résumé fourni par `gpf_describe_type` est insuffisant. |
 
@@ -1039,7 +1040,7 @@ Utiliser ce tool après `gpf_search_types` pour inspecter les propriétés dispo
     },
     "properties": {
       "type": "array",
-      "description": "La liste des propriétés non géométriques du schéma.",
+      "description": "La liste des propriétés non-géométriques du schéma.",
       "items": {
         "type": "object",
         "properties": {
@@ -1063,12 +1064,20 @@ Utiliser ce tool après `gpf_search_types` pour inspecter les propriétés dispo
           "name"
         ]
       }
+    },
+    "required": {
+      "type": "array",
+      "description": "La liste des propriétés non-géométriques toujours présentes. Toute propriété qui n'est pas dans cette liste est donc facultative.",
+      "items": {
+        "type": "string"
+      }
     }
   },
   "required": [
     "typename",
     "url",
-    "properties"
+    "properties",
+    "required"
   ]
 }
 ```
