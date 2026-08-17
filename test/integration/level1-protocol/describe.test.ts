@@ -14,6 +14,7 @@ interface DescribeResult {
   description: string;
   geometry_kind?: string;
   required: string[];
+  selection_criteria?: string;
   properties: Array<{
     name: string;
     description?: string;
@@ -32,6 +33,8 @@ describe("GPF Describe Type (integration)", () => {
     expect(result.typename).toBe("BDTOPO_V3:batiment");
     expect(result.url).toContain("BDTOPO_V3");
     expect(Array.isArray(result.required)).toBe(true);
+    expect(result.selection_criteria).toBeDefined();
+    expect(result.selection_criteria).toMatch(/50 m²/)
     expect(result.properties).toBeDefined();
     expect(result.properties.length).toBeGreaterThan(0);
     expect(result.properties[0].name).toBeDefined();
