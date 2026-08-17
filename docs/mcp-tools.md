@@ -38,17 +38,6 @@ Exemple complet généré automatiquement à partir d'un appel de tool invalide 
 }
 ```
 
-## Annotations MCP
-
-Tous les tools exposent les mêmes annotations MCP dans leur définition `tools/list` :
-
-| Annotation | Valeur | Signification |
-| --- | --- | --- |
-| `readOnlyHint` | oui | Le tool consulte des données sans modifier d'état côté serveur. |
-| `destructiveHint` | non | Le tool n'est pas signalé comme destructif. |
-| `idempotentHint` | oui | Répéter le même appel ne déclenche pas d'effet de bord supplémentaire attendu. |
-| `openWorldHint` | oui | Le tool interroge des sources externes ou ouvertes, dont le contenu peut évoluer. |
-
 ## Liste des tools
 
 - [`geocode`](#geocode)
@@ -967,9 +956,9 @@ Description d’un type GPF
 ### Description du tool
 
 ```
-Renvoie le schéma détaillé d'un type GPF à partir de son identifiant (`typename`).
-Ce schéma contient notamment la description du type et un champ `properties` qui détaille, pour chaque propriété, son type, sa description et la liste des ses valeurs possibles (`oneOf`) lorsqu'elle est fixée.
-Utiliser ce tool après `gpf_search_types` pour inspecter les propriétés disponibles avant d'appeler `gpf_get_features`.
+Renvoie un résumé du schéma d'un type GPF à partir de son identifiant (`typename`).
+Ce schéma contient notamment la description du type et un champ `properties` qui recense la liste des propriétés avec un début de description et la liste des ses valeurs possibles (`oneOf`) lorsqu'elle est fixée.
+Utiliser ce tool après `gpf_search_types` pour inspecter les propriétés disponibles avant d'appeler `gpf_get_features`. Si le résumé ne suffit pas, télécharger le schéma complet via l'`url` renvoyée.
 **IMPORTANT : Appel fortement recommandé si les noms exacts des propriétés ne sont pas connus : un nom de propriété incorrect provoque une erreur**.
 ```
 
@@ -1004,15 +993,11 @@ Utiliser ce tool après `gpf_search_types` pour inspecter les propriétés dispo
 
 | Champ | Type | Requis | Description |
 | --- | --- | --- | --- |
-| `$id` | string | oui |   |
-| `$schema` | string | oui |   |
-| `description` | string | oui |   |
-| `required` | array | oui |   |
-| `title` | string | oui |   |
-| `type` | string | oui |   |
-| `x-ign-representedFeatures` | array | non |   |
-| `x-ign-selectionCriteria` | string | non |   |
-| `x-ign-theme` | string | non |   |
+| `description` | string | non | La description du contenu du type. |
+| `geometry_kind` | string (enum) | non | Le type de la géométrie, si elle existe. Cela peut être un type GeoJSON en minuscules, une union comme "point-or-multipoint" ou encore "any". Ce champ est indéfini lorsque le schéma n'a pas de propriété géométrique.<br> Note : si tu as besoin d'une propriété géométrique dans une requête, utilise préférentiellement un `spatial_extra` adapté ; rabats-toi sur un tool `_layer` pour faire des calculs géomatiques avancés seulement si nécessaire. Valeurs : point, multipoint, point-or-multipoint, linestring, multilinestring, linestring-or-multilinestring, polygon, multipolygon, polygon-or-multipolygon, geometrycollection, any. |
+| `properties` | array | oui | La liste des propriétés non géométriques du schéma. |
+| `typename` | string | oui | L'identifiant du type (de la forme `prefixe:nom`). |
+| `url` | string | oui | Le lien vers le schéma complet du type. Pour des recherches simples, gpf_describe_type suffit, ne télécharge le schéma complet que lorsque les résultats ne sont pas assez complets pour ta recherche. |
 
 <details>
 <summary>Schéma de sortie brut</summary>
@@ -1021,48 +1006,68 @@ Utiliser ce tool après `gpf_search_types` pour inspecter les propriétés dispo
 {
   "type": "object",
   "properties": {
-    "$schema": {
-      "type": "string"
-    },
-    "$id": {
+    "typename": {
       "type": "string",
+      "description": "L'identifiant du type (de la forme `prefixe:nom`)."
+    },
+    "url": {
+      "type": "string",
+      "description": "Le lien vers le schéma complet du type. Pour des recherches simples, gpf_describe_type suffit, ne télécharge le schéma complet que lorsque les résultats ne sont pas assez complets pour ta recherche.",
       "format": "uri"
     },
-    "type": {
-      "type": "string"
-    },
-    "title": {
-      "type": "string"
-    },
-    "x-ign-theme": {
-      "type": "string"
-    },
     "description": {
-      "type": "string"
+      "type": "string",
+      "description": "La description du contenu du type."
     },
-    "x-ign-selectionCriteria": {
-      "type": "string"
+    "geometry_kind": {
+      "type": "string",
+      "description": "Le type de la géométrie, si elle existe. Cela peut être un type GeoJSON en minuscules, une union comme \"point-or-multipoint\" ou encore \"any\". Ce champ est indéfini lorsque le schéma n'a pas de propriété géométrique.\n Note : si tu as besoin d'une propriété géométrique dans une requête, utilise préférentiellement un `spatial_extra` adapté ; rabats-toi sur un tool `_layer` pour faire des calculs géomatiques avancés seulement si nécessaire.",
+      "enum": [
+        "point",
+        "multipoint",
+        "point-or-multipoint",
+        "linestring",
+        "multilinestring",
+        "linestring-or-multilinestring",
+        "polygon",
+        "multipolygon",
+        "polygon-or-multipolygon",
+        "geometrycollection",
+        "any"
+      ]
     },
-    "x-ign-representedFeatures": {
+    "properties": {
       "type": "array",
+      "description": "La liste des propriétés non géométriques du schéma.",
       "items": {
-        "type": "string"
-      }
-    },
-    "required": {
-      "type": "array",
-      "items": {
-        "type": "string"
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Le nom de la propriété."
+          },
+          "description": {
+            "type": "string",
+            "description": "La description de la propriété."
+          },
+          "oneOf": {
+            "type": "array",
+            "description": "La liste des valeurs possibles, si elle existe.",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "name"
+        ]
       }
     }
   },
   "required": [
-    "$schema",
-    "$id",
-    "type",
-    "title",
-    "description",
-    "required"
+    "typename",
+    "url",
+    "properties"
   ]
 }
 ```
