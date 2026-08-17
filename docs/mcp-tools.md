@@ -998,6 +998,7 @@ Utiliser ce tool après `gpf_search_types` pour inspecter les propriétés dispo
 | `geometry_kind` | string (enum) | non | Le type de la géométrie, si elle existe. Cela peut être un type GeoJSON en minuscules, une union comme "point-or-multipoint" ou encore "any". Ce champ est indéfini lorsque le schéma n'a pas de propriété géométrique. Valeurs : point, multipoint, point-or-multipoint, linestring, multilinestring, linestring-or-multilinestring, polygon, multipolygon, polygon-or-multipolygon, geometrycollection, any. |
 | `properties` | array | oui | La liste des propriétés non-géométriques du schéma. |
 | `required` | array | oui | La liste des propriétés non-géométriques toujours présentes. Toute propriété qui n'est pas dans cette liste est donc facultative. |
+| `selection_criteria` | string | non | Les critères de sélection des objets enregistrés dans ce type. |
 | `typename` | string | oui | L'identifiant du type (de la forme `prefixe:nom`). |
 | `url` | string | oui | Le lien vers le schéma complet du type, à ne télécharger que lorsque le résumé fourni par `gpf_describe_type` est insuffisant. |
 
@@ -1071,6 +1072,10 @@ Utiliser ce tool après `gpf_search_types` pour inspecter les propriétés dispo
       "items": {
         "type": "string"
       }
+    },
+    "selection_criteria": {
+      "type": "string",
+      "description": "Les critères de sélection des objets enregistrés dans ce type."
     }
   },
   "required": [
