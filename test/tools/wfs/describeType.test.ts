@@ -50,6 +50,7 @@ describe("Test GpfDescribeTypeTool", () => {
       },
     },
     required: ["code_insee"],
+    "x-ign-selectionCriteria": "Code INSEE officiel non vide",
   };
 
   afterEach(() => {
@@ -94,6 +95,7 @@ describe("Test GpfDescribeTypeTool", () => {
       url: "https://example.test/ADMINEXPRESS-COG.LATEST/commune.json",
       geometry_kind: "multipolygon",
       required: ["code_insee"],
+      selection_criteria: "Code INSEE officiel non vide",
     });
     expect(parsed.properties).toHaveLength(2);
     expect(parsed.properties.find((p: { name: string }) => p.name === "geometrie")).toBeUndefined();
@@ -121,6 +123,27 @@ describe("Test GpfDescribeTypeTool", () => {
     };
     const description = payload.properties.find((p) => p.name === "code_insee")?.description;
     expect(description).toEqual("Code INSEE officiel de la commune");
+  });
+
+  it("should omit selection_criteria when not provided by the schema", async () => {
+    const tool = new GpfDescribeTypeTool();
+    const { ["x-ign-selectionCriteria"]: _ignored, ...schemaWithoutCriteria } = communeType;
+    mockGetFeatureType.mockResolvedValue({ typename: COMMUNE_TYPENAME, schema: schemaWithoutCriteria });
+
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_describe_type",
+        arguments: {
+          typename: COMMUNE_TYPENAME,
+        },
+      },
+    });
+
+    expect(response.isError).toBeUndefined();
+    const payload = response.structuredContent as {
+      selection_criteria?: string;
+    };
+    expect(payload.selection_criteria).toBeUndefined();
   });
 
   it("should return a payload that validates against its outputSchema", async () => {
