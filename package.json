@@ -59,11 +59,11 @@
     "@turf/bbox": "^7.3.5",
     "@turf/centroid": "^7.3.5",
     "@turf/helpers": "^7.3.5",
+    "@turf/midpoint": "^7.4.0",
     "jsts": "^2.12.1",
     "mcp-framework": "^0.2.22",
     "node-fetch": "^3.3.2",
     "node-vincenty": "^0.0.6",
-    "rbush": "^4.0.1",
     "winston": "^3.19.0",
     "zod": "^3.25.76"
   },
