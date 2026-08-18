@@ -152,6 +152,65 @@ describe("distance helper", () => {
       expectZeroBothWays(gcA, gcB, "intersecting geometry collections");
     });
 
+    // Zero distance is settled in two steps: an indexed pass over the
+    // boundaries, then a point-in-area test per component for the strict
+    // containment the boundaries cannot show. These cases pin both outcomes of
+    // that second step.
+    it("returns zero for a polygon strictly inside another polygon", () => {
+      const outer: Polygon = { type: "Polygon", coordinates: [[[0, 0], [10, 0], [10, 10], [0, 10], [0, 0]]] };
+      const inner: Polygon = { type: "Polygon", coordinates: [[[4, 4], [6, 4], [6, 6], [4, 6], [4, 4]]] };
+      expectZeroBothWays(inner, outer, "polygon strictly inside a polygon");
+    });
+
+    it("returns zero for a line strictly inside a polygon", () => {
+      const polygon: Polygon = { type: "Polygon", coordinates: [[[0, 0], [10, 0], [10, 10], [0, 10], [0, 0]]] };
+      const line: LineString = { type: "LineString", coordinates: [[4, 4], [6, 6]] };
+      expectZeroBothWays(line, polygon, "line strictly inside a polygon");
+    });
+
+    it("returns zero when only one part of a MultiPolygon is inside", () => {
+      const outer: Polygon = { type: "Polygon", coordinates: [[[0, 0], [10, 0], [10, 10], [0, 10], [0, 0]]] };
+      const parts: MultiPolygon = {
+        type: "MultiPolygon",
+        coordinates: [
+          [[[4, 4], [6, 4], [6, 6], [4, 6], [4, 4]]],         // inside
+          [[[40, 40], [41, 40], [41, 41], [40, 41], [40, 40]]], // far outside
+        ],
+      };
+      expectZeroBothWays(parts, outer, "one MultiPolygon part inside");
+    });
+
+    it("returns positive for a polygon sitting in another polygon's hole", () => {
+      const ringWithHole: Polygon = {
+        type: "Polygon",
+        coordinates: [
+          [[0, 0], [10, 0], [10, 10], [0, 10], [0, 0]],
+          [[3, 3], [7, 3], [7, 7], [3, 7], [3, 3]],
+        ],
+      };
+      const inHole: Polygon = { type: "Polygon", coordinates: [[[4, 4], [6, 4], [6, 6], [4, 6], [4, 4]]] };
+      const d = ensureSymmetricDistance(inHole, ringWithHole, "polygon in a hole");
+      // Nearest is the 1 degree gap from the square's edge to the hole's wall.
+      expect(d).toBeGreaterThan(0);
+      expectCloseRatio(d, haversine([6, 6], [7, 6]), 0.01, "polygon in a hole");
+    });
+
+    it("returns positive for a square parked in a C-shape's notch", () => {
+      // The C-shape's bounding box swallows the square's whole bounding box, so
+      // the envelope shortcut cannot rule out an intersection and the
+      // containment test has to answer "not contained" on its own. At
+      // y in (1, 3) the C-shape's interior is only x in (0, 1).
+      const cShape: Polygon = {
+        type: "Polygon",
+        coordinates: [[[0, 0], [10, 0], [10, 1], [1, 1], [1, 3], [10, 3], [10, 4], [0, 4], [0, 0]]],
+      };
+      const inNotch: Polygon = { type: "Polygon", coordinates: [[[2, 1.2], [9, 1.2], [9, 2.8], [2, 2.8], [2, 1.2]]] };
+      const d = ensureSymmetricDistance(inNotch, cShape, "square in a C-shape notch");
+      expect(d).toBeGreaterThan(0);
+      // Nearest is the 0.2 degree gap down to the C-shape's y = 1 edge.
+      expectCloseRatio(d, haversine([5, 1], [5, 1.2]), 0.01, "square in a C-shape notch");
+    });
+
     it("does not misclassify outside point for polygon with duplicate vertex", () => {
       const polygonWithDuplicateVertex: Polygon = {
         type: "Polygon",
@@ -166,11 +225,26 @@ describe("distance helper", () => {
 
   describe("antimeridian and poles", () => {
     // Antimeridian-crossing geometries are rejected by design (RFC 7946 SHOULD split them).
-    const capVertexCount = 36;
-    const ring = Array.from({ length: capVertexCount }, (_, i) =>
-      [-180 + (i * 360) / capVertexCount, 80] as [number, number],
-    );
-    ring.push(ring[0]);
+    //
+    // The rejection is load-bearing, not merely conservative. Two steps of the
+    // pipeline read raw lon/lat degrees as a plane: the zero-distance test
+    // (`RelateOp.intersects`) and the equirectangular seed. A ring with a
+    // |Δlon| > 180° edge is a different shape in that plane — it wraps the long
+    // way round the globe — so both steps answer about the wrong geometry:
+    //   - containment goes undetected, because the planar interior is the
+    //     complement of the intended one (a point inside a 170°..190° polygon
+    //     is reported ~220 km away from it instead of at distance 0),
+    //   - worse, the planar phantom of a crossing LineString sweeps the
+    //     hemisphere it never visits, so `intersects` fires against unrelated
+    //     geometry: a 165°..-174.5° line is reported as intersecting a box at
+    //     lon 23°..28°, i.e. distance 0 instead of ~13 000 km.
+    // Only the azimuthal refinement is antimeridian-safe, since it projects each
+    // vertex spherically; it cannot rescue either step above.
+    const polarRing = (lat: number, sign = 1) => {
+      const ring = Array.from({ length: 36 }, (_, i) => [sign * (-180 + (i * 360) / 36), lat] as [number, number]);
+      ring.push(ring[0]);
+      return ring;
+    };
 
     it.each([
       {
@@ -183,27 +257,98 @@ describe("distance helper", () => {
             [[175, 3], [175, 7], [178, 7], [178, 3], [175, 3]],
           ],
         } as Geometry,
-        error: /RFC 7946/,
       },
       {
         name: "throws for a polar-cap polygon whose closing edge spans > 180° of longitude",
         g1: { type: "Point", coordinates: [0, 85] } as Geometry,
-        g2: { type: "Polygon", coordinates: [ring] } as Geometry,
-        error: /RFC 7946/,
+        g2: { type: "Polygon", coordinates: [polarRing(80)] } as Geometry,
       },
       {
-        name: "throws for a pair of individually valid geometries facing each other across the antimeridian",
-        g1: {
-          type: "Polygon",
-          coordinates: [[[179.8, -0.1], [179.9, -0.1], [179.9, 0.1], [179.8, 0.1], [179.8, -0.1]]],
-        } as Geometry,
+        name: "throws for a south polar cap",
+        g1: { type: "Point", coordinates: [0, -85] } as Geometry,
+        g2: { type: "Polygon", coordinates: [polarRing(-80)] } as Geometry,
+      },
+      {
+        // Both rings encircle a pole, so both carry a > 180° closing edge. The
+        // guard has to walk holes, not just shells.
+        name: "throws for a polar annulus whose shell and hole both encircle the pole",
+        g1: { type: "Point", coordinates: [0, 80] } as Geometry,
+        g2: { type: "Polygon", coordinates: [polarRing(70), polarRing(85, -1)] } as Geometry,
+      },
+      {
+        // Shell stays east of the antimeridian; only the hole crosses it.
+        name: "throws for a polygon whose hole alone crosses the antimeridian",
+        g1: { type: "Point", coordinates: [0, 0] } as Geometry,
         g2: {
           type: "Polygon",
-          coordinates: [[[-179.9, -0.1], [-179.8, -0.1], [-179.8, 0.1], [-179.9, 0.1], [-179.9, -0.1]]],
+          coordinates: [
+            [[160, -10], [160, 20], [170, 20], [170, -10], [160, -10]],
+            [[175, 0], [175, 10], [-175, 10], [-175, 0], [175, 0]],
+          ],
         } as Geometry,
-        error: /Antimeridian-adjacent/,
       },
-    ])("$name", ({ g1, g2, error }) => expectThrowBothWays(g1, g2, error));
+      {
+        name: "throws when only one MultiPolygon part crosses the antimeridian",
+        g1: { type: "Point", coordinates: [50, 50] } as Geometry,
+        g2: {
+          type: "MultiPolygon",
+          coordinates: [
+            [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]],
+            [[[170, 0], [170, 10], [-170, 10], [-170, 0], [170, 0]]],
+          ],
+        } as Geometry,
+      },
+      {
+        name: "throws when only one MultiLineString member crosses the antimeridian",
+        g1: { type: "Point", coordinates: [50, 50] } as Geometry,
+        g2: { type: "MultiLineString", coordinates: [[[0, 0], [1, 1]], [[170, 5], [-170, 5]]] } as Geometry,
+      },
+      {
+        name: "throws when a GeometryCollection member crosses the antimeridian",
+        g1: { type: "Point", coordinates: [50, 50] } as Geometry,
+        g2: {
+          type: "GeometryCollection",
+          geometries: [
+            { type: "Point", coordinates: [0, 0] },
+            { type: "LineString", coordinates: [[170, 5], [-170, 5]] },
+          ],
+        } as Geometry,
+      },
+    ])("$name", ({ g1, g2 }) => expectThrowBothWays(g1, g2, /RFC 7946/));
+
+    // The guard triggers on |Δlon| > 180°, so a half-globe edge is still legal
+    // and must not be swept up with the crossing ones.
+    it("accepts an edge spanning exactly 180° of longitude", () => {
+      const line: Geometry = { type: "LineString", coordinates: [[-90, 10], [90, 10]] };
+      const point: Geometry = { type: "Point", coordinates: [0, 0] };
+      // Edges interpolate linearly in lon/lat, so the line passes through [0,10].
+      expectCloseRatio(
+        ensureSymmetricDistance(point, line, "exactly 180 degrees of longitude"),
+        haversine([0, 0], [0, 10]),
+        0.001,
+        "exactly 180 degrees of longitude",
+      );
+    });
+
+    // The following case used to expect an error, but the new implementation
+    // supports antimeridian-adjacent geometries. Test it as a normal symmetric
+    // distance case instead.
+    it("accepts a pair of individually valid geometries facing each other across the antimeridian", () => {
+      const g1: Geometry = {
+        type: "Polygon",
+        coordinates: [[[179.8, -0.1], [179.9, -0.1], [179.9, 0.1], [179.8, 0.1], [179.8, -0.1]]],
+      } as Geometry;
+      const g2: Geometry = {
+        type: "Polygon",
+        coordinates: [[[-179.9, -0.1], [-179.8, -0.1], [-179.8, 0.1], [-179.9, 0.1], [-179.9, -0.1]]],
+      } as Geometry;
+      const d = ensureSymmetricDistance(g1, g2, "antimeridian-adjacent polygons");
+      // Expected distance ~ haversine between 179.9 and -179.9 at equator (~22.3 km).
+      const expected = Math.round(haversine([179.9, 0], [-179.9, 0]) * 100) / 100;
+      // Check to the nearest decade of kilometers (±10 km) and sanity bounds.
+      expect(Math.abs(d - expected), "antimeridian distance close to expected").toBeLessThanOrEqual(100);
+      expect(Math.abs(22_300 - expected), "antimeridian distance close to expected").toBeLessThanOrEqual(100);
+    });
   });
 
   describe("antimeridian-safe Multi* geometries (RFC 7946 conforming)", () => {
@@ -497,7 +642,10 @@ describe("distance helper", () => {
       },
     ])("$name", ({ g1, g2 }) => expectThrowBothWays(g1, g2, /RFC 7946/));
 
-    it("does not follow a naive s1/s2 result", () => {
+    // Two long sub-antarctic lines. Read as a plane of raw degrees they look
+    // ~2 440 km apart; the true nearest pair is ~986 km, on the far end of the
+    // first line. Pins that the search is not fooled by degree-space geometry.
+    it("picks the true nearest pair on two long sub-antarctic lines", () => {
       const s1: Geometry = {
         type: "LineString",
         coordinates: [
@@ -514,30 +662,36 @@ describe("distance helper", () => {
       };
 
       const result = distance(s1, s2);
-      const d = ensureSymmetricDistance(s1, s2, "s1/s2 distance");
-      expectCloseRatio(d, 986_440, 0.005, "s1/s2 distance");
+      const d = ensureSymmetricDistance(s1, s2, "long sub-antarctic lines");
+      expectCloseRatio(d, 986_440, 0.005, "long sub-antarctic lines");
       expect(d).toBeLessThan(2_440_829.44);
-      expectCloseRatio(result.point1[0], -85.7, 0.02, "s1/s2 point1 lon");
-      expectCloseRatio(result.point1[1], -66.77, 0.02, "s1/s2 point1 lat");
-      expectCloseRatio(result.point2[0], -86.16447630165361, 0.001, "s1/s2 point2 lon");
-      expectCloseRatio(result.point2[1], -57.89895966720661, 0.001, "s1/s2 point2 lat");
+      expectCloseRatio(result.point1[0], -85.7, 0.02, "long sub-antarctic lines point1 lon");
+      expectCloseRatio(result.point1[1], -66.77, 0.02, "long sub-antarctic lines point1 lat");
+      expectCloseRatio(result.point2[0], -86.16447630165361, 0.001, "long sub-antarctic lines point2 lon");
+      expectCloseRatio(result.point2[1], -57.89895966720661, 0.001, "long sub-antarctic lines point2 lat");
     });
 
-    it("finds nearest edge with Vincenty when lower bounds use haversine METERS_PER_DEGREE", () => {
-      const p: Geometry = { type: "Point", coordinates: [0, 0] };
-      const b: Geometry = {
-        type: "MultiLineString",
+    // Both edges span tens of degrees, so the linear lon/lat path they stand
+    // for and the geodesic the azimuthal plane refines along separate enough
+    // that the refinement's candidate pair drifts hundreds of km off the real
+    // edges (see the loop in `distance` for why that guard exists at all).
+    // Caught here as a thrown error rather than a silently wrong distance.
+    it("throws instead of returning a wrong distance for two very long, far-apart lines", () => {
+      const a: Geometry = {
+        type: "LineString",
         coordinates: [
-          [[0.9963, -1], [0.9963, 1]],  // planar seed ~110907 m, lon-edge
-          [[-1, 1.0], [1, 1.0]],        // true nearest ~110574 m, lat-edge
+          [73.95631313323975, 38.032363414764404],
+          [41.048042762817566, -35.91032814939557],
         ],
       };
-      expectCloseRatio(
-        ensureSymmetricDistance(p, b, "Vincenty avoids over-pruning lat bounds", "vincenty"),
-        110574.39,
-        0.001,
-        "Vincenty avoids over-pruning lat bounds",
-      );
+      const b: Geometry = {
+        type: "LineString",
+        coordinates: [
+          [-33.47427845001221, 15.573780059814453],
+          [-38.53770555856234, -89],
+        ],
+      };
+      expectThrowBothWays(a, b, /Convergence error/);
     });
 
     it("regresses the concrete RBush false-pruning case with a poleward nearest edge", () => {
@@ -597,8 +751,67 @@ describe("distance helper", () => {
     });
   });
 
+  // Candidate edges have to be ranked in the same metric the answer is
+  // reported in. The planar searches inside the helper run in a projection, and
+  // if that projection carries a sphere's local scale while the caller asked
+  // for Vincenty, an edge that is genuinely nearer on WGS84 loses to one that
+  // is only nearer on a sphere. The pairs below sit inside the narrow window
+  // where the two metrics disagree, so each one fails if the projection and the
+  // metric ever drift apart again.
+  describe("ranks candidate edges in the requested metric", () => {
+    // A meridian edge dLon away, and a parallel edge 1 degree north. Ranking
+    // them one way or the other is exactly the sphere/WGS84 disagreement:
+    // - a sphere prefers the meridian edge while dLon < 1 / cos(lat),
+    // - WGS84 prefers the parallel edge once dLon > M / (N cos(lat)),
+    // and M / N < 1 always, so every dLon in between is ranked differently by
+    // the two metrics. Each dLon here is the midpoint of that window.
+    const cases = [
+      { lat: 0, dLon: 0.996653 },  // window (0.993306, 1.000000)
+      { lat: 45, dLon: 1.411839 }, // window (1.409464, 1.414214)
+      { lat: 60, dLon: 1.998318 }, // window (1.996636, 2.000000)
+    ];
+
+    it.each(cases)("prefers the parallel edge under Vincenty at lat $lat", ({ lat, dLon }) => {
+      const p: Geometry = { type: "Point", coordinates: [0, lat] };
+      const edges: Geometry = {
+        type: "MultiLineString",
+        coordinates: [
+          [[dLon, lat - 1], [dLon, lat + 1]],   // meridian edge: nearer on a sphere
+          [[-dLon, lat + 1], [dLon, lat + 1]],  // parallel edge: nearer on WGS84
+        ],
+      };
+      const parallelEdge = distanceVincenty([0, lat], [0, lat + 1]);
+      const meridianEdge = distanceVincenty([0, lat], [dLon, lat]);
+      expect(parallelEdge, `lat ${lat}: the case only bites if WGS84 prefers the parallel edge`).toBeLessThan(meridianEdge);
+
+      const d = ensureSymmetricDistance(p, edges, `Vincenty edge ranking at lat ${lat}`, "vincenty");
+      expect(d, `lat ${lat}: expected the parallel edge at ~${parallelEdge.toFixed(2)}, got ${d}`).toBeCloseTo(parallelEdge, 1);
+    });
+
+    it.each(cases)("prefers the meridian edge under haversine at lat $lat", ({ lat, dLon }) => {
+      const p: Geometry = { type: "Point", coordinates: [0, lat] };
+      const edges: Geometry = {
+        type: "MultiLineString",
+        coordinates: [
+          [[dLon, lat - 1], [dLon, lat + 1]],
+          [[-dLon, lat + 1], [dLon, lat + 1]],
+        ],
+      };
+      const parallelEdge = haversine([0, lat], [0, lat + 1]);
+      const meridianEdge = haversine([0, lat], [dLon, lat]);
+      expect(meridianEdge, `lat ${lat}: on a sphere the meridian edge must be the nearer one`).toBeLessThan(parallelEdge);
+
+      // The mirror of the test above: the fix has to follow the requested
+      // metric, not hardcode the ellipsoid. A geodesic ranking here would
+      // return the parallel edge instead.
+      const d = ensureSymmetricDistance(p, edges, `haversine edge ranking at lat ${lat}`, "haversine");
+      expect(d, `lat ${lat}: expected the meridian edge at ~${meridianEdge.toFixed(2)}, got ${d}`).toBeLessThan(parallelEdge);
+      expectCloseRatio(d, meridianEdge, 0.001, `haversine edge ranking at lat ${lat}`);
+    });
+  });
+
   describe("performance sanity", () => {
-    it("resolves two disjoint 500-vertex polygons in under a second", () => {
+    it("resolves two disjoint 500-vertex polygons in under 10 millisecond", () => {
       const circle = (centerLon: number, centerLat: number, radiusDeg: number, n: number): Geometry => ({
         type: "Polygon",
         coordinates: [
@@ -617,10 +830,10 @@ describe("distance helper", () => {
       const elapsedMs = performance.now() - start;
 
       expect(result.distance).toBeGreaterThan(0);
-      expect(elapsedMs).toBeLessThan(1_000);
+      expect(elapsedMs).toBeLessThan(10);
     });
 
-    it("resolves two nearby irregular ~5000-vertex polygons in under a second", () => {
+    it("resolves two nearby irregular ~10000-vertex polygons in under a second", () => {
       const blob = (centerLon: number, centerLat: number, radiusDeg: number, n: number, seed: number): Geometry => ({
         type: "Polygon",
         coordinates: [
@@ -632,8 +845,8 @@ describe("distance helper", () => {
         ],
       });
 
-      const a = blob(2.0, 48.0, 0.5, 5000, 1);
-      const b = blob(4.0, 48.3, 0.5, 5000, 2);
+      const a = blob(2.0, 48.0, 0.5, 10000, 1);
+      const b = blob(4.0, 48.3, 0.5, 10000, 2);
 
       const start = performance.now();
       const result = distance(a, b);
