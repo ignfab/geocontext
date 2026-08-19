@@ -143,6 +143,9 @@ const envSchema = z.object({
     GPF_WFS_RATE_LIMIT: z.preprocess(emptyToUndefined, positiveIntegerSchema.default(30)),
     GPF_GEOCODE_RATE_LIMIT: z.preprocess(emptyToUndefined, positiveIntegerSchema.default(50)),
     GPF_ALTI_RATE_LIMIT: z.preprocess(emptyToUndefined, positiveIntegerSchema.default(50)),
+    // Shared budget for both the isochrone (navigation.ts) and itinerary (itinerary.ts)
+    // clients: they hit the same GPF navigation service and share one RateLimiter
+    // instance (see getNavigationRateLimiter).
     GPF_NAVIGATION_RATE_LIMIT: z.preprocess(emptyToUndefined, positiveIntegerSchema.default(5)),
     // GPF
     GPF_WFS_MINISEARCH_OPTIONS: z
