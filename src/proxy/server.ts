@@ -14,19 +14,19 @@ import { GPF_WFS_URL } from "../wfs/catalog.js";
 import {
   gpfGetFeaturesLayerInputSchema,
   gpfGetFeatureByIdLayerInputObjectSchema,
-  gpfIsochroneLayerInputSchema,
+  gpfIsosurfaceLayerInputSchema,
   PROXY_TOKEN_KIND,
 } from "../wfs/schema.js";
 import {
   runGeometryFeatureQuery,
   runGeometryFeatureByIdQuery,
-  runGeometryIsochroneQuery,
+  runGeometryIsosurfaceQuery,
 } from "./execute.js";
 import { FeatureNotFoundError, FeatureCardinalityError } from "../wfs/byId.js";
 import {
   getDefaultGeometryFeatureQueryDeps,
   getDefaultGeometryFeatureByIdQueryDeps,
-  getDefaultGeometryIsochroneQueryDeps,
+  getDefaultGeometryIsosurfaceQueryDeps,
 } from "./transport.js";
 import {
   decodeToken,
@@ -186,11 +186,11 @@ async function handleLayerRequest(token: string, res: ServerResponse): Promise<v
         input,
         getDefaultGeometryFeatureByIdQueryDeps(),
       );
-    } else if (kind === PROXY_TOKEN_KIND.isochrone) {
-      const input = gpfIsochroneLayerInputSchema.parse(payload);
-      featureCollection = await runGeometryIsochroneQuery(
+    } else if (kind === PROXY_TOKEN_KIND.isosurface) {
+      const input = gpfIsosurfaceLayerInputSchema.parse(payload);
+      featureCollection = await runGeometryIsosurfaceQuery(
         input,
-        getDefaultGeometryIsochroneQueryDeps(),
+        getDefaultGeometryIsosurfaceQueryDeps(),
       );
     } else if (kind === PROXY_TOKEN_KIND.query) {
       const input = gpfGetFeaturesLayerInputSchema.parse(payload);

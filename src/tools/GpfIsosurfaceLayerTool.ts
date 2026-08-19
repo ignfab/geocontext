@@ -18,17 +18,17 @@ import { buildDataUrl } from "../proxy/dataUrl.js";
 import {
   PROXY_TOKEN_KIND,
   gpfGetFeaturesLayerOutputSchema,
-  gpfIsochroneLayerInputObjectSchema,
-  gpfIsochroneLayerInputSchema,
-  gpfIsochroneLayerPublishedInputSchema,
-  type GpfIsochroneLayerInput,
+  gpfIsosurfaceLayerInputObjectSchema,
+  gpfIsosurfaceLayerInputSchema,
+  gpfIsosurfaceLayerPublishedInputSchema,
+  type GpfIsosurfaceLayerInput,
 } from "../wfs/schema.js";
 import { NAVIGATION_SOURCE } from "../gpf/navigation.js";
 import logger from "../logger.js";
 
-class GpfIsochroneLayerTool extends BaseTool<GpfIsochroneLayerInput> {
-  name = "gpf_isochrone_layer";
-  title = "Couche cartographiable d’isochrone GPF";
+class GpfIsosurfaceLayerTool extends BaseTool<GpfIsosurfaceLayerInput> {
+  name = "gpf_isosurface_layer";
+  title = "Couche cartographiable d’isosurface GPF";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
   description = [
     "Renvoie une **URL de couche cartographiable** (`data_url`) pour l'isochrone autour d'un point.",
@@ -38,10 +38,10 @@ class GpfIsochroneLayerTool extends BaseTool<GpfIsochroneLayerInput> {
   ].join("\n");
   protected outputSchemaShape = gpfGetFeaturesLayerOutputSchema;
 
-  schema = gpfIsochroneLayerInputObjectSchema;
+  schema = gpfIsosurfaceLayerInputObjectSchema;
 
   get inputSchema() {
-    return gpfIsochroneLayerPublishedInputSchema;
+    return gpfIsosurfaceLayerPublishedInputSchema;
   }
 
   protected createSuccessResponse(data: unknown) {
@@ -53,23 +53,23 @@ class GpfIsochroneLayerTool extends BaseTool<GpfIsochroneLayerInput> {
     };
   }
 
-  async execute(input: GpfIsochroneLayerInput) {
+  async execute(input: GpfIsosurfaceLayerInput) {
     const env = getEnv();
 
     if (!env.PROXY_URL_SECRET || !env.PROXY_PUBLIC_BASE_URL) {
       throw new Error(
-        "`gpf_isochrone_layer` nécessite un proxy geodata configuré (variables d'environnement `PROXY_URL_SECRET` et `PROXY_PUBLIC_BASE_URL`, pointant vers un proxy joignable).",
+        "`gpf_isosurface_layer` nécessite un proxy geodata configuré (variables d'environnement `PROXY_URL_SECRET` et `PROXY_PUBLIC_BASE_URL`, pointant vers un proxy joignable).",
       );
     }
 
-    const tokenParams = gpfIsochroneLayerInputSchema.parse(input);
+    const tokenParams = gpfIsosurfaceLayerInputSchema.parse(input);
 
     logger.info(`[tool] execute ${this.name} ...`, {
       input: tokenParams,
     });
 
     const token = encodeToken(
-      { kind: PROXY_TOKEN_KIND.isochrone, ...tokenParams },
+      { kind: PROXY_TOKEN_KIND.isosurface, ...tokenParams },
       env.PROXY_URL_SECRET,
     );
 
@@ -79,4 +79,4 @@ class GpfIsochroneLayerTool extends BaseTool<GpfIsochroneLayerInput> {
   }
 }
 
-export default GpfIsochroneLayerTool;
+export default GpfIsosurfaceLayerTool;

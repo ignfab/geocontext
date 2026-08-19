@@ -98,12 +98,12 @@ const travelTimeFilterSchema = z.object({
   profile: navigationProfileSchema,
 }).strict().describe("Filtre les objets situés dans une zone atteignable en un temps donné depuis un point.");
 
-const isochronePointSchema = z.object({
+const isosurfacePointSchema = z.object({
   lon: lonSchema.describe("Longitude du point de départ en WGS84 `lon/lat`."),
   lat: latSchema.describe("Latitude du point de départ en WGS84 `lon/lat`."),
-}).strict().describe("Point de départ de l'isochrone.");
+}).strict().describe("Point de départ de l'isosurface.");
 
-const isochroneCostValueSchema = z
+const isosurfaceCostValueSchema = z
   .number()
   .finite()
   .positive()
@@ -288,7 +288,7 @@ export const gpfGetFeaturesLayerOutputSchema = z.object({
 export const PROXY_TOKEN_KIND = {
   query: "query",
   byId: "by_id",
-  isochrone: "isochrone",
+  isosurface: "isosurface",
 } as const;
 
 export type ProxyTokenKind = (typeof PROXY_TOKEN_KIND)[keyof typeof PROXY_TOKEN_KIND];
@@ -327,19 +327,19 @@ export type GpfGetFeatureByIdLayerInput = z.infer<typeof gpfGetFeatureByIdLayerI
 
 export const gpfGetFeatureByIdLayerPublishedInputSchema = generatePublishedInputSchema(gpfGetFeatureByIdLayerInputObjectSchema);
 
-// --- `gpf_isochrone_layer` (proxy) ---
+// --- `gpf_isosurface_layer` (proxy) ---
 
-export const gpfIsochroneLayerInputObjectSchema = z.object({
-  point: isochronePointSchema,
+export const gpfIsosurfaceLayerInputObjectSchema = z.object({
+  point: isosurfacePointSchema,
   profile: navigationProfileSchema,
-  minutes: isochroneCostValueSchema,
+  minutes: isosurfaceCostValueSchema,
 }).strict();
 
-export const gpfIsochroneLayerInputSchema = gpfIsochroneLayerInputObjectSchema;
+export const gpfIsosurfaceLayerInputSchema = gpfIsosurfaceLayerInputObjectSchema;
 
-export type GpfIsochroneLayerInput = z.infer<typeof gpfIsochroneLayerInputSchema>;
+export type GpfIsosurfaceLayerInput = z.infer<typeof gpfIsosurfaceLayerInputSchema>;
 
-export const gpfIsochroneLayerPublishedInputSchema = generatePublishedInputSchema(gpfIsochroneLayerInputObjectSchema);
+export const gpfIsosurfaceLayerPublishedInputSchema = generatePublishedInputSchema(gpfIsosurfaceLayerInputObjectSchema);
 
 // --- `gpf_count_features` ---
 

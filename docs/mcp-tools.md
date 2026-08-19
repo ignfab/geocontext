@@ -60,7 +60,7 @@ Tous les tools exposent les mêmes annotations MCP dans leur définition `tools/
 - [`gpf_search_types`](#gpf_search_types)
 - [`gpf_describe_type`](#gpf_describe_type)
 - [`gpf_get_features`](#gpf_get_features)
-- [`gpf_isochrone_layer`](#gpf_isochrone_layer)
+- [`gpf_isosurface_layer`](#gpf_isosurface_layer)
 - [`gpf_get_features_layer`](#gpf_get_features_layer)
 - [`gpf_count_features`](#gpf_count_features)
 - [`gpf_get_feature_by_id`](#gpf_get_feature_by_id)
@@ -1406,13 +1406,13 @@ Aucun `outputSchema` unique n'est exposé. La sortie est gérée par la sériali
 | Succès | oui | non | `content[0].text` est la FeatureCollection stringifiée (propriétés attributaires uniquement) ; aucun `structuredContent` n'est ajouté. |
 | Erreur | oui | oui | `content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`. |
 
-## `gpf_isochrone_layer`
+## `gpf_isosurface_layer`
 
-Code Source : [src/tools/GpfIsochroneLayerTool.ts](../src/tools/GpfIsochroneLayerTool.ts)
+Code Source : [src/tools/GpfIsosurfaceLayerTool.ts](../src/tools/GpfIsosurfaceLayerTool.ts)
 
 ### Titre
 
-Couche cartographiable d’isochrone GPF
+Couche cartographiable d’isosurface GPF
 
 ### Description du tool
 
@@ -1428,7 +1428,7 @@ L'URL est opaque et doit être transmise telle quelle à un outil cartographique
 | Champ | Type | Requis | Description |
 | --- | --- | --- | --- |
 | `minutes` | number | oui | Valeur du coût maximal, en minutes. Maximum : 6000. |
-| `point` | object | oui | Point de départ de l'isochrone. |
+| `point` | object | oui | Point de départ de l'isosurface. |
 | `profile` | string (enum) | oui | Mode de déplacement utilisé pour calculer l'isochrone (`car` ou `pedestrian`). Valeurs : car, pedestrian. |
 
 <details>
@@ -1459,7 +1459,7 @@ L'URL est opaque et doit être transmise telle quelle à un outil cartographique
         "lat"
       ],
       "additionalProperties": false,
-      "description": "Point de départ de l'isochrone."
+      "description": "Point de départ de l'isosurface."
     },
     "profile": {
       "type": "string",

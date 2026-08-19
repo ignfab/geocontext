@@ -3,7 +3,7 @@ import { vi, describe, it, expect, afterEach } from "vitest";
 import type { Env } from "../../src/config/env.js";
 import { decodeToken } from "../../src/proxy/token.js";
 import { PROXY_TOKEN_KIND } from "../../src/wfs/schema.js";
-import { validateStructuredContentAgainstOutputSchema } from "./helpers/outputSchema.js";
+import { validateStructuredContentAgainstOutputSchema } from "./helpers/outputSchema";
 
 const SECRET_HEX = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 const SECRET = Buffer.from(SECRET_HEX, "hex");
@@ -21,8 +21,8 @@ vi.doMock("../../src/config/env.js", async () => {
   };
 });
 
-const { default: GpfIsochroneLayerTool } = await import(
-  "../../src/tools/GpfIsochroneLayerTool.js"
+const { default: GpfIsosurfaceLayerTool } = await import(
+  "../../src/tools/GpfIsosurfaceLayerTool"
 );
 
 function makeEnv(overrides: Partial<Env>): Env {
@@ -35,7 +35,7 @@ function makeEnv(overrides: Partial<Env>): Env {
   } as Env;
 }
 
-describe("Test GpfIsochroneLayerTool", () => {
+describe("Test GpfIsosurfaceLayerTool", () => {
   afterEach(() => {
     vi.clearAllMocks();
     mockGetEnv.mockReset();
@@ -43,7 +43,7 @@ describe("Test GpfIsochroneLayerTool", () => {
 
   it("publishes the same minutes upper bound as runtime validation", () => {
     mockGetEnv.mockReturnValue(makeEnv({}));
-    const tool = new GpfIsochroneLayerTool();
+    const tool = new GpfIsosurfaceLayerTool();
 
     const minutesSchema = (tool.toolDefinition.inputSchema.properties as Record<string, unknown>)
       .minutes as { maximum?: number };
@@ -55,11 +55,11 @@ describe("Test GpfIsochroneLayerTool", () => {
     mockGetEnv.mockReturnValue(
       makeEnv({ PROXY_URL_SECRET: undefined, PROXY_PUBLIC_BASE_URL: undefined }),
     );
-    const tool = new GpfIsochroneLayerTool();
+    const tool = new GpfIsosurfaceLayerTool();
 
     const response = await tool.toolCall({
       params: {
-        name: "gpf_isochrone_layer",
+        name: "gpf_isosurface_layer",
         arguments: {
           point: { lon: 2.337306, lat: 48.849319 },
           profile: "pedestrian",
@@ -78,11 +78,11 @@ describe("Test GpfIsochroneLayerTool", () => {
 
   it("mints a data_url", async () => {
     mockGetEnv.mockReturnValue(makeEnv({ TRANSPORT_TYPE: "stdio" }));
-    const tool = new GpfIsochroneLayerTool();
+    const tool = new GpfIsosurfaceLayerTool();
 
     const response = await tool.toolCall({
       params: {
-        name: "gpf_isochrone_layer",
+        name: "gpf_isosurface_layer",
         arguments: {
           point: { lon: 2.337306, lat: 48.849319 },
           profile: "pedestrian",
@@ -96,13 +96,13 @@ describe("Test GpfIsochroneLayerTool", () => {
     expect(payload.data_url).toContain("https://proxy.example.test/api/v1/proxy/");
   });
 
-  it("builds an opaque data_url that round-trips to the tagged isochrone params", async () => {
+  it("builds an opaque data_url that round-trips to the tagged isosurface params", async () => {
     mockGetEnv.mockReturnValue(makeEnv({}));
-    const tool = new GpfIsochroneLayerTool();
+    const tool = new GpfIsosurfaceLayerTool();
 
     const response = await tool.toolCall({
       params: {
-        name: "gpf_isochrone_layer",
+        name: "gpf_isosurface_layer",
         arguments: {
           point: { lon: 2.337306, lat: 48.849319 },
           profile: "car",
@@ -129,7 +129,7 @@ describe("Test GpfIsochroneLayerTool", () => {
     const token = url.pathname.slice("/api/v1/proxy/".length, -".json".length);
     const decoded = decodeToken(token, SECRET);
     expect(decoded).toEqual({
-      kind: PROXY_TOKEN_KIND.isochrone,
+      kind: PROXY_TOKEN_KIND.isosurface,
       point: { lon: 2.337306, lat: 48.849319 },
       profile: "car",
       minutes: 60,
@@ -138,11 +138,11 @@ describe("Test GpfIsochroneLayerTool", () => {
 
   it("rejects a time cost above the supported maximum", async () => {
     mockGetEnv.mockReturnValue(makeEnv({}));
-    const tool = new GpfIsochroneLayerTool();
+    const tool = new GpfIsosurfaceLayerTool();
 
     const response = await tool.toolCall({
       params: {
-        name: "gpf_isochrone_layer",
+        name: "gpf_isosurface_layer",
         arguments: {
           point: { lon: 2.337306, lat: 48.849319 },
           profile: "pedestrian",

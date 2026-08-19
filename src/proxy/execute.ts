@@ -20,7 +20,7 @@
  */
 
 import type { GpfFeatureType } from "../wfs/catalog.js";
-import type { GeoJsonGeometryLike, IsochroneGeometryInput } from "../gpf/navigation.js";
+import type { GeoJsonGeometryLike, IsosurfaceGeometryInput } from "../gpf/navigation.js";
 
 import {
   buildGetFeatureByIdRequest,
@@ -42,7 +42,7 @@ import type { WfsFeatureCollectionResponse } from "../wfs/types.js";
 import type {
   GpfGetFeaturesInput,
   GpfGetFeatureByIdLayerInput,
-  GpfIsochroneLayerInput,
+  GpfIsosurfaceLayerInput,
 } from "../wfs/schema.js";
 
 // --- Injected Dependencies ---
@@ -247,12 +247,12 @@ export type GeometryFeatureByIdQueryDeps = {
   wfsClient: WfsClientLike;
 };
 
-export type IsochroneGeometryResolver = (
-  input: IsochroneGeometryInput,
+export type IsosurfaceGeometryResolver = (
+  input: IsosurfaceGeometryInput,
 ) => Promise<GeoJsonGeometryLike>;
 
-export type GeometryIsochroneQueryDeps = {
-  getGeometry: IsochroneGeometryResolver;
+export type GeometryIsosurfaceQueryDeps = {
+  getGeometry: IsosurfaceGeometryResolver;
 };
 
 /**
@@ -315,9 +315,9 @@ export async function runGeometryFeatureByIdQuery(
   };
 }
 
-export async function runGeometryIsochroneQuery(
-  input: GpfIsochroneLayerInput,
-  deps: GeometryIsochroneQueryDeps,
+export async function runGeometryIsosurfaceQuery(
+  input: GpfIsosurfaceLayerInput,
+  deps: GeometryIsosurfaceQueryDeps,
 ): Promise<WfsFeatureCollectionResponse> {
   const geometry = await deps.getGeometry({
     lon: input.point.lon,

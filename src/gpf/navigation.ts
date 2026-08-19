@@ -29,7 +29,7 @@ export type TravelTimeGeometryInput = {
   profile: TravelTimeProfile;
 };
 
-export type IsochroneGeometryInput = {
+export type IsosurfaceGeometryInput = {
   lon: number;
   lat: number;
   minutes: number;
@@ -52,7 +52,7 @@ export class NavigationIsochroneClient {
     private fetcher: JsonFetcher<RawIsochroneResponse> = fetchJSONGet,
   ) {}
 
-  async getGeometry(input: IsochroneGeometryInput): Promise<GeoJsonGeometryLike> {
+  async getGeometry(input: IsosurfaceGeometryInput): Promise<GeoJsonGeometryLike> {
     await this.rateLimiter.limit();
     logger.debug(`[gpf:navigation] getGeometry(${JSON.stringify(input)})...`);
 
@@ -90,7 +90,7 @@ function getDefaultNavigationIsochroneClient() {
 }
 
 export const navigationIsochroneClient = {
-  getGeometry(input: IsochroneGeometryInput) {
+  getGeometry(input: IsosurfaceGeometryInput) {
     return getDefaultNavigationIsochroneClient().getGeometry(input);
   },
   getTravelTimeGeometry(input: TravelTimeGeometryInput) {
