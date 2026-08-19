@@ -13,15 +13,18 @@ import { ServiceResponseError, ResponseTooLargeError } from "../../src/helpers/h
 const runGeometryFeatureQuery = vi.fn();
 const runGeometryFeatureByIdQuery = vi.fn();
 const runGeometryIsolineQuery = vi.fn();
+const runGeometryItineraryQuery = vi.fn();
 vi.mock("../../src/proxy/execute", () => ({
   runGeometryFeatureQuery: (...args: unknown[]) => runGeometryFeatureQuery(...args),
   runGeometryFeatureByIdQuery: (...args: unknown[]) => runGeometryFeatureByIdQuery(...args),
   runGeometryIsolineQuery: (...args: unknown[]) => runGeometryIsolineQuery(...args),
+  runGeometryItineraryQuery: (...args: unknown[]) => runGeometryItineraryQuery(...args),
 }));
 vi.mock("../../src/proxy/transport", () => ({
   getDefaultGeometryFeatureQueryDeps: () => ({ wfsClient: {}, resolveIsoline: vi.fn() }),
   getDefaultGeometryFeatureByIdQueryDeps: () => ({ wfsClient: {} }),
   getDefaultGeometryIsolineQueryDeps: () => ({ getGeometry: vi.fn() }),
+  getDefaultGeometryItineraryQueryDeps: () => ({ getItineraryWithGeometry: vi.fn() }),
 }));
 
 // A fixed 32-byte hex key for the test environment.
@@ -64,6 +67,17 @@ function validIsolineToken() {
   }, KEY);
 }
 
+function validItineraryToken() {
+  return encodeToken({
+    kind: PROXY_TOKEN_KIND.itinerary,
+    departure_lon: 2.33,
+    departure_lat: 48.84,
+    arrival_lon: 2.35,
+    arrival_lat: 48.85,
+    profile: "car",
+  }, KEY);
+}
+
 beforeAll(async () => {
   process.env.TRANSPORT_TYPE = "http";
   process.env.PROXY_URL_SECRET = TEST_SECRET;
@@ -90,6 +104,7 @@ beforeEach(() => {
   runGeometryFeatureQuery.mockReset();
   runGeometryFeatureByIdQuery.mockReset();
   runGeometryIsolineQuery.mockReset();
+  runGeometryItineraryQuery.mockReset();
 });
 
 describe("proxy/server", () => {
@@ -237,6 +252,46 @@ describe("proxy/server", () => {
       cost_type: "time",
       cost_value: 15,
     });
+  });
+
+  it("dispatches an itinerary token to the itinerary engine", async () => {
+    runGeometryItineraryQuery.mockResolvedValue(SAMPLE_COLLECTION);
+
+    const res = await request(baseUrl).get(layerPath(validItineraryToken()));
+
+    expect(res.status).toBe(200);
+    expect(res.headers["content-type"]).toContain("application/geo+json");
+    expect(JSON.parse(res.text)).toEqual(SAMPLE_COLLECTION);
+    expect(runGeometryItineraryQuery).toHaveBeenCalledOnce();
+    expect(runGeometryFeatureQuery).not.toHaveBeenCalled();
+    expect(runGeometryFeatureByIdQuery).not.toHaveBeenCalled();
+    const [input] = runGeometryItineraryQuery.mock.calls[0];
+    expect(input).toEqual({
+      departure_lon: 2.33,
+      departure_lat: 48.84,
+      arrival_lon: 2.35,
+      arrival_lat: 48.85,
+      profile: "car",
+    });
+  });
+
+  it("400 on an itinerary token beyond the crow-flies cap", async () => {
+    // Defense in depth: the tool refuses these at mint time, but a token forged with
+    // a leaked secret must not reach the upstream itinerary service either.
+    const overCap = encodeToken({
+      kind: PROXY_TOKEN_KIND.itinerary,
+      // Saint-Quentin -> Dijon: ~300 km apart, over the 100 km cap.
+      departure_lon: 3.274356,
+      departure_lat: 49.839862,
+      arrival_lon: 5.044572,
+      arrival_lat: 47.326213,
+      profile: "car",
+    }, KEY);
+
+    const res = await request(baseUrl).get(layerPath(overCap));
+
+    expect(res.status).toBe(400);
+    expect(runGeometryItineraryQuery).not.toHaveBeenCalled();
   });
 
   it("404 when the by-id feature is absent (FeatureNotFoundError)", async () => {

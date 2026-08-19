@@ -143,6 +143,9 @@ const envSchema = z.object({
     GPF_WFS_RATE_LIMIT: z.preprocess(emptyToUndefined, positiveIntegerSchema.default(30)),
     GPF_GEOCODE_RATE_LIMIT: z.preprocess(emptyToUndefined, positiveIntegerSchema.default(50)),
     GPF_ALTI_RATE_LIMIT: z.preprocess(emptyToUndefined, positiveIntegerSchema.default(50)),
+    // Budget for MCP calls to the GPF navigation service, shared through a single
+    // RateLimiter instance (see getNavigationRateLimiter). The proxy draws on
+    // GPF_NAVIGATION_PROXY_RATE_LIMIT instead.
     GPF_NAVIGATION_RATE_LIMIT: z.preprocess(emptyToUndefined, positiveIntegerSchema.default(5)),
     // GPF
     GPF_WFS_MINISEARCH_OPTIONS: z
