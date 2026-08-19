@@ -2219,12 +2219,14 @@ Code Source : [src/tools/DistanceTool.ts](../src/tools/DistanceTool.ts)
 
 ### Titre
 
-Distance entre deux points
+Distance et temps de trajet entre deux points
 
 ### Description du tool
 
 ```
 Renvoie la distance (en mètres) entre deux points à partir de leur longitude et latitude.
+Renvoie aussi une estimation du temps de trajet dans le cas où un profil (marche, voiture) est renseigné.
+(source : Géoplateforme (calcul d'itinéraire)).
 ```
 
 ### Schéma d’entrée
@@ -2233,7 +2235,8 @@ Renvoie la distance (en mètres) entre deux points à partir de leur longitude e
 | --- | --- | --- | --- |
 | `arrival` | object | oui | Le point d'arrivée |
 | `departure` | object | oui | Le point de départ |
-| `profile` | string (enum) | non | Le type de chemin suivi : `direct` distance à vol d'oiseau (Terre ronde, précision à 0.5%), `vincenty` distance à vol d'oiseau (Terre ellipsoïde, plus précise et coûteuse, précision à 1mm). Par défaut : `direct`. Valeurs : direct, vincenty. Valeur par défaut : direct. |
+| `profile` | string (enum) | non | Le type de chemin suivi : `direct` distance à vol d'oiseau (Terre ronde, précision à 0.5%), `vincenty` distance à vol d'oiseau (Terre ellipsoïde, plus précise et coûteuse, précision à 1mm) `pedestrian` à pied, `car` en voiture. Par défaut : `direct`. Valeurs : direct, vincenty, pedestrian, car. Valeur par défaut : direct. |
+| `shortest` | string (enum) | non | La métrique à optimiser, lorsqu'il y a un choix: `time` chemin le plus rapide, `distance` chemin le plus court. Cette option est sans effet lorsque `profile=direct` ou `vincenty`. Valeurs : time, distance. Valeur par défaut : time. |
 
 <details>
 <summary>Schéma d’entrée brut</summary>
@@ -2292,10 +2295,21 @@ Renvoie la distance (en mètres) entre deux points à partir de leur longitude e
       "type": "string",
       "enum": [
         "direct",
-        "vincenty"
+        "vincenty",
+        "pedestrian",
+        "car"
       ],
       "default": "direct",
-      "description": "Le type de chemin suivi : `direct` distance à vol d'oiseau (Terre ronde, précision à 0.5%), `vincenty` distance à vol d'oiseau (Terre ellipsoïde, plus précise et coûteuse, précision à 1mm). Par défaut : `direct`."
+      "description": "Le type de chemin suivi : `direct` distance à vol d'oiseau (Terre ronde, précision à 0.5%), `vincenty` distance à vol d'oiseau (Terre ellipsoïde, plus précise et coûteuse, précision à 1mm) `pedestrian` à pied, `car` en voiture. Par défaut : `direct`."
+    },
+    "shortest": {
+      "type": "string",
+      "enum": [
+        "time",
+        "distance"
+      ],
+      "default": "time",
+      "description": "La métrique à optimiser, lorsqu'il y a un choix: `time` chemin le plus rapide, `distance` chemin le plus court. Cette option est sans effet lorsque `profile=direct` ou `vincenty`."
     }
   },
   "required": [
@@ -2314,6 +2328,7 @@ Renvoie la distance (en mètres) entre deux points à partir de leur longitude e
 | Champ | Type | Requis | Description |
 | --- | --- | --- | --- |
 | `distance` | number | oui | La distance entre les deux points, en mètres. |
+| `time` | number | non | Estimation du temps de trajet, en minutes. Absent si `profile`=`direct` ou `vincenty`. |
 
 <details>
 <summary>Schéma de sortie brut</summary>
@@ -2325,6 +2340,10 @@ Renvoie la distance (en mètres) entre deux points à partir de leur longitude e
     "distance": {
       "type": "number",
       "description": "La distance entre les deux points, en mètres."
+    },
+    "time": {
+      "type": "number",
+      "description": "Estimation du temps de trajet, en minutes. Absent si `profile`=`direct` ou `vincenty`."
     }
   },
   "required": [
