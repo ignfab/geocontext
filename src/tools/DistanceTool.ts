@@ -1,10 +1,11 @@
 /**
- * MCP tool exposing the distance between two geographic positions.
+ * MCP tool exposing the distance and travel time between two geographic positions.
  */
 
 import BaseTool from "./BaseTool.js";
 import { z } from "zod";
 
+import { NAVIGATION_ITINERARY_SOURCE, navigationItineraryClient, ITINERARY_METRICS, ITINERARY_PROFILES } from "../gpf/itinerary.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import { lonSchema, latSchema } from "../helpers/schemas.js";
 import { generatePublishedInputSchema } from "../helpers/jsonSchema.js";
@@ -23,16 +24,27 @@ const distanceInputSchema = z.object({
     lat: latSchema.describe("La latitude du point d'arrivée."),
   }).describe("Le point d'arrivée"),
   profile: z
-    .enum(["spherical", "ellipsoidal"])
+    .enum(["spherical", "ellipsoidal", ...ITINERARY_PROFILES])
     .default("spherical")
     .describe(["Le type de chemin suivi :",
-      " `spherical` distance à vol d'oiseau (Terre ronde, précision à 0.5%),",
-      " `ellipsoidal` distance à vol d'oiseau (Terre ellipsoïde, plus précise, précision à 0.5cm).",
-    ].join("")),
+      "`spherical` distance à vol d'oiseau (Terre ronde, précision à 0.5%)",
+      "`ellipsoidal` distance à vol d'oiseau (Terre ellipsoïde, plus précise et coûteuse, précision à 1mm)",
+      "`car` en voiture",
+      "`pedestrian` à pied.",
+    ].join(", ")),
+  optimize: z
+    .enum(ITINERARY_METRICS)
+    .default("time")
+    .describe(["La métrique à optimiser, lorsqu'il y a un choix :",
+      " `time` chemin le plus rapide,",
+      " `distance` chemin le plus court.",
+      " Cette option est sans effet lorsque `profile=spherical` ou `ellipsoidal`."
+    ].join(""))
 }).strict();
 
 const distanceOutputSchema = z.object({
   distance: z.number().describe("La distance entre les deux points, en mètres."),
+  time: z.number().optional().describe("Estimation du temps de trajet, en minutes. Absent si `profile=spherical` ou `ellipsoidal`."),
 });
 
 // --- Types ---
@@ -41,11 +53,15 @@ type DistanceInput = z.infer<typeof distanceInputSchema>;
 
 // --- Tool ---
 
-const DISTANCE_TOOL_DESCRIPTION = `Renvoie la distance (en mètres) entre deux points à partir de leur longitude et latitude.`;
+const DISTANCE_TOOL_DESCRIPTION = [
+  `Renvoie la distance (en mètres) entre deux points à partir de leur longitude et latitude.`,
+  `Renvoie aussi une estimation du temps de trajet dans le cas où un profil (marche, voiture) est renseigné.`,
+  `(source : ${NAVIGATION_ITINERARY_SOURCE}).`,
+].join("\n");
 
 class DistanceTool extends BaseTool<DistanceInput> {
   name = "distance";
-  title = "Distance entre deux points";
+  title = "Distance et temps de trajet entre deux points";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
   description = DISTANCE_TOOL_DESCRIPTION;
   protected outputSchemaShape = distanceOutputSchema;
@@ -62,7 +78,7 @@ class DistanceTool extends BaseTool<DistanceInput> {
    * Resolves the distance query.
    *
    * @param input Normalized tool input.
-   * @returns The distance.
+   * @returns The distance, and the travel time for itinerary profiles.
    */
   async execute(input: DistanceInput) {
     logger.info(`[tool] execute ${this.name} ...`, {
@@ -79,6 +95,19 @@ class DistanceTool extends BaseTool<DistanceInput> {
         );
         return {
           distance: Math.round(raw * 100) / 100
+        };
+      }
+      case "car":
+      case "pedestrian": {
+        const itinerary = await navigationItineraryClient.getItinerary({
+          departure: input.departure,
+          arrival: input.arrival,
+          profile: input.profile,
+          optimize: input.optimize,
+        });
+        return {
+          distance: itinerary.distance,
+          time: Math.round(itinerary.duration)
         };
       }
       default: {
