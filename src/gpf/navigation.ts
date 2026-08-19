@@ -1,10 +1,10 @@
 import { fetchJSONGet } from "../helpers/http.js";
 import logger from "../logger.js";
 import type { JsonFetcher } from "../helpers/http.js";
-import { RateLimiter } from "../helpers/RateLimiter.js";
-import { getEnv } from "../config/env.js";
 import type { Geometry } from "geojson";
 import { isGeometryLike } from "../helpers/geojson.js";
+import type { RateLimiter } from "../helpers/RateLimiter.js";
+import { getNavigationRateLimiter } from "./navigationRateLimiter.js";
 
 export const NAVIGATION_SOURCE = "Géoplateforme (calcul d'isochrone)";
 export const NAVIGATION_ISOCHRONE_URL = "https://data.geopf.fr/navigation/isochrone";
@@ -57,9 +57,7 @@ export class NavigationIsochroneClient {
 let defaultNavigationIsochroneClient: NavigationIsochroneClient | undefined;
 
 function getDefaultNavigationIsochroneClient() {
-  defaultNavigationIsochroneClient ??= new NavigationIsochroneClient(
-    new RateLimiter({ name: "GPF_NAVIGATION", maxCalls: getEnv().GPF_NAVIGATION_RATE_LIMIT, period: 1 }),
-  );
+  defaultNavigationIsochroneClient ??= new NavigationIsochroneClient(getNavigationRateLimiter());
   return defaultNavigationIsochroneClient;
 }
 
