@@ -8,7 +8,7 @@ import { resetEnv } from "../../src/config/env";
 import { PROXY_TOKEN_KIND } from "../../src/wfs/schema";
 import { FeatureNotFoundError, FeatureCardinalityError } from "../../src/wfs/byId";
 import { ServiceResponseError, ResponseTooLargeError } from "../../src/helpers/http";
-import { NAVIGATION_ISOCHRONE_MAX_TIME_MINUTES } from "../../src/gpf/navigation";
+import { NAVIGATION_ISOCHRONE_MAX_MINUTES, NAVIGATION_ISODISTANCE_MAX_METERS } from "../../src/gpf/navigation";
 
 // Mock the proxy engine + transport so the server is exercised WITHOUT network.
 const runGeometryFeatureQuery = vi.fn();
@@ -241,7 +241,8 @@ describe("proxy/server", () => {
   });
 
   it.each([
-    ["minutes above the maximum", { cost_value: NAVIGATION_ISOCHRONE_MAX_TIME_MINUTES + 1 }],
+    ["minutes above the maximum", { cost_value: NAVIGATION_ISOCHRONE_MAX_MINUTES + 1 }],
+    ["distance above the maximum", { cost_type: "distance", cost_value: NAVIGATION_ISODISTANCE_MAX_METERS + 1 }],
     ["an unknown key", { typename: "BDTOPO_V3:batiment" }],
   ])("400 when an isoline token carries %s", async (_name, overrides) => {
     const badToken = encodeToken({
