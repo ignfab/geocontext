@@ -10,12 +10,20 @@ export const NAVIGATION_SOURCE = "Géoplateforme (calcul d'isochrone)";
 export const NAVIGATION_ISOCHRONE_URL = "https://data.geopf.fr/navigation/isochrone";
 export const TRAVEL_TIME_RESOURCE = "bdtopo-valhalla";
 export const TRAVEL_TIME_MAX_MINUTES = 120;
+// Upstream ceiling accepted by the GPF isochrone service for a time cost.
+export const NAVIGATION_MAX_TIME_MINUTES = 600;
 export const TRAVEL_TIME_PROFILES = ["car", "pedestrian"] as const;
 
 export type TravelTimeProfile = typeof TRAVEL_TIME_PROFILES[number];
 
-
 export type TravelTimeGeometryInput = {
+  lon: number;
+  lat: number;
+  minutes: number;
+  profile: TravelTimeProfile;
+};
+
+export type IsochroneGeometryInput = {
   lon: number;
   lat: number;
   minutes: number;
@@ -28,9 +36,9 @@ export class NavigationIsochroneClient {
     private fetcher: JsonFetcher<{geometry?: unknown}> = fetchJSONGet,
   ) {}
 
-  async getTravelTimeGeometry(input: TravelTimeGeometryInput): Promise<Geometry> {
+  async getGeometry(input: IsochroneGeometryInput): Promise<Geometry> {
     await this.rateLimiter.limit();
-    logger.debug(`[gpf:navigation] getTravelTimeGeometry(${JSON.stringify(input)})...`);
+    logger.debug(`[gpf:navigation] getGeometry(${JSON.stringify(input)})...`);
 
     const url = `${NAVIGATION_ISOCHRONE_URL}?${new URLSearchParams({
       resource: TRAVEL_TIME_RESOURCE,
@@ -52,6 +60,10 @@ export class NavigationIsochroneClient {
 
     return json.geometry;
   }
+
+  async getTravelTimeGeometry(input: TravelTimeGeometryInput): Promise<Geometry> {
+    return this.getGeometry(input);
+  }
 }
 
 let defaultNavigationIsochroneClient: NavigationIsochroneClient | undefined;
@@ -64,6 +76,9 @@ function getDefaultNavigationIsochroneClient() {
 }
 
 export const navigationIsochroneClient = {
+  getGeometry(input: IsochroneGeometryInput) {
+    return getDefaultNavigationIsochroneClient().getGeometry(input);
+  },
   getTravelTimeGeometry(input: TravelTimeGeometryInput) {
     return getDefaultNavigationIsochroneClient().getTravelTimeGeometry(input);
   },
