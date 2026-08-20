@@ -239,6 +239,25 @@ describe("proxy/server", () => {
     });
   });
 
+  it.each([
+    { cost_type: "time", cost_value: 601 },
+    { cost_type: "distance", cost_value: 50_001 },
+  ])("400 on an isoline token with a $cost_type cost above the maximum", async ({ cost_type, cost_value }) => {
+    // The per-cost-type ceiling lives in a superRefine the proxy must re-run on
+    // the decoded payload, not just trust the producer tool's validation.
+    const token = encodeToken({
+      kind: PROXY_TOKEN_KIND.isoline,
+      lon: 2.35,
+      lat: 48.85,
+      profile: "pedestrian",
+      cost_type,
+      cost_value,
+    }, KEY);
+    const res = await request(baseUrl).get(layerPath(token));
+    expect(res.status).toBe(400);
+    expect(runGeometryIsolineQuery).not.toHaveBeenCalled();
+  });
+
   it("404 when the by-id feature is absent (FeatureNotFoundError)", async () => {
     runGeometryFeatureByIdQuery.mockRejectedValue(
       new FeatureNotFoundError("Le feature 'batiment.404' est introuvable dans 'BDTOPO_V3:batiment'."),
