@@ -7,8 +7,8 @@ import type { RateLimiter } from "../helpers/RateLimiter.js";
 import { getNavigationRateLimiter } from "./navigationRateLimiter.js";
 
 export const NAVIGATION_SOURCE = "Géoplateforme (calcul d'isochrone)";
-export const NAVIGATION_ISOCHRONE_URL = "https://data.geopf.fr/navigation/isochrone";
-export const NAVIGATION_ISOCHRONE_RESOURCE = "bdtopo-valhalla";
+export const NAVIGATION_ISOLINE_URL = "https://data.geopf.fr/navigation/isochrone";
+export const NAVIGATION_ISOLINE_RESOURCE = "bdtopo-valhalla";
 // Upstream ceiling accepted by the GPF isochrone service for a time cost.
 export const NAVIGATION_ISOCHRONE_MAX_TIME_MINUTES = 600;
 export const NAVIGATION_PROFILES = ["car", "pedestrian"] as const;
@@ -16,25 +16,25 @@ export const TRAVEL_TIME_MAX_MINUTES = 120;
 
 export type NavigationProfile = typeof NAVIGATION_PROFILES[number];
 
-export type IsochroneInput = {
+export type IsolineInput = {
   lon: number;
   lat: number;
   minutes: number;
   profile: NavigationProfile;
 };
 
-export class NavigationIsochroneClient {
+export class NavigationIsolineClient {
   constructor(
     private rateLimiter: RateLimiter,
     private fetcher: JsonFetcher<{geometry?: unknown}> = fetchJSONGet,
   ) {}
 
-  async getIsochrone(input: IsochroneInput): Promise<Geometry> {
+  async getIsoline(input: IsolineInput): Promise<Geometry> {
     await this.rateLimiter.limit();
-    logger.debug(`[gpf:navigation] getIsochrone(${JSON.stringify(input)})...`);
+    logger.debug(`[gpf:navigation] getIsoline(${JSON.stringify(input)})...`);
 
-    const url = `${NAVIGATION_ISOCHRONE_URL}?${new URLSearchParams({
-      resource: NAVIGATION_ISOCHRONE_RESOURCE,
+    const url = `${NAVIGATION_ISOLINE_URL}?${new URLSearchParams({
+      resource: NAVIGATION_ISOLINE_RESOURCE,
       point: `${input.lon},${input.lat}`,
       direction: "departure",
       costType: "time",
@@ -57,15 +57,15 @@ export class NavigationIsochroneClient {
   }
 }
 
-let defaultNavigationIsochroneClient: NavigationIsochroneClient | undefined;
+let defaultNavigationIsolineClient: NavigationIsolineClient | undefined;
 
-function getDefaultNavigationIsochroneClient() {
-  defaultNavigationIsochroneClient ??= new NavigationIsochroneClient(getNavigationRateLimiter());
-  return defaultNavigationIsochroneClient;
+function getDefaultNavigationIsolineClient() {
+  defaultNavigationIsolineClient ??= new NavigationIsolineClient(getNavigationRateLimiter());
+  return defaultNavigationIsolineClient;
 }
 
-export const navigationIsochroneClient = {
-  getIsochrone(input: IsochroneInput) {
-    return getDefaultNavigationIsochroneClient().getIsochrone(input);
+export const navigationIsolineClient = {
+  getIsoline(input: IsolineInput) {
+    return getDefaultNavigationIsolineClient().getIsoline(input);
   },
 };

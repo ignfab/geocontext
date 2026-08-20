@@ -6,7 +6,7 @@
  * hit counting, and FeatureCollection post-processing.
  */
 
-import { navigationIsochroneClient } from "../gpf/navigation.js";
+import { navigationIsolineClient } from "../gpf/navigation.js";
 import logger from "../logger.js";
 import { resolveFeatureGeometry } from "./referenceGeometry.js";
 import { rethrowIdentifiedCatalogDesyncError } from "./catalogDesync.js";
@@ -111,7 +111,7 @@ export async function resolveTravelTimeGeometry(
 
   const { operator, ...parameters } = spatialFilter;
 
-  return await navigationIsochroneClient.getIsochrone(parameters);
+  return await navigationIsolineClient.getIsoline(parameters);
 }
 
 /**

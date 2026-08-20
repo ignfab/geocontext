@@ -7,8 +7,8 @@ import type { GpfGetFeaturesInput } from "../../src/wfs/schema";
 // - fetchJSONPostWithLimit (the bounded WFS fetch, parses to JSON) — but keep the real error classes;
 // - fetchJSONGetWithLimit (the bounded isochrone fetch) — asserts the travel_time leg
 //   goes through the SAME PROXY_UPSTREAM_TIMEOUT + PROXY_MAX_RESPONSE_BYTES bounds as WFS.
-//   The real NavigationIsochroneClient runs (only its fetcher is mocked), so this covers
-//   the previously-untested gap where the isochrone leg used unbounded fetchJSONGet.
+//   The real NavigationIsolineClient runs (only its fetcher is mocked), so this covers
+//   the previously-untested gap where the isoline leg used unbounded fetchJSONGet.
 // - RateLimiter (assert it is invoked, without real timing).
 // The parse + 502-on-bad-body now lives inside fetchJSON*WithLimit (helpers/http),
 // so it is covered there; here we only assert the transport wires the right args.
@@ -36,7 +36,7 @@ vi.mock("../../src/helpers/RateLimiter", () => ({
 }));
 
 import {
-  getDefaultGeometryIsochroneQueryDeps,
+  getDefaultGeometryIsolineQueryDeps,
   getProxyWfsClient,
   resolveProxyTravelTimeGeometry,
 } from "../../src/proxy/transport";
@@ -118,7 +118,7 @@ describe("proxy/transport · resolveProxyTravelTimeGeometry", () => {
   };
 
   it("resolves the isochrone through the BOUNDED fetch (PROXY_UPSTREAM_TIMEOUT + PROXY_MAX_RESPONSE_BYTES) and returns EWKT", async () => {
-    // The real NavigationIsochroneClient runs; only its fetcher is mocked. This is
+    // The real NavigationIsolineClient runs; only its fetcher is mocked. This is
     // the regression guard: the travel_time leg must NOT use the unbounded
     // fetchJSONGet (HTTP_TIMEOUT only) — it must go through fetchJSONGetWithLimit
     // with the SAME bounds as the WFS leg, so a 2-call travel_time stays capped.
@@ -155,12 +155,12 @@ describe("proxy/transport · resolveProxyTravelTimeGeometry", () => {
   });
 });
 
-describe("proxy/transport · getDefaultGeometryIsochroneQueryDeps", () => {
-  it("resolves the isochrone through the bounded fetch (PROXY_UPSTREAM_TIMEOUT + PROXY_MAX_RESPONSE_BYTES)", async () => {
+describe("proxy/transport · getDefaultGeometryIsolineQueryDeps", () => {
+  it("resolves the isoline through the bounded fetch (PROXY_UPSTREAM_TIMEOUT + PROXY_MAX_RESPONSE_BYTES)", async () => {
     const geometry = { type: "Polygon", coordinates: [[[2, 48], [2.2, 48], [2.2, 48.2], [2, 48]]] };
     fetchJSONGetWithLimit.mockResolvedValue({ geometry });
 
-    const result = await getDefaultGeometryIsochroneQueryDeps().getGeometry({
+    const result = await getDefaultGeometryIsolineQueryDeps().getGeometry({
       lon: 2.35,
       lat: 48.85,
       minutes: 15,

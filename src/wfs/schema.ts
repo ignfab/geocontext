@@ -109,17 +109,17 @@ const travelTimeMinutesSchema = z
 // Departure point of an isochrone. Flat `lon`/`lat`, exactly like every spatial
 // filter (`intersects_point_filter`, `dwithin_point_filter`, ...), so the LLM sees
 // one point convention across the whole surface.
-const isochronePointSchema = z.object({
+const isolinePointSchema = z.object({
   lon: lonSchema.describe("Longitude du point de départ en WGS84 `lon/lat`."),
   lat: latSchema.describe("Latitude du point de départ en WGS84 `lon/lat`."),
 }).strict();
 
-const travelTimeFilterSchema = isochronePointSchema.extend({
+const travelTimeFilterSchema = isolinePointSchema.extend({
   minutes: travelTimeMinutesSchema,
   profile: navigationProfileSchema,
 }).strict().describe("Filtre les objets situés dans une zone atteignable en un temps donné depuis un point.");
 
-const isochroneCostValueSchema = z
+const isolineCostValueSchema = z
   .number()
   .finite()
   .positive()
@@ -406,14 +406,14 @@ export const gpfGetFeaturesLayerOutputSchema = z.object({
 
 // The proxy serves ONE opaque token (in the URL path, `${endpoint}/<token>.json`)
 // but several token kinds (a filtered layer query, a single-feature by-id lookup
-// and an isochrone). Every producer tool stamps its token
+// and an isoline). Every producer tool stamps its token
 // with this `kind` discriminant; the proxy reads it to dispatch to the right
 // schema + engine, then strips it before the strict per-kind `.parse`. It is
 // injected by the tool from validated params — never an LLM-supplied field.
 export const PROXY_TOKEN_KIND = {
   query: "query",
   byId: "by_id",
-  isochrone: "isochrone",
+  isoline: "isoline",
 } as const;
 
 export type ProxyTokenKind = (typeof PROXY_TOKEN_KIND)[keyof typeof PROXY_TOKEN_KIND];
@@ -452,16 +452,16 @@ export type GpfGetFeatureByIdLayerInput = z.infer<typeof gpfGetFeatureByIdLayerI
 
 export const gpfGetFeatureByIdLayerPublishedInputSchema = generatePublishedInputSchema(gpfGetFeatureByIdLayerInputObjectSchema);
 
-// --- `gpf_isochrone_layer` (proxy) ---
+// --- `gpf_isoline_layer` (proxy) ---
 
-export const gpfIsochroneLayerInputObjectSchema = isochronePointSchema.extend({
-  minutes: isochroneCostValueSchema,
+export const gpfIsolineLayerInputObjectSchema = isolinePointSchema.extend({
+  minutes: isolineCostValueSchema,
   profile: navigationProfileSchema,
 }).strict();
 
-export type GpfIsochroneLayerInput = z.infer<typeof gpfIsochroneLayerInputObjectSchema>;
+export type GpfIsolineLayerInput = z.infer<typeof gpfIsolineLayerInputObjectSchema>;
 
-export const gpfIsochroneLayerPublishedInputSchema = generatePublishedInputSchema(gpfIsochroneLayerInputObjectSchema);
+export const gpfIsolineLayerPublishedInputSchema = generatePublishedInputSchema(gpfIsolineLayerInputObjectSchema);
 
 // --- `gpf_count_features` ---
 
