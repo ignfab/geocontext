@@ -1084,14 +1084,15 @@ Lecture d’objets GPF
 
 ```
 Interroge un type GPF et renvoie des résultats structurés (propriétés attributaires ; les géométries ne sont pas incluses). Pour obtenir une couche cartographiable, utiliser `gpf_get_features_layer`.
-Utiliser `select` pour choisir les propriétés, `where` pour filtrer, `order_by` pour trier et un filtre spatial dédié (`bbox_filter`, `intersects_point_filter`, `dwithin_point_filter`, `intersects_feature_filter` ou `travel_time_filter`) pour le spatial.
+Utiliser `select` pour choisir les propriétés, `where` pour filtrer, `order_by` pour trier et un filtre spatial dédié (`bbox_filter`, `intersects_point_filter`, `dwithin_point_filter`, `intersects_feature_filter` ou `isoline_filter`) pour le spatial.
 Utiliser `spatial_extras` pour obtenir des mesures calculées sur la géométrie (`centroid`, `bbox`, `length`, `area`, `distance_to_filter_center` et `intersection_area`). Elles portent uniquement sur les objets renvoyés.
 Exemple attributaire : `where=[{ property: "code_insee", operator: "eq", value: "75056" }]`.
 Exemple bbox : `bbox_filter={ west: 2.1, south: 48.7, east: 2.5, north: 48.9 }`.
 Exemple point dans géométrie : `intersects_point_filter={ lon: 2.35, lat: 48.85 }`.
 Exemple distance : `dwithin_point_filter={ lon: 2.35, lat: 48.85, distance_m: 500 }`.
 Exemple réutilisation : `intersects_feature_filter={ typename, feature_id }` avec `typename` et `feature_id` issus d'une `feature_ref`.
-Exemple temps de trajet : `travel_time_filter={ lon: 2.35, lat: 48.85, minutes: 15, profile: "pedestrian" }` pour les objets atteignables en 15 minutes à pied depuis ce point.
+Exemple isochrone : `isoline_filter={ lon: 2.35, lat: 48.85, profile: "pedestrian", cost_type: "time", cost_value: 15 }` pour les objets atteignables en 15 minutes à pied depuis ce point.
+Exemple isodistance : `isoline_filter={ lon: 2.35, lat: 48.85, profile: "car", cost_type: "distance", cost_value: 2000 }` pour les objets atteignables à 2 km en voiture depuis ce point.
 ⚠️ Quand `typename` et `intersects_feature_filter.typename` sont identiques, utiliser `gpf_get_feature_by_id` pour récupérer exactement l'objet ciblé.
 **OBLIGATOIRE : toujours appeler `gpf_describe_type` avant ce tool, sauf si `gpf_describe_type` a déjà été appelé pour ce même typename dans la conversation en cours.**
 Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiques à chaque typename et diffèrent systématiquement des conventions habituelles (ex : pas de nom_officiel, navigabilite sans accent, etc.). Toute tentative sans appel préalable à `gpf_describe_type` **provoquera une erreur.**
@@ -1102,14 +1103,14 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
 | Champ | Type | Requis | Description |
 | --- | --- | --- | --- |
 | `bbox_filter` | object | non | Filtre spatial par boîte englobante. Exclusif avec les autres filtres spatiaux. |
-| `dwithin_point_filter` | object | non | Filtre spatial par distance à un point. Exclusif avec les autres filtres spatiaux. |
+| `dwithin_point_filter` | object | non | Filtre spatial par distance à un point à vol d'oiseau. Exclusif avec les autres filtres spatiaux. |
 | `intersects_feature_filter` | object | non | Filtre spatial par intersection avec un feature GPF de référence. Exclusif avec les autres filtres spatiaux. |
 | `intersects_point_filter` | object | non | Filtre spatial par intersection avec un point. Exclusif avec les autres filtres spatiaux. |
+| `isoline_filter` | object | non | Filtre spatial par temps de trajet (isochrone) ou par distance (isodistance) depuis un point avec un profil voiture ou piéton. Exclusif avec les autres filtres spatiaux. |
 | `limit` | integer | non | Nombre maximum d'objets à renvoyer. Valeur par défaut : 100. Maximum : 5000. Valeur par défaut : 100. |
 | `order_by` | array | non | Liste ordonnée des critères de tri. |
 | `select` | array | non | Liste des propriétés non géométriques à renvoyer pour chaque objet. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles. Exemple : `["code_insee", "nom_officiel"]`. |
 | `spatial_extras` | array | non | Éléments calculés depuis la géométrie à renvoyer pour chaque objet. Peut inclure `centroid`, `bbox`, `length`, `area`, `distance_to_filter_center` et `intersection_area`, aucun par défaut.<br>`centroid` est le centroïde (moyenne arithmétique des sommets) de la géométrie. Il peut tomber hors d'une géométrie concave : un `intersects_point_filter` sur ce point peut alors ne renvoyer ni l'objet, ni ce qui le contient.<br>`bbox` est la boîte englobante de la géométrie : `[ouest, sud, est, nord]` en WGS84 `lon/lat`, dans l'ordre des champs `west`, `south`, `east` et `north` de `bbox_filter`.<br>`length` est la somme des longueurs (en m) des parties linéaires de la géométrie (LineString, MultiLineString).<br>`area` est la somme des surfaces (en m²) des parties surfaciques de la géométrie (Polygon, MultiPolygon).<br>`distance_to_filter_center` est la distance (en m) entre le centre du filtre spatial et le point le plus proche de l'objet renvoyé, `0` si l'objet contient ce centre. Ce centre est le point de `dwithin_point_filter`, le point de départ de `travel_time_filter`, le centre de la boîte de `bbox_filter` et le centroïde (moyenne des sommets) de l'objet de référence de `intersects_feature_filter`.<br>`intersection_area` est l'aire (en m²) de la partie de l'objet renvoyé située dans le filtre spatial (boîte, disque, isochrone ou objet de référence surfacique). Elle vaut `null` si l'objet renvoyé n'a pas de partie surfacique, et `0` si l'objet ne recouvre pas le filtre.<br>`distance_to_filter_center` et `intersection_area` exigent un filtre spatial.<br>Les `spatial_extras` sont calculés après la requête, sur les seuls objets renvoyés : ils ne sont utilisables ni dans `where` ni dans `order_by`. Pour un classement (les N plus grands, les N plus proches) ou une somme, vérifier que `numberReturned` est égal à `numberMatched`, sinon augmenter `limit` ou restreindre le filtre spatial. Pour les N plus proches d'un point, utiliser `dwithin_point_filter` avec `distance_to_filter_center`, trier sur cette distance et élargir `distance_m` s'il y a moins de N objets.<br>Si l'élément à calculer est incompatible avec la géométrie (exemple : bbox d'un point, aire d'une géométrie linéaire) et que le type de la géométrie est connu à l'avance, une erreur indiquera comment corriger la requête.<br>Sinon, un élément qui n'est pas calculable pour un objet (géométrie absente ou vide, aucune partie de la dimension requise) vaut `null`. Une valeur numérique, `0` compris, signifie que le calcul a bien eu lieu. Valeur par défaut : []. |
-| `travel_time_filter` | object | non | Filtre spatial par temps de trajet depuis un point (`profile` voiture ou piéton). Exclusif avec les autres filtres spatiaux. |
 | `typename` | string | oui | Nom exact du type GPF à interroger de la forme `prefixe:nom`. Utiliser `gpf_search_types` pour trouver un `typename` valide. |
 | `where` | array | non | Clauses de filtre attributaire, combinées avec `AND`. |
 
@@ -1270,7 +1271,7 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
         "distance_m"
       ],
       "additionalProperties": false,
-      "description": "Filtre spatial par distance à un point. Exclusif avec les autres filtres spatiaux."
+      "description": "Filtre spatial par distance à un point à vol d'oiseau. Exclusif avec les autres filtres spatiaux."
     },
     "intersects_feature_filter": {
       "type": "object",
@@ -1293,7 +1294,7 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
       "additionalProperties": false,
       "description": "Filtre spatial par intersection avec un feature GPF de référence. Exclusif avec les autres filtres spatiaux."
     },
-    "travel_time_filter": {
+    "isoline_filter": {
       "type": "object",
       "properties": {
         "lon": {
@@ -1308,12 +1309,6 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
           "maximum": 90,
           "description": "Latitude du point de départ en WGS84 `lon/lat`."
         },
-        "minutes": {
-          "type": "number",
-          "exclusiveMinimum": 0,
-          "maximum": 120,
-          "description": "Temps de trajet maximal en minutes. Maximum : 120."
-        },
         "profile": {
           "type": "string",
           "enum": [
@@ -1321,16 +1316,30 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
             "pedestrian"
           ],
           "description": "Mode de déplacement utilisé pour calculer l'isochrone ou l'isodistance : `car` ou `pedestrian`."
+        },
+        "cost_type": {
+          "type": "string",
+          "enum": [
+            "time",
+            "distance"
+          ],
+          "description": "Type de coût utilisé : `time` pour une isochrone, `distance` pour une isodistance."
+        },
+        "cost_value": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Valeur du coût maximal. Interprétée en minutes si `cost_type = \"time\"` (maximum : 120), et en mètres si `cost_type = \"distance\"` (maximum : 50000)."
         }
       },
       "required": [
         "lon",
         "lat",
-        "minutes",
-        "profile"
+        "profile",
+        "cost_type",
+        "cost_value"
       ],
       "additionalProperties": false,
-      "description": "Filtre spatial par temps de trajet depuis un point (`profile` voiture ou piéton). Exclusif avec les autres filtres spatiaux."
+      "description": "Filtre spatial par temps de trajet (isochrone) ou par distance (isodistance) depuis un point avec un profil voiture ou piéton. Exclusif avec les autres filtres spatiaux."
     },
     "limit": {
       "type": "integer",
@@ -1419,7 +1428,7 @@ Couche cartographiable d’objets GPF
 ```
 Interroge un type GPF et renvoie une **URL de couche cartographiable** (`data_url`) : une URL opaque, à passer telle quelle à un outil d'affichage cartographique (MCP Carto, ...). L'ouvrir renvoie une FeatureCollection GeoJSON avec les géométries complètes.
 À utiliser dès qu'il faut **afficher / cartographier** des objets GPF. Pour des attributs sans géométrie, utiliser `gpf_get_features`.
-Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, `where` pour filtrer, `order_by` pour trier et un filtre spatial dédié (`bbox_filter`, `intersects_point_filter`, `dwithin_point_filter`, `intersects_feature_filter` ou `travel_time_filter`) pour le spatial.
+Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, `where` pour filtrer, `order_by` pour trier et un filtre spatial dédié (`bbox_filter`, `intersects_point_filter`, `dwithin_point_filter`, `intersects_feature_filter` ou `isoline_filter`) pour le spatial.
 **OBLIGATOIRE : toujours appeler `gpf_describe_type` avant ce tool, sauf si `gpf_describe_type` a déjà été appelé pour ce même typename dans la conversation en cours.** Les noms de propriétés ne peuvent pas être devinés.
 ```
 
@@ -1428,13 +1437,13 @@ Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, 
 | Champ | Type | Requis | Description |
 | --- | --- | --- | --- |
 | `bbox_filter` | object | non | Filtre spatial par boîte englobante. Exclusif avec les autres filtres spatiaux. |
-| `dwithin_point_filter` | object | non | Filtre spatial par distance à un point. Exclusif avec les autres filtres spatiaux. |
+| `dwithin_point_filter` | object | non | Filtre spatial par distance à un point à vol d'oiseau. Exclusif avec les autres filtres spatiaux. |
 | `intersects_feature_filter` | object | non | Filtre spatial par intersection avec un feature GPF de référence. Exclusif avec les autres filtres spatiaux. |
 | `intersects_point_filter` | object | non | Filtre spatial par intersection avec un point. Exclusif avec les autres filtres spatiaux. |
+| `isoline_filter` | object | non | Filtre spatial par temps de trajet (isochrone) ou par distance (isodistance) depuis un point avec un profil voiture ou piéton. Exclusif avec les autres filtres spatiaux. |
 | `limit` | integer | non | Nombre maximum d'objets à cartographier. Valeur par défaut : 5000 (plafond du service). Réduire pour alléger la carte. Maximum : 5000. Une requête produisant plus de 5000 objets sera tronquée. Valeur par défaut : 5000. |
 | `order_by` | array | non | Liste ordonnée des critères de tri. |
 | `select` | array | non | Liste des propriétés non géométriques à renvoyer pour chaque objet. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles. Exemple : `["code_insee", "nom_officiel"]`. |
-| `travel_time_filter` | object | non | Filtre spatial par temps de trajet depuis un point (`profile` voiture ou piéton). Exclusif avec les autres filtres spatiaux. |
 | `typename` | string | oui | Nom exact du type GPF à interroger de la forme `prefixe:nom`. Utiliser `gpf_search_types` pour trouver un `typename` valide. |
 | `where` | array | non | Clauses de filtre attributaire, combinées avec `AND`. |
 
@@ -1595,7 +1604,7 @@ Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, 
         "distance_m"
       ],
       "additionalProperties": false,
-      "description": "Filtre spatial par distance à un point. Exclusif avec les autres filtres spatiaux."
+      "description": "Filtre spatial par distance à un point à vol d'oiseau. Exclusif avec les autres filtres spatiaux."
     },
     "intersects_feature_filter": {
       "type": "object",
@@ -1618,7 +1627,7 @@ Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, 
       "additionalProperties": false,
       "description": "Filtre spatial par intersection avec un feature GPF de référence. Exclusif avec les autres filtres spatiaux."
     },
-    "travel_time_filter": {
+    "isoline_filter": {
       "type": "object",
       "properties": {
         "lon": {
@@ -1633,12 +1642,6 @@ Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, 
           "maximum": 90,
           "description": "Latitude du point de départ en WGS84 `lon/lat`."
         },
-        "minutes": {
-          "type": "number",
-          "exclusiveMinimum": 0,
-          "maximum": 120,
-          "description": "Temps de trajet maximal en minutes. Maximum : 120."
-        },
         "profile": {
           "type": "string",
           "enum": [
@@ -1646,16 +1649,30 @@ Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, 
             "pedestrian"
           ],
           "description": "Mode de déplacement utilisé pour calculer l'isochrone ou l'isodistance : `car` ou `pedestrian`."
+        },
+        "cost_type": {
+          "type": "string",
+          "enum": [
+            "time",
+            "distance"
+          ],
+          "description": "Type de coût utilisé : `time` pour une isochrone, `distance` pour une isodistance."
+        },
+        "cost_value": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Valeur du coût maximal. Interprétée en minutes si `cost_type = \"time\"` (maximum : 120), et en mètres si `cost_type = \"distance\"` (maximum : 50000)."
         }
       },
       "required": [
         "lon",
         "lat",
-        "minutes",
-        "profile"
+        "profile",
+        "cost_type",
+        "cost_value"
       ],
       "additionalProperties": false,
-      "description": "Filtre spatial par temps de trajet depuis un point (`profile` voiture ou piéton). Exclusif avec les autres filtres spatiaux."
+      "description": "Filtre spatial par temps de trajet (isochrone) ou par distance (isodistance) depuis un point avec un profil voiture ou piéton. Exclusif avec les autres filtres spatiaux."
     },
     "order_by": {
       "type": "array",
@@ -1750,13 +1767,14 @@ Décompte d’objets GPF
 
 ```
 Interroge un type GPF et renvoie le nombre de résultats obtenus.
-Utiliser `where` pour filtrer et un filtre spatial dédié (`bbox_filter`, `intersects_point_filter`, `dwithin_point_filter`, `intersects_feature_filter` ou `travel_time_filter`) pour le spatial.
+Utiliser `where` pour filtrer et un filtre spatial dédié (`bbox_filter`, `intersects_point_filter`, `dwithin_point_filter`, `intersects_feature_filter` ou `isoline_filter`) pour le spatial.
 Exemple attributaire : `where=[{ property: "code_insee", operator: "eq", value: "75056" }]`.
 Exemple bbox : `bbox_filter={ west: 2.1, south: 48.7, east: 2.5, north: 48.9 }`.
 Exemple point dans géométrie : `intersects_point_filter={ lon: 2.35, lat: 48.85 }`.
 Exemple distance : `dwithin_point_filter={ lon: 2.35, lat: 48.85, distance_m: 500 }`.
 Exemple réutilisation : `intersects_feature_filter={ typename, feature_id }` avec `typename` et `feature_id` issus d'une `feature_ref`.
-Exemple temps de trajet : `travel_time_filter={ lon: 2.35, lat: 48.85, minutes: 15, profile: "pedestrian" }` pour les objets atteignables en 15 minutes à pied depuis ce point.
+Exemple isochrone : `isoline_filter={ lon: 2.35, lat: 48.85, profile: "pedestrian", cost_type: "time", cost_value: 15 }` pour les objets atteignables en 15 minutes à pied depuis ce point.
+Exemple isodistance : `isoline_filter={ lon: 2.35, lat: 48.85, profile: "car", cost_type: "distance", cost_value: 2000 }` pour les objets atteignables à 2 km en voiture depuis ce point.
 ⚠️ Quand `typename` et `intersects_feature_filter.typename` sont identiques, utiliser `gpf_get_feature_by_id` pour récupérer exactement l'objet ciblé.
 **OBLIGATOIRE dès que `where` est utilisé : toujours appeler `gpf_describe_type` avant ce tool, sauf si `gpf_describe_type` a déjà été appelé pour ce même typename dans la conversation en cours.** Un comptage par `typename` et filtre spatial seul (sans `where`) ne référence aucun nom de propriété et ne nécessite pas cet appel préalable.
 Les noms de propriétés utilisés dans `where` **ne peuvent pas être devinés** : ils sont spécifiques à chaque typename et diffèrent systématiquement des conventions habituelles (ex : pas de nom_officiel, navigabilite sans accent, etc.). Toute clause `where` sans appel préalable à `gpf_describe_type` **provoquera une erreur.**
@@ -1767,10 +1785,10 @@ Les noms de propriétés utilisés dans `where` **ne peuvent pas être devinés*
 | Champ | Type | Requis | Description |
 | --- | --- | --- | --- |
 | `bbox_filter` | object | non | Filtre spatial par boîte englobante. Exclusif avec les autres filtres spatiaux. |
-| `dwithin_point_filter` | object | non | Filtre spatial par distance à un point. Exclusif avec les autres filtres spatiaux. |
+| `dwithin_point_filter` | object | non | Filtre spatial par distance à un point à vol d'oiseau. Exclusif avec les autres filtres spatiaux. |
 | `intersects_feature_filter` | object | non | Filtre spatial par intersection avec un feature GPF de référence. Exclusif avec les autres filtres spatiaux. |
 | `intersects_point_filter` | object | non | Filtre spatial par intersection avec un point. Exclusif avec les autres filtres spatiaux. |
-| `travel_time_filter` | object | non | Filtre spatial par temps de trajet depuis un point (`profile` voiture ou piéton). Exclusif avec les autres filtres spatiaux. |
+| `isoline_filter` | object | non | Filtre spatial par temps de trajet (isochrone) ou par distance (isodistance) depuis un point avec un profil voiture ou piéton. Exclusif avec les autres filtres spatiaux. |
 | `typename` | string | oui | Nom exact du type GPF à interroger de la forme `prefixe:nom`. Utiliser `gpf_search_types` pour trouver un `typename` valide. |
 | `where` | array | non | Clauses de filtre attributaire, combinées avec `AND`. |
 
@@ -1922,7 +1940,7 @@ Les noms de propriétés utilisés dans `where` **ne peuvent pas être devinés*
         "distance_m"
       ],
       "additionalProperties": false,
-      "description": "Filtre spatial par distance à un point. Exclusif avec les autres filtres spatiaux."
+      "description": "Filtre spatial par distance à un point à vol d'oiseau. Exclusif avec les autres filtres spatiaux."
     },
     "intersects_feature_filter": {
       "type": "object",
@@ -1945,7 +1963,7 @@ Les noms de propriétés utilisés dans `where` **ne peuvent pas être devinés*
       "additionalProperties": false,
       "description": "Filtre spatial par intersection avec un feature GPF de référence. Exclusif avec les autres filtres spatiaux."
     },
-    "travel_time_filter": {
+    "isoline_filter": {
       "type": "object",
       "properties": {
         "lon": {
@@ -1960,12 +1978,6 @@ Les noms de propriétés utilisés dans `where` **ne peuvent pas être devinés*
           "maximum": 90,
           "description": "Latitude du point de départ en WGS84 `lon/lat`."
         },
-        "minutes": {
-          "type": "number",
-          "exclusiveMinimum": 0,
-          "maximum": 120,
-          "description": "Temps de trajet maximal en minutes. Maximum : 120."
-        },
         "profile": {
           "type": "string",
           "enum": [
@@ -1973,16 +1985,30 @@ Les noms de propriétés utilisés dans `where` **ne peuvent pas être devinés*
             "pedestrian"
           ],
           "description": "Mode de déplacement utilisé pour calculer l'isochrone ou l'isodistance : `car` ou `pedestrian`."
+        },
+        "cost_type": {
+          "type": "string",
+          "enum": [
+            "time",
+            "distance"
+          ],
+          "description": "Type de coût utilisé : `time` pour une isochrone, `distance` pour une isodistance."
+        },
+        "cost_value": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Valeur du coût maximal. Interprétée en minutes si `cost_type = \"time\"` (maximum : 120), et en mètres si `cost_type = \"distance\"` (maximum : 50000)."
         }
       },
       "required": [
         "lon",
         "lat",
-        "minutes",
-        "profile"
+        "profile",
+        "cost_type",
+        "cost_value"
       ],
       "additionalProperties": false,
-      "description": "Filtre spatial par temps de trajet depuis un point (`profile` voiture ou piéton). Exclusif avec les autres filtres spatiaux."
+      "description": "Filtre spatial par temps de trajet (isochrone) ou par distance (isodistance) depuis un point avec un profil voiture ou piéton. Exclusif avec les autres filtres spatiaux."
     }
   },
   "required": [
