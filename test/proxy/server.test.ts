@@ -60,7 +60,8 @@ function validIsolineToken() {
     lon: 2.35,
     lat: 48.85,
     profile: "pedestrian",
-    minutes: 15,
+    cost_type: "time",
+    cost_value: 15,
   }, KEY);
 }
 
@@ -234,12 +235,13 @@ describe("proxy/server", () => {
       lon: 2.35,
       lat: 48.85,
       profile: "pedestrian",
-      minutes: 15,
+      cost_type: "time",
+      cost_value: 15,
     });
   });
 
   it.each([
-    ["minutes above the maximum", { minutes: NAVIGATION_ISOCHRONE_MAX_TIME_MINUTES + 1 }],
+    ["minutes above the maximum", { cost_value: NAVIGATION_ISOCHRONE_MAX_TIME_MINUTES + 1 }],
     ["an unknown key", { typename: "BDTOPO_V3:batiment" }],
   ])("400 when an isoline token carries %s", async (_name, overrides) => {
     const badToken = encodeToken({
@@ -247,7 +249,8 @@ describe("proxy/server", () => {
       lon: 2.35,
       lat: 48.85,
       profile: "pedestrian",
-      minutes: 15,
+      cost_type: "time",
+      cost_value: 15,
       ...overrides,
     }, KEY);
     const res = await request(baseUrl).get(layerPath(badToken));

@@ -125,9 +125,13 @@ export const resolveProxyTravelTimeGeometry: TravelTimeResolver = async (
     throw new Error("resolveProxyTravelTimeGeometry appelé sans filtre `travel_time`.");
   }
 
-  const { operator, ...parameters } = spatialFilter;
+  const { operator, minutes, ...parameters } = spatialFilter;
 
-  return await getProxyIsolineClient().getIsoline(parameters);
+  return await getProxyIsolineClient().getIsoline({
+    ...parameters,
+    cost_type: "time",
+    cost_value: minutes,
+  });
 };
 
 // --- Default Engine Dependencies ---

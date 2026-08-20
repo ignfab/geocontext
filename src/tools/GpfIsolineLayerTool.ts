@@ -1,6 +1,6 @@
 /**
  * MCP tool producing an opaque, cartographiable layer URL for a Géoplateforme
- * isochrone request.
+ * isochrone or isodistance request.
  *
  * The tool returns a short opaque `data_url` that the LLM passes verbatim to a
  * map client. Fetching it yields a GeoJSON FeatureCollection served by the
@@ -19,6 +19,7 @@ import {
   PROXY_TOKEN_KIND,
   gpfGetFeaturesLayerOutputSchema,
   gpfIsolineLayerInputObjectSchema,
+  gpfIsolineLayerInputSchema,
   gpfIsolineLayerPublishedInputSchema,
   type GpfIsolineLayerInput,
 } from "../wfs/schema.js";
@@ -26,9 +27,10 @@ import { NAVIGATION_SOURCE } from "../gpf/navigation.js";
 import logger from "../logger.js";
 
 const GPF_ISOLINE_LAYER_TOOL_DESCRIPTION = [
-  "Interroge l'isochrone autour d'un point et renvoie une **URL de couche cartographiable** (`data_url`) : une URL opaque, à passer telle quelle à un outil d'affichage cartographique (MCP Carto, ...). L'ouvrir renvoie une FeatureCollection GeoJSON avec une géométrie complète.",
+  "Interroge l'isochrone ou l'isodistance autour d'un point : isochrone si `cost_type = \"time\"`, isodistance si `cost_type = \"distance\"`.",
   "À utiliser pour afficher ou cartographier une zone de desserte.",
-  "Utiliser `lon`/`lat` pour le point de départ, `profile` pour le mode de déplacement et `minutes` pour fixer le seuil maximal.",
+  "Renvoie une **URL de couche cartographiable** (`data_url`) : une URL opaque, à passer telle quelle à un outil d'affichage cartographique (MCP Carto, ...). L'ouvrir renvoie une FeatureCollection GeoJSON avec une géométrie complète.",
+  "Utiliser `lon`/`lat` pour le point de départ, `profile` pour le mode de déplacement, `cost_type` pour choisir le type de calcul et `cost_value` pour fixer le seuil maximal (en minutes si `time`, en mètres si `distance`).",
   `(source : ${NAVIGATION_SOURCE}).`,
 ].join("\n");
 
@@ -36,13 +38,13 @@ const GPF_ISOLINE_LAYER_TOOL_DESCRIPTION = [
 
 class GpfIsolineLayerTool extends BaseTool<GpfIsolineLayerInput> {
   name = "gpf_isoline_layer";
-  title = "Couche cartographiable d’isochrone GPF";
+  title = "Couche cartographiable d’isochrone / d'isodistance GPF";
   annotations = READ_ONLY_CLOSED_WORLD_TOOL_ANNOTATIONS;
   description = GPF_ISOLINE_LAYER_TOOL_DESCRIPTION;
   protected outputSchemaShape = gpfGetFeaturesLayerOutputSchema;
 
   // The framework requires a plain Zod object here to publish a compatible input
-  // schema. The object schema is the full runtime contract here.
+  // schema.
   schema = gpfIsolineLayerInputObjectSchema;
 
   /**
@@ -70,11 +72,11 @@ class GpfIsolineLayerTool extends BaseTool<GpfIsolineLayerInput> {
   }
 
   /**
-   * Mints the opaque proxy URL for the requested isochrone. No upstream call is
-   * made here: the isochrone itself is computed by the proxy when the `data_url`
+   * Mints the opaque proxy URL for the requested isoline. No upstream call is
+   * made here: the isoline itself is computed by the proxy when the `data_url`
    * is fetched.
    *
-   * @param input Validated isochrone layer input.
+   * @param input Validated isoline layer input.
    * @returns The `{ data_url }` payload carrying the opaque token.
    */
   async execute(input: GpfIsolineLayerInput) {
@@ -86,7 +88,7 @@ class GpfIsolineLayerTool extends BaseTool<GpfIsolineLayerInput> {
       );
     }
 
-    const tokenParams = gpfIsolineLayerInputObjectSchema.parse(input);
+    const tokenParams = gpfIsolineLayerInputSchema.parse(input);
 
     logger.info(`[tool] execute ${this.name} ...`, {
       input: tokenParams,

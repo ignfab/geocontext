@@ -109,9 +109,13 @@ export async function resolveTravelTimeGeometry(
     return undefined;
   }
 
-  const { operator, ...parameters } = spatialFilter;
+  const { operator, minutes, ...parameters } = spatialFilter;
 
-  return await navigationIsolineClient.getIsoline(parameters);
+  return await navigationIsolineClient.getIsoline({
+    ...parameters,
+    cost_type: "time",
+    cost_value: minutes,
+  });
 }
 
 /**

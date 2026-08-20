@@ -3,7 +3,7 @@ import logger from "../logger.js";
 import type { JsonFetcher } from "../helpers/http.js";
 import type { RateLimiter } from "../helpers/RateLimiter.js";
 import { getNavigationRateLimiter } from "./navigationRateLimiter.js";
-import { NAVIGATION_PROFILES, NAVIGATION_ISOLINE_RESOURCE } from "./navigation.js";
+import { NAVIGATION_METRICS, NAVIGATION_PROFILES, NAVIGATION_ISOLINE_RESOURCE } from "./navigation.js";
 
 export const NAVIGATION_ITINERARY_SOURCE = "Géoplateforme (calcul d'itinéraire)";
 export const NAVIGATION_ITINERARY_URL = "https://data.geopf.fr/navigation/itineraire";
@@ -11,7 +11,7 @@ export const NAVIGATION_ITINERARY_URL = "https://data.geopf.fr/navigation/itiner
 // same travel times.
 export const ITINERARY_RESOURCE = NAVIGATION_ISOLINE_RESOURCE;
 export const ITINERARY_PROFILES = NAVIGATION_PROFILES;
-export const ITINERARY_METRICS = ["time", "distance"] as const;
+export const ITINERARY_METRICS = NAVIGATION_METRICS;
 
 export type ItineraryProfile = typeof ITINERARY_PROFILES[number];
 export type ItineraryMetric = typeof ITINERARY_METRICS[number];
