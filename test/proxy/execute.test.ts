@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 import type { GpfFeatureType } from "../../src/wfs/catalog.js";
 
-import { runGeometryFeatureQuery, runGeometryFeatureByIdQuery, runGeometryIsochroneQuery, type WfsClientLike, type TravelTimeResolver } from "../../src/proxy/execute";
+import { runGeometryFeatureQuery, runGeometryFeatureByIdQuery, runGeometryIsolineQuery, type WfsClientLike, type TravelTimeResolver } from "../../src/proxy/execute";
 import type { CompiledRequest } from "../../src/wfs/request";
 import type { WfsFeatureCollectionResponse } from "../../src/wfs/types";
 import type { GpfGetFeaturesInput } from "../../src/wfs/schema";
@@ -413,12 +413,12 @@ describe("proxy/execute · runGeometryFeatureByIdQuery", () => {
   });
 });
 
-describe("proxy/execute · runGeometryIsochroneQuery", () => {
+describe("proxy/execute · runGeometryIsolineQuery", () => {
   const isochroneInput = { lon: 2.35, lat: 48.85, profile: "pedestrian" as const, minutes: 15 };
   const isochroneGeometry = { type: "Polygon", coordinates: [[[2, 48], [2.1, 48], [2, 48]]] };
 
   it("returns the isochrone as a FeatureCollection", async () => {
-    const result = await runGeometryIsochroneQuery(isochroneInput, {
+    const result = await runGeometryIsolineQuery(isochroneInput, {
       getGeometry: async () => isochroneGeometry,
     });
 
@@ -437,7 +437,7 @@ describe("proxy/execute · runGeometryIsochroneQuery", () => {
   it("maps the layer input onto the isochrone client input", async () => {
     const calls: unknown[] = [];
 
-    await runGeometryIsochroneQuery(isochroneInput, {
+    await runGeometryIsolineQuery(isochroneInput, {
       getGeometry: async (input) => {
         calls.push(input);
         return isochroneGeometry;

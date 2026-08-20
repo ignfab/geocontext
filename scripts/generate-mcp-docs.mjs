@@ -19,7 +19,7 @@ const toolDisplayOrder = [
   "gpf_search_types",
   "gpf_describe_type",
   "gpf_get_features",
-  "gpf_isochrone_layer",
+  "gpf_isoline_layer",
   "gpf_get_features_layer",
   "gpf_count_features",
   "gpf_get_feature_by_id",
