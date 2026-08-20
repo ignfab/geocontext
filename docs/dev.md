@@ -63,7 +63,7 @@ Avec certains clients MCP, vous serez amené à éditer un fichier JSON. Par exe
 
 ## Activer les tools cartographiques en local
 
-Les tools `gpf_isochrone_layer`, `gpf_get_features_layer` et `gpf_get_feature_by_id_layer` renvoient une `data_url` opaque, servie par le **proxy geodata**, un processus séparé du serveur MCP. Ils sont listés dans tous les transports mais échouent tant qu'aucun proxy joignable n'est configuré. Comme le proxy est **indépendant du transport**, on peut les activer en local — **même en `stdio`** — en lançant les deux composants côte à côte, sans Docker.
+Les tools `gpf_isoline_layer`, `gpf_get_features_layer` et `gpf_get_feature_by_id_layer` renvoient une `data_url` opaque, servie par le **proxy geodata**, un processus séparé du serveur MCP. Ils sont listés dans tous les transports mais échouent tant qu'aucun proxy joignable n'est configuré. Comme le proxy est **indépendant du transport**, on peut les activer en local — **même en `stdio`** — en lançant les deux composants côte à côte, sans Docker.
 
 Il faut une clé partagée (`PROXY_URL_SECRET`) entre les deux processus, et pointer le MCP vers le proxy local via `PROXY_PUBLIC_BASE_URL`.
 

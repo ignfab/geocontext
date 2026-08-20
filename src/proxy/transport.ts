@@ -21,7 +21,7 @@ import type {
   TravelTimeResolver,
   GeometryFeatureQueryDeps,
   GeometryFeatureByIdQueryDeps,
-  GeometryIsochroneQueryDeps,
+  GeometryIsolineQueryDeps,
 } from "./execute.js";
 import { fetchJSONPostWithLimit, fetchJSONGetWithLimit } from "../helpers/http.js";
 import { RateLimiter } from "../helpers/RateLimiter.js";
@@ -163,9 +163,9 @@ export function getDefaultGeometryFeatureByIdQueryDeps(): GeometryFeatureByIdQue
 }
 
 /**
- * Default dependency bundle for `runGeometryIsochroneQuery`.
+ * Default dependency bundle for `runGeometryIsolineQuery`.
  */
-export function getDefaultGeometryIsochroneQueryDeps(): GeometryIsochroneQueryDeps {
+export function getDefaultGeometryIsolineQueryDeps(): GeometryIsolineQueryDeps {
   return {
     getGeometry: (input) => getProxyIsochroneClient().getGeometry(input),
   };

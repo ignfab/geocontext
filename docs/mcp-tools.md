@@ -60,7 +60,7 @@ Tous les tools exposent les mêmes annotations MCP dans leur définition `tools/
 - [`gpf_search_types`](#gpf_search_types)
 - [`gpf_describe_type`](#gpf_describe_type)
 - [`gpf_get_features`](#gpf_get_features)
-- [`gpf_isochrone_layer`](#gpf_isochrone_layer)
+- [`gpf_isoline_layer`](#gpf_isoline_layer)
 - [`gpf_get_features_layer`](#gpf_get_features_layer)
 - [`gpf_count_features`](#gpf_count_features)
 - [`gpf_get_feature_by_id`](#gpf_get_feature_by_id)
@@ -1406,20 +1406,20 @@ Aucun `outputSchema` unique n'est exposé. La sortie est gérée par la sériali
 | Succès | oui | non | `content[0].text` est la FeatureCollection stringifiée (propriétés attributaires uniquement) ; aucun `structuredContent` n'est ajouté. |
 | Erreur | oui | oui | `content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`. |
 
-## `gpf_isochrone_layer`
+## `gpf_isoline_layer`
 
-Code Source : [src/tools/GpfIsochroneLayerTool.ts](../src/tools/GpfIsochroneLayerTool.ts)
+Code Source : [src/tools/GpfIsolineLayerTool.ts](../src/tools/GpfIsolineLayerTool.ts)
 
 ### Titre
 
-Couche cartographiable d’isochrone GPF
+Couche cartographiable d’isoline GPF
 
 ### Description du tool
 
 ```
 Renvoie une **URL de couche cartographiable** (`data_url`) pour l'isochrone autour d'un point.
 Utiliser `lon`/`lat` pour le départ, `profile` pour le mode de déplacement et `minutes` pour fixer le seuil maximal.
-L'URL est opaque et doit être transmise telle quelle à un outil cartographique (MCP Carto, ...). Son ouverture renvoie un Feature GeoJSON unique portant la géométrie complète de l'isochrone.
+L'URL est opaque et doit être transmise telle quelle à un outil cartographique (MCP Carto, ...). Son ouverture renvoie une FeatureCollection portant la géométrie complète de l'isochrone.
 (source : Géoplateforme (calcul d'isochrone)).
 ```
 
@@ -1483,7 +1483,7 @@ L'URL est opaque et doit être transmise telle quelle à un outil cartographique
 
 | Champ | Type | Requis | Description |
 | --- | --- | --- | --- |
-| `data_url` | string | oui | URL renvoyant un Feature GeoJSON unique (géométrie complète) prêt à être affiché dans un outil cartographique. |
+| `data_url` | string | oui | URL renvoyant une FeatureCollection GeoJSON (géométries complètes) prête à être affichée dans un outil cartographique. |
 
 <details>
 <summary>Schéma de sortie brut</summary>
@@ -1494,7 +1494,7 @@ L'URL est opaque et doit être transmise telle quelle à un outil cartographique
   "properties": {
     "data_url": {
       "type": "string",
-      "description": "URL renvoyant un Feature GeoJSON unique (géométrie complète) prêt à être affiché dans un outil cartographique.",
+      "description": "URL renvoyant une FeatureCollection GeoJSON (géométries complètes) prête à être affichée dans un outil cartographique.",
       "format": "uri"
     }
   },
