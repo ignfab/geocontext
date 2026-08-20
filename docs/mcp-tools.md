@@ -60,7 +60,7 @@ Tous les tools exposent les mêmes annotations MCP dans leur définition `tools/
 - [`gpf_search_types`](#gpf_search_types)
 - [`gpf_describe_type`](#gpf_describe_type)
 - [`gpf_get_features`](#gpf_get_features)
-- [`gpf_isochrone_layer`](#gpf_isochrone_layer)
+- [`gpf_isoline_layer`](#gpf_isoline_layer)
 - [`gpf_get_features_layer`](#gpf_get_features_layer)
 - [`gpf_count_features`](#gpf_count_features)
 - [`gpf_get_feature_by_id`](#gpf_get_feature_by_id)
@@ -1417,13 +1417,13 @@ Aucun `outputSchema` unique n'est exposé. La sortie est gérée par la sériali
 | Succès | oui | non | `content[0].text` est la FeatureCollection stringifiée (propriétés attributaires uniquement) ; aucun `structuredContent` n'est ajouté. |
 | Erreur | oui | oui | `content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`. |
 
-## `gpf_isochrone_layer`
+## `gpf_isoline_layer`
 
-Code Source : [src/tools/GpfIsochroneLayerTool.ts](../src/tools/GpfIsochroneLayerTool.ts)
+Code Source : [src/tools/GpfIsolineLayerTool.ts](../src/tools/GpfIsolineLayerTool.ts)
 
 ### Titre
 
-Couche cartographiable d’isochrone GPF
+Couche cartographiable d’isochrone / d'isodistance GPF
 
 ### Description du tool
 
