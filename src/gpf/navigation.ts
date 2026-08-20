@@ -8,8 +8,9 @@ export const NAVIGATION_SOURCE = "Géoplateforme (calcul d'isochrone / d'isodist
 export const NAVIGATION_ISOCHRONE_URL = "https://data.geopf.fr/navigation/isochrone";
 export const TRAVEL_TIME_RESOURCE = "bdtopo-valhalla";
 export const TRAVEL_TIME_MAX_MINUTES = 120;
-// Upstream ceiling accepted by the GPF isochrone service for a time cost.
+// Upstream ceilings accepted by the GPF isochrone service, per cost type.
 export const NAVIGATION_MAX_TIME_MINUTES = 600;
+export const NAVIGATION_MAX_DISTANCE_METERS = 50_000;
 export const TRAVEL_TIME_PROFILES = ["car", "pedestrian"] as const;
 export const NAVIGATION_COST_TYPES = ["time", "distance"] as const;
 

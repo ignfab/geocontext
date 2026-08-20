@@ -2,8 +2,8 @@ import { vi, describe, it, expect, afterEach } from "vitest";
 
 import type { Env } from "../../src/config/env.js";
 import { decodeToken } from "../../src/proxy/token.js";
-import { PROXY_TOKEN_KIND } from "../../src/wfs/schema.js";
-import { validateStructuredContentAgainstOutputSchema } from "./helpers/outputSchema.js";
+import { PROXY_TOKEN_KIND, gpfIsolineLayerInputSchema } from "../../src/wfs/schema.js";
+import { validateStructuredContentAgainstOutputSchema } from "./helpers/outputSchema";
 
 const SECRET_HEX = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 const SECRET = Buffer.from(SECRET_HEX, "hex");
@@ -100,7 +100,7 @@ describe("Test GpfIsolineLayerTool", () => {
           lat: 48.849319,
           profile: "car",
           cost_type: "distance",
-          cost_value: 1200,
+          cost_value: 50_000,
         },
       },
     });
@@ -128,33 +128,63 @@ describe("Test GpfIsolineLayerTool", () => {
       lat: 48.849319,
       profile: "car",
       cost_type: "distance",
-      cost_value: 1200,
+      cost_value: 50_000,
     });
   });
 
-  it("rejects a time cost above the supported maximum", async () => {
+  it("rejects a cost above the supported maximum", async () => {
     mockGetEnv.mockReturnValue(makeEnv({}));
     const tool = new GpfIsolineLayerTool();
 
-    const response = await tool.toolCall({
-      params: {
-        name: "gpf_isoline_layer",
-        arguments: {
-          lon: 2.337306,
-          lat: 48.849319,
-          profile: "pedestrian",
-          cost_type: "time",
-          cost_value: 601,
+    for (const { type, cost } of [
+      { type: "time", cost: 601 },
+      { type: "distance", cost: 50_001 },
+    ]) {
+      const response = await tool.toolCall({
+        params: {
+          name: "gpf_isoline_layer",
+          arguments: {
+            lon: 2.337306,
+            lat: 48.849319,
+            profile: "pedestrian",
+            cost_type: type,
+            cost_value: cost,
+          },
         },
-      },
+      });
+
+      expect(response.isError).toBe(true);
+      expect(response.structuredContent).toMatchObject({
+        type: "urn:geocontext:problem:invalid-tool-params",
+        errors: expect.arrayContaining([
+          expect.objectContaining({ name: "cost_value" }),
+        ]),
+      });
+    }
+  });
+
+  it("emits a `too_big` cost_value issue for an out-of-range distance", () => {
+    const result = gpfIsolineLayerInputSchema.safeParse({
+      lon: 2.337306,
+      lat: 48.849319,
+      profile: "pedestrian",
+      cost_type: "distance",
+      cost_value: 50_001,
     });
 
-    expect(response.isError).toBe(true);
-    expect(response.structuredContent).toMatchObject({
-      type: "urn:geocontext:problem:invalid-tool-params",
-      errors: expect.arrayContaining([
-        expect.objectContaining({ name: "cost_value" }),
+    expect(result.success).toBe(false);
+    if (result.success) {
+      throw new Error("expected parse failure");
+    }
+
+    expect(result.error.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "too_big",
+          path: ["cost_value"],
+          message: expect.stringContaining("ne peut pas dépasser"),
+        }),
       ]),
-    });
+    );
   });
 });

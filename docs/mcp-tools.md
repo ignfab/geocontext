@@ -1428,7 +1428,7 @@ L'URL est opaque et doit être transmise telle quelle à un outil cartographique
 | Champ | Type | Requis | Description |
 | --- | --- | --- | --- |
 | `cost_type` | string (enum) | non | Type de coût utilisé : `time` pour une isochrone, `distance` pour une isodistance. Valeurs : time, distance. Valeur par défaut : time. |
-| `cost_value` | number | oui | Valeur du coût maximal. Interprétée en minutes si `cost_type = "time"` (maximum : 600), et en mètres si `cost_type = "distance"`. |
+| `cost_value` | number | oui | Valeur du coût maximal. Interprétée en minutes si `cost_type = "time"` (maximum : 600), et en mètres si `cost_type = "distance"` (maximum : 50000). |
 | `lat` | number | oui | Latitude du point de départ en WGS84 `lon/lat`. |
 | `lon` | number | oui | Longitude du point de départ en WGS84 `lon/lat`. |
 | `profile` | string (enum) | oui | Mode de déplacement utilisé pour calculer l'isochrone ou l'isodistance : `car` ou `pedestrian`. Valeurs : car, pedestrian. |
@@ -1472,7 +1472,7 @@ L'URL est opaque et doit être transmise telle quelle à un outil cartographique
     "cost_value": {
       "type": "number",
       "exclusiveMinimum": 0,
-      "description": "Valeur du coût maximal. Interprétée en minutes si `cost_type = \"time\"` (maximum : 600), et en mètres si `cost_type = \"distance\"`."
+      "description": "Valeur du coût maximal. Interprétée en minutes si `cost_type = \"time\"` (maximum : 600), et en mètres si `cost_type = \"distance\"` (maximum : 50000)."
     }
   },
   "required": [
