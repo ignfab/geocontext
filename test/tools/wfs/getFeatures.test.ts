@@ -233,12 +233,13 @@ describe("Test GpfGetFeaturesTool", () => {
         distance_m: expect.objectContaining({ type: "number" }),
       }),
     });
-    expect(tool.toolDefinition.inputSchema.properties?.travel_time_filter).toMatchObject({
+    expect(tool.toolDefinition.inputSchema.properties?.isoline_filter).toMatchObject({
       type: "object",
       properties: expect.objectContaining({
         lon: expect.objectContaining({ type: "number" }),
         lat: expect.objectContaining({ type: "number" }),
-        minutes: expect.objectContaining({ type: "number", maximum: 120 }),
+        cost_type: expect.objectContaining({ enum: ["time", "distance"] }),
+        cost_value: expect.objectContaining({ type: "number" }),
         profile: expect.objectContaining({ enum: ["car", "pedestrian"] }),
       }),
     });
@@ -263,7 +264,7 @@ describe("Test GpfGetFeaturesTool", () => {
     });
   });
 
-  it("should compile travel_time_filter into a WFS request using an isochrone geometry", async () => {
+  it("should compile isoline_filter into a WFS request using an isochrone geometry", async () => {
     const tool = new GpfGetFeaturesTool();
     mockFeatureTypes({ [COMMUNE_TYPENAME]: polygonFeatureType });
     const isochroneUrls = captureIsochroneRequests();
@@ -274,10 +275,11 @@ describe("Test GpfGetFeaturesTool", () => {
         name: "gpf_get_features",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
-          travel_time_filter: {
+          isoline_filter: {
             lon: 2.337306,
             lat: 48.849319,
-            minutes: 15,
+            cost_type: "time",
+            cost_value: 15,
             profile: "pedestrian",
           },
         },
@@ -437,7 +439,7 @@ describe("Test GpfGetFeaturesTool", () => {
         { bbox_filter: { west: 2.1, south: 48.7, east: 2.5, north: 48.9 } },
         { dwithin_point_filter: { lon: 2.3, lat: 48.8, distance_m: 500 } },
         { intersects_feature_filter: { typename: "ADMINEXPRESS-COG.LATEST:departement", feature_id: "departement.1" } },
-        { travel_time_filter: { lon: 2.3, lat: 48.8, minutes: 10, profile: "pedestrian" } },
+        { isoline_filter: { lon: 2.3, lat: 48.8, cost_type: "distance", cost_value: 10, profile: "pedestrian" } },
       ]) {
         expect(() => gpfGetFeaturesInputSchema.parse({
           typename: COMMUNE_TYPENAME,

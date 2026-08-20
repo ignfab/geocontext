@@ -8,30 +8,22 @@ import { isGeometryLike } from "../helpers/geojson.js";
 
 export const NAVIGATION_SOURCE = "Géoplateforme (calcul d'isochrone / d'isodistance)";
 export const NAVIGATION_ISOCHRONE_URL = "https://data.geopf.fr/navigation/isochrone";
-export const TRAVEL_TIME_RESOURCE = "bdtopo-valhalla";
-export const TRAVEL_TIME_MAX_MINUTES = 120;
+export const NAVIGATION_ISOCHRONE_RESOURCE = "bdtopo-valhalla";
 // Upstream ceilings accepted by the GPF isochrone service, per cost type.
 export const NAVIGATION_MAX_TIME_MINUTES = 600;
 export const NAVIGATION_MAX_DISTANCE_METERS = 50_000;
-export const TRAVEL_TIME_PROFILES = ["car", "pedestrian"] as const;
+export const NAVIGATION_PROFILES = ["car", "pedestrian"] as const;
 export const NAVIGATION_COST_TYPES = ["time", "distance"] as const;
 
-export type TravelTimeProfile = typeof TRAVEL_TIME_PROFILES[number];
+export type NavigationProfile = typeof NAVIGATION_PROFILES[number];
 export type NavigationCostType = typeof NAVIGATION_COST_TYPES[number];
-
-export type TravelTimeGeometryInput = {
-  lon: number;
-  lat: number;
-  minutes: number;
-  profile: TravelTimeProfile;
-};
 
 export type IsolineGeometryInput = {
   lon: number;
   lat: number;
   costType: NavigationCostType;
   costValue: number;
-  profile: TravelTimeProfile;
+  profile: NavigationProfile;
 };
 
 export class NavigationIsochroneClient {
@@ -45,7 +37,7 @@ export class NavigationIsochroneClient {
     logger.debug(`[gpf:navigation] getGeometry(${JSON.stringify(input)})...`);
 
     const url = `${NAVIGATION_ISOCHRONE_URL}?${new URLSearchParams({
-      resource: TRAVEL_TIME_RESOURCE,
+      resource: NAVIGATION_ISOCHRONE_RESOURCE,
       point: `${input.lon},${input.lat}`,
       direction: "departure",
       costType: input.costType,
@@ -64,16 +56,6 @@ export class NavigationIsochroneClient {
 
     return json.geometry;
   }
-
-  async getTravelTimeGeometry(input: TravelTimeGeometryInput): Promise<Geometry> {
-    return this.getGeometry({
-      lon: input.lon,
-      lat: input.lat,
-      costType: "time",
-      costValue: input.minutes,
-      profile: input.profile,
-    });
-  }
 }
 
 let defaultNavigationIsochroneClient: NavigationIsochroneClient | undefined;
@@ -88,8 +70,5 @@ function getDefaultNavigationIsochroneClient() {
 export const navigationIsochroneClient = {
   getGeometry(input: IsolineGeometryInput) {
     return getDefaultNavigationIsochroneClient().getGeometry(input);
-  },
-  getTravelTimeGeometry(input: TravelTimeGeometryInput) {
-    return getDefaultNavigationIsochroneClient().getTravelTimeGeometry(input);
   },
 };

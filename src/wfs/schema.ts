@@ -12,9 +12,8 @@ import { generatePublishedInputSchema } from "../helpers/jsonSchema.js";
 import { lonSchema, latSchema } from "../helpers/schemas.js";
 import {
   NAVIGATION_COST_TYPES,
-  TRAVEL_TIME_MAX_MINUTES,
   NAVIGATION_MAX_DISTANCE_METERS,
-  TRAVEL_TIME_PROFILES,
+  NAVIGATION_PROFILES,
   NAVIGATION_MAX_TIME_MINUTES,
   type NavigationCostType,
 } from "../gpf/navigation.js";
@@ -99,24 +98,10 @@ const intersectsFeatureFilterSchema = z.object({
 }).strict().describe("Filtre les objets dont la géométrie intersecte celle d'un objet GPF de référence.");
 
 const navigationProfileSchema = z
-  .enum(TRAVEL_TIME_PROFILES)
+  .enum(NAVIGATION_PROFILES)
   .describe("Mode de déplacement utilisé pour calculer l'isochrone ou l'isodistance : `car` ou `pedestrian`.");
 
-const travelTimeMinutesSchema = z
-  .number()
-  .finite()
-  .positive()
-  .max(TRAVEL_TIME_MAX_MINUTES)
-  .describe(`Temps de trajet maximal en minutes. Maximum : ${TRAVEL_TIME_MAX_MINUTES}.`);
-
-const travelTimeFilterSchema = z.object({
-  lon: lonSchema.describe("Longitude du point de départ en WGS84 `lon/lat`."),
-  lat: latSchema.describe("Latitude du point de départ en WGS84 `lon/lat`."),
-  minutes: travelTimeMinutesSchema,
-  profile: navigationProfileSchema,
-}).strict().describe("Filtre les objets situés dans une zone atteignable en un temps donné depuis un point.");
-
-// Departure point of an isochrone. Flat `lon`/`lat`, exactly like every spatial
+// Departure point of an isoline. Flat `lon`/`lat`, exactly like every spatial
 // filter (`intersects_point_filter`, `dwithin_point_filter`, ...), so the LLM sees
 // one point convention across the whole surface.
 const isolinePointSchema = z.object({
@@ -134,27 +119,48 @@ const isolineCostValueSchema = z
   .positive()
   .describe(`Valeur du coût maximal. Interprétée en minutes si \`cost_type = \"time\"\` (maximum : ${NAVIGATION_MAX_TIME_MINUTES}), et en mètres si \`cost_type = \"distance\"\` (maximum : ${NAVIGATION_MAX_DISTANCE_METERS}).`);
 
+const isolineCostSchema = z.object({
+  profile: navigationProfileSchema,
+  cost_type: navigationCostTypeSchema,
+  cost_value: isolineCostValueSchema,
+}).strict();
+
+type CostLimits = Record<NavigationCostType, { max: number; name: string; unit: string }>
+
 // One max per cost type: `cost_value` is minutes for `time` and meters for
 // `distance`, so the ceiling can only be checked once `cost_type` is known.
-const ISOLINE_COST_LIMITS: Record<NavigationCostType, { max: number; name: string; unit: string }> = {
+const ISOLINE_COST_LIMITS: CostLimits = {
   time: { max: NAVIGATION_MAX_TIME_MINUTES, name: "temps", unit: "minutes" },
   distance: { max: NAVIGATION_MAX_DISTANCE_METERS, name: "distance", unit: "mètres" },
 };
 
-function assertIsolineCostValue(input: { cost_type: NavigationCostType; cost_value: number }, ctx: z.RefinementCtx) {
-  const { max, name, unit } = ISOLINE_COST_LIMITS[input.cost_type];
+const ISOLINE_FILTER_COST_LIMITS: CostLimits = {
+  ...ISOLINE_COST_LIMITS,
+  // lower limit for performance
+  time: { ...ISOLINE_COST_LIMITS.time, max: 120 },
+}
 
-  if (input.cost_value > max) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.too_big,
-      maximum: max,
-      type: "number",
-      inclusive: true,
-      path: ["cost_value"],
-      message: `Le coût maximal en ${name} ne peut pas dépasser ${max} ${unit}.`,
-    });
+function assertIsolineCostValue(limits: CostLimits) {
+  return (input: { cost_type: NavigationCostType; cost_value: number }, ctx: z.RefinementCtx) => {
+    const { max, name, unit } = limits[input.cost_type];
+
+    if (input.cost_value > max) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.too_big,
+        maximum: max,
+        type: "number",
+        inclusive: true,
+        path: ["cost_value"],
+        message: `Le coût maximal en ${name} ne peut pas dépasser ${max} ${unit}.`,
+      });
+    }
   }
 }
+
+const isolineFilterSchema = isolinePointSchema
+  .merge(isolineCostSchema)
+  .superRefine(assertIsolineCostValue(ISOLINE_FILTER_COST_LIMITS))
+  .describe("Filtre les objets situés dans une isochrone (temps de trajet maximum fixé) ou une isodistance (distance maximale fixée) autour d'un point.");
 
 // --- Shared GPF Inputs ---
 
@@ -183,13 +189,13 @@ const gpfSpatialFilterInputSchema = z.object({
     .describe("Filtre spatial par intersection avec un point. Exclusif avec les autres filtres spatiaux."),
   dwithin_point_filter: dwithinPointFilterSchema
     .optional()
-    .describe("Filtre spatial par distance à un point. Exclusif avec les autres filtres spatiaux."),
+    .describe("Filtre spatial par distance à un point à vol d'oiseau. Exclusif avec les autres filtres spatiaux."),
   intersects_feature_filter: intersectsFeatureFilterSchema
     .optional()
     .describe("Filtre spatial par intersection avec un feature GPF de référence. Exclusif avec les autres filtres spatiaux."),
-  travel_time_filter: travelTimeFilterSchema
+  isoline_filter: isolineFilterSchema
     .optional()
-    .describe("Filtre spatial par temps de trajet depuis un point (`profile` voiture ou piéton). Exclusif avec les autres filtres spatiaux."),
+    .describe("Filtre spatial par temps de trajet (isochrone) ou par distance (isodistance) depuis un point avec un profil voiture ou piéton. Exclusif avec les autres filtres spatiaux."),
 })
 
 export const GPF_GET_FEATURES_SPATIAL_FILTER_KEYS =
@@ -277,7 +283,7 @@ const gpfGetFeaturesGeometryExtraInputSchema = z.object({
     .describe(buildSpatialExtrasDescription(
       "chaque objet",
       GPF_SPATIAL_EXTRAS_DOCNAMES,
-      "`distance_to_filter` est la distance (en m) entre la géométrie de l'objet renvoyé et le centroïde du filtre spatial (le point de départ dans le cas de `travel_time_filter`).\n"+
+      "`distance_to_filter` est la distance (en m) entre la géométrie de l'objet renvoyé et le centroïde du filtre spatial (le point de départ dans le cas de `isoline_filter`).\n"+
       "`intersection_area` est l'aire (en m²) de la partie de l'objet renvoyé située dans le filtre spatial. L'objet et le filtre doivent être surfaciques, sinon la valeur est `null` ; `0` signifie que l'objet ne recouvre pas le filtre.\n"+
       "`distance_to_filter` et `intersection_area` exigent un filtre spatial.\n"+
       "Les `spatial_extras` sont calculés après la requête, sur les seuls objets renvoyés : ils ne sont utilisables ni dans `where` ni dans `order_by`. Pour un classement (les N plus grands, le plus proche) ou une somme, vérifier que `numberReturned` est égal à `numberMatched`, sinon augmenter `limit`."
@@ -473,14 +479,12 @@ export const gpfGetFeatureByIdLayerPublishedInputSchema = generatePublishedInput
 
 // --- `gpf_isoline_layer` (proxy) ---
 
-export const gpfIsolineLayerInputObjectSchema = isolinePointSchema.merge(z.object({
-  profile: navigationProfileSchema,
-  cost_type: navigationCostTypeSchema,
-  cost_value: isolineCostValueSchema,
-})).strict();
+export const gpfIsolineLayerInputObjectSchema = isolinePointSchema
+  .merge(isolineCostSchema)
+  .strict();
 
 export const gpfIsolineLayerInputSchema = gpfIsolineLayerInputObjectSchema
-  .superRefine(assertIsolineCostValue);
+  .superRefine(assertIsolineCostValue(ISOLINE_COST_LIMITS));
 
 export type GpfIsolineLayerInput = z.infer<typeof gpfIsolineLayerInputSchema>;
 
