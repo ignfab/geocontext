@@ -18,32 +18,31 @@ import { buildDataUrl } from "../proxy/dataUrl.js";
 import {
   PROXY_TOKEN_KIND,
   gpfGetFeaturesLayerOutputSchema,
-  gpfIsochroneLayerInputObjectSchema,
-  gpfIsochroneLayerPublishedInputSchema,
-  type GpfIsochroneLayerInput,
+  gpfIsolineLayerInputObjectSchema,
+  gpfIsolineLayerPublishedInputSchema,
+  type GpfIsolineLayerInput,
 } from "../wfs/schema.js";
 import { NAVIGATION_SOURCE } from "../gpf/navigation.js";
 import logger from "../logger.js";
 
-const GPF_ISOCHRONE_LAYER_TOOL_DESCRIPTION = [
-  "Calcule l'isochrone autour d'un point et renvoie une **URL de couche cartographiable** (`data_url`) : une URL opaque, à passer telle quelle à un outil d'affichage cartographique (MCP Carto, ...). L'ouvrir renvoie une FeatureCollection GeoJSON avec une géométrie complète.",
-  "À utiliser pour afficher ou cartographier une zone de desserte.",
+const GPF_ISOLINE_LAYER_TOOL_DESCRIPTION = [
+  "Interroge l'isochrone autour d'un point et renvoie une **URL de couche cartographiable** (`data_url`) : une URL opaque, à passer telle quelle à un outil d'affichage cartographique (MCP Carto, ...). L'ouvrir renvoie une FeatureCollection GeoJSON avec une géométrie complète.",
   "Utiliser `lon`/`lat` pour le point de départ, `profile` pour le mode de déplacement et `minutes` pour fixer le seuil maximal.",
   `(source : ${NAVIGATION_SOURCE}).`,
 ].join("\n");
 
 // --- Tool ---
 
-class GpfIsochroneLayerTool extends BaseTool<GpfIsochroneLayerInput> {
-  name = "gpf_isochrone_layer";
+class GpfIsolineLayerTool extends BaseTool<GpfIsolineLayerInput> {
+  name = "gpf_isoline_layer";
   title = "Couche cartographiable d’isochrone GPF";
   annotations = READ_ONLY_CLOSED_WORLD_TOOL_ANNOTATIONS;
-  description = GPF_ISOCHRONE_LAYER_TOOL_DESCRIPTION;
+  description = GPF_ISOLINE_LAYER_TOOL_DESCRIPTION;
   protected outputSchemaShape = gpfGetFeaturesLayerOutputSchema;
 
   // The framework requires a plain Zod object here to publish a compatible input
   // schema. The object schema is the full runtime contract here.
-  schema = gpfIsochroneLayerInputObjectSchema;
+  schema = gpfIsolineLayerInputObjectSchema;
 
   /**
    * Exposes an input schema variant that stays compatible with most MCP integrations.
@@ -51,7 +50,7 @@ class GpfIsochroneLayerTool extends BaseTool<GpfIsochroneLayerInput> {
    * @returns The published input schema exposed through the MCP tool definition.
    */
   get inputSchema() {
-    return gpfIsochroneLayerPublishedInputSchema;
+    return gpfIsolineLayerPublishedInputSchema;
   }
 
   /**
@@ -77,23 +76,23 @@ class GpfIsochroneLayerTool extends BaseTool<GpfIsochroneLayerInput> {
    * @param input Validated isochrone layer input.
    * @returns The `{ data_url }` payload carrying the opaque token.
    */
-  async execute(input: GpfIsochroneLayerInput) {
+  async execute(input: GpfIsolineLayerInput) {
     const env = getEnv();
 
     if (!env.PROXY_URL_SECRET || !env.PROXY_PUBLIC_BASE_URL) {
       throw new Error(
-        "`gpf_isochrone_layer` nécessite un proxy geodata configuré (variables d'environnement `PROXY_URL_SECRET` et `PROXY_PUBLIC_BASE_URL`, pointant vers un proxy joignable).",
+        "`gpf_isoline_layer` nécessite un proxy geodata configuré (variables d'environnement `PROXY_URL_SECRET` et `PROXY_PUBLIC_BASE_URL`, pointant vers un proxy joignable).",
       );
     }
 
-    const tokenParams = gpfIsochroneLayerInputObjectSchema.parse(input);
+    const tokenParams = gpfIsolineLayerInputObjectSchema.parse(input);
 
     logger.info(`[tool] execute ${this.name} ...`, {
       input: tokenParams,
     });
 
     const token = encodeToken(
-      { kind: PROXY_TOKEN_KIND.isochrone, ...tokenParams },
+      { kind: PROXY_TOKEN_KIND.isoline, ...tokenParams },
       env.PROXY_URL_SECRET,
     );
 
@@ -103,4 +102,4 @@ class GpfIsochroneLayerTool extends BaseTool<GpfIsochroneLayerInput> {
   }
 }
 
-export default GpfIsochroneLayerTool;
+export default GpfIsolineLayerTool;

@@ -35,7 +35,7 @@ Annotations MCP exposées dans la définition `tools/list` de chaque tool :
 | `readOnlyHint` | oui | Le tool consulte des données sans modifier d'état côté serveur. |
 | `destructiveHint` | non | Le tool n'est pas signalé comme destructif. |
 | `idempotentHint` | oui | Répéter le même appel ne déclenche pas d'effet de bord supplémentaire attendu. |
-| `openWorldHint` | oui (non pour `gpf_search_types`, `gpf_describe_type`, `gpf_get_features_layer`, `gpf_get_feature_by_id_layer` et `gpf_isochrone_layer`) | Le tool interroge des sources externes ou ouvertes, dont le contenu peut évoluer. |
+| `openWorldHint` | oui (non pour `gpf_search_types`, `gpf_describe_type`, `gpf_get_features_layer`, `gpf_get_feature_by_id_layer` et `gpf_isoline_layer`) | Le tool interroge des sources externes ou ouvertes, dont le contenu peut évoluer. |
 
 ## Liste des tools
 
@@ -52,7 +52,7 @@ Annotations MCP exposées dans la définition `tools/list` de chaque tool :
 - [`gpf_count_features`](#gpf_count_features)
 - [`gpf_get_feature_by_id`](#gpf_get_feature_by_id)
 - [`gpf_get_feature_by_id_layer`](#gpf_get_feature_by_id_layer)
-- [`gpf_isochrone_layer`](#gpf_isochrone_layer)
+- [`gpf_isoline_layer`](#gpf_isoline_layer)
 - [`distance`](#distance)
 
 ## `geocode`
@@ -2215,9 +2215,9 @@ Cet outil ne peut renvoyer qu'un unique objet (0 ou plusieurs résultats provoqu
 | Succès | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
 | Erreur | oui | non | `content[0].text` porte le message d'erreur ; aucun `structuredContent` n'est ajouté (réservé au `outputSchema` du cas de succès). |
 
-## `gpf_isochrone_layer`
+## `gpf_isoline_layer`
 
-Code Source : [src/tools/GpfIsochroneLayerTool.ts](../src/tools/GpfIsochroneLayerTool.ts)
+Code Source : [src/tools/GpfIsolineLayerTool.ts](../src/tools/GpfIsolineLayerTool.ts)
 
 ### Titre
 
@@ -2226,8 +2226,7 @@ Couche cartographiable d’isochrone GPF
 ### Description du tool
 
 ```
-Calcule l'isochrone autour d'un point et renvoie une **URL de couche cartographiable** (`data_url`) : une URL opaque, à passer telle quelle à un outil d'affichage cartographique (MCP Carto, ...). L'ouvrir renvoie une FeatureCollection GeoJSON avec une géométrie complète.
-À utiliser pour afficher ou cartographier une zone de desserte.
+Interroge l'isochrone autour d'un point et renvoie une **URL de couche cartographiable** (`data_url`) : une URL opaque, à passer telle quelle à un outil d'affichage cartographique (MCP Carto, ...). L'ouvrir renvoie une FeatureCollection GeoJSON avec une géométrie complète.
 Utiliser `lon`/`lat` pour le point de départ, `profile` pour le mode de déplacement et `minutes` pour fixer le seuil maximal.
 (source : Géoplateforme (calcul d'isochrone)).
 ```

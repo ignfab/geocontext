@@ -13,16 +13,16 @@ import { NAVIGATION_ISOCHRONE_MAX_TIME_MINUTES } from "../../src/gpf/navigation"
 // Mock the proxy engine + transport so the server is exercised WITHOUT network.
 const runGeometryFeatureQuery = vi.fn();
 const runGeometryFeatureByIdQuery = vi.fn();
-const runGeometryIsochroneQuery = vi.fn();
+const runGeometryIsolineQuery = vi.fn();
 vi.mock("../../src/proxy/execute", () => ({
   runGeometryFeatureQuery: (...args: unknown[]) => runGeometryFeatureQuery(...args),
   runGeometryFeatureByIdQuery: (...args: unknown[]) => runGeometryFeatureByIdQuery(...args),
-  runGeometryIsochroneQuery: (...args: unknown[]) => runGeometryIsochroneQuery(...args),
+  runGeometryIsolineQuery: (...args: unknown[]) => runGeometryIsolineQuery(...args),
 }));
 vi.mock("../../src/proxy/transport", () => ({
   getDefaultGeometryFeatureQueryDeps: () => ({ wfsClient: {}, resolveTravelTime: vi.fn() }),
   getDefaultGeometryFeatureByIdQueryDeps: () => ({ wfsClient: {} }),
-  getDefaultGeometryIsochroneQueryDeps: () => ({ getGeometry: vi.fn() }),
+  getDefaultGeometryIsolineQueryDeps: () => ({ getGeometry: vi.fn() }),
 }));
 
 // A fixed 32-byte hex key for the test environment.
@@ -54,9 +54,9 @@ function validByIdToken() {
   }, KEY);
 }
 
-function validIsochroneToken() {
+function validIsolineToken() {
   return encodeToken({
-    kind: PROXY_TOKEN_KIND.isochrone,
+    kind: PROXY_TOKEN_KIND.isoline,
     lon: 2.35,
     lat: 48.85,
     profile: "pedestrian",
@@ -89,7 +89,7 @@ afterAll(async () => {
 beforeEach(() => {
   runGeometryFeatureQuery.mockReset();
   runGeometryFeatureByIdQuery.mockReset();
-  runGeometryIsochroneQuery.mockReset();
+  runGeometryIsolineQuery.mockReset();
 });
 
 describe("proxy/server", () => {
@@ -218,18 +218,18 @@ describe("proxy/server", () => {
     });
   });
 
-  it("dispatches an isochrone token to the isochrone engine", async () => {
-    runGeometryIsochroneQuery.mockResolvedValue(SAMPLE_COLLECTION);
+  it("dispatches an isoline token to the isoline engine", async () => {
+    runGeometryIsolineQuery.mockResolvedValue(SAMPLE_COLLECTION);
 
-    const res = await request(baseUrl).get(layerPath(validIsochroneToken()));
+    const res = await request(baseUrl).get(layerPath(validIsolineToken()));
 
     expect(res.status).toBe(200);
     expect(res.headers["content-type"]).toContain("application/geo+json");
     expect(JSON.parse(res.text)).toEqual(SAMPLE_COLLECTION);
-    expect(runGeometryIsochroneQuery).toHaveBeenCalledOnce();
+    expect(runGeometryIsolineQuery).toHaveBeenCalledOnce();
     expect(runGeometryFeatureQuery).not.toHaveBeenCalled();
     expect(runGeometryFeatureByIdQuery).not.toHaveBeenCalled();
-    const [input] = runGeometryIsochroneQuery.mock.calls[0];
+    const [input] = runGeometryIsolineQuery.mock.calls[0];
     expect(input).toEqual({
       lon: 2.35,
       lat: 48.85,
@@ -243,7 +243,7 @@ describe("proxy/server", () => {
     ["an unknown key", { typename: "BDTOPO_V3:batiment" }],
   ])("400 when an isochrone token carries %s", async (_name, overrides) => {
     const badToken = encodeToken({
-      kind: PROXY_TOKEN_KIND.isochrone,
+      kind: PROXY_TOKEN_KIND.isoline,
       lon: 2.35,
       lat: 48.85,
       profile: "pedestrian",
@@ -252,7 +252,7 @@ describe("proxy/server", () => {
     }, KEY);
     const res = await request(baseUrl).get(layerPath(badToken));
     expect(res.status).toBe(400);
-    expect(runGeometryIsochroneQuery).not.toHaveBeenCalled();
+    expect(runGeometryIsolineQuery).not.toHaveBeenCalled();
   });
 
   it("404 when the by-id feature is absent (FeatureNotFoundError)", async () => {

@@ -65,7 +65,7 @@ describe("generate-mcp-docs helpers", () => {
       { name: "gpf_get_feature_by_id_layer" },
       { name: "gpf_count_features" },
       { name: "gpf_get_features" },
-      { name: "gpf_isochrone_layer" },
+      { name: "gpf_isoline_layer" },
       { name: "gpf_get_feature_by_id" },
       { name: "adminexpress" },
       { name: "gpf_get_features_layer" },
@@ -83,7 +83,7 @@ describe("generate-mcp-docs helpers", () => {
       "gpf_count_features",
       "gpf_get_feature_by_id",
       "gpf_get_feature_by_id_layer",
-      "gpf_isochrone_layer",
+      "gpf_isoline_layer",
       "unknown_custom_tool",
     ]);
   });

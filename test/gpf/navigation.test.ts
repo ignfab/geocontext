@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { NavigationIsochroneClient } from "../../src/gpf/navigation.js";
+import { NavigationIsolineClient } from "../../src/gpf/navigation.js";
 import { RateLimiter } from "../../src/helpers/RateLimiter.js";
 
-describe("NavigationIsochroneClient", () => {
-  it("should build a Valhalla travel-time isochrone request and return its GeoJSON geometry", async () => {
+describe("NavigationIsolineClient", () => {
+  it("should build a Valhalla travel-time isoline request and return its GeoJSON geometry", async () => {
     const urls: string[] = [];
-    const client = new NavigationIsochroneClient(
+    const client = new NavigationIsolineClient(
       new RateLimiter({ name: "test", maxCalls: 100, period: 1 }),
       async (url) => {
         urls.push(url);
@@ -21,7 +21,7 @@ describe("NavigationIsochroneClient", () => {
       },
     );
 
-    const geometry = await client.getIsochrone({
+    const geometry = await client.getIsoline({
       lon: 2.337306,
       lat: 48.849319,
       minutes: 15,
@@ -44,12 +44,12 @@ describe("NavigationIsochroneClient", () => {
   });
 
   it("should reject responses without usable GeoJSON geometry", async () => {
-    const client = new NavigationIsochroneClient(
+    const client = new NavigationIsolineClient(
       new RateLimiter({ name: "test", maxCalls: 100, period: 1 }),
       async () => ({ geometry: null }),
     );
 
-    await expect(client.getIsochrone({
+    await expect(client.getIsoline({
       lon: 2.337306,
       lat: 48.849319,
       minutes: 15,
