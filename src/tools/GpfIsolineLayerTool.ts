@@ -1,6 +1,6 @@
 /**
  * MCP tool producing an opaque, cartographiable layer URL for a Géoplateforme
- * isochrone request.
+ * isochrone or isodistance request.
  *
  * The tool returns a short opaque `data_url` that the LLM passes verbatim to a
  * map client. Fetching it yields a GeoJSON FeatureCollection served by the
@@ -33,9 +33,9 @@ class GpfIsolineLayerTool extends BaseTool<GpfIsolineLayerInput> {
   title = "Couche cartographiable d’isoline GPF";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
   description = [
-    "Renvoie une **URL de couche cartographiable** (`data_url`) pour l'isochrone autour d'un point.",
-    "Utiliser `lon`/`lat` pour le départ, `profile` pour le mode de déplacement et `minutes` pour fixer le seuil maximal.",
-    "L'URL est opaque et doit être transmise telle quelle à un outil cartographique (MCP Carto, ...). Son ouverture renvoie une FeatureCollection portant la géométrie complète de l'isochrone.",
+    "Renvoie une **URL de couche cartographiable** (`data_url`) pour une zone de desserte calculée autour d'un point : isochrone si `cost_type = \"time\"`, isodistance si `cost_type = \"distance\"`.",
+    "Utiliser `lon`/`lat` pour le départ, `profile` pour le mode de déplacement, `cost_type` pour choisir le type de calcul et `cost_value` pour fixer le seuil maximal (en minutes si `time`, en mètres si `distance`).",
+    "L'URL est opaque et doit être transmise telle quelle à un outil cartographique (MCP Carto, ...).",
     `(source : ${NAVIGATION_SOURCE}).`,
   ].join("\n");
   protected outputSchemaShape = gpfGetFeaturesLayerOutputSchema;
@@ -70,11 +70,11 @@ class GpfIsolineLayerTool extends BaseTool<GpfIsolineLayerInput> {
   }
 
   /**
-   * Mints the opaque proxy URL for the requested isochrone. No upstream call is
-   * made here: the isochrone itself is computed by the proxy when the `data_url`
+   * Mints the opaque proxy URL for the requested isoline. No upstream call is
+   * made here: the isoline itself is computed by the proxy when the `data_url`
    * is fetched.
    *
-   * @param input Validated isochrone layer input.
+   * @param input Validated isoline layer input.
    * @returns The `{ data_url }` payload carrying the opaque token.
    */
   async execute(input: GpfIsolineLayerInput) {

@@ -1324,7 +1324,7 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
             "car",
             "pedestrian"
           ],
-          "description": "Mode de déplacement utilisé pour calculer l'isochrone (`car` ou `pedestrian`)."
+          "description": "Mode de déplacement utilisé pour calculer l'isochrone ou l'isodistance : `car` ou `pedestrian`."
         }
       },
       "required": [
@@ -1417,20 +1417,21 @@ Couche cartographiable d’isoline GPF
 ### Description du tool
 
 ```
-Renvoie une **URL de couche cartographiable** (`data_url`) pour l'isochrone autour d'un point.
-Utiliser `lon`/`lat` pour le départ, `profile` pour le mode de déplacement et `minutes` pour fixer le seuil maximal.
-L'URL est opaque et doit être transmise telle quelle à un outil cartographique (MCP Carto, ...). Son ouverture renvoie une FeatureCollection portant la géométrie complète de l'isochrone.
-(source : Géoplateforme (calcul d'isochrone)).
+Renvoie une **URL de couche cartographiable** (`data_url`) pour une zone de desserte calculée autour d'un point : isochrone si `cost_type = "time"`, isodistance si `cost_type = "distance"`.
+Utiliser `lon`/`lat` pour le départ, `profile` pour le mode de déplacement, `cost_type` pour choisir le type de calcul et `cost_value` pour fixer le seuil maximal (en minutes si `time`, en mètres si `distance`).
+L'URL est opaque et doit être transmise telle quelle à un outil cartographique (MCP Carto, ...).
+(source : Géoplateforme (calcul d'isochrone / d'isodistance)).
 ```
 
 ### Schéma d’entrée
 
 | Champ | Type | Requis | Description |
 | --- | --- | --- | --- |
+| `cost_type` | string (enum) | non | Type de coût utilisé : `time` pour une isochrone, `distance` pour une isodistance. Valeurs : time, distance. Valeur par défaut : time. |
+| `cost_value` | number | oui | Valeur du coût maximal. Interprétée en minutes si `cost_type = "time"` (maximum : 600), et en mètres si `cost_type = "distance"`. |
 | `lat` | number | oui | Latitude du point de départ en WGS84 `lon/lat`. |
 | `lon` | number | oui | Longitude du point de départ en WGS84 `lon/lat`. |
-| `minutes` | number | oui | Valeur du coût maximal, en minutes. Maximum : 600. |
-| `profile` | string (enum) | oui | Mode de déplacement utilisé pour calculer l'isochrone (`car` ou `pedestrian`). Valeurs : car, pedestrian. |
+| `profile` | string (enum) | oui | Mode de déplacement utilisé pour calculer l'isochrone ou l'isodistance : `car` ou `pedestrian`. Valeurs : car, pedestrian. |
 
 <details>
 <summary>Schéma d’entrée brut</summary>
@@ -1457,20 +1458,28 @@ L'URL est opaque et doit être transmise telle quelle à un outil cartographique
         "car",
         "pedestrian"
       ],
-      "description": "Mode de déplacement utilisé pour calculer l'isochrone (`car` ou `pedestrian`)."
+      "description": "Mode de déplacement utilisé pour calculer l'isochrone ou l'isodistance : `car` ou `pedestrian`."
     },
-    "minutes": {
+    "cost_type": {
+      "type": "string",
+      "enum": [
+        "time",
+        "distance"
+      ],
+      "default": "time",
+      "description": "Type de coût utilisé : `time` pour une isochrone, `distance` pour une isodistance."
+    },
+    "cost_value": {
       "type": "number",
       "exclusiveMinimum": 0,
-      "maximum": 600,
-      "description": "Valeur du coût maximal, en minutes. Maximum : 600."
+      "description": "Valeur du coût maximal. Interprétée en minutes si `cost_type = \"time\"` (maximum : 600), et en mètres si `cost_type = \"distance\"`."
     }
   },
   "required": [
     "lon",
     "lat",
     "profile",
-    "minutes"
+    "cost_value"
   ],
   "additionalProperties": false,
   "$schema": "http://json-schema.org/draft-07/schema#"
@@ -1752,7 +1761,7 @@ Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, 
             "car",
             "pedestrian"
           ],
-          "description": "Mode de déplacement utilisé pour calculer l'isochrone (`car` ou `pedestrian`)."
+          "description": "Mode de déplacement utilisé pour calculer l'isochrone ou l'isodistance : `car` ou `pedestrian`."
         }
       },
       "required": [
@@ -2079,7 +2088,7 @@ Les noms de propriétés utilisés dans `where` **ne peuvent pas être devinés*
             "car",
             "pedestrian"
           ],
-          "description": "Mode de déplacement utilisé pour calculer l'isochrone (`car` ou `pedestrian`)."
+          "description": "Mode de déplacement utilisé pour calculer l'isochrone ou l'isodistance : `car` ou `pedestrian`."
         }
       },
       "required": [

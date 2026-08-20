@@ -414,12 +414,15 @@ describe("proxy/execute · runGeometryFeatureByIdQuery", () => {
 });
 
 describe("proxy/execute · runGeometryIsolineQuery", () => {
-  const isochroneInput = { lon: 2.35, lat: 48.85, profile: "pedestrian" as const, minutes: 15 };
-  const isochroneGeometry = { type: "Polygon", coordinates: [[[2, 48], [2.1, 48], [2, 48]]] };
+  const isolineInput = {
+    lon: 2.35, lat: 48.85, profile: "pedestrian" as const,
+    cost_type: "time" as const, cost_value: 15,
+  };
+  const isolineGeometry = { type: "Polygon", coordinates: [[[2, 48], [2.1, 48], [2, 48]]] };
 
-  it("returns the isochrone as a FeatureCollection", async () => {
-    const result = await runGeometryIsolineQuery(isochroneInput, {
-      getGeometry: async () => isochroneGeometry,
+  it("returns the isoline as a FeatureCollection", async () => {
+    const result = await runGeometryIsolineQuery(isolineInput, {
+      getGeometry: async () => isolineGeometry,
     });
 
     expect(result).toEqual({
@@ -427,23 +430,23 @@ describe("proxy/execute · runGeometryIsolineQuery", () => {
       features: [
         {
           type: "Feature",
-          geometry: isochroneGeometry,
-          properties: { profile: "pedestrian", minutes: 15 },
+          geometry: isolineGeometry,
+          properties: { profile: "pedestrian", cost_type: "time", cost_value: 15 },
         }
       ]
     });
   });
 
-  it("maps the layer input onto the isochrone client input", async () => {
+  it("maps the layer input onto the isoline client input", async () => {
     const calls: unknown[] = [];
 
-    await runGeometryIsolineQuery(isochroneInput, {
+    await runGeometryIsolineQuery(isolineInput, {
       getGeometry: async (input) => {
         calls.push(input);
-        return isochroneGeometry;
+        return isolineGeometry;
       },
     });
 
-    expect(calls).toEqual([{ lon: 2.35, lat: 48.85, minutes: 15, profile: "pedestrian" }]);
+    expect(calls).toEqual([{ lon: 2.35, lat: 48.85, costType: "time", costValue: 15, profile: "pedestrian" }]);
   });
 });
