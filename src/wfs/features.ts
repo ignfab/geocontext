@@ -89,24 +89,25 @@ export async function resolveIntersectsFeatureGeometry(
 }
 
 /**
- * Resolves the travel-time isochrone geometry when `travel_time_filter` is used,
- * then converts it to EWKT for CQL compilation.
+ * Resolves the isosurface geometry (isochrone or isodistance) when
+ * `isosurface_filter` is used, then converts it to EWKT for CQL compilation.
  *
  * @param input Normalized tool input.
- * @returns The resolved isochrone geometry, or `undefined` when no travel-time filter is requested.
+ * @returns The resolved isosurface geometry, or `undefined` when no isosurface filter is requested.
  */
-export async function resolveTravelTimeGeometry(
+export async function resolveIsosurfaceGeometry(
   input: GpfQueryFeaturesInput,
 ): Promise<ResolvedFeatureGeometryRef | undefined> {
   const spatialFilter = getSpatialFilter(input);
-  if (!spatialFilter || spatialFilter.operator !== "travel_time") {
+  if (!spatialFilter || spatialFilter.operator !== "isosurface") {
     return undefined;
   }
 
-  const geometry = await navigationIsochroneClient.getTravelTimeGeometry({
+  const geometry = await navigationIsochroneClient.getGeometry({
     lon: spatialFilter.lon,
     lat: spatialFilter.lat,
-    minutes: spatialFilter.minutes,
+    costType: spatialFilter.cost_type,
+    costValue: spatialFilter.cost_value,
     profile: spatialFilter.profile,
   });
 
@@ -129,8 +130,8 @@ export async function resolveSpatialFilterGeometry(
   switch (spatialFilter?.operator) {
     case "intersects_feature":
       return resolveIntersectsFeatureGeometry(input);
-    case "travel_time":
-      return resolveTravelTimeGeometry(input);
+    case "isosurface":
+      return resolveIsosurfaceGeometry(input);
     default:
       return undefined;
   }

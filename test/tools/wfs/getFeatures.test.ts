@@ -230,12 +230,13 @@ describe("Test GpfGetFeaturesTool", () => {
         distance_m: expect.objectContaining({ type: "number" }),
       }),
     });
-    expect(tool.toolDefinition.inputSchema.properties?.travel_time_filter).toMatchObject({
+    expect(tool.toolDefinition.inputSchema.properties?.isosurface_filter).toMatchObject({
       type: "object",
       properties: expect.objectContaining({
         lon: expect.objectContaining({ type: "number" }),
         lat: expect.objectContaining({ type: "number" }),
-        minutes: expect.objectContaining({ type: "number", maximum: 120 }),
+        cost_type: expect.objectContaining({ enum: ["time", "distance"] }),
+        cost_value: expect.objectContaining({ type: "number" }),
         profile: expect.objectContaining({ enum: ["car", "pedestrian"] }),
       }),
     });
@@ -260,7 +261,7 @@ describe("Test GpfGetFeaturesTool", () => {
     });
   });
 
-  it("should compile travel_time_filter into a WFS request using an isochrone geometry", async () => {
+  it("should compile isosurface_filter into a WFS request using an isochrone geometry", async () => {
     const tool = new GpfGetFeaturesTool();
     mockFeatureTypes({ [COMMUNE_TYPENAME]: polygonFeatureType });
     const isochroneUrls = captureIsochroneRequests();
@@ -271,10 +272,11 @@ describe("Test GpfGetFeaturesTool", () => {
         name: "gpf_get_features",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
-          travel_time_filter: {
+          isosurface_filter: {
             lon: 2.337306,
             lat: 48.849319,
-            minutes: 15,
+            cost_type: "time",
+            cost_value: 15,
             profile: "pedestrian",
           },
         },

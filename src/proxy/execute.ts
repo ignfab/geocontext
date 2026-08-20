@@ -3,7 +3,7 @@
  *
  * `runGeometryFeatureQuery` (entry point) compiles and runs the layer query;
  * `resolveReferenceGeometry` (internal helper) resolves the reference geometry
- * for `intersects_feature` / `travel_time` filters.
+ * for `intersects_feature` / `isosurface` filters.
  *
  * Unlike the LLM-facing `executeQueryFeatures` (which strips geometry to `null`
  * via `postProcessFeatureCollection` to save tokens), the proxy needs the OPPOSITE: a
@@ -58,21 +58,21 @@ export type WfsClientLike = {
 };
 
 /**
- * Resolves the isochrone geometry for a `travel_time` filter (EWKT). Injected by
+ * Resolves the isochrone/isodistance geometry for an `isosurface` filter (EWKT). Injected by
  * the HTTP layer (backed by the navigation/isochrone service). Required, because
- * `travel_time` is part of the `gpf_get_features` query contract the proxy must
+ * `isosurface` is part of the `gpf_get_features` query contract the proxy must
  * honour — it is not an optional capability. The engine stays isochrone-agnostic
  * (pure, network-free, testable), exactly as it is for `wfsClient`.
  */
-export type TravelTimeResolver = (input: GpfGetFeaturesInput) => Promise<ResolvedFeatureGeometryRef>;
+export type IsosurfaceResolver = (input: GpfGetFeaturesInput) => Promise<ResolvedFeatureGeometryRef>;
 
 /**
  * Dependencies injected into {@link runGeometryFeatureQuery}.
  */
 export type GeometryFeatureQueryDeps = {
   wfsClient: WfsClientLike;
-  /** Isochrone resolver, invoked only for `travel_time` filters. */
-  resolveTravelTime: TravelTimeResolver;
+  /** Isochrone/isodistance resolver, invoked only for `isosurface` filters. */
+  resolveIsosurface: IsosurfaceResolver;
 };
 
 // --- Internal Helpers ---
@@ -162,10 +162,10 @@ async function resolveReferenceGeometry(
 ): Promise<ResolvedFeatureGeometryRef | undefined> {
   const spatialFilter = getSpatialFilter(input);
 
-  // travel_time is resolved by the injected isochrone resolver, up front, so
+  // isosurface is resolved by the injected isochrone/isodistance resolver, up front, so
   // compileQueryParts never sees an unresolved ref (symmetric to intersects_feature).
-  if (spatialFilter?.operator === "travel_time") {
-    return deps.resolveTravelTime(input);
+  if (spatialFilter?.operator === "isosurface") {
+    return deps.resolveIsosurface(input);
   }
 
   if (!spatialFilter || spatialFilter.operator !== "intersects_feature") {
@@ -191,7 +191,7 @@ async function resolveReferenceGeometry(
  * @param input Validated layer query input (same shape as `gpf_get_features`
  *   minus the LLM-only `spatial_extras` knob).
  * @param deps Injected WFS client (catalog + execution) and isochrone resolver
- *   (always required; invoked only for `travel_time` filters).
+ *   (always required; invoked only for `isosurface` filters).
  * @returns The raw WFS FeatureCollection, geometry preserved.
  */
 export async function runGeometryFeatureQuery(

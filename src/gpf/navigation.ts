@@ -8,7 +8,6 @@ export const NAVIGATION_SOURCE = "Géoplateforme (calcul d'isochrone)";
 export const NAVIGATION_ISOSURFACE_SOURCE = "Géoplateforme (calcul d'isochrone / d'isodistance)";
 export const NAVIGATION_ISOCHRONE_URL = "https://data.geopf.fr/navigation/isochrone";
 export const TRAVEL_TIME_RESOURCE = "bdtopo-valhalla";
-export const TRAVEL_TIME_MAX_MINUTES = 120;
 export const NAVIGATION_MAX_TIME_MINUTES = 6_000;
 export const NAVIGATION_MAX_DISTANCE_METERS = 50000;
 export const TRAVEL_TIME_PROFILES = ["car", "pedestrian"] as const;

@@ -19,7 +19,7 @@ vi.mock("../../src/proxy/execute", () => ({
   runGeometryIsosurfaceQuery: (...args: unknown[]) => runGeometryIsosurfaceQuery(...args),
 }));
 vi.mock("../../src/proxy/transport", () => ({
-  getDefaultGeometryFeatureQueryDeps: () => ({ wfsClient: {}, resolveTravelTime: vi.fn() }),
+  getDefaultGeometryFeatureQueryDeps: () => ({ wfsClient: {}, resolveIsosurface: vi.fn() }),
   getDefaultGeometryFeatureByIdQueryDeps: () => ({ wfsClient: {} }),
   getDefaultGeometryIsosurfaceQueryDeps: () => ({ getGeometry: vi.fn() }),
 }));

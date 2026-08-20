@@ -45,9 +45,9 @@ const PARAM_SHAPES: Record<string, unknown> = {
     where: [{ property: "hauteur", operator: "gt", value: "20" }],
     limit: 100,
   },
-  travel_time: {
+  isosurface: {
     typename: "BDTOPO_V3:batiment",
-    travel_time_filter: { lon: 2.35, lat: 48.85, minutes: 15, profile: "pedestrian" },
+    isosurface_filter: { lon: 2.35, lat: 48.85, cost_type: "time", cost_value: 15, profile: "pedestrian" },
     limit: 100,
   },
 };

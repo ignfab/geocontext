@@ -138,12 +138,12 @@ class GpfGetFeaturesLayerTool extends BaseTool<GpfGetFeaturesLayerInput> {
       getGeometryName(referenceType);
     }
 
-    // We must NOT resolve the reference geometry for intersects_feature/travel_time
+    // We must NOT resolve the reference geometry for intersects_feature/isosurface
     // (that IS a network call) — those geometries resolve at fetch time on the
     // proxy — so we pass a placeholder ref just to let compileQueryParts validate
     // the attribute side (select/where/order_by).
     const needsResolvedRef =
-      spatialFilter?.operator === "intersects_feature" || spatialFilter?.operator === "travel_time";
+      spatialFilter?.operator === "intersects_feature" || spatialFilter?.operator === "isosurface";
     compileQueryParts(
       compiledInput,
       featureType,

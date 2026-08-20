@@ -5,7 +5,7 @@ import type { GpfGetFeaturesInput } from "../../src/wfs/schema";
 
 // Mock ONLY the I/O boundaries, so the real proxy transport code runs:
 // - fetchJSONPostWithLimit (the bounded WFS fetch, parses to JSON) — but keep the real error classes;
-// - fetchJSONGetWithLimit (the bounded isochrone fetch) — asserts the travel_time leg
+// - fetchJSONGetWithLimit (the bounded isochrone fetch) — asserts the isosurface leg
 //   goes through the SAME PROXY_UPSTREAM_TIMEOUT + PROXY_MAX_RESPONSE_BYTES bounds as WFS.
 //   The real NavigationIsochroneClient runs (only its fetcher is mocked), so this covers
 //   the previously-untested gap where the isochrone leg used unbounded fetchJSONGet.
@@ -35,7 +35,7 @@ vi.mock("../../src/helpers/RateLimiter", () => ({
   },
 }));
 
-import { getProxyWfsClient, resolveProxyTravelTimeGeometry } from "../../src/proxy/transport";
+import { getProxyWfsClient, resolveProxyIsosurfaceGeometry } from "../../src/proxy/transport";
 import { resetEnv } from "../../src/config/env";
 
 const TEST_SECRET = "a".repeat(64);
@@ -104,24 +104,24 @@ describe("proxy/transport · buildProxyTransport (via getProxyWfsClient)", () =>
   });
 });
 
-describe("proxy/transport · resolveProxyTravelTimeGeometry", () => {
-  const travelTimeInput: GpfGetFeaturesInput = {
+describe("proxy/transport · resolveProxyIsosurfaceGeometry", () => {
+  const isosurfaceInput: GpfGetFeaturesInput = {
     typename: "BDTOPO_V3:batiment",
     limit: 100,
     spatial_extras: [],
-    travel_time_filter: { lon: 2.35, lat: 48.85, minutes: 15, profile: "pedestrian" },
+    isosurface_filter: { lon: 2.35, lat: 48.85, cost_type: "time", cost_value: 15, profile: "pedestrian" },
   };
 
   it("resolves the isochrone through the BOUNDED fetch (PROXY_UPSTREAM_TIMEOUT + PROXY_MAX_RESPONSE_BYTES) and returns EWKT", async () => {
     // The real NavigationIsochroneClient runs; only its fetcher is mocked. This is
-    // the regression guard: the travel_time leg must NOT use the unbounded
+    // the regression guard: the isosurface leg must NOT use the unbounded
     // fetchJSONGet (HTTP_TIMEOUT only) — it must go through fetchJSONGetWithLimit
-    // with the SAME bounds as the WFS leg, so a 2-call travel_time stays capped.
+    // with the SAME bounds as the WFS leg, so a 2-call isosurface stays capped.
     fetchJSONGetWithLimit.mockResolvedValue({
       geometry: { type: "Polygon", coordinates: [[[2, 48], [2.2, 48], [2.2, 48.2], [2, 48]]] },
     });
 
-    const result = await resolveProxyTravelTimeGeometry(travelTimeInput);
+    const result = await resolveProxyIsosurfaceGeometry(isosurfaceInput);
 
     expect(fetchJSONGetWithLimit).toHaveBeenCalledOnce();
     const [url, timeoutMs, maxBytes, label] = fetchJSONGetWithLimit.mock.calls[0];
@@ -139,13 +139,13 @@ describe("proxy/transport · resolveProxyTravelTimeGeometry", () => {
     expect(result.geometry_ewkt).toMatch(/^SRID=4326;POLYGON/);
   });
 
-  it("throws defensively if called without a travel_time filter", async () => {
+  it("throws defensively if called without an isosurface filter", async () => {
     const noFilter: GpfGetFeaturesInput = {
       typename: "BDTOPO_V3:batiment",
       limit: 100,
       spatial_extras: [],
     };
-    await expect(resolveProxyTravelTimeGeometry(noFilter)).rejects.toThrow(/travel_time/);
+    await expect(resolveProxyIsosurfaceGeometry(noFilter)).rejects.toThrow(/isosurface/);
     expect(fetchJSONGetWithLimit).not.toHaveBeenCalled();
   });
 });

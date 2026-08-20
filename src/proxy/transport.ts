@@ -18,7 +18,7 @@ import type { ResolvedFeatureGeometryRef } from "../wfs/queryPreparation.js";
 import type { GpfGetFeaturesInput } from "../wfs/schema.js";
 import { NavigationIsochroneClient } from "../gpf/navigation.js";
 import type {
-  TravelTimeResolver,
+  IsosurfaceResolver,
   GeometryFeatureQueryDeps,
   GeometryFeatureByIdQueryDeps,
   GeometryIsosurfaceQueryDeps,
@@ -92,7 +92,7 @@ let cachedProxyIsochroneClient: NavigationIsochroneClient | undefined;
  * (`PROXY_UPSTREAM_TIMEOUT` + `PROXY_MAX_RESPONSE_BYTES`) and its own
  * `GPF_NAVIGATION_PROXY` rate limiter — NOT the default `navigationIsochroneClient`
  * singleton, which uses the unbounded `HTTP_TIMEOUT`-only `fetchJSONGet`. This
- * keeps both upstream legs of a `travel_time` layer request under the same bounds,
+ * keeps both upstream legs of an `isosurface` layer request under the same bounds,
  * so its worst case matches `intersects_feature` (2 × PROXY_UPSTREAM_TIMEOUT).
  * Lazily built so the bounds are read from a fully-parsed environment.
  */
@@ -104,31 +104,32 @@ function getProxyIsochroneClient(): NavigationIsochroneClient {
   return cachedProxyIsochroneClient;
 }
 
-// --- Reference-geometry resolver (travel_time / isochrone) ---
+// --- Reference-geometry resolver (isosurface / isochrone) ---
 
 /**
- * Reference-geometry resolver for the `travel_time` spatial filter: turns the
+ * Reference-geometry resolver for the `isosurface` spatial filter: turns the
  * isochrone into a reference geometry (EWKT) that is fed INTO the WFS query — the
  * sibling of `intersects_feature`'s reference-geometry resolution
  * (`resolveFeatureGeometryEwkt`). It does NOT fetch features itself (that is the
  * WFS transport's job). Backed by the proxy isochrone client (bounded fetch +
  * `GPF_NAVIGATION_PROXY` rate limiter), and injected into `runGeometryFeatureQuery`
- * so it only fires for travel_time inputs.
+ * so it only fires for isosurface inputs.
  */
-export const resolveProxyTravelTimeGeometry: TravelTimeResolver = async (
+export const resolveProxyIsosurfaceGeometry: IsosurfaceResolver = async (
   input: GpfGetFeaturesInput,
 ): Promise<ResolvedFeatureGeometryRef> => {
   const spatialFilter = getSpatialFilter(input);
-  if (spatialFilter?.operator !== "travel_time") {
-    // Guarded by the caller (runGeometryFeatureQuery only calls this for travel_time);
+  if (spatialFilter?.operator !== "isosurface") {
+    // Guarded by the caller (runGeometryFeatureQuery only calls this for isosurface);
     // defensive check keeps the type narrow.
-    throw new Error("resolveProxyTravelTimeGeometry appelé sans filtre `travel_time`.");
+    throw new Error("resolveProxyIsosurfaceGeometry appelé sans filtre `isosurface`.");
   }
 
-  const geometry = await getProxyIsochroneClient().getTravelTimeGeometry({
+  const geometry = await getProxyIsochroneClient().getGeometry({
     lon: spatialFilter.lon,
     lat: spatialFilter.lat,
-    minutes: spatialFilter.minutes,
+    costType: spatialFilter.cost_type,
+    costValue: spatialFilter.cost_value,
     profile: spatialFilter.profile,
   });
 
@@ -147,7 +148,7 @@ export const resolveProxyTravelTimeGeometry: TravelTimeResolver = async (
 export function getDefaultGeometryFeatureQueryDeps(): GeometryFeatureQueryDeps {
   return {
     wfsClient: getProxyWfsClient(),
-    resolveTravelTime: resolveProxyTravelTimeGeometry,
+    resolveIsosurface: resolveProxyIsosurfaceGeometry,
   };
 }
 

@@ -143,7 +143,7 @@ describe("Test GpfCountFeaturesTool", () => {
     ).toBeNull();
   });
 
-  it("should apply travel_time_filter before returning the count", async () => {
+  it("should apply isosurface_filter before returning the count", async () => {
     const tool = new GpfCountFeaturesTool();
     mockFeatureTypes({ [COMMUNE_TYPENAME]: polygonFeatureType });
     captureIsochroneRequests();
@@ -154,10 +154,11 @@ describe("Test GpfCountFeaturesTool", () => {
         name: "gpf_count_features",
         arguments: {
           typename: "ADMINEXPRESS-COG.LATEST:commune",
-          travel_time_filter: {
+          isosurface_filter: {
             lon: 2.337306,
             lat: 48.849319,
-            minutes: 5,
+            cost_type: "time",
+            cost_value: 5,
             profile: "car",
           },
         },

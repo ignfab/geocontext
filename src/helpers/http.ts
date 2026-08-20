@@ -402,7 +402,7 @@ export async function fetchJSONPostWithLimit<T>(
 
 /**
  * GET variant of the size-bounded transport, parsing the bounded body as JSON.
- * Used by the proxy's isochrone leg so a `travel_time` layer request goes
+ * Used by the proxy's isochrone leg so an `isosurface` layer request goes
  * through the SAME `PROXY_UPSTREAM_TIMEOUT` + `PROXY_MAX_RESPONSE_BYTES` bounds
  * as its WFS leg, instead of the unbounded `HTTP_TIMEOUT`-only `fetchJSONGet`.
  *

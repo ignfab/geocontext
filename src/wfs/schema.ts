@@ -12,7 +12,6 @@ import { generatePublishedInputSchema } from "../helpers/jsonSchema.js";
 import { lonSchema, latSchema } from "../helpers/schemas.js";
 import {
   ISOSURFACE_COST_TYPES,
-  TRAVEL_TIME_MAX_MINUTES,
   NAVIGATION_MAX_DISTANCE_METERS,
   TRAVEL_TIME_PROFILES,
   NAVIGATION_MAX_TIME_MINUTES,
@@ -29,7 +28,7 @@ export const GPF_GET_FEATURES_SPATIAL_FILTER_KEYS = [
   "intersects_point_filter",
   "dwithin_point_filter",
   "intersects_feature_filter",
-  "travel_time_filter"
+  "isosurface_filter"
 ] as const;
 export const GPF_SPATIAL_FILTER_DOCNAMES = GPF_GET_FEATURES_SPATIAL_FILTER_KEYS
   .map((name) => `\`${name}\``)
@@ -86,20 +85,6 @@ const navigationProfileSchema = z
   .enum(TRAVEL_TIME_PROFILES)
   .describe("Mode de déplacement utilisé pour calculer l'isochrone ou l'isodistance (`car` ou `pedestrian`).");
 
-const travelTimeMinutesSchema = z
-  .number()
-  .finite()
-  .positive()
-  .max(TRAVEL_TIME_MAX_MINUTES)
-  .describe(`Temps de trajet maximal en minutes. Maximum : ${TRAVEL_TIME_MAX_MINUTES}.`);
-
-const travelTimeFilterSchema = z.object({
-  lon: lonSchema.describe("Longitude du point de départ en WGS84 `lon/lat`."),
-  lat: latSchema.describe("Latitude du point de départ en WGS84 `lon/lat`."),
-  minutes: travelTimeMinutesSchema,
-  profile: navigationProfileSchema,
-}).strict().describe("Filtre les objets situés dans une zone atteignable en un temps donné depuis un point.");
-
 const isosurfacePointSchema = z.object({
   lon: lonSchema.describe("Longitude du point de départ en WGS84 `lon/lat`."),
   lat: latSchema.describe("Latitude du point de départ en WGS84 `lon/lat`."),
@@ -115,6 +100,17 @@ const isosurfaceCostValueSchema = z
   .finite()
   .positive()
   .describe(`Valeur du coût maximal. Interprétée en minutes si \`cost_type = \"time\"\` (maximum : ${NAVIGATION_MAX_TIME_MINUTES}), et en mètres si \`cost_type = \"distance\"\` (maximum : ${NAVIGATION_MAX_DISTANCE_METERS}).`);
+
+const isosurfaceCostSchema = z.object({
+  profile: navigationProfileSchema,
+  cost_type: isosurfaceCostTypeSchema,
+  cost_value: isosurfaceCostValueSchema,
+}).strict();
+
+const isosurfaceFilterSchema = isosurfacePointSchema
+  .merge(isosurfaceCostSchema)
+  .superRefine(assertIsosurfaceCostValue)
+  .describe("Filtre les objets situés dans une isochrone (temps de trajet maximum fixé) ou une isodistance (distance maximale fixée) autour d'un point.");
 
 function assertIsosurfaceCostValue(input: { cost_type: "time" | "distance"; cost_value: number }, ctx: z.RefinementCtx) {
   for (const { type, max, name, unit } of [
@@ -161,13 +157,13 @@ const gpfSpatialFilterInputSchema = z.object({
     .describe("Filtre spatial par intersection avec un point. Exclusif avec les autres filtres spatiaux."),
   dwithin_point_filter: dwithinPointFilterSchema
     .optional()
-    .describe("Filtre spatial par distance à un point. Exclusif avec les autres filtres spatiaux."),
+    .describe("Filtre spatial par distance à un point à vol d'oiseau. Exclusif avec les autres filtres spatiaux."),
   intersects_feature_filter: intersectsFeatureFilterSchema
     .optional()
     .describe("Filtre spatial par intersection avec un feature GPF de référence. Exclusif avec les autres filtres spatiaux."),
-  travel_time_filter: travelTimeFilterSchema
+  isosurface_filter: isosurfaceFilterSchema
     .optional()
-    .describe("Filtre spatial par temps de trajet depuis un point (`profile` voiture ou piéton). Exclusif avec les autres filtres spatiaux."),
+    .describe("Filtre spatial par temps de trajet (isochrone) ou par distance (isodistance) depuis un point avec un profil voiture ou piéton. Exclusif avec les autres filtres spatiaux."),
 })
 
 const gpfGeometryExtraInputSchema = z.object({
@@ -201,7 +197,7 @@ export type SpatialFilter =
   | ({ operator: "intersects_point" } & z.infer<typeof intersectsPointFilterSchema>)
   | ({ operator: "dwithin_point" } & z.infer<typeof dwithinPointFilterSchema>)
   | ({ operator: "intersects_feature" } & z.infer<typeof intersectsFeatureFilterSchema>)
-  | ({ operator: "travel_time" } & z.infer<typeof travelTimeFilterSchema>);
+  | ({ operator: "isosurface" } & z.infer<typeof isosurfaceFilterSchema>);
 
 // --- `gpf_get_features` ---
 
@@ -353,10 +349,7 @@ export const gpfGetFeatureByIdLayerPublishedInputSchema = generatePublishedInput
 
 export const gpfIsosurfaceLayerInputObjectSchema = z.object({
   point: isosurfacePointSchema,
-  profile: navigationProfileSchema,
-  cost_type: isosurfaceCostTypeSchema,
-  cost_value: isosurfaceCostValueSchema,
-}).strict();
+}).merge(isosurfaceCostSchema).strict();
 
 export const gpfIsosurfaceLayerInputSchema = gpfIsosurfaceLayerInputObjectSchema
   .superRefine(assertIsosurfaceCostValue);
