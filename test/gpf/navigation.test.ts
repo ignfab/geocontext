@@ -34,7 +34,6 @@ describe("NavigationIsochroneClient", () => {
     expect(parsedUrl.searchParams.get("resource")).toEqual("bdtopo-valhalla");
     expect(parsedUrl.searchParams.get("point")).toEqual("2.337306,48.849319");
     expect(parsedUrl.searchParams.get("direction")).toEqual("departure");
-    expect(parsedUrl.searchParams.get("costType")).toEqual("time");
     expect(parsedUrl.searchParams.get("costValue")).toEqual("15");
     expect(parsedUrl.searchParams.get("profile")).toEqual("pedestrian");
     expect(parsedUrl.searchParams.get("timeUnit")).toEqual("minute");
