@@ -13,6 +13,7 @@ import { lonSchema, latSchema } from "../helpers/schemas.js";
 import {
   ISOSURFACE_COST_TYPES,
   TRAVEL_TIME_MAX_MINUTES,
+  NAVIGATION_MAX_DISTANCE_METERS,
   TRAVEL_TIME_PROFILES,
   NAVIGATION_MAX_TIME_MINUTES,
 } from "../gpf/navigation.js";
@@ -113,18 +114,23 @@ const isosurfaceCostValueSchema = z
   .number()
   .finite()
   .positive()
-  .describe(`Valeur du coût maximal. Interprétée en minutes si \`cost_type = \"time\"\` (maximum : ${NAVIGATION_MAX_TIME_MINUTES}), et en mètres si \`cost_type = \"distance\"\`.`);
+  .describe(`Valeur du coût maximal. Interprétée en minutes si \`cost_type = \"time\"\` (maximum : ${NAVIGATION_MAX_TIME_MINUTES}), et en mètres si \`cost_type = \"distance\"\` (maximum : ${NAVIGATION_MAX_DISTANCE_METERS}).`);
 
 function assertIsosurfaceCostValue(input: { cost_type: "time" | "distance"; cost_value: number }, ctx: z.RefinementCtx) {
-  if (input.cost_type === "time" && input.cost_value > NAVIGATION_MAX_TIME_MINUTES) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.too_big,
-      maximum: NAVIGATION_MAX_TIME_MINUTES,
-      type: "number",
-      inclusive: true,
-      path: ["cost_value"],
-      message: `Le coût maximal en temps ne peut pas dépasser ${NAVIGATION_MAX_TIME_MINUTES} minutes.`,
-    });
+  for (const { type, max, name, unit } of [
+    { type: "time", max: NAVIGATION_MAX_TIME_MINUTES, name: "temps", unit: "minute" },
+    { type: "distance", max: NAVIGATION_MAX_DISTANCE_METERS, name: "distance", unit: "mètre"},
+  ]) {
+    if (input.cost_type === type && input.cost_value > max) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.too_big,
+        maximum: max,
+        type: "number",
+        inclusive: true,
+        path: ["cost_value"],
+        message: `Le coût maximal en ${name} ne peut pas dépasser ${max} ${unit}s.`,
+      });
+    }
   }
 }
 
