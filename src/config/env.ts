@@ -200,12 +200,12 @@ const envSchema = z.object({
     // Dedicated upstream WFS rate limit for the proxy, separate from GPF_WFS_RATE_LIMIT.
     // Both counters hit the same IGN service, so split one allowance across them.
     GPF_WFS_PROXY_RATE_LIMIT: z.preprocess(emptyToUndefined, positiveIntegerSchema.default(10)),
-    // Dedicated isochrone rate limit for the proxy's travel_time leg, separate from
+    // Dedicated isochrone rate limit for the proxy's isoline leg, separate from
     // GPF_NAVIGATION_RATE_LIMIT. Both counters hit the same IGN service, so split one
     // allowance across them.
     GPF_NAVIGATION_PROXY_RATE_LIMIT: z.preprocess(emptyToUndefined, positiveIntegerSchema.default(5)),
     // Upstream timeout (seconds) for the proxy's WFS AND isochrone calls, shorter than
-    // HTTP_TIMEOUT so a 2-call intersects_feature/travel_time stays under the
+    // HTTP_TIMEOUT so a 2-call intersects_feature/isoline stays under the
     // browser/Carto fetch timeout.
     PROXY_UPSTREAM_TIMEOUT: z.preprocess(emptyToUndefined, positiveNumberSchema.default(10)),
 });

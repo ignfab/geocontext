@@ -4,7 +4,7 @@ import { NavigationIsochroneClient } from "../../src/gpf/navigation.js";
 import { RateLimiter } from "../../src/helpers/RateLimiter.js";
 
 describe("NavigationIsochroneClient", () => {
-  it("should build a Valhalla travel-time isochrone request and return its GeoJSON geometry", async () => {
+  it("should build a Valhalla isochrone request and return its GeoJSON geometry", async () => {
     const urls: string[] = [];
     const client = new NavigationIsochroneClient(
       new RateLimiter({ name: "test", maxCalls: 100, period: 1 }),
@@ -21,10 +21,11 @@ describe("NavigationIsochroneClient", () => {
       },
     );
 
-    const geometry = await client.getTravelTimeGeometry({
+    const geometry = await client.getGeometry({
       lon: 2.337306,
       lat: 48.849319,
-      minutes: 15,
+      costType: "time",
+      costValue: 15,
       profile: "pedestrian",
     });
 
@@ -89,10 +90,11 @@ describe("NavigationIsochroneClient", () => {
       async () => ({ geometry: null }),
     );
 
-    await expect(client.getTravelTimeGeometry({
+    await expect(client.getGeometry({
       lon: 2.337306,
       lat: 48.849319,
-      minutes: 15,
+      costType: "time",
+      costValue: 15,
       profile: "car",
     })).rejects.toThrow("géométrie GeoJSON exploitable");
   });
