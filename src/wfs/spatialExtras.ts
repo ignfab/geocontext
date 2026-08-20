@@ -37,7 +37,7 @@ function spatialFilterToGeometry(spatialFilter: SpatialFilter, resolvedGeometryR
       return { type: "Point", coordinates: point };
     }
     case "intersects_feature":
-    case "travel_time":
+    case "isoline":
       if (!resolvedGeometryRef) {
         throw new Error(`Le filtre spatial \`${spatialFilter.operator}\` exige la résolution préalable de la géométrie de référence.`);
       }
@@ -51,7 +51,7 @@ function spatialFilterToGeometry(spatialFilter: SpatialFilter, resolvedGeometryR
 function spatialFilterToCentroid(spatialFilter: SpatialFilter, resolvedGeometryRef?: Geometry) : Point {
   switch (spatialFilter.operator) {
     case "dwithin_point" :
-    case "travel_time":
+    case "isoline":
     case "intersects_point": {
       return { type: "Point", coordinates: [spatialFilter.lon, spatialFilter.lat] };
     }
@@ -190,7 +190,7 @@ function intersectionAreaWithSpatialFilter(geom: Geometry, spatialFilter: Spatia
     // lies within `distance_m`, so the intersection is needed even for it.
     case "dwithin_point":
     case "intersects_feature":
-    case "travel_time":
+    case "isoline":
     case "bbox": {
       if (!intersectionArea) return null; // non-areal filter, or filter preparation failed
       return intersectionArea(geo);

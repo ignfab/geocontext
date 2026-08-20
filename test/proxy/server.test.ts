@@ -20,7 +20,7 @@ vi.mock("../../src/proxy/execute", () => ({
   runGeometryIsolineQuery: (...args: unknown[]) => runGeometryIsolineQuery(...args),
 }));
 vi.mock("../../src/proxy/transport", () => ({
-  getDefaultGeometryFeatureQueryDeps: () => ({ wfsClient: {}, resolveTravelTime: vi.fn() }),
+  getDefaultGeometryFeatureQueryDeps: () => ({ wfsClient: {}, resolveIsoline: vi.fn() }),
   getDefaultGeometryFeatureByIdQueryDeps: () => ({ wfsClient: {} }),
   getDefaultGeometryIsolineQueryDeps: () => ({ getGeometry: vi.fn() }),
 }));
@@ -257,6 +257,19 @@ describe("proxy/server", () => {
     const res = await request(baseUrl).get(layerPath(badToken));
     expect(res.status).toBe(400);
     expect(runGeometryIsolineQuery).not.toHaveBeenCalled();
+  });
+
+  it("400 on a query token whose isoline_filter exceeds the filter's lower time limit", async () => {
+    // 121 minutes is accepted by the isoline service but not by `isoline_filter`:
+    // the proxy must re-run the filter's own limit on the decoded payload.
+    const token = encodeToken({
+      kind: PROXY_TOKEN_KIND.query,
+      typename: "BDTOPO_V3:batiment",
+      isoline_filter: { lon: 2.35, lat: 48.85, profile: "car", cost_type: "time", cost_value: 121 },
+    }, KEY);
+    const res = await request(baseUrl).get(layerPath(token));
+    expect(res.status).toBe(400);
+    expect(runGeometryFeatureQuery).not.toHaveBeenCalled();
   });
 
   it("404 when the by-id feature is absent (FeatureNotFoundError)", async () => {
