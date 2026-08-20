@@ -20,6 +20,7 @@
  */
 
 import type { GpfFeatureType } from "../wfs/catalog.js";
+import type { GeoJsonGeometryLike, IsochroneGeometryInput } from "../gpf/navigation.js";
 
 import {
   buildGetFeatureByIdRequest,
@@ -38,7 +39,11 @@ import { resolveFeatureGeometryEwkt } from "../wfs/referenceGeometry.js";
 import { rethrowIdentifiedCatalogDesyncError } from "../wfs/catalogDesync.js";
 import { ServiceResponseError, extractJsonServiceError } from "../helpers/http.js";
 import type { WfsFeatureCollectionResponse } from "../wfs/types.js";
-import type { GpfGetFeaturesInput, GpfGetFeatureByIdLayerInput } from "../wfs/schema.js";
+import type {
+  GpfGetFeaturesInput,
+  GpfGetFeatureByIdLayerInput,
+  GpfIsochroneLayerInput,
+} from "../wfs/schema.js";
 
 // --- Injected Dependencies ---
 
@@ -242,6 +247,14 @@ export type GeometryFeatureByIdQueryDeps = {
   wfsClient: WfsClientLike;
 };
 
+export type IsochroneGeometryResolver = (
+  input: IsochroneGeometryInput,
+) => Promise<GeoJsonGeometryLike>;
+
+export type GeometryIsochroneQueryDeps = {
+  getGeometry: IsochroneGeometryResolver;
+};
+
 /**
  * Executes a single-feature by-id lookup and returns the RAW FeatureCollection
  * with full geometry (for map rendering by MCP Carto).
@@ -299,5 +312,43 @@ export async function runGeometryFeatureByIdQuery(
     totalFeatures: 1,
     numberReturned: 1,
     numberMatched: 1,
+  };
+}
+
+/**
+ * Resolves an isochrone and returns it as a GeoJSON `FeatureCollection` with full
+ * geometry (for map rendering by MCP Carto).
+ *
+ * Counterpart of {@link runGeometryFeatureQuery} for the isochrone producer tool.
+ * The request params are echoed into `properties` so the rendered layer carries
+ * its own legend.
+ *
+ * @param input Validated isochrone layer input (`{ lon, lat, profile, minutes }`).
+ * @param deps Injected isochrone geometry resolver.
+ * @returns The isochrone as a single GeoJSON FeatureCollection.
+ */
+export async function runGeometryIsochroneQuery(
+  input: GpfIsochroneLayerInput,
+  deps: GeometryIsochroneQueryDeps,
+): Promise<WfsFeatureCollectionResponse> {
+  const geometry = await deps.getGeometry({
+    lon: input.lon,
+    lat: input.lat,
+    minutes: input.minutes,
+    profile: input.profile,
+  });
+
+  return {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        geometry,
+        properties: {
+          profile: input.profile,
+          minutes: input.minutes,
+        },
+      }
+    ]
   };
 }

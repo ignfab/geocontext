@@ -10,7 +10,11 @@ import { z } from "zod";
 
 import { generatePublishedInputSchema } from "../helpers/jsonSchema.js";
 import { lonSchema, latSchema } from "../helpers/schemas.js";
-import { TRAVEL_TIME_MAX_MINUTES, TRAVEL_TIME_PROFILES } from "../gpf/navigation.js";
+import {
+  TRAVEL_TIME_MAX_MINUTES,
+  TRAVEL_TIME_PROFILES,
+  NAVIGATION_MAX_TIME_MINUTES,
+} from "../gpf/navigation.js";
 
 // --- Shared Constants ---
 
@@ -76,19 +80,40 @@ const intersectsFeatureFilterSchema = z.object({
   feature_id: z.string().trim().min(1).describe("Identifiant du feature de référence."),
 }).strict().describe("Filtre les objets dont la géométrie intersecte celle d'un objet GPF de référence.");
 
+const navigationProfileSchema = z
+  .enum(TRAVEL_TIME_PROFILES)
+  .describe("Mode de déplacement utilisé pour calculer l'isochrone (`car` ou `pedestrian`).");
+
+const travelTimeMinutesSchema = z
+  .number()
+  .finite()
+  .positive()
+  .max(TRAVEL_TIME_MAX_MINUTES)
+  .describe(`Temps de trajet maximal en minutes. Maximum : ${TRAVEL_TIME_MAX_MINUTES}.`);
+
 const travelTimeFilterSchema = z.object({
   lon: lonSchema.describe("Longitude du point de départ en WGS84 `lon/lat`."),
   lat: latSchema.describe("Latitude du point de départ en WGS84 `lon/lat`."),
-  minutes: z
-    .number()
-    .finite()
-    .positive()
-    .max(TRAVEL_TIME_MAX_MINUTES)
-    .describe(`Temps de trajet maximal en minutes. Maximum : ${TRAVEL_TIME_MAX_MINUTES}.`),
-  profile: z
-    .enum(TRAVEL_TIME_PROFILES)
-    .describe("Mode de déplacement utilisé pour calculer l'isochrone (`car` ou `pedestrian`)."),
+  minutes: travelTimeMinutesSchema,
+  profile: navigationProfileSchema,
 }).strict().describe("Filtre les objets situés dans une zone atteignable en un temps donné depuis un point.");
+
+// Departure point of an isochrone. Flat `lon`/`lat`, exactly like every spatial
+// filter (`intersects_point_filter`, `dwithin_point_filter`, ...), so the LLM sees
+// one point convention across the whole surface.
+const isochronePointSchema = z.object({
+  lon: lonSchema.describe("Longitude du point de départ en WGS84 `lon/lat`."),
+  lat: latSchema.describe("Latitude du point de départ en WGS84 `lon/lat`."),
+}).strict();
+
+const isochroneCostValueSchema = z
+  .number()
+  .finite()
+  .positive()
+  .max(NAVIGATION_MAX_TIME_MINUTES, {
+    message: `Le coût maximal en temps ne peut pas dépasser ${NAVIGATION_MAX_TIME_MINUTES} minutes.`,
+  })
+  .describe(`Valeur du coût maximal, en minutes. Maximum : ${NAVIGATION_MAX_TIME_MINUTES}.`);
 
 // --- Shared GPF Inputs ---
 
@@ -258,14 +283,15 @@ export const gpfGetFeaturesLayerOutputSchema = z.object({
 // --- Proxy token discriminant ---
 
 // The proxy serves ONE opaque token (in the URL path, `${endpoint}/<token>.json`)
-// but two token kinds (a filtered layer query and a single-feature by-id lookup).
-// Both producer tools stamp their token
+// but several token kinds (a filtered layer query, a single-feature by-id lookup
+// and an isochrone). Every producer tool stamps its token
 // with this `kind` discriminant; the proxy reads it to dispatch to the right
 // schema + engine, then strips it before the strict per-kind `.parse`. It is
 // injected by the tool from validated params — never an LLM-supplied field.
 export const PROXY_TOKEN_KIND = {
   query: "query",
   byId: "by_id",
+  isochrone: "isochrone",
 } as const;
 
 export type ProxyTokenKind = (typeof PROXY_TOKEN_KIND)[keyof typeof PROXY_TOKEN_KIND];
@@ -303,6 +329,19 @@ export type GpfGetFeatureByIdLayerInput = z.infer<typeof gpfGetFeatureByIdLayerI
 // --- `gpf_get_feature_by_id_layer` Published Schema ---
 
 export const gpfGetFeatureByIdLayerPublishedInputSchema = generatePublishedInputSchema(gpfGetFeatureByIdLayerInputObjectSchema);
+
+// --- `gpf_isochrone_layer` (proxy) ---
+
+export const gpfIsochroneLayerInputObjectSchema = isochronePointSchema.merge(z.object({
+  profile: navigationProfileSchema,
+  minutes: isochroneCostValueSchema,
+})).strict();
+
+export const gpfIsochroneLayerInputSchema = gpfIsochroneLayerInputObjectSchema;
+
+export type GpfIsochroneLayerInput = z.infer<typeof gpfIsochroneLayerInputSchema>;
+
+export const gpfIsochroneLayerPublishedInputSchema = generatePublishedInputSchema(gpfIsochroneLayerInputObjectSchema);
 
 // --- `gpf_count_features` ---
 
