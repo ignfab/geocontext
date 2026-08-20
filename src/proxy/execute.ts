@@ -322,7 +322,8 @@ export async function runGeometryIsosurfaceQuery(
   const geometry = await deps.getGeometry({
     lon: input.point.lon,
     lat: input.point.lat,
-    minutes: input.minutes,
+    costType: input.cost_type,
+    costValue: input.cost_value,
     profile: input.profile,
   });
 
@@ -331,7 +332,8 @@ export async function runGeometryIsosurfaceQuery(
     geometry,
     properties: {
       profile: input.profile,
-      minutes: input.minutes,
+      cost_type: input.cost_type,
+      cost_value: input.cost_value,
     },
   };
 }

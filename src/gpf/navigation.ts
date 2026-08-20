@@ -5,13 +5,16 @@ import type { RateLimiter } from "../helpers/RateLimiter.js";
 import { getNavigationRateLimiter } from "./navigationRateLimiter.js";
 
 export const NAVIGATION_SOURCE = "Géoplateforme (calcul d'isochrone)";
+export const NAVIGATION_ISOSURFACE_SOURCE = "Géoplateforme (calcul d'isochrone / d'isodistance)";
 export const NAVIGATION_ISOCHRONE_URL = "https://data.geopf.fr/navigation/isochrone";
 export const TRAVEL_TIME_RESOURCE = "bdtopo-valhalla";
 export const TRAVEL_TIME_MAX_MINUTES = 120;
 export const NAVIGATION_MAX_TIME_MINUTES = 6_000;
 export const TRAVEL_TIME_PROFILES = ["car", "pedestrian"] as const;
+export const ISOSURFACE_COST_TYPES = ["time", "distance"] as const;
 
 export type TravelTimeProfile = typeof TRAVEL_TIME_PROFILES[number];
+export type IsosurfaceCostType = typeof ISOSURFACE_COST_TYPES[number];
 
 export type GeoJsonGeometryLike = {
   type: string;
@@ -32,7 +35,8 @@ export type TravelTimeGeometryInput = {
 export type IsosurfaceGeometryInput = {
   lon: number;
   lat: number;
-  minutes: number;
+  costType: IsosurfaceCostType;
+  costValue: number;
   profile: TravelTimeProfile;
 };
 
@@ -60,8 +64,8 @@ export class NavigationIsochroneClient {
       resource: TRAVEL_TIME_RESOURCE,
       point: `${input.lon},${input.lat}`,
       direction: "departure",
-      costType: "time",
-      costValue: String(input.minutes),
+      costType: input.costType,
+      costValue: String(input.costValue),
       profile: input.profile,
       timeUnit: "minute",
       distanceUnit: "meter",
@@ -78,7 +82,13 @@ export class NavigationIsochroneClient {
   }
 
   async getTravelTimeGeometry(input: TravelTimeGeometryInput): Promise<GeoJsonGeometryLike> {
-    return this.getGeometry(input);
+    return this.getGeometry({
+      lon: input.lon,
+      lat: input.lat,
+      costType: "time",
+      costValue: input.minutes,
+      profile: input.profile,
+    });
   }
 }
 

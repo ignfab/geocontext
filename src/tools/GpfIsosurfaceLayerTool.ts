@@ -23,7 +23,7 @@ import {
   gpfIsosurfaceLayerPublishedInputSchema,
   type GpfIsosurfaceLayerInput,
 } from "../wfs/schema.js";
-import { NAVIGATION_SOURCE } from "../gpf/navigation.js";
+import { NAVIGATION_ISOSURFACE_SOURCE } from "../gpf/navigation.js";
 import logger from "../logger.js";
 
 class GpfIsosurfaceLayerTool extends BaseTool<GpfIsosurfaceLayerInput> {
@@ -31,10 +31,10 @@ class GpfIsosurfaceLayerTool extends BaseTool<GpfIsosurfaceLayerInput> {
   title = "Couche cartographiable d’isosurface GPF";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
   description = [
-    "Renvoie une **URL de couche cartographiable** (`data_url`) pour l'isochrone autour d'un point.",
-    "Utiliser `point` pour le départ, `profile` pour le mode de déplacement et `minutes` pour fixer le seuil maximal.",
-    "L'URL est opaque et doit être transmise telle quelle à un outil cartographique (MCP Carto, ...). Son ouverture renvoie une FeatureCollection GeoJSON avec la géométrie complète de l'isochrone.",
-    `(source : ${NAVIGATION_SOURCE}).`,
+    "Renvoie une **URL de couche cartographiable** (`data_url`) pour une zone de desserte calculée autour d'un point : isochrone si `cost_type = \"time\"`, isodistance si `cost_type = \"distance\"`.",
+    "Utiliser `point` pour le départ, `profile` pour le mode de déplacement, `cost_type` pour choisir le type de calcul et `cost_value` pour fixer le seuil maximal (minutes si `time`, mètres si `distance`).",
+    "L'URL est opaque et doit être transmise telle quelle à un outil cartographique (MCP Carto, ...). Son ouverture renvoie une FeatureCollection GeoJSON avec la géométrie complète calculée par le proxy.",
+    `(source : ${NAVIGATION_ISOSURFACE_SOURCE}).`,
   ].join("\n");
   protected outputSchemaShape = gpfGetFeaturesLayerOutputSchema;
 

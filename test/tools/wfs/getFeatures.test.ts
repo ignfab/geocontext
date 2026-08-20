@@ -285,6 +285,7 @@ describe("Test GpfGetFeaturesTool", () => {
     expect(isochroneUrls).toHaveLength(1);
     const isochroneUrl = new URL(isochroneUrls[0]);
     expect(isochroneUrl.searchParams.get("resource")).toEqual("bdtopo-valhalla");
+    expect(isochroneUrl.searchParams.get("costType")).toEqual("time");
     expect(isochroneUrl.searchParams.get("costValue")).toEqual("15");
     expect(isochroneUrl.searchParams.get("profile")).toEqual("pedestrian");
 
