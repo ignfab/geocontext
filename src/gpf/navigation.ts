@@ -10,8 +10,9 @@ import type { GpfIsolineLayerInput } from "../wfs/schema.js";
 export const NAVIGATION_SOURCE = "Géoplateforme (calcul d'isochrone / d'isodistance)";
 export const NAVIGATION_ISOLINE_URL = "https://data.geopf.fr/navigation/isochrone";
 export const NAVIGATION_ISOLINE_RESOURCE = "bdtopo-valhalla";
-// Upstream ceiling accepted by the GPF isochrone service for a time cost.
-export const NAVIGATION_ISOCHRONE_MAX_TIME_MINUTES = 600;
+// Upstream ceilings accepted by the GPF isochrone service, per cost type.
+export const NAVIGATION_ISOCHRONE_MAX_MINUTES = 600;
+export const NAVIGATION_ISODISTANCE_MAX_METERS = 50_000;
 export const NAVIGATION_PROFILES = ["car", "pedestrian"] as const;
 export const NAVIGATION_METRICS = ["time", "distance"] as const;
 

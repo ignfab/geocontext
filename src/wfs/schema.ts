@@ -13,7 +13,8 @@ import { lonSchema, latSchema } from "../helpers/schemas.js";
 import {
   NAVIGATION_METRICS,
   NAVIGATION_PROFILES,
-  NAVIGATION_ISOCHRONE_MAX_TIME_MINUTES,
+  NAVIGATION_ISOCHRONE_MAX_MINUTES,
+  NAVIGATION_ISODISTANCE_MAX_METERS,
   type NavigationMetrics,
   TRAVEL_TIME_MAX_MINUTES,
 } from "../gpf/navigation.js";
@@ -130,17 +131,26 @@ const isolineCostValueSchema = z
   .number()
   .finite()
   .positive()
-  .describe(`Valeur du coût maximal. Interprétée en minutes si \`cost_type = \"time\"\` (maximum : ${NAVIGATION_ISOCHRONE_MAX_TIME_MINUTES}), et en mètres si \`cost_type = \"distance\"\`.`);
+  .describe(`Valeur du coût maximal. Interprétée en minutes si \`cost_type = \"time\"\` (maximum : ${NAVIGATION_ISOCHRONE_MAX_MINUTES}), et en mètres si \`cost_type = \"distance\"\` (maximum : ${NAVIGATION_ISODISTANCE_MAX_METERS}).`);
+
+// One max per cost type: `cost_value` is minutes for `time` and meters for
+// `distance`, so the ceiling can only be checked once `cost_type` is known.
+const ISOLINE_COST_LIMITS: Record<NavigationMetrics, { max: number; name: string; unit: string }> = {
+  time: { max: NAVIGATION_ISOCHRONE_MAX_MINUTES, name: "temps", unit: "minutes" },
+  distance: { max: NAVIGATION_ISODISTANCE_MAX_METERS, name: "distance", unit: "mètres" },
+};
 
 function assertIsolineCostValue(input: { cost_type: NavigationMetrics; cost_value: number }, ctx: z.RefinementCtx) {
-  if (input.cost_type === "time" && input.cost_value > NAVIGATION_ISOCHRONE_MAX_TIME_MINUTES) {
+  const { max, name, unit } = ISOLINE_COST_LIMITS[input.cost_type];
+
+  if (input.cost_value > max) {
     ctx.addIssue({
       code: z.ZodIssueCode.too_big,
-      maximum: NAVIGATION_ISOCHRONE_MAX_TIME_MINUTES,
+      maximum: max,
       type: "number",
       inclusive: true,
       path: ["cost_value"],
-      message: `Le coût maximal en temps ne peut pas dépasser ${NAVIGATION_ISOCHRONE_MAX_TIME_MINUTES} minutes.`,
+      message: `Le coût maximal en ${name} ne peut pas dépasser ${max} ${unit}.`,
     });
   }
 }
