@@ -14,7 +14,7 @@ import { GPF_WFS_URL } from "../wfs/catalog.js";
 import {
   gpfGetFeaturesLayerInputSchema,
   gpfGetFeatureByIdLayerInputObjectSchema,
-  gpfIsolineLayerInputObjectSchema,
+  gpfIsolineLayerInputSchema,
   PROXY_TOKEN_KIND,
 } from "../wfs/schema.js";
 import {
@@ -187,7 +187,7 @@ async function handleLayerRequest(token: string, res: ServerResponse): Promise<v
         getDefaultGeometryFeatureByIdQueryDeps(),
       );
     } else if (kind === PROXY_TOKEN_KIND.isoline) {
-      const input = gpfIsolineLayerInputObjectSchema.parse(payload);
+      const input = gpfIsolineLayerInputSchema.parse(payload);
       geoJsonBody = await runGeometryIsolineQuery(
         input,
         getDefaultGeometryIsolineQueryDeps(),

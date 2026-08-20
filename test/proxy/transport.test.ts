@@ -163,7 +163,8 @@ describe("proxy/transport · getDefaultGeometryIsolineQueryDeps", () => {
     const result = await getDefaultGeometryIsolineQueryDeps().getGeometry({
       lon: 2.35,
       lat: 48.85,
-      minutes: 15,
+      cost_type: "time",
+      cost_value: 15,
       profile: "car",
     });
 

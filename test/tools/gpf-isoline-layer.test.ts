@@ -42,14 +42,40 @@ describe("Test GpfIsolineLayerTool", () => {
     mockGetEnv.mockReset();
   });
 
-  it("publishes the same minutes upper bound as runtime validation", () => {
+  it("publishes the time-only cost limit without capping distance costs", () => {
     mockGetEnv.mockReturnValue(makeEnv({}));
     const tool = new GpfIsolineLayerTool();
 
-    const minutesSchema = (tool.toolDefinition.inputSchema.properties as Record<string, unknown>)
-      .minutes as { maximum?: number };
+    const properties = tool.toolDefinition.inputSchema.properties as Record<string, unknown>;
+    const costValueSchema = properties.cost_value as { description?: string; maximum?: number };
 
-    expect(minutesSchema.maximum).toBe(NAVIGATION_ISOCHRONE_MAX_TIME_MINUTES);
+    expect(properties).not.toHaveProperty("minutes");
+    expect(costValueSchema.description).toContain(`\`cost_type = "time"\` (maximum : ${NAVIGATION_ISOCHRONE_MAX_TIME_MINUTES})`);
+    expect(costValueSchema.maximum).toBeUndefined();
+  });
+
+  it.each([
+    { cost_type: "time", cost_value: NAVIGATION_ISOCHRONE_MAX_TIME_MINUTES },
+    { cost_type: "distance", cost_value: NAVIGATION_ISOCHRONE_MAX_TIME_MINUTES + 1 },
+  ])("accepts $cost_type cost at $cost_value", async ({ cost_type, cost_value }) => {
+    mockGetEnv.mockReturnValue(makeEnv({}));
+    const tool = new GpfIsolineLayerTool();
+
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_isoline_layer",
+        arguments: {
+          lon: 2.337306,
+          lat: 48.849319,
+          profile: "pedestrian",
+          cost_type,
+          cost_value,
+        },
+      },
+    });
+
+    expect(response.isError).toBeUndefined();
+    expect(response.structuredContent).toEqual({ data_url: expect.any(String) });
   });
 
   it("fails fast when no proxy is configured", async () => {
@@ -65,7 +91,8 @@ describe("Test GpfIsolineLayerTool", () => {
           lon: 2.337306,
           lat: 48.849319,
           profile: "pedestrian",
-          minutes: 15,
+          cost_type: "time",
+          cost_value: 15,
         },
       },
     });
@@ -89,7 +116,8 @@ describe("Test GpfIsolineLayerTool", () => {
           lon: 2.337306,
           lat: 48.849319,
           profile: "pedestrian",
-          minutes: 15,
+          cost_type: "time",
+          cost_value: 15,
         },
       },
     });
@@ -110,7 +138,8 @@ describe("Test GpfIsolineLayerTool", () => {
           lon: 2.337306,
           lat: 48.849319,
           profile: "car",
-          minutes: 60,
+          cost_type: "distance",
+          cost_value: 1200,
         },
       },
     });
@@ -137,7 +166,8 @@ describe("Test GpfIsolineLayerTool", () => {
       lon: 2.337306,
       lat: 48.849319,
       profile: "car",
-      minutes: 60,
+      cost_type: "distance",
+      cost_value: 1200,
     });
   });
 
@@ -152,7 +182,8 @@ describe("Test GpfIsolineLayerTool", () => {
           lon: 2.337306,
           lat: 48.849319,
           profile: "pedestrian",
-          minutes: NAVIGATION_ISOCHRONE_MAX_TIME_MINUTES + 1,
+          cost_type: "time",
+          cost_value: NAVIGATION_ISOCHRONE_MAX_TIME_MINUTES + 1,
         },
       },
     });
@@ -163,7 +194,7 @@ describe("Test GpfIsolineLayerTool", () => {
     if (textContent.type !== "text") {
       throw new Error("expected text content");
     }
-    expect(textContent.text).toContain(`minutes: La valeur doit être au plus ${NAVIGATION_ISOCHRONE_MAX_TIME_MINUTES}.`);
+    expect(textContent.text).toContain(`cost_value: Le coût maximal en temps ne peut pas dépasser ${NAVIGATION_ISOCHRONE_MAX_TIME_MINUTES} minutes.`);
   });
 
   it("rejects an unknown key such as kind (strict isoline surface)", async () => {

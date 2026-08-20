@@ -11,9 +11,11 @@ import { z } from "zod";
 import { generatePublishedInputSchema } from "../helpers/jsonSchema.js";
 import { lonSchema, latSchema } from "../helpers/schemas.js";
 import {
-  TRAVEL_TIME_MAX_MINUTES,
+  NAVIGATION_METRICS,
   NAVIGATION_PROFILES,
   NAVIGATION_ISOCHRONE_MAX_TIME_MINUTES,
+  type NavigationMetrics,
+  TRAVEL_TIME_MAX_MINUTES,
 } from "../gpf/navigation.js";
 
 // --- Shared Constants ---
@@ -97,7 +99,7 @@ const intersectsFeatureFilterSchema = z.object({
 
 const navigationProfileSchema = z
   .enum(NAVIGATION_PROFILES)
-  .describe("Mode de déplacement utilisé pour calculer l'isochrone (`car` ou `pedestrian`).");
+  .describe("Mode de déplacement utilisé pour calculer l'isochrone ou l'isodistance : `car` ou `pedestrian`.");
 
 const travelTimeMinutesSchema = z
   .number()
@@ -120,12 +122,28 @@ const travelTimeFilterSchema = isolinePointSchema
     profile: navigationProfileSchema,
 })).strict().describe("Filtre les objets situés dans une zone atteignable en un temps donné depuis un point.");
 
+const NavigationMetricsSchema = z
+  .enum(NAVIGATION_METRICS)
+  .describe("Type de coût utilisé : `time` pour une isochrone, `distance` pour une isodistance.");
+
 const isolineCostValueSchema = z
   .number()
   .finite()
   .positive()
-  .max(NAVIGATION_ISOCHRONE_MAX_TIME_MINUTES)
-  .describe(`Temps de trajet maximal en minutes. Maximum : ${NAVIGATION_ISOCHRONE_MAX_TIME_MINUTES}.`);
+  .describe(`Valeur du coût maximal. Interprétée en minutes si \`cost_type = \"time\"\` (maximum : ${NAVIGATION_ISOCHRONE_MAX_TIME_MINUTES}), et en mètres si \`cost_type = \"distance\"\`.`);
+
+function assertIsolineCostValue(input: { cost_type: NavigationMetrics; cost_value: number }, ctx: z.RefinementCtx) {
+  if (input.cost_type === "time" && input.cost_value > NAVIGATION_ISOCHRONE_MAX_TIME_MINUTES) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.too_big,
+      maximum: NAVIGATION_ISOCHRONE_MAX_TIME_MINUTES,
+      type: "number",
+      inclusive: true,
+      path: ["cost_value"],
+      message: `Le coût maximal en temps ne peut pas dépasser ${NAVIGATION_ISOCHRONE_MAX_TIME_MINUTES} minutes.`,
+    });
+  }
+}
 
 // --- Shared GPF Inputs ---
 
@@ -456,11 +474,15 @@ export const gpfGetFeatureByIdLayerPublishedInputSchema = generatePublishedInput
 // --- `gpf_isoline_layer` (proxy) ---
 
 export const gpfIsolineLayerInputObjectSchema = isolinePointSchema.merge(z.object({
-  minutes: isolineCostValueSchema,
   profile: navigationProfileSchema,
+  cost_type: NavigationMetricsSchema,
+  cost_value: isolineCostValueSchema,
 })).strict();
 
-export type GpfIsolineLayerInput = z.infer<typeof gpfIsolineLayerInputObjectSchema>;
+export const gpfIsolineLayerInputSchema = gpfIsolineLayerInputObjectSchema
+  .superRefine(assertIsolineCostValue);
+
+export type GpfIsolineLayerInput = z.infer<typeof gpfIsolineLayerInputSchema>;
 
 export const gpfIsolineLayerPublishedInputSchema = generatePublishedInputSchema(gpfIsolineLayerInputObjectSchema);
 
