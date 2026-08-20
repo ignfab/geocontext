@@ -59,7 +59,8 @@ function validIsolineToken() {
     lon: 2.35,
     lat: 48.85,
     profile: "pedestrian",
-    minutes: 15,
+    cost_type: "time",
+    cost_value: 15,
   }, KEY);
 }
 
@@ -233,7 +234,8 @@ describe("proxy/server", () => {
       lon: 2.35,
       lat: 48.85,
       profile: "pedestrian",
-      minutes: 15,
+      cost_type: "time",
+      cost_value: 15,
     });
   });
 
