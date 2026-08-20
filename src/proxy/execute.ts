@@ -317,16 +317,16 @@ export async function runGeometryFeatureByIdQuery(
 }
 
 /**
- * Resolves an isochrone and returns it as a GeoJSON `FeatureCollection` with full
- * geometry (for map rendering by MCP Carto).
+ * Resolves an isoline (isochrone or isodistance) and returns it as a
+ * GeoJSON `FeatureCollection` with full geometry (for map rendering by MCP Carto).
  *
- * Counterpart of {@link runGeometryFeatureQuery} for the isochrone producer tool.
+ * Counterpart of {@link runGeometryFeatureQuery} for the isoline producer tool.
  * The request params are echoed into `properties` so the rendered layer carries
  * its own legend.
  *
- * @param input Validated isochrone layer input (`{ lon, lat, profile, minutes }`).
- * @param deps Injected isochrone geometry resolver.
- * @returns The isochrone as a single GeoJSON FeatureCollection.
+ * @param input Validated isoline layer input (`{ lon, lat, profile, cost_type, cost_value }`).
+ * @param deps Injected isoline geometry resolver.
+ * @returns The isoline as a GeoJSON FeatureCollection.
  */
 export async function runGeometryIsolineQuery(
   input: GpfIsolineLayerInput,
@@ -335,7 +335,8 @@ export async function runGeometryIsolineQuery(
   const geometry = await deps.getGeometry({
     lon: input.lon,
     lat: input.lat,
-    minutes: input.minutes,
+    costType: input.cost_type,
+    costValue: input.cost_value,
     profile: input.profile,
   });
 
@@ -347,7 +348,8 @@ export async function runGeometryIsolineQuery(
         geometry,
         properties: {
           profile: input.profile,
-          minutes: input.minutes,
+          cost_type: input.cost_type,
+          cost_value: input.cost_value,
         },
       }
     ]

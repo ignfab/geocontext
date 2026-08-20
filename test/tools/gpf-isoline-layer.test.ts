@@ -41,16 +41,6 @@ describe("Test GpfIsolineLayerTool", () => {
     mockGetEnv.mockReset();
   });
 
-  it("publishes the same minutes upper bound as runtime validation", () => {
-    mockGetEnv.mockReturnValue(makeEnv({}));
-    const tool = new GpfIsolineLayerTool();
-
-    const minutesSchema = (tool.toolDefinition.inputSchema.properties as Record<string, unknown>)
-      .minutes as { maximum?: number };
-
-    expect(minutesSchema.maximum).toBe(600);
-  });
-
   it("fails fast when no proxy is configured", async () => {
     mockGetEnv.mockReturnValue(
       makeEnv({ PROXY_URL_SECRET: undefined, PROXY_PUBLIC_BASE_URL: undefined }),
@@ -64,7 +54,8 @@ describe("Test GpfIsolineLayerTool", () => {
           lon: 2.337306,
           lat: 48.849319,
           profile: "pedestrian",
-          minutes: 15,
+          cost_type: "time",
+          cost_value: 15,
         },
       },
     });
@@ -75,27 +66,6 @@ describe("Test GpfIsolineLayerTool", () => {
       throw new Error("expected text content");
     }
     expect(textContent.text).toContain("PROXY_URL_SECRET");
-  });
-
-  it("mints a data_url", async () => {
-    mockGetEnv.mockReturnValue(makeEnv({ TRANSPORT_TYPE: "stdio" }));
-    const tool = new GpfIsolineLayerTool();
-
-    const response = await tool.toolCall({
-      params: {
-        name: "gpf_isoline_layer",
-        arguments: {
-          lon: 2.337306,
-          lat: 48.849319,
-          profile: "pedestrian",
-          minutes: 15,
-        },
-      },
-    });
-
-    expect(response.isError).toBeUndefined();
-    const payload = JSON.parse((response.content[0] as { text: string }).text);
-    expect(payload.data_url).toContain("https://proxy.example.test/api/v1/proxy/");
   });
 
   it("builds an opaque data_url that round-trips to the tagged isoline params", async () => {
@@ -109,7 +79,8 @@ describe("Test GpfIsolineLayerTool", () => {
           lon: 2.337306,
           lat: 48.849319,
           profile: "car",
-          minutes: 60,
+          cost_type: "distance",
+          cost_value: 1200,
         },
       },
     });
@@ -136,7 +107,8 @@ describe("Test GpfIsolineLayerTool", () => {
       lon: 2.337306,
       lat: 48.849319,
       profile: "car",
-      minutes: 60,
+      cost_type: "distance",
+      cost_value: 1200,
     });
   });
 
@@ -151,7 +123,8 @@ describe("Test GpfIsolineLayerTool", () => {
           lon: 2.337306,
           lat: 48.849319,
           profile: "pedestrian",
-          minutes: 601,
+          cost_type: "time",
+          cost_value: 601,
         },
       },
     });
@@ -160,7 +133,7 @@ describe("Test GpfIsolineLayerTool", () => {
     expect(response.structuredContent).toMatchObject({
       type: "urn:geocontext:problem:invalid-tool-params",
       errors: expect.arrayContaining([
-        expect.objectContaining({ name: "minutes" }),
+        expect.objectContaining({ name: "cost_value" }),
       ]),
     });
   });
