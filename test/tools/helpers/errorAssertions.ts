@@ -35,5 +35,8 @@ export function expectErrorText(response: ToolResponse) {
  * @param response Tool response expected to be a validation error.
  */
 export function expectInvalidLon(response: ToolResponse) {
-  expect(expectErrorText(response)).toContain("Paramètres invalides");
+  const text = expectErrorText(response);
+  expect(text).toContain("Paramètres invalides");
+  // `detail` is the only channel left, so it must still name the bad param.
+  expect(text).toContain("lon");
 }

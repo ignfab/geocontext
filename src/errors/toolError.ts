@@ -2,8 +2,12 @@
  * Centralized normalization for MCP tool errors.
  *
  * This helper converts heterogeneous runtime errors (Zod validation errors,
- * upstream service errors, and generic exceptions) into one stable
- * `structuredContent` contract consumed by tools through `BaseTool`.
+ * upstream service errors, and generic exceptions) into one stable problem
+ * payload.
+ *
+ * Error responses carry no `structuredContent` (reserved for the success-path
+ * `outputSchema`), so `detail` is the only channel the caller sees: it must
+ * name the offending parameter and stay self-sufficient.
  */
 
 import { ZodError } from "zod";
@@ -15,7 +19,7 @@ import {
   ProxyTokenTooLargeError,
 } from "../proxy/token.js";
 import { FeatureNotFoundError, FeatureCardinalityError } from "../wfs/byId.js";
-import { installZodErrorMapFr } from "./zodErrorMapFr.js";
+import { installZodErrorMapFr, issueName } from "./zodErrorMapFr.js";
 
 // Install the FR Zod error map at module load so the very first parse in the
 // process already emits localized messages.
@@ -51,7 +55,7 @@ type ClassifiedToolError =
 // --- Problem Type Constants ---
 
 /**
- * Stable RFC7807-like problem type identifiers exposed in `structuredContent`.
+ * Stable RFC7807-like problem type identifiers, logged as `problem_type`.
  */
 const INVALID_TOOL_PARAMS_TYPE = "urn:geocontext:problem:invalid-tool-params";
 const UPSTREAM_INVALID_REQUEST_TYPE = "urn:geocontext:problem:upstream-invalid-request";
@@ -62,24 +66,6 @@ const FEATURE_NOT_FOUND_TYPE = "urn:geocontext:problem:feature-not-found";
 const FEATURE_CARDINALITY_TYPE = "urn:geocontext:problem:feature-cardinality";
 
 // --- Shared Helpers ---
-
-/**
- * Returns the most specific string segment from a Zod issue path.
- * 
- * TODO: this is a best-effort heuristic to extract a user-friendly parameter name
- *
- * @param path Zod issue path.
- * @returns Last non-empty string segment, or `undefined`.
- */
-function issueName(path: Array<string | number>) {
-  for (let index = path.length - 1; index >= 0; index -= 1) {
-    const segment = path[index];
-    if (typeof segment === "string" && segment.length > 0) {
-      return segment;
-    }
-  }
-  return undefined;
-}
 
 /**
  * Builds a compact end-user summary from normalized validation errors.
@@ -136,9 +122,18 @@ function normalizeZodIssues(error: ZodError): ToolErrorItem[] {
     }
 
     const name = issueName(issue.path);
+    // `detail` is the caller's only channel, so the parameter name has to live
+    // inside it. Messages that already name the parameter are left alone: the
+    // FR map spells some out inline (`Le paramètre 'x' est requis.`), and
+    // prefixing those would stutter. Anchored at the start so a message merely
+    // quoting some other field named `x` still gets its own prefix.
+    const message = issue.message || "Valeur invalide.";
+    const messageNamesParam = name !== undefined && message.startsWith(`Le paramètre '${name}'`);
+    const detail = name && !messageNamesParam ? `${name}: ${message}` : message;
+
     errors.push({
       code: issue.code,
-      detail: issue.message || "Valeur invalide.",
+      detail,
       ...(name ? { name } : {}),
     });
   }
@@ -296,7 +291,7 @@ function buildExecutionProblem(error: unknown): ToolErrorPayload {
  * Normalizes any runtime error into the shared MCP tool problem contract.
  *
  * @param error Unknown runtime error to normalize.
- * @returns A stable payload intended for MCP `structuredContent`.
+ * @returns A stable problem payload whose `detail` is caller-facing.
  */
 export function normalizeToolError(error: unknown): ToolErrorPayload {
   const classifiedError = classifyToolError(error);
