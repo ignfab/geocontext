@@ -68,7 +68,18 @@ const FEATURE_CARDINALITY_TYPE = "urn:geocontext:problem:feature-cardinality";
 // --- Shared Helpers ---
 
 /**
+ * Validation messages spelled out in full before the summary elides them.
+ *
+ * Five keeps the common "whole call is malformed" case fully detailed while
+ * bounding the summary to a length a caller can still read at a glance.
+ */
+const MAX_DETAILED_VALIDATION_ERRORS = 5;
+
+/**
  * Builds a compact end-user summary from normalized validation errors.
+ *
+ * Elided messages still list their parameter names, so the caller can fix
+ * every bad input in one round-trip instead of discovering them one at a time.
  *
  * @param errors Normalized validation errors.
  * @returns A short, localized validation summary.
@@ -78,10 +89,21 @@ function summarizeValidationDetail(errors: ToolErrorItem[]) {
     return "Un ou plusieurs paramètres fournis à l'outil sont invalides.";
   }
 
-  const details = errors.map((error) => error.detail);
-  const firstDetails = details.slice(0, 3).join(" ");
-  const suffix = details.length > 3 ? " (et d'autres erreurs)." : "";
-  return `Paramètres invalides : ${firstDetails}${suffix}`;
+  const shown = errors.slice(0, MAX_DETAILED_VALIDATION_ERRORS);
+  const omitted = errors.slice(MAX_DETAILED_VALIDATION_ERRORS);
+  const summary = `Paramètres invalides : ${shown.map((error) => error.detail).join(" ")}`;
+
+  if (omitted.length === 0) {
+    return summary;
+  }
+
+  const omittedNames = [
+    ...new Set(omitted.map((error) => error.name).filter((name): name is string => Boolean(name))),
+  ];
+  const suffix = omittedNames.length > 0
+    ? ` (et ${omitted.length} autre(s) erreur(s) sur : ${omittedNames.join(", ")}).`
+    : ` (et ${omitted.length} autre(s) erreur(s)).`;
+  return `${summary}${suffix}`;
 }
 
 /**
@@ -107,12 +129,25 @@ function toSnakeCase(value: string) {
  */
 function normalizeZodIssues(error: ZodError): ToolErrorItem[] {
   const errors: ToolErrorItem[] = [];
+  // A single field can raise the same wording twice (two `ctx.addIssue` calls
+  // in one refinement); repeating it verbatim only adds noise. Keyed on name
+  // too, so per-element array errors stay separate.
+  const seen = new Set<string>();
+
+  const push = (item: ToolErrorItem) => {
+    const key = `${item.name ?? ""}\u0000${item.detail}`;
+    if (seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    errors.push(item);
+  };
 
   for (const issue of error.issues) {
     if (issue.code === "unrecognized_keys") {
       const keys = issue.keys.length > 0 ? issue.keys : ["<inconnu>"];
       for (const key of keys) {
-        errors.push({
+        push({
           code: "unknown_parameter",
           detail: `Le paramètre '${key}' n'est pas reconnu.`,
           name: key,
@@ -131,7 +166,7 @@ function normalizeZodIssues(error: ZodError): ToolErrorItem[] {
     const messageNamesParam = name !== undefined && message.startsWith(`Le paramètre '${name}'`);
     const detail = name && !messageNamesParam ? `${name}: ${message}` : message;
 
-    errors.push({
+    push({
       code: issue.code,
       detail,
       ...(name ? { name } : {}),

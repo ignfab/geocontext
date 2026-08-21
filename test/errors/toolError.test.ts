@@ -239,4 +239,59 @@ describe("Test toolError helper", () => {
     expect(payload.detail).toContain("Le paramètre 'nope' n'est pas reconnu.");
     expect(payload.detail).not.toContain("nope: ");
   });
+  it("should name every omitted parameter when truncating the summary", () => {
+    const keys = ["a", "b", "c", "d", "e", "f", "g"];
+    const shape = Object.fromEntries(keys.map((key) => [key, z.number().max(1)]));
+    const input = Object.fromEntries(keys.map((key) => [key, 9]));
+    const result = z.object(shape).safeParse(input);
+
+    if (result.success) {
+      throw new Error("expected parse failure");
+    }
+
+    const payload = normalizeToolError(result.error);
+
+    // The first five are spelled out, the rest are named but not detailed.
+    expect(payload.detail).toContain("a: La valeur doit être au plus 1.");
+    expect(payload.detail).toContain("e: La valeur doit être au plus 1.");
+    expect(payload.detail).toContain("(et 2 autre(s) erreur(s) sur : f, g).");
+  });
+
+  it("should not truncate when the summary fits", () => {
+    const result = z.object({ a: z.number().max(1), b: z.number().max(1) })
+      .safeParse({ a: 9, b: 9 });
+
+    if (result.success) {
+      throw new Error("expected parse failure");
+    }
+
+    expect(normalizeToolError(result.error).detail).not.toContain("autre(s) erreur(s)");
+  });
+
+  it("should drop duplicate messages that share a parameter name", () => {
+    const schema = z.object({
+      a: z.number().superRefine((_value, ctx) => {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Valeur incohérente." });
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Valeur incohérente." });
+      }),
+    });
+    const result = schema.safeParse({ a: 1 });
+
+    if (result.success) {
+      throw new Error("expected parse failure");
+    }
+
+    expect(normalizeToolError(result.error).errors).toHaveLength(1);
+  });
+
+  it("should keep same-wording errors on different parameters", () => {
+    const result = z.object({ tags: z.array(z.string()) }).safeParse({ tags: [1, 2] });
+
+    if (result.success) {
+      throw new Error("expected parse failure");
+    }
+
+    // Identical wording, distinct parameters: the dedupe must not merge these.
+    expect(normalizeToolError(result.error).errors).toHaveLength(2);
+  });
 });
