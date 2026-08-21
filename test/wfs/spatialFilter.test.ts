@@ -35,22 +35,24 @@ describe("getSpatialFilter", () => {
     });
   });
 
-  it("should map a travel_time_filter to the compiler spatial filter", () => {
+  it("should map an isoline_filter to the compiler spatial filter", () => {
     const input: GpfGetFeaturesInput = {
       ...baseInput,
-      travel_time_filter: {
+      isoline_filter: {
         lon: 2.3522,
         lat: 48.8566,
-        minutes: 15,
+        cost_type: "time",
+        cost_value: 15,
         profile: "pedestrian",
       },
     };
 
     expect(getSpatialFilter(input)).toEqual({
-      operator: "travel_time",
+      operator: "isoline",
       lon: 2.3522,
       lat: 48.8566,
-      minutes: 15,
+      cost_type: "time",
+      cost_value: 15,
       profile: "pedestrian",
     });
   });
@@ -112,50 +114,66 @@ describe("gpfGetFeaturesInputSchema spatial filters", () => {
     })).toThrow("Un seul filtre spatial est autorisé");
   });
 
-  it("should validate travel-time filters", () => {
+  it("should validate isoline filters", () => {
     expect(gpfGetFeaturesInputSchema.parse({
       ...baseInput,
-      travel_time_filter: {
+      isoline_filter: {
         lon: 2.3522,
         lat: 48.8566,
-        minutes: 120,
+        cost_type: "time",
+        cost_value: 600,
         profile: "car",
       },
-    }).travel_time_filter).toEqual({
+    }).isoline_filter).toEqual({
       lon: 2.3522,
       lat: 48.8566,
-      minutes: 120,
+      cost_type: "time",
+      cost_value: 600,
       profile: "car",
     });
   });
 
-  it("should reject invalid travel-time filters", () => {
+  it("should reject invalid isoline filters", () => {
     expect(() => gpfGetFeaturesInputSchema.parse({
       ...baseInput,
-      travel_time_filter: {
+      isoline_filter: {
         lon: 2.3522,
         lat: 48.8566,
-        minutes: 0,
+        cost_type: "time",
+        cost_value: 0,
         profile: "pedestrian",
       },
     })).toThrow();
 
     expect(() => gpfGetFeaturesInputSchema.parse({
       ...baseInput,
-      travel_time_filter: {
+      isoline_filter: {
         lon: 2.3522,
         lat: 48.8566,
-        minutes: 121,
+        cost_type: "time",
+        cost_value: 601,
         profile: "pedestrian",
       },
     })).toThrow();
 
     expect(() => gpfGetFeaturesInputSchema.parse({
       ...baseInput,
-      travel_time_filter: {
+      isoline_filter: {
         lon: 2.3522,
         lat: 48.8566,
-        minutes: 15,
+        cost_type: "distance",
+        cost_value: 50001,
+        profile: "pedestrian",
+      },
+    })).toThrow();
+
+    expect(() => gpfGetFeaturesInputSchema.parse({
+      ...baseInput,
+      isoline_filter: {
+        lon: 2.3522,
+        lat: 48.8566,
+        cost_type: "time",
+        cost_value: 15,
         profile: "bicycle",
       },
     })).toThrow();

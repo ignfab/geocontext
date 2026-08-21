@@ -33,7 +33,7 @@
 
 ## Génération de `PROXY_URL_SECRET`
 
-Pour produire des URLs opaques d'affichage cartographique (tools `gpf_get_features_layer` et `gpf_get_feature_by_id_layer`), geocontext chiffre les paramètres de requête avec une clé symétrique AES-256, fournie via `PROXY_URL_SECRET`. La même clé est utilisée par le MCP (pour signer) et par le proxy geodata (pour déchiffrer).
+Pour produire des URLs opaques d'affichage cartographique (tools `gpf_isoline_layer`, `gpf_get_features_layer` et `gpf_get_feature_by_id_layer`), geocontext chiffre les paramètres de requête avec une clé symétrique AES-256, fournie via `PROXY_URL_SECRET`. La même clé est utilisée par le MCP (pour signer) et par le proxy geodata (pour déchiffrer).
 
 La clé doit être une valeur aléatoire de **32 octets encodée en hexadécimal** (soit 64 caractères `0-9a-f`). Générez-la avec :
 
