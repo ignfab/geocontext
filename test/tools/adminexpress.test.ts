@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 
 import AdminexpressTool from "../../src/tools/AdminexpressTool";
 import { validateStructuredContentAgainstOutputSchema } from "./helpers/outputSchema";
+import { expectInvalidLon } from "./helpers/errorAssertions";
 import { mairieLoray } from "../samples";
 
 const adminexpressResults = [
@@ -142,23 +143,6 @@ describe("Test AdminexpressTool",() => {
             },
         });
 
-        expect(response.isError).toBe(true);
-        expect(response.content[0]).toMatchObject({
-            type: "text",
-        });
-        const textContent = response.content[0];
-        if (textContent.type !== "text") {
-            throw new Error("expected text content");
-        }
-        expect(textContent.text).toContain("Paramètres invalides");
-        expect(response.structuredContent).toMatchObject({
-            type: "urn:geocontext:problem:invalid-tool-params",
-            errors: expect.arrayContaining([
-                expect.objectContaining({
-                    name: "lon",
-                    code: "too_big",
-                }),
-            ]),
-        });
+        expectInvalidLon(response);
     });
 });
