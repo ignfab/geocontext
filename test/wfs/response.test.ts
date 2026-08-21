@@ -276,6 +276,35 @@ describe("wfs_engine/response", () => {
         expect(feature.intersection_area as number).toBeLessThanOrEqual(DISC_AREA);
       });
     });
+
+    it("should compute intersection_area over a bbox filter that clips part of a MultiPolygon away", () => {
+      const insideRing = [[2, 48], [2.1, 48], [2.1, 48.1], [2, 48.1], [2, 48]];
+      const outsideRing = [[5, 48], [5.1, 48], [5.1, 48.1], [5, 48.1], [5, 48]];
+      const bbox_filter = { west: 1.9, south: 47.9, east: 2.2, north: 48.2 };
+
+      function intersectionArea(coordinates: number[][][][]) {
+        const result = transformFeatureCollectionResponse({
+          type: "FeatureCollection",
+          features: [{
+            id: "poly.1",
+            geometry: { type: "MultiPolygon", coordinates },
+            properties: { name: "poly" },
+          }],
+        }, {
+          typename: "TEST:type",
+          spatial_extras: ["intersection_area"],
+          bbox_filter,
+        } as Parameters<typeof transformFeatureCollectionResponse>[1]);
+
+        return getFeatures(result)[0].intersection_area as number;
+      }
+
+      // The clipped-away part must contribute nothing.
+      expect(intersectionArea([[insideRing], [outsideRing]])).toBeCloseTo(
+        intersectionArea([[insideRing]]), 6,
+      );
+      expect(intersectionArea([[outsideRing]])).toEqual(0);
+    });
   });
 
   // --- postProcessFeatureCollection ---

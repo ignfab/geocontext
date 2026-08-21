@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { geometryToEwkt } from "../../src/wfs/geometry";
 import { Geometry } from "geojson";
 import { isGeometryLike } from "../../src/helpers/geojson";
+import { dropEmptyRings } from "../../src/wfs/spatialExtras";
 
 describe("geometryToEwkt", () => {
   // --- Point and MultiPoint (already partially covered via queryPreparation tests) ---
@@ -128,5 +129,44 @@ describe("isGeometryLike", () => {
 
   it("returns false when type is not a string", () => {
     expect(isGeometryLike({ type: 42, coordinates: [] })).toBe(false);
+  });
+});
+
+describe("dropEmptyRings", () => {
+  // `@turf/bbox-clip` emits an empty ring for each part it clips away, producing
+  // invalid GeoJSON: `{ coordinates: [] }` for a Polygon and `[[...], []]` for a
+  // MultiPolygon. `area()` tolerates those rings, so only a structural
+  // assertion catches them.
+  const ring = [[2, 48], [2.1, 48], [2.1, 48.1], [2, 48.1], [2, 48]];
+
+  it("should strip the empty rings a partial clip leaves behind", () => {
+    const cleaned = dropEmptyRings({ type: "MultiPolygon", coordinates: [[ring], []] });
+
+    expect(cleaned).toEqual({ type: "MultiPolygon", coordinates: [[ring]] });
+  });
+
+  it("should return null when every part was clipped away", () => {
+    expect(dropEmptyRings({ type: "MultiPolygon", coordinates: [[], []] })).toBeNull();
+  });
+
+  it("should return null for a Polygon with no rings", () => {
+    expect(dropEmptyRings({ type: "Polygon", coordinates: [] })).toBeNull();
+  });
+
+  it("should pass a fully-surviving Polygon through untouched", () => {
+    const polygon: Geometry = { type: "Polygon", coordinates: [ring] };
+
+    expect(dropEmptyRings(polygon)).toEqual(polygon);
+  });
+
+  it("should preserve interior rings", () => {
+    const hole = [[2.02, 48.02], [2.05, 48.02], [2.05, 48.05], [2.02, 48.05], [2.02, 48.02]];
+    const polygon: Geometry = { type: "Polygon", coordinates: [ring, hole] };
+
+    expect(dropEmptyRings(polygon)).toEqual(polygon);
+  });
+
+  it("should return null for a non-areal geometry", () => {
+    expect(dropEmptyRings({ type: "LineString", coordinates: [[2, 48], [2.1, 48]] })).toBeNull();
   });
 });
