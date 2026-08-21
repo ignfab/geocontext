@@ -17,6 +17,8 @@ import {
   NAVIGATION_MAX_TIME_MINUTES,
   type NavigationCostType,
 } from "../gpf/navigation.js";
+import { ITINERARY_MAX_DIRECT_DISTANCE_METERS } from "../gpf/itinerary.js";
+import distance from "../helpers/distance.js";
 
 // --- Shared Constants ---
 
@@ -315,6 +317,7 @@ export const PROXY_TOKEN_KIND = {
   query: "query",
   byId: "by_id",
   isoline: "isoline",
+  itinerary: "itinerary",
 } as const;
 
 export type ProxyTokenKind = (typeof PROXY_TOKEN_KIND)[keyof typeof PROXY_TOKEN_KIND];
@@ -365,6 +368,67 @@ export const gpfIsolineLayerInputSchema = gpfIsolineLayerInputObjectSchema
 export type GpfIsolineLayerInput = z.infer<typeof gpfIsolineLayerInputSchema>;
 
 export const gpfIsolineLayerPublishedInputSchema = generatePublishedInputSchema(gpfIsolineLayerInputObjectSchema);
+
+// --- `gpf_itinerary_layer` (proxy) ---
+
+const itineraryProfileSchema = z
+  .enum(NAVIGATION_PROFILES)
+  .describe("Mode de déplacement : `car` ou `pedestrian`.");
+
+export const gpfItineraryLayerInputObjectSchema = z.object({
+  departure_lon: lonSchema.describe("Longitude du point de départ en WGS84 `lon/lat`."),
+  departure_lat: latSchema.describe("Latitude du point de départ en WGS84 `lon/lat`."),
+  arrival_lon: lonSchema.describe("Longitude du point d'arrivée en WGS84 `lon/lat`."),
+  arrival_lat: latSchema.describe("Latitude du point d'arrivée en WGS84 `lon/lat`."),
+  profile: itineraryProfileSchema,
+  optimize: z
+    .enum(NAVIGATION_COST_TYPES)
+    .optional()
+    .describe("Métrique d'optimisation : `time` (itinéraire le plus rapide, défaut) ou `distance` (le plus court)."),
+}).strict();
+
+/**
+ * Caps the crow-flies span of an itinerary request. The upstream service accepts any
+ * pair of points, but a very long route costs proportionally more to compute and
+ * returns a LineString with thousands of vertices, so it is rejected up front rather
+ * than truncated downstream by `PROXY_MAX_RESPONSE_BYTES`.
+ *
+ * The issue is attached to the object root, not to a single coordinate: the constraint
+ * is a property of the departure/arrival pair.
+ */
+function assertItineraryDirectDistance(
+  input: {
+    departure_lon: number;
+    departure_lat: number;
+    arrival_lon: number;
+    arrival_lat: number;
+  },
+  ctx: z.RefinementCtx,
+) {
+  const dist = distance(
+    { type: "Point", coordinates: [input.departure_lon, input.departure_lat] },
+    { type: "Point", coordinates: [input.arrival_lon, input.arrival_lat] },
+  );
+
+  if (dist > ITINERARY_MAX_DIRECT_DISTANCE_METERS) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.too_big,
+      maximum: ITINERARY_MAX_DIRECT_DISTANCE_METERS,
+      type: "number",
+      inclusive: true,
+      message: `La distance à vol d'oiseau entre le départ et l'arrivée (${Math.round(dist / 1000)} km) ne peut pas dépasser ${ITINERARY_MAX_DIRECT_DISTANCE_METERS/1000} km.`,
+    });
+  }
+}
+
+// Refined counterpart of the object schema above, mirroring `gpf_isoline_layer`: the
+// published schema stays a plain object while the cross-field cap runs on parse.
+export const gpfItineraryLayerInputSchema = gpfItineraryLayerInputObjectSchema
+  .superRefine(assertItineraryDirectDistance);
+
+export type GpfItineraryLayerInput = z.infer<typeof gpfItineraryLayerInputSchema>;
+
+export const gpfItineraryLayerPublishedInputSchema = generatePublishedInputSchema(gpfItineraryLayerInputObjectSchema);
 
 // --- `gpf_count_features` ---
 

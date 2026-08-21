@@ -43,7 +43,9 @@ import type {
   GpfGetFeaturesInput,
   GpfGetFeatureByIdLayerInput,
   GpfIsolineLayerInput,
+  GpfItineraryLayerInput,
 } from "../wfs/schema.js";
+import type { ItineraryWithGeometryResult } from "../gpf/itinerary.js";
 
 // --- Injected Dependencies ---
 
@@ -255,6 +257,14 @@ export type GeometryIsolineQueryDeps = {
   getGeometry: IsolineGeometryResolver;
 };
 
+export type ItineraryWithGeometryResolver = (
+  input: GpfItineraryLayerInput,
+) => Promise<ItineraryWithGeometryResult>;
+
+export type GeometryItineraryQueryDeps = {
+  getItineraryWithGeometry: ItineraryWithGeometryResolver;
+};
+
 /**
  * Executes a single-feature by-id lookup and returns the RAW FeatureCollection
  * with full geometry (for map rendering by MCP Carto).
@@ -349,6 +359,40 @@ export async function runGeometryIsolineQuery(
           profile: input.profile,
           cost_type: input.cost_type,
           cost_value: input.cost_value,
+        },
+      }
+    ]
+  };
+}
+
+/**
+ * Fetches the itinerary route and returns it as a GeoJSON `FeatureCollection`
+ * with full geometry (for map rendering by MCP Carto).
+ *
+ * The request params and computed distance/duration are echoed into `properties`
+ * so the rendered layer carries its own legend.
+ *
+ * @param input Validated itinerary layer input.
+ * @param deps Injected itinerary geometry resolver.
+ * @returns The route as a GeoJSON FeatureCollection.
+ */
+export async function runGeometryItineraryQuery(
+  input: GpfItineraryLayerInput,
+  deps: GeometryItineraryQueryDeps,
+): Promise<WfsFeatureCollectionResponse> {
+  const { geometry, distance, duration } = await deps.getItineraryWithGeometry(input);
+
+  return {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        geometry,
+        properties: {
+          profile: input.profile,
+          optimize: input.optimize ?? "time",
+          distance_meters: distance,
+          duration_minutes: duration,
         },
       }
     ]

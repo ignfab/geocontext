@@ -15,18 +15,21 @@ import {
   gpfGetFeaturesLayerInputSchema,
   gpfGetFeatureByIdLayerInputObjectSchema,
   gpfIsolineLayerInputSchema,
+  gpfItineraryLayerInputSchema,
   PROXY_TOKEN_KIND,
 } from "../wfs/schema.js";
 import {
   runGeometryFeatureQuery,
   runGeometryFeatureByIdQuery,
   runGeometryIsolineQuery,
+  runGeometryItineraryQuery,
 } from "./execute.js";
 import { FeatureNotFoundError, FeatureCardinalityError } from "../wfs/byId.js";
 import {
   getDefaultGeometryFeatureQueryDeps,
   getDefaultGeometryFeatureByIdQueryDeps,
   getDefaultGeometryIsolineQueryDeps,
+  getDefaultGeometryItineraryQueryDeps,
 } from "./transport.js";
 import {
   decodeToken,
@@ -191,6 +194,12 @@ async function handleLayerRequest(token: string, res: ServerResponse): Promise<v
       geoJsonBody = await runGeometryIsolineQuery(
         input,
         getDefaultGeometryIsolineQueryDeps(),
+      );
+    } else if (kind === PROXY_TOKEN_KIND.itinerary) {
+      const input = gpfItineraryLayerInputSchema.parse(payload);
+      geoJsonBody = await runGeometryItineraryQuery(
+        input,
+        getDefaultGeometryItineraryQueryDeps(),
       );
     } else if (kind === PROXY_TOKEN_KIND.query) {
       const input = gpfGetFeaturesLayerInputSchema.parse(payload);
