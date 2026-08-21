@@ -143,6 +143,9 @@ function validateSpatialExtras(featureType: GpfFeatureType, geometryName: string
       ": pour avoir cette information, demandez à la place le calcul du `centroid`."
     throw new Error(`La géométrie de l'objet sera de type Point, or vous avez demandé sa \`bbox\` ${errorEnding}. Retirez \`bbox\` de spatial_extras.`)
   }
+  // `intersection_area` is only reachable from the get-features path:
+  // `GPF_GET_FEATURE_BY_ID_SPATIAL_EXTRAS` excludes it, so the by-id path never
+  // sees it here.
   for (const { required, extras } of [
     { required: "linéaire", extras: ["length"] },
     { required: "surfacique", extras: ["area", "intersection_area"] },
