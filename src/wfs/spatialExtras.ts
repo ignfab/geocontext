@@ -3,8 +3,8 @@ import { bbox } from "@turf/bbox";
 import turfLength from "@turf/length";
 import { area } from "@turf/area";
 import { intersect } from "@turf/intersect";
-import { circle } from "@turf/circle"
-import { bboxPolygon } from "@turf/bbox-polygon"
+import { circle } from "@turf/circle";
+import { bboxPolygon } from "@turf/bbox-polygon";
 import { Geometry, MultiPolygon, Point, Polygon, Position } from "geojson";
 import distance from "../helpers/distance.js";
 import { feature, featureCollection } from "@turf/helpers";
@@ -33,7 +33,7 @@ function spatialFilterToGeometry(spatialFilter: SpatialFilter, resolvedGeometryR
     case "travel_time":
       return resolvedGeometryRef!;
     default: // Make a compile-time error if a filter is missing from the switch
-      const noFilter: never = spatialFilter; 
+      const noFilter: never = spatialFilter;
       throw new Error(`Unhandled filter case: ${noFilter}`)
   }
 }
@@ -49,13 +49,13 @@ function spatialFilterToCentroid(spatialFilter: SpatialFilter, resolvedGeometryR
     case "bbox":
       return centroid(spatialFilterToGeometry(spatialFilter, resolvedGeometryRef)).geometry;
     default: // Make a compile-time error if a filter is missing from the switch
-      const noFilter: never = spatialFilter; 
+      const noFilter: never = spatialFilter;
       throw new Error(`Unhandled filter case: ${noFilter}`)
   }
 }
 
 /** Accepts any geometry and returns it as a Polygon or MultiPolygon, filtering
- * all 1D and 2D sub-geometries out.
+ * all 0D (point) and 1D (line) sub-geometries out.
  */
 function geometryToPolygons(geom: Geometry) : Polygon | MultiPolygon | null {
   switch(geom.type) {
@@ -87,8 +87,10 @@ function geometryToPolygons(geom: Geometry) : Polygon | MultiPolygon | null {
   }
 }
 
-/** Return the 3D intersection between a geometry and a spatial filter. null if the intersection is not 3D. */
-function intersection3DWithSpatialFilter(geom: Geometry, spatialFilter: SpatialFilter, resolvedGeometryRef?: Geometry) : Polygon | MultiPolygon | null {
+/** Return the areal (2D) intersection between a geometry and a spatial filter.
+ * null if the intersection has no area.
+ */
+function intersectionAreaWithSpatialFilter(geom: Geometry, spatialFilter: SpatialFilter, resolvedGeometryRef?: Geometry) : Polygon | MultiPolygon | null {
   const geo = geometryToPolygons(geom);
   if (!geo) {
     return null;
@@ -112,7 +114,7 @@ function intersection3DWithSpatialFilter(geom: Geometry, spatialFilter: SpatialF
       return clipped.geometry as Polygon | MultiPolygon;
     }
     default: // Make a compile-time error if a filter is missing from the switch
-      const noFilter: never = spatialFilter; 
+      const noFilter: never = spatialFilter;
       throw new Error(`Unhandled filter case: ${noFilter}`)
   }
 }
@@ -190,7 +192,7 @@ export function deriveFromGeometry(geometry: unknown, input: FeatureCollectionPo
 
   if (requires_intersection_area) {
     try {
-      const intersection = intersection3DWithSpatialFilter(geo, spatialFilter, resolvedGeometryRef);
+      const intersection = intersectionAreaWithSpatialFilter(geo, spatialFilter, resolvedGeometryRef);
       ret.intersection_area = intersection ? area(intersection) : 0;
     } catch {
       ret.intersection_area = null;
