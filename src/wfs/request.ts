@@ -8,7 +8,7 @@
 
 import { GPF_WFS_URL } from "./catalog.js";
 import { CompiledQuery } from "./queryPreparation.js";
-import type { GpfQueryFeaturesInput } from "./schema.js";
+import { queryIsGetFeaturesInput, type GpfQueryFeaturesInput } from "./schema.js";
 
 // --- Transport Types ---
 
@@ -54,7 +54,7 @@ export function buildMainRequest(
     typeNames: input.typename,
     outputFormat: "application/json",
     exceptions: "application/json",
-    count: "limit" in input ? String(input.limit) : "1"
+    count: queryIsGetFeaturesInput(input) ? String(input.limit) : "1"
   };
 
   if (compiled.propertyName) {

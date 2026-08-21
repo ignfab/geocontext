@@ -1111,7 +1111,7 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
 | `limit` | integer | non | Nombre maximum d'objets à renvoyer. Valeur par défaut : 100. Maximum : 5000. Valeur par défaut : 100. |
 | `order_by` | array | non | Liste ordonnée des critères de tri. |
 | `select` | array | non | Liste des propriétés non géométriques à renvoyer pour chaque objet. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles. Exemple : `["code_insee", "nom_officiel"]`. |
-| `spatial_extras` | array | non | Éléments calculés depuis la géométrie à renvoyer pour chaque objet. Peut inclure `centroid` et `bbox`, aucun par défaut. Valeur par défaut : []. |
+| `spatial_extras` | array | non | Éléments calculés depuis la géométrie à renvoyer pour chaque objet. Peut inclure `centroid`, `bbox`, `length`, `area`, `distance_to_filter` et `intersection_area`, aucun par défaut.<br>`centroid` est le centroïde (moyenne arithmétique des sommets) de la géométrie.<br>`bbox` est la boîte englobante de la géométrie.<br>`length` est renvoyé en m et ne peut être utilisé qu'avec des géométries linéaires (LineString, MultiLineString).<br>`area` est renvoyé en m² et ne peut être utilisé qu'avec des géométries surfaciques (Polygon, MultiPolygon).<br>`distance_to_filter` est la distance (en m) entre la géométrie de l'objet renvoyé et le centroïde du filtre (qui doit être défini).<br>`intersection_area` est l'aire d'intersection (en m²) entre la géométrie de l'objet renvoyé, qui doit être surfacique, et le filtre (qui doit être défini).<br>Si une valeur n'est pas calculable, elle sera remplacée par `null` dans la réponse. Valeur par défaut : []. |
 | `travel_time_filter` | object | non | Filtre spatial par temps de trajet depuis un point (`profile` voiture ou piéton). Exclusif avec les autres filtres spatiaux. |
 | `typename` | string | oui | Nom exact du type GPF à interroger de la forme `prefixe:nom`. Utiliser `gpf_search_types` pour trouver un `typename` valide. |
 | `where` | array | non | Clauses de filtre attributaire, combinées avec `AND`. |
@@ -1377,11 +1377,15 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
         "type": "string",
         "enum": [
           "centroid",
-          "bbox"
+          "bbox",
+          "length",
+          "area",
+          "distance_to_filter",
+          "intersection_area"
         ]
       },
       "default": [],
-      "description": "Éléments calculés depuis la géométrie à renvoyer pour chaque objet. Peut inclure `centroid` et `bbox`, aucun par défaut."
+      "description": "Éléments calculés depuis la géométrie à renvoyer pour chaque objet. Peut inclure `centroid`, `bbox`, `length`, `area`, `distance_to_filter` et `intersection_area`, aucun par défaut.\n`centroid` est le centroïde (moyenne arithmétique des sommets) de la géométrie.\n`bbox` est la boîte englobante de la géométrie.\n`length` est renvoyé en m et ne peut être utilisé qu'avec des géométries linéaires (LineString, MultiLineString).\n`area` est renvoyé en m² et ne peut être utilisé qu'avec des géométries surfaciques (Polygon, MultiPolygon).\n`distance_to_filter` est la distance (en m) entre la géométrie de l'objet renvoyé et le centroïde du filtre (qui doit être défini).\n`intersection_area` est l'aire d'intersection (en m²) entre la géométrie de l'objet renvoyé, qui doit être surfacique, et le filtre (qui doit être défini).\nSi une valeur n'est pas calculable, elle sera remplacée par `null` dans la réponse."
     }
   },
   "required": [
@@ -2050,7 +2054,7 @@ Utiliser `spatial_extras` pour renvoyer une information géométrique dérivée 
 | --- | --- | --- | --- |
 | `feature_id` | string | oui | Identifiant GPF exact de l'objet à récupérer, par exemple `commune.8952`. |
 | `select` | array | non | Liste des propriétés non géométriques à renvoyer. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles. Exemple : `["code_insee", "nom_officiel"]`. |
-| `spatial_extras` | array | non | Éléments calculés depuis la géométrie à renvoyer pour chaque objet. Peut inclure `centroid` et `bbox`, aucun par défaut. Valeur par défaut : []. |
+| `spatial_extras` | array | non | Éléments calculés depuis la géométrie à renvoyer pour l'objet. Peut inclure `centroid`, `bbox`, `length` et `area`, aucun par défaut.<br>`centroid` est le centroïde (moyenne arithmétique des sommets) de la géométrie.<br>`bbox` est la boîte englobante de la géométrie.<br>`length` est renvoyé en m et ne peut être utilisé qu'avec des géométries linéaires (LineString, MultiLineString).<br>`area` est renvoyé en m² et ne peut être utilisé qu'avec des géométries surfaciques (Polygon, MultiPolygon).<br>Si une valeur n'est pas calculable, elle sera remplacée par `null` dans la réponse. Valeur par défaut : []. |
 | `typename` | string | oui | Nom exact du type GPF à interroger, par exemple `ADMINEXPRESS-COG.LATEST:commune`. |
 
 <details>
@@ -2085,11 +2089,13 @@ Utiliser `spatial_extras` pour renvoyer une information géométrique dérivée 
         "type": "string",
         "enum": [
           "centroid",
-          "bbox"
+          "bbox",
+          "length",
+          "area"
         ]
       },
       "default": [],
-      "description": "Éléments calculés depuis la géométrie à renvoyer pour chaque objet. Peut inclure `centroid` et `bbox`, aucun par défaut."
+      "description": "Éléments calculés depuis la géométrie à renvoyer pour l'objet. Peut inclure `centroid`, `bbox`, `length` et `area`, aucun par défaut.\n`centroid` est le centroïde (moyenne arithmétique des sommets) de la géométrie.\n`bbox` est la boîte englobante de la géométrie.\n`length` est renvoyé en m et ne peut être utilisé qu'avec des géométries linéaires (LineString, MultiLineString).\n`area` est renvoyé en m² et ne peut être utilisé qu'avec des géométries surfaciques (Polygon, MultiPolygon).\nSi une valeur n'est pas calculable, elle sera remplacée par `null` dans la réponse."
     }
   },
   "required": [

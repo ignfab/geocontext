@@ -241,7 +241,7 @@ function coerceScalarValueForProperty(property: OgcCollectionProperty, value: st
     ? property.oneOf.map((entry : { const: string }) => entry.const)
     : [];
   if (enumValues.length > 0 && !enumValues.includes(value)) {
-    throw new Error(`La propriété '${propertyName}' exige une valeur parmi : ${enumValues.join(", ")}.`);
+    throw new Error(`La propriété '${propertyName}' exige une valeur parmi : ${enumValues.join(", ")}. Utilise \`gpf_describe_types\` pour avoir une description détaillée de ces différentes valeurs possibles et pour mieux comprendre les champs du type.`);
   }
   return value;
 }

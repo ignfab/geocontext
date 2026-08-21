@@ -22,7 +22,11 @@ import type {
   OrderByClause,
   WhereClause,
 } from "./schema.js";
-import { GPF_SPATIAL_FILTER_DOCNAMES } from "./schema.js"
+import {
+  GPF_SPATIAL_FILTER_DOCNAMES,
+  queryIsGetFeaturesInput,
+  spatialExtraRequiresFilter,
+} from "./schema.js"
 
 import {
   formatScalarValue,
@@ -37,10 +41,10 @@ import {
   compileIntersectsFeatureSpatialFilter,
   compileIntersectsPointSpatialFilter,
 } from "./spatialCql.js";
+import { Geometry } from "geojson";
 
 // --- Re-exports ---
 
-export { geometryToEwkt } from "./geometry.js";
 export { getGeometryName } from "./properties.js";
 export { getSpatialFilter } from "./spatialFilter.js";
 
@@ -59,15 +63,12 @@ type InClause = Extract<ReturnType<typeof normalizeWhereClause>, { operator: "in
 
 // --- Public Types ---
 
-export type ResolvedFeatureGeometryRef = {
-  geometry_ewkt: string;
-};
-
 export type CompiledQuery = {
   geometryName?: string;
   propertyName: string;
   cqlFilter?: string;
   sortBy?: string;
+  resolvedGeometryRef?: Geometry;
 };
 
 // --- Attribute Compilation ---
@@ -182,10 +183,12 @@ function compileOrderByClause(featureType: GpfFeatureType, clause: OrderByClause
 export function compileQueryParts(
   input: GpfQueryFeaturesInput,
   featureType: GpfFeatureType,
-  resolvedGeometryRef?: ResolvedFeatureGeometryRef,
+  resolvedGeometryRef?: Geometry,
 ): CompiledQuery {
   let geometryName: string | undefined;
+  const isGetFeatures = queryIsGetFeaturesInput(input);
   const spatialFilter = getSpatialFilter(input);
+  const spatialExtras = isGetFeatures ? input.spatial_extras : [];
   const fragments: string[] = [];
 
   // Keep the spatial predicate first: the GeoPlateforme GeoServer is sensitive
@@ -206,14 +209,19 @@ export function compileQueryParts(
         if (!resolvedGeometryRef) {
           throw new Error("Le filtre spatial `intersects_feature` exige la résolution préalable de la géométrie de référence.");
         }
-        fragments.push(compileIntersectsFeatureSpatialFilter(geometryName, resolvedGeometryRef.geometry_ewkt));
+        fragments.push(compileIntersectsFeatureSpatialFilter(geometryName, resolvedGeometryRef));
         break;
       case "travel_time":
         if (!resolvedGeometryRef) {
           throw new Error("Le filtre spatial `travel_time` exige la résolution préalable de la géométrie d'isochrone.");
         }
-        fragments.push(compileIntersectsFeatureSpatialFilter(geometryName, resolvedGeometryRef.geometry_ewkt));
+        fragments.push(compileIntersectsFeatureSpatialFilter(geometryName, resolvedGeometryRef));
         break;
+    }
+  } else if (spatialExtras.length > 0) {
+    const faultyExtra = spatialExtras.filter(spatialExtraRequiresFilter);
+    if (faultyExtra.length > 0) {
+      throw new Error(`Impossible de demander ${faultyExtra} sans spécifier de filtre géométrique (à choisir parmi ${GPF_SPATIAL_FILTER_DOCNAMES}).`);
     }
   }
 
@@ -223,13 +231,13 @@ export function compileQueryParts(
 
   const cqlFilter = fragments.length > 0 ? fragments.join(" AND ") : undefined;
 
-  // TODO: use a more solid guard that will not break at the first contract change
-  if (!("spatial_extras" in input)) {
+  if (!isGetFeatures) {
     // for CountFeatures: only return the required parts
     return {
       cqlFilter,
       geometryName,
       propertyName: "",
+      resolvedGeometryRef
     };
   }
 
@@ -254,5 +262,6 @@ export function compileQueryParts(
     cqlFilter,
     propertyName,
     sortBy,
+    resolvedGeometryRef,
   };
 }

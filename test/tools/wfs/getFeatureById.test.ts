@@ -2,6 +2,7 @@ import { vi, describe, it, expect, afterEach } from "vitest";
 
 import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 import type { GpfFeatureType } from "../../../src/wfs/catalog.js";
+import { GPF_SPATIAL_EXTRAS_REQUIRING_FILTER } from "../../../src/wfs/schema.js";
 import { ServiceResponseError } from "../../../src/helpers/http.js";
 
 const mockGetFeatureType = vi.fn<(typename: string) => Promise<GpfFeatureType>>();
@@ -88,11 +89,16 @@ describe("Test GpfGetFeatureByIdTool", () => {
         spatial_extras: {
           type: "array",
           items: {
-            enum: ["centroid", "bbox"],
+            enum: ["centroid", "bbox", "length", "area"],
             type: "string",
           },
           default: [],
-          description: "Éléments calculés depuis la géométrie à renvoyer pour chaque objet. Peut inclure `centroid` et `bbox`, aucun par défaut.",
+          description: "Éléments calculés depuis la géométrie à renvoyer pour l'objet. Peut inclure `centroid`, `bbox`, `length` et `area`, aucun par défaut.\n"+
+            "`centroid` est le centroïde (moyenne arithmétique des sommets) de la géométrie.\n"+
+            "`bbox` est la boîte englobante de la géométrie.\n"+
+            "`length` est renvoyé en m et ne peut être utilisé qu'avec des géométries linéaires (LineString, MultiLineString).\n"+
+            "`area` est renvoyé en m² et ne peut être utilisé qu'avec des géométries surfaciques (Polygon, MultiPolygon).\n"+
+            "Si une valeur n'est pas calculable, elle sera remplacée par `null` dans la réponse.",
         },
         select: {
           type: "array",
@@ -223,6 +229,31 @@ describe("Test GpfGetFeatureByIdTool", () => {
     expect(results.features[0].bbox).toBeDefined();
     expect(results.features[0].bbox).toStrictEqual([2.3, 48.8, 2.4, 48.9]);
     expect(results.features[0].centroid).toBeUndefined();
+  });
+
+  it.each(GPF_SPATIAL_EXTRAS_REQUIRING_FILTER)("should reject spatial_extra %s for by-id", async (forbiddenExtra) => {
+    const tool = new GpfGetFeatureByIdTool();
+
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_get_feature_by_id",
+        arguments: {
+          typename: "ADMINEXPRESS-COG.LATEST:commune",
+          feature_id: "commune.1",
+          spatial_extras: [forbiddenExtra],
+        },
+      },
+    });
+
+    expect(response.isError).toBe(true);
+    const textContent = response.content[0];
+    if (textContent.type !== "text") {
+      throw new Error("expected text content");
+    }
+    expect(textContent.text).toContain("Paramètres invalides");
+    expect(textContent.text).toContain("Valeurs autorisées : 'centroid', 'bbox', 'length', 'area'");
+    expect(mockGetFeatureType).not.toHaveBeenCalled();
+    expect(mockFetchJSONPost).not.toHaveBeenCalled();
   });
 
   it("should not append the geometry column to propertyName when spatial_extras is empty", async () => {

@@ -7,43 +7,8 @@
  */
 
 import type { WfsFeatureCollectionResponse } from "./types.js";
-import { centroid } from "@turf/centroid";
-import { bbox } from "@turf/bbox";
-import { AllGeoJSON } from "@turf/helpers";
-
-
-function deriveGeometry(geometry: unknown, spatial_extras: string[] = []) {
-  const ret : Record<string, unknown> = {};
-
-  if (spatial_extras.length === 0) {
-    return ret;
-  }
-
-  const geo = geometry as AllGeoJSON;
-
-  if (spatial_extras.includes("centroid")) {
-    try {
-      const centr : GeoJSON.Position = centroid(geo).geometry.coordinates;
-      ret.centroid = {
-        lon: centr[0],
-        lat: centr[1],
-      };
-    } catch {
-      ret.centroid = null
-    }
-  }
-
-  if (spatial_extras.includes("bbox")) {
-    try {
-      const bb : GeoJSON.BBox = bbox(geo);
-      ret.bbox = bb;
-    } catch {
-      ret.bbox = null
-    }
-  }
-
-  return ret;
-}
+import { deriveFromGeometry, type FeatureCollectionPostProcessInput } from "./spatialExtras.js"
+import { Geometry } from "geojson";
 
 // --- Response Types ---
 
@@ -113,11 +78,14 @@ export function getMatchedFeatureCount(featureCollection: WfsFeatureCollectionRe
  * and exposes lightweight `feature_ref` objects reusable by follow-up requests.
  *
  * @param featureCollection Raw FeatureCollection returned by the WFS endpoint.
+ * @param input Normalized get-features/by-id input carrying `typename` and requested `spatial_extras`.
+ * @param resolvedGeometryRef Resolved geometry for spatial-filter-dependent extras, when available.
  * @returns A transformed FeatureCollection with raw geometry fields removed and optional `feature_ref` metadata.
  */
 export function transformFeatureCollectionResponse(
   featureCollection: GenericFeatureCollection,
-  spatial_extras: string[] = [],
+  input: FeatureCollectionPostProcessInput,
+  resolvedGeometryRef?: Geometry,
 ): TransformedFeatureCollection {
   if (!Array.isArray(featureCollection.features)) {
     return featureCollection;
@@ -129,7 +97,7 @@ export function transformFeatureCollectionResponse(
     const nextFeature: Record<string, unknown> = {
       ...rest,
       geometry: null,
-      ...deriveGeometry(_geometry, spatial_extras),
+      ...deriveFromGeometry(_geometry, input, resolvedGeometryRef),
     };
 
     if (typeof feature.id === "string") {
@@ -148,11 +116,6 @@ export function transformFeatureCollectionResponse(
 
 // --- Feature Collection post-processing ---
 
-type FeatureCollectionPostProcessInput = {
-  typename: string,
-  spatial_extras?: string[],
-}
-
 /**
  * Transforms a FeatureCollection obtained from upstream.
  *
@@ -161,10 +124,11 @@ type FeatureCollectionPostProcessInput = {
  *
  * @param featureCollection Raw FeatureCollection returned by the WFS endpoint.
  * @param input GpfGetFeatures or GpfGetFeatureById input query.
+ * @param resolvedGeometryRef The spatial filter resolved geometry, if any.
  * @returns A FeatureCollection with the required transformations done.
  */
-export function postProcessFeatureCollection(featureCollection: GenericFeatureCollection, input: FeatureCollectionPostProcessInput) {
-  const transformed = transformFeatureCollectionResponse(featureCollection, input.spatial_extras);
+export function postProcessFeatureCollection(featureCollection: GenericFeatureCollection, input: FeatureCollectionPostProcessInput, resolvedGeometryRef?: Geometry) {
+  const transformed = transformFeatureCollectionResponse(featureCollection, input, resolvedGeometryRef);
   if (!Array.isArray(transformed.features)) {
     return transformed;
   }

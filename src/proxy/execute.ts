@@ -30,15 +30,15 @@ import {
   compileQueryParts,
   getGeometryName,
   getSpatialFilter,
-  type ResolvedFeatureGeometryRef,
 } from "../wfs/queryPreparation.js";
 import { requireSingleFeatureById } from "../wfs/byId.js";
 import { buildPropertyNameWithGeometry } from "../wfs/properties.js"
-import { resolveFeatureGeometryEwkt } from "../wfs/referenceGeometry.js";
+import { resolveFeatureGeometry } from "../wfs/referenceGeometry.js";
 import { rethrowIdentifiedCatalogDesyncError } from "../wfs/catalogDesync.js";
 import { ServiceResponseError, extractJsonServiceError } from "../helpers/http.js";
 import type { WfsFeatureCollectionResponse } from "../wfs/types.js";
 import type { GpfGetFeaturesInput, GpfGetFeatureByIdLayerInput } from "../wfs/schema.js";
+import { Geometry } from "geojson";
 
 // --- Injected Dependencies ---
 
@@ -53,13 +53,13 @@ export type WfsClientLike = {
 };
 
 /**
- * Resolves the isochrone geometry for a `travel_time` filter (EWKT). Injected by
+ * Resolves the isochrone geometry for a `travel_time` filter. Injected by
  * the HTTP layer (backed by the navigation/isochrone service). Required, because
  * `travel_time` is part of the `gpf_get_features` query contract the proxy must
  * honour — it is not an optional capability. The engine stays isochrone-agnostic
  * (pure, network-free, testable), exactly as it is for `wfsClient`.
  */
-export type TravelTimeResolver = (input: GpfGetFeaturesInput) => Promise<ResolvedFeatureGeometryRef>;
+export type TravelTimeResolver = (input: GpfGetFeaturesInput) => Promise<Geometry>;
 
 /**
  * Dependencies injected into {@link runGeometryFeatureQuery}.
@@ -149,12 +149,12 @@ function assertUsableFeatureCollection(
  *
  * @param input Normalized layer query input.
  * @param wfsClient Injected WFS client.
- * @returns The resolved reference geometry as EWKT, or `undefined`.
+ * @returns The resolved reference geometry, or `undefined`.
  */
 async function resolveReferenceGeometry(
   input: GpfGetFeaturesInput,
   deps: GeometryFeatureQueryDeps,
-): Promise<ResolvedFeatureGeometryRef | undefined> {
+): Promise<Geometry | undefined> {
   const spatialFilter = getSpatialFilter(input);
 
   // travel_time is resolved by the injected isochrone resolver, up front, so
@@ -167,7 +167,7 @@ async function resolveReferenceGeometry(
     return undefined;
   }
 
-  return resolveFeatureGeometryEwkt(deps.wfsClient, {
+  return resolveFeatureGeometry(deps.wfsClient, {
     typename: spatialFilter.typename,
     feature_id: spatialFilter.feature_id,
   });
@@ -204,6 +204,7 @@ export async function runGeometryFeatureQuery(
     cqlFilter: compiled.cqlFilter,
     propertyName: ensureGeometrySelected(compiled.propertyName, geometryName),
     sortBy: compiled.sortBy,
+    resolvedGeometryRef
   });
 
   // Request WGS84 lon/lat, matching the convention the /gpf modules already
