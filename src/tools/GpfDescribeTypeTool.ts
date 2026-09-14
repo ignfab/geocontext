@@ -24,7 +24,7 @@ const gpfDescribeTypeInputSchema = z.object({
 // because mcp-framework does not accept z.record field types.
 const gpfDescribeTypeOutput = zOgcCollectionSchema
   .omit({ properties: true })
-  .catchall(z.unknown());
+  .extend({ properties: z.object({}).catchall(z.unknown()) });
 
 
 // --- Types ---

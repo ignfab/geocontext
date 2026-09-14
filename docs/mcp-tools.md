@@ -1007,6 +1007,7 @@ Utiliser ce tool après `gpf_search_types` pour inspecter les propriétés dispo
 | `$id` | string | oui |   |
 | `$schema` | string | oui |   |
 | `description` | string | oui |   |
+| `properties` | object | oui |   |
 | `required` | array | oui |   |
 | `title` | string | oui |   |
 | `type` | string | oui |   |
@@ -1054,6 +1055,10 @@ Utiliser ce tool après `gpf_search_types` pour inspecter les propriétés dispo
       "items": {
         "type": "string"
       }
+    },
+    "properties": {
+      "type": "object",
+      "properties": {}
     }
   },
   "required": [
@@ -1062,7 +1067,8 @@ Utiliser ce tool après `gpf_search_types` pour inspecter les propriétés dispo
     "type",
     "title",
     "description",
-    "required"
+    "required",
+    "properties"
   ]
 }
 ```
