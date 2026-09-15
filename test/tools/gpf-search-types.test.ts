@@ -94,4 +94,76 @@ describe("Test GpfSearchTypesTool", () => {
       ),
     ).toBeNull();
   });
+
+  it("should forward queryTerms, terms and match from the catalog search results", async () => {
+    const mockSearchResults = [
+      {
+        id: "BDTOPO_V3:batiment",
+        score: 0.99,
+        queryTerms: ["bâtiment", "batiment"],
+        terms: ["batiment"],
+        match: {
+          batiment: ["name", "title"],
+        },
+      },
+    ];
+
+    const mockFeatureType: OgcCollectionSchema = {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      $id: "https://example.test/BDTOPO_V3/batiment.json",
+      type: "object",
+      title: "Bâtiment",
+      description: "Les bâtiments de test",
+      properties: {},
+      required: [],
+    };
+
+    vi.mocked(wfsSchemaStore).searchFeatureTypesWithScores.mockResolvedValue(mockSearchResults as never);
+    vi.mocked(wfsSchemaStore).getFeatureType.mockResolvedValue({
+      typename: "BDTOPO_V3:batiment",
+      schema: mockFeatureType,
+    });
+
+    const tool = new GpfSearchTypesTool();
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_search_types",
+        arguments: {
+          query: "bâtiment",
+        },
+      },
+    });
+
+    expect(response.isError).toBeUndefined();
+
+    const textContent = response.content[0];
+    if (textContent.type !== "text") {
+      throw new Error("expected text content");
+    }
+
+    const parsedContent = JSON.parse(textContent.text);
+    expect(parsedContent.results[0]).toMatchObject({
+      typename: "BDTOPO_V3:batiment",
+      score: 0.99,
+      queryTerms: ["bâtiment", "batiment"],
+      terms: ["batiment"],
+      match: {
+        batiment: ["name", "title"],
+      },
+    });
+
+    expect(response.structuredContent).toMatchObject({
+      results: [
+        {
+          typename: "BDTOPO_V3:batiment",
+          score: 0.99,
+          queryTerms: ["bâtiment", "batiment"],
+          terms: ["batiment"],
+          match: {
+            batiment: ["name", "title"],
+          },
+        },
+      ],
+    });
+  });
 });

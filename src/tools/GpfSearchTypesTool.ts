@@ -68,7 +68,7 @@ class GpfSearchTypesTool extends BaseTool<GpfSearchTypesInput> {
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
   description = [
     "Recherche des types de la Géoplateforme (GPF) à partir de mots-clés afin de trouver un identifiant de type (`typename`) valide.",
-    "La recherche est textuelle (mini-search) et retourne une liste ordonnée de candidats avec leur identifiant, leur titre, leur description et un score de pertinence éventuel.",
+    "La recherche est textuelle (mini-search) et retourne une liste ordonnée de candidats, avec, pour chacun, son identifiant, son titre, sa description, un score de pertinence éventuel ainsi que son lien avec les mots-clés de la requête.",
     "Le paramètre `max_results` permet d'élargir le nombre de candidats retournés (10 par défaut).",
     "**Important** : Utiliser ce tool avant `gpf_describe_type` ou `gpf_get_features` lorsque le nom exact du type n'est pas connu.",
     "**Important** : Privilégier des termes métier en français pour la recherche."
