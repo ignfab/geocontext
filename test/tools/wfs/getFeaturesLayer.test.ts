@@ -275,7 +275,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
       },
       required: [],
     };
-    mockGetFeatureType.mockResolvedValue(asFeatureType("wfs_scot:doc_urba", tableType));
+    mockGetFeatureType.mockResolvedValue(asFeatureType("INSEE.FILOSOFI.INDICATORS:filosofi_iris_2019", tableType));
     const tool = new GpfGetFeaturesLayerTool();
 
     const response = await tool.toolCall({
