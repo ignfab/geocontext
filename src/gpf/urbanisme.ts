@@ -12,7 +12,7 @@ import type { Point, Geometry } from 'geojson';
 
 import { wfsClient } from '../wfs/execution.js';
 import type { WfsFeatureCollectionResponse } from '../wfs/types.js';
-import { getGeometryProperty } from '../wfs/properties.js';
+import { getGeometryName } from '../wfs/properties.js';
 import { compileDwithinSpatialFilter } from '../wfs/spatialCql.js';
 import { mapToFlatItemsWithGeometry, type FlatItem } from '../wfs/response.js';
 import type { SpatialFilter } from '../wfs/schema.js';
@@ -77,8 +77,8 @@ export async function getUrbanisme(lon: number, lat: number): Promise<Record<str
     // cross-layer geometry property homogeneity.
     const cqlFilters = await Promise.all(URBANISME_TYPES.map(async (typename) => {
         const featureType = await wfsClient.getFeatureType(typename);
-        const geometryProperty = getGeometryProperty(featureType);
-        return compileDwithinSpatialFilter(geometryProperty, spatialFilter);
+        const geometryName = getGeometryName(featureType);
+        return compileDwithinSpatialFilter(geometryName, spatialFilter);
     }));
 
     // Execute the multi-typename WFS query
@@ -129,8 +129,8 @@ export async function getAssiettesServitudes(lon: number, lat: number): Promise<
     // cross-layer geometry property homogeneity.
     const cqlFilters = await Promise.all(ASSIETTES_SUP_TYPES.map(async (typename) => {
         const featureType = await wfsClient.getFeatureType(typename);
-        const geometryProperty = getGeometryProperty(featureType);
-        return compileDwithinSpatialFilter(geometryProperty, spatialFilter);
+        const geometryName = getGeometryName(featureType);
+        return compileDwithinSpatialFilter(geometryName, spatialFilter);
     }));
 
     // Execute the multi-typename WFS query

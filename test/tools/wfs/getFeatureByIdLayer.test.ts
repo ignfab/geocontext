@@ -1,6 +1,8 @@
 import { vi, describe, it, expect, afterEach } from "vitest";
 
-import type { Collection } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
+import type { GpfFeatureType } from "../../../src/wfs/catalog.js";
+import { validateStructuredContentAgainstOutputSchema } from "../helpers/outputSchema";
 
 import type { Env } from "../../../src/config/env.js";
 import { decodeToken } from "../../../src/proxy/token.js";
@@ -11,7 +13,7 @@ const SECRET_HEX = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789ab
 const SECRET = Buffer.from(SECRET_HEX, "hex");
 
 const mockGetEnv = vi.fn<() => Env>();
-const mockGetFeatureType = vi.fn<(typename: string) => Promise<Collection>>();
+const mockGetFeatureType = vi.fn<(typename: string) => Promise<GpfFeatureType>>();
 
 vi.doMock("../../../src/config/env.js", async () => {
   const actual = await vi.importActual<typeof import("../../../src/config/env.js")>(
@@ -39,16 +41,20 @@ const { default: GpfGetFeatureByIdLayerTool } = await import(
   "../../../src/tools/GpfGetFeatureByIdLayerTool"
 );
 
-const communeType: Collection = {
-  id: "ADMINEXPRESS-COG.LATEST:commune",
-  namespace: "ADMINEXPRESS-COG.LATEST",
-  name: "commune",
+const communeType: OgcCollectionSchema = {
+  $schema: "https://json-schema.org/draft/2020-12/schema",
+  $id: "https://example.test/ADMINEXPRESS-COG.LATEST/commune.json",
+  type: "object",
   title: "Commune",
   description: "Fixture de test",
-  properties: [
-    { name: "code_insee", type: "string" },
-    { name: "geometrie", type: "multipolygon", defaultCrs: "EPSG:4326" },
-  ],
+  properties: {
+    code_insee: { type: "string" },
+    geometrie: {
+      format: "geometry-multipolygon",
+      "x-ogc-role": "primary-geometry",
+    },
+  },
+  required: [],
 };
 
 /**
@@ -101,7 +107,7 @@ describe("Test GpfGetFeatureByIdLayerTool", () => {
     // stdio + a locally-run proxy (secret + base URL set) is a valid dev setup: the
     // tool must produce a URL, proving the gate no longer keys on TRANSPORT_TYPE.
     mockGetEnv.mockReturnValue(makeEnv({ TRANSPORT_TYPE: "stdio" }));
-    mockGetFeatureType.mockResolvedValue(communeType);
+    mockGetFeatureType.mockResolvedValue({ typename: "ADMINEXPRESS-COG.LATEST:commune", schema: communeType });
     const tool = new GpfGetFeatureByIdLayerTool();
 
     const response = await tool.toolCall({
@@ -118,7 +124,7 @@ describe("Test GpfGetFeatureByIdLayerTool", () => {
 
   it("builds an opaque data_url that round-trips to the by-id-tagged params", async () => {
     mockGetEnv.mockReturnValue(makeEnv({}));
-    mockGetFeatureType.mockResolvedValue(communeType);
+    mockGetFeatureType.mockResolvedValue({ typename: "ADMINEXPRESS-COG.LATEST:commune", schema: communeType });
     const tool = new GpfGetFeatureByIdLayerTool();
 
     const response = await tool.toolCall({
@@ -139,6 +145,12 @@ describe("Test GpfGetFeatureByIdLayerTool", () => {
     }
     const payload = JSON.parse(textContent.text);
     expect(payload).toEqual(response.structuredContent);
+    expect(
+      validateStructuredContentAgainstOutputSchema(
+        tool.toolDefinition.outputSchema,
+        response.structuredContent,
+      ),
+    ).toBeNull();
 
     const url = new URL(payload.data_url);
     expect(url.pathname.startsWith("/api/v1/proxy/")).toBe(true);
@@ -160,7 +172,7 @@ describe("Test GpfGetFeatureByIdLayerTool", () => {
 
   it("does not build a double slash when the base URL has a trailing slash", async () => {
     mockGetEnv.mockReturnValue(makeEnv({ PROXY_PUBLIC_BASE_URL: "https://proxy.example.test/" }));
-    mockGetFeatureType.mockResolvedValue(communeType);
+    mockGetFeatureType.mockResolvedValue({ typename: "ADMINEXPRESS-COG.LATEST:commune", schema: communeType });
     const tool = new GpfGetFeatureByIdLayerTool();
 
     const response = await tool.toolCall({
@@ -178,7 +190,7 @@ describe("Test GpfGetFeatureByIdLayerTool", () => {
 
   it("preserves an ingress path prefix on the public base URL", async () => {
     mockGetEnv.mockReturnValue(makeEnv({ PROXY_PUBLIC_BASE_URL: "https://example.test/published/proxy" }));
-    mockGetFeatureType.mockResolvedValue(communeType);
+    mockGetFeatureType.mockResolvedValue({ typename: "ADMINEXPRESS-COG.LATEST:commune", schema: communeType });
     const tool = new GpfGetFeatureByIdLayerTool();
 
     const response = await tool.toolCall({
@@ -242,7 +254,7 @@ describe("Test GpfGetFeatureByIdLayerTool", () => {
 
   it("rejects an unknown selected property BEFORE minting the URL", async () => {
     mockGetEnv.mockReturnValue(makeEnv({}));
-    mockGetFeatureType.mockResolvedValue(communeType);
+    mockGetFeatureType.mockResolvedValue({ typename: "ADMINEXPRESS-COG.LATEST:commune", schema: communeType });
     const tool = new GpfGetFeatureByIdLayerTool();
 
     const response = await tool.toolCall({
@@ -264,7 +276,7 @@ describe("Test GpfGetFeatureByIdLayerTool", () => {
 
   it("rejects the geometry property in select because it is added automatically", async () => {
     mockGetEnv.mockReturnValue(makeEnv({}));
-    mockGetFeatureType.mockResolvedValue(communeType);
+    mockGetFeatureType.mockResolvedValue({ typename: "ADMINEXPRESS-COG.LATEST:commune", schema: communeType });
     const tool = new GpfGetFeatureByIdLayerTool();
 
     const response = await tool.toolCall({

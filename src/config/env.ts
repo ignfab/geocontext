@@ -103,6 +103,31 @@ const logLevels = ["error", "warn", "info", "http", "verbose", "debug", "silly"]
 const logFormats = ["json", "simple"] as const;
 const nodeEnvs = ["development", "test", "production"] as const;
 
+// Shared keys used by both `fields` and `boost` in MiniSearchCollectionSearchOptions.
+export const MINISEARCH_INDEXED_OPTION_KEYS = [
+    'namespace',
+    'name',
+    'identifierTokens',
+    'title',
+    'description',
+    'propertyNames',
+    'propertyTitles',
+    'propertyDescriptions',
+    'oneOfConsts',
+    'oneOfDescriptions',
+    'representedFeatures',
+    'selectionCriteria',
+] as const;
+
+export const MINISEARCH_COMBINE_WITH_VALUES = ["AND", "OR"] as const;
+
+export const miniSearchOptionsSchema = z.object({
+    fields: z.array(z.enum(MINISEARCH_INDEXED_OPTION_KEYS)).optional(),
+    combineWith: z.enum(MINISEARCH_COMBINE_WITH_VALUES).optional(),
+    fuzzy: z.number().finite().optional(),
+    boost: z.record(z.enum(MINISEARCH_INDEXED_OPTION_KEYS), z.number().finite()).optional(),
+}).strict();
+
 // --- Env Schema ---
 
 const envSchema = z.object({
@@ -149,7 +174,7 @@ const envSchema = z.object({
         .string()
         .trim()
         .transform(parseJsonEnvValue)
-        .pipe(z.record(z.string(), z.unknown()).optional())
+        .pipe(miniSearchOptionsSchema.optional())
         .optional(),
     // Stateless geodata proxy (only used in http transport)
     // Symmetric key for the opaque proxy URL token. Decoded to a 32-byte Buffer.

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 import AdminexpressTool from "../../src/tools/AdminexpressTool";
+import { validateStructuredContentAgainstOutputSchema } from "./helpers/outputSchema";
 import { mairieLoray } from "../samples";
 
 const adminexpressResults = [
@@ -121,6 +122,12 @@ describe("Test AdminexpressTool",() => {
             ]),
         });
         expect(payload).toMatchObject(response.structuredContent as Record<string, unknown>);
+        expect(
+            validateStructuredContentAgainstOutputSchema(
+                tool.toolDefinition.outputSchema,
+                response.structuredContent,
+            ),
+        ).toBeNull();
     });
 
     it("should return isError=true for invalid input", async () => {
