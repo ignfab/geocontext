@@ -115,6 +115,27 @@ describe("gpfGetFeatures/queryPreparation", () => {
     expect(dwithin.cqlFilter).toEqual("DWITHIN(geometrie,SRID=4326;POINT(2.3522 48.8566),250,meters)");
   });
 
+  const multipolygon_example = {
+    type: "MultiPolygon" as const,
+    coordinates: [[[
+      [2,   48  ],
+      [2.2, 48  ],
+      [2.2, 48.2],
+      [2,   48.2],
+      [2,   48  ],
+    ]]]
+  }
+
+  const polygon_example = {
+    type: "Polygon" as const,
+    coordinates: [[
+      [2,   48  ],
+      [2.2, 48  ],
+      [2.2, 48.2],
+      [2,   48  ],
+    ]]
+  }
+
   it("should compile intersects_feature with resolved geometry", () => {
     const compiled = compileQueryParts({
       ...baseInput,
@@ -122,12 +143,20 @@ describe("gpfGetFeatures/queryPreparation", () => {
         typename: "ADMINEXPRESS-COG.LATEST:commune",
         feature_id: "commune.1",
       },
-    }, wrappedFeatureType, {
-      type: "MultiPolygon" as const,
-      coordinates: [[[[2, 48], [2.2, 48], [2.2, 48.2], [2, 48], [2, 48]]]]
-    });
+    }, wrappedFeatureType, multipolygon_example);
 
-    expect(compiled.cqlFilter).toEqual("INTERSECTS(geometrie,SRID=4326;MULTIPOLYGON(((2 48,2.2 48,2.2 48.2,2 48,2 48))))");
+    expect(compiled.cqlFilter).toEqual("INTERSECTS(geometrie,SRID=4326;MULTIPOLYGON(((2 48,2.2 48,2.2 48.2,2 48.2,2 48))))");
+  });
+
+  it("should compile adjacent_feature with resolved geometry", () => {
+    const compiled = compileQueryParts({
+      ...baseInput,
+      adjacent_feature_filter: {
+        feature_id: "commune.1",
+      },
+    }, wrappedFeatureType, multipolygon_example);
+
+    expect(compiled.cqlFilter).toEqual("INTERSECTS(geometrie,SRID=4326;MULTIPOLYGON(((2 48,2.2 48,2.2 48.2,2 48.2,2 48)))) AND NOT INTERSECTS(geometrie,SRID=4326;POINT(2.1 48.1))");
   });
 
   it("should propagate resolvedGeometryRef in GetFeatures output for intersects_feature", () => {
@@ -157,12 +186,7 @@ describe("gpfGetFeatures/queryPreparation", () => {
         minutes: 15,
         profile: "pedestrian",
       },
-    }, wrappedFeatureType,
-    {
-      type: "Polygon" as const,
-      coordinates: [[[2, 48], [2.2, 48], [2.2, 48.2], [2, 48]]]
-    }
-  );
+    }, wrappedFeatureType, polygon_example);
 
     expect(compiled.cqlFilter).toEqual("INTERSECTS(geometrie,SRID=4326;POLYGON((2 48,2.2 48,2.2 48.2,2 48)))");
   });
