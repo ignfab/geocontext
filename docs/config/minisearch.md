@@ -17,3 +17,24 @@ export GPF_WFS_MINISEARCH_OPTIONS='{"fields":["title","identifierTokens"],"combi
 export HTTP_TIMEOUT=15
 ```
 
+Champs autorisés pour `fields` et les clés de `boost` (alignés sur `@ignfab/gpf-schema-store@0.2.x`) :
+
+- `namespace`
+- `name`
+- `identifierTokens`
+- `title`
+- `description`
+- `propertyNames`
+- `propertyTitles`
+- `propertyDescriptions`
+- `oneOfConsts`
+- `oneOfDescriptions`
+- `representedFeatures`
+- `selectionCriteria`
+
+Exemple plus complet :
+
+```bash
+export GPF_WFS_MINISEARCH_OPTIONS='{"fields":["title","identifierTokens","propertyNames","oneOfConsts"],"combineWith":"OR","fuzzy":0.05,"boost":{"title":4,"name":5,"identifierTokens":3,"oneOfConsts":1.5}}'
+```
+

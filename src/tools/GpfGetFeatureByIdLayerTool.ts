@@ -32,7 +32,7 @@ import { getEnv } from "../config/env.js";
 import { encodeToken } from "../proxy/token.js";
 import { buildDataUrl } from "../proxy/dataUrl.js";
 import { wfsClient } from "../wfs/execution.js";
-import { buildPropertyNameWithGeometry, getGeometryProperty } from "../wfs/properties.js";
+import { buildPropertyNameWithGeometry, getGeometryName } from "../wfs/properties.js";
 import {
   PROXY_TOKEN_KIND,
   gpfGetFeatureByIdLayerInputObjectSchema,
@@ -128,7 +128,7 @@ class GpfGetFeatureByIdLayerTool extends BaseTool<GpfGetFeatureByIdLayerInput> {
     buildPropertyNameWithGeometry(featureType, tokenParams.select);
 
     // Also check that the typename corresponds to a collection that has a geometry.
-    getGeometryProperty(featureType);
+    getGeometryName(featureType);
 
     logger.info(`[tool] execute ${this.name} ...`, {
       input: tokenParams,

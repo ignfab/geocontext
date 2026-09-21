@@ -1,9 +1,10 @@
 import { vi, describe, it, expect, afterEach } from "vitest";
 
-import type { Collection } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
+import type { GpfFeatureType } from "../../../src/wfs/catalog.js";
 import { ServiceResponseError } from "../../../src/helpers/http.js";
 
-const mockGetFeatureType = vi.fn<(typename: string) => Promise<Collection>>();
+const mockGetFeatureType = vi.fn<(typename: string) => Promise<GpfFeatureType>>();
 const mockFetchJSONPost = vi.fn<(
   url: string,
   body?: string,
@@ -31,29 +32,34 @@ describe("Test GpfGetFeatureByIdTool", () => {
     }
   }
 
-  const polygonFeatureType: Collection = {
-    id: "ADMINEXPRESS-COG.LATEST:commune",
-    namespace: "ADMINEXPRESS-COG.LATEST",
-    name: "commune",
+  const polygonFeatureType: OgcCollectionSchema = {
+    $schema: "https://json-schema.org/draft/2020-12/schema",
+    $id: "https://example.test/ADMINEXPRESS-COG.LATEST/commune.json",
+    type: "object",
     title: "Commune",
     description: "Description de test",
-    properties: [
-      { name: "code_insee", type: "string" },
-      { name: "nom_officiel", type: "string" },
-      { name: "geometrie", type: "multipolygon", defaultCrs: "EPSG:4326" },
-    ],
+    properties: {
+      code_insee: { type: "string" },
+      nom_officiel: { type: "string" },
+      geometrie: {
+        format: "geometry-multipolygon",
+        "x-ogc-role": "primary-geometry",
+      },
+    },
+    required: [],
   };
 
-  const tableFeatureType: Collection = {
-    id: "wfs_scot:doc_urba",
-    namespace: "wfs_scot",
-    name: "doc_urba",
+  const tableFeatureType: OgcCollectionSchema = {
+    $schema: "https://json-schema.org/draft/2020-12/schema",
+    $id: "https://example.test/wfs_scot/doc_urba.json",
+    type: "object",
     title: "Document d'urbanisme",
     description: "Description de test",
-    properties: [
-      { name: "partition", type: "string" },
-      { name: "idurba", type: "string" },
-    ],
+    properties: {
+      partition: { type: "string" },
+      idurba: { type: "string" },
+    },
+    required: [],
   };
 
   afterEach(() => {
@@ -65,6 +71,7 @@ describe("Test GpfGetFeatureByIdTool", () => {
   it("should expose its MCP input schema definition", () => {
     const tool = new GpfGetFeatureByIdTool();
     expect(tool.toolDefinition.title).toEqual("Lecture d’un objet GPF par identifiant");
+    expect(tool.toolDefinition.outputSchema).toBeUndefined();
     expect(tool.toolDefinition.inputSchema).toEqual({
       type: "object",
       properties: {
@@ -106,7 +113,7 @@ describe("Test GpfGetFeatureByIdTool", () => {
   it("should return exactly one transformed feature for results", async () => {
     const tool = new GpfGetFeatureByIdTool();
     const requests: Array<{ url: string; query: Record<string, string> }> = [];
-    mockGetFeatureType.mockResolvedValue(polygonFeatureType);
+    mockGetFeatureType.mockResolvedValue({ typename: "ADMINEXPRESS-COG.LATEST:commune", schema: polygonFeatureType });
     mockFetchJSONPost.mockImplementation(async (url, _body) => {
       const [baseUrl, queryString = ""] = url.split("?");
       requests.push({
@@ -165,7 +172,7 @@ describe("Test GpfGetFeatureByIdTool", () => {
   it("should include the bbox when asked in spatial_extras", async () => {
     const tool = new GpfGetFeatureByIdTool();
     const requests: Array<{ url: string; query: Record<string, string> }> = [];
-    mockGetFeatureType.mockResolvedValue(polygonFeatureType);
+    mockGetFeatureType.mockResolvedValue({ typename: "ADMINEXPRESS-COG.LATEST:commune", schema: polygonFeatureType });
     mockFetchJSONPost.mockImplementation(async (url, _body) => {
       const [baseUrl, queryString = ""] = url.split("?");
       requests.push({
@@ -221,7 +228,7 @@ describe("Test GpfGetFeatureByIdTool", () => {
   it("should not append the geometry column to propertyName when spatial_extras is empty", async () => {
     const tool = new GpfGetFeatureByIdTool();
     const requests: Array<{ url: string; query: Record<string, string> }> = [];
-    mockGetFeatureType.mockResolvedValue(polygonFeatureType);
+    mockGetFeatureType.mockResolvedValue({ typename: "ADMINEXPRESS-COG.LATEST:commune", schema: polygonFeatureType });
     mockFetchJSONPost.mockImplementation(async (url, _body) => {
       const [baseUrl, queryString = ""] = url.split("?");
       requests.push({
@@ -268,7 +275,7 @@ describe("Test GpfGetFeatureByIdTool", () => {
 
   it("should fail clearly when the feature is missing", async () => {
     const tool = new GpfGetFeatureByIdTool();
-    mockGetFeatureType.mockResolvedValue(polygonFeatureType);
+    mockGetFeatureType.mockResolvedValue({ typename: "ADMINEXPRESS-COG.LATEST:commune", schema: polygonFeatureType });
     mockFetchJSONPost.mockResolvedValue({ type: "FeatureCollection", features: [], totalFeatures: 0 });
 
     const response = await tool.toolCall({
@@ -298,7 +305,7 @@ describe("Test GpfGetFeatureByIdTool", () => {
 
   it("should fail clearly when multiple features are returned", async () => {
     const tool = new GpfGetFeatureByIdTool();
-    mockGetFeatureType.mockResolvedValue(polygonFeatureType);
+    mockGetFeatureType.mockResolvedValue({ typename: "ADMINEXPRESS-COG.LATEST:commune", schema: polygonFeatureType });
     mockFetchJSONPost.mockResolvedValue({
       type: "FeatureCollection",
       features: [
@@ -334,7 +341,7 @@ describe("Test GpfGetFeatureByIdTool", () => {
 
   it("should fail clearly when the returned feature id mismatches", async () => {
     const tool = new GpfGetFeatureByIdTool();
-    mockGetFeatureType.mockResolvedValue(polygonFeatureType);
+    mockGetFeatureType.mockResolvedValue({ typename: "ADMINEXPRESS-COG.LATEST:commune", schema: polygonFeatureType });
     mockFetchJSONPost.mockResolvedValue({
       type: "FeatureCollection",
       features: [
@@ -396,7 +403,7 @@ describe("Test GpfGetFeatureByIdTool", () => {
   it("should work on a geometry-less table when select and spatial_extras are empty", async () => {
     const tool = new GpfGetFeatureByIdTool();
     const requests: Array<{ url: string; query: Record<string, string> }> = [];
-    mockGetFeatureType.mockResolvedValue(tableFeatureType);
+    mockGetFeatureType.mockResolvedValue({ typename: "wfs_scot:doc_urba", schema: tableFeatureType });
     mockFetchJSONPost.mockImplementation(async (url) => {
       const [baseUrl, queryString = ""] = url.split("?");
       requests.push({
@@ -436,7 +443,7 @@ describe("Test GpfGetFeatureByIdTool", () => {
 
   it("should fail before WFS request on a geometry-less table when spatial_extras is not empty", async () => {
     const tool = new GpfGetFeatureByIdTool();
-    mockGetFeatureType.mockResolvedValue(tableFeatureType);
+    mockGetFeatureType.mockResolvedValue({ typename: "wfs_scot:doc_urba", schema: tableFeatureType });
 
     const response = await tool.toolCall({
       params: {

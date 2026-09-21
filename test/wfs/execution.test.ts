@@ -1,5 +1,6 @@
 import { vi, describe, expect, afterEach, it } from "vitest";
-import type { Collection } from "@ignfab/gpf-schema-store";
+import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
+import type { GpfFeatureType } from "../../src/wfs/catalog.js";
 import { getMatchedFeatureCount } from "../../src/wfs/response.js";
 
 const mockPost = vi.fn<(request: any) => Promise<unknown>>();
@@ -107,29 +108,39 @@ describe("WfsClient", () => {
   });
 
   it("should accept structural test doubles as dependencies", async () => {
-    const featureType: Collection = {
-      id: "BDTOPO_V3:batiment",
-      namespace: "BDTOPO_V3",
-      name: "batiment",
+    const featureType: OgcCollectionSchema = {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      $id: "https://example.test/BDTOPO_V3/batiment.json",
+      type: "object",
       title: "Batiment",
       description: "Description de test",
-      properties: [
-        { name: "cleabs", type: "string" },
-        { name: "geometrie", type: "multipolygon", defaultCrs: "EPSG:4326" },
-      ],
+      properties: {
+        cleabs: { type: "string" },
+        geometrie: {
+          format: "geometry-multipolygon",
+          "x-ogc-role": "primary-geometry",
+        },
+      },
+      required: [],
     };
     const post = vi.fn(async () => ({
       type: "FeatureCollection",
       features: [],
     }));
-    const getFeatureType = vi.fn(async () => featureType);
+    const getFeatureType = vi.fn(async (typename: string) => ({
+      typename,
+      schema: featureType,
+    } satisfies GpfFeatureType));
 
     const client = new WfsClient(
       { post },
       { getFeatureType },
     );
 
-    await expect(client.getFeatureType("BDTOPO_V3:batiment")).resolves.toEqual(featureType);
+    await expect(client.getFeatureType("BDTOPO_V3:batiment")).resolves.toEqual({
+      typename: "BDTOPO_V3:batiment",
+      schema: featureType,
+    });
     await expect(client.fetchFeatureCollection({
       method: "POST",
       url: "https://data.geopf.fr/wfs",

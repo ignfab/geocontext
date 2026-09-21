@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 import GpfSearchTypesTool from "../../../src/tools/GpfSearchTypesTool";
+import { validateStructuredContentAgainstOutputSchema } from "../helpers/outputSchema";
 
 describe("Test GpfSearchTypesTool",() => {
     class TestableGpfSearchTypesTool extends GpfSearchTypesTool {
@@ -8,9 +9,31 @@ describe("Test GpfSearchTypesTool",() => {
             return {
                 results: [
                     {
-                        id: "BDTOPO_V3:batiment",
+                        typename: "BDTOPO_V3:batiment",
                         title: "Batiment",
                         description: "Description de test",
+                        score: undefined,
+                        queryTerms: undefined,
+                        terms: undefined,
+                        match: undefined,
+                    },
+                ],
+            };
+        }
+    }
+
+    class TestableGpfSearchTypesToolWithMetadata extends GpfSearchTypesTool {
+        async execute() {
+            return {
+                results: [
+                    {
+                        typename: "BDTOPO_V3:batiment",
+                        title: "Batiment",
+                        description: "Description de test",
+                        score: 42.5,
+                        queryTerms: ["batiment"],
+                        terms: ["batiment"],
+                        match: { batiment: ["name", "title"] as ("name" | "title")[] },
                     },
                 ],
             };
@@ -55,7 +78,7 @@ describe("Test GpfSearchTypesTool",() => {
         expect(JSON.parse(textContent.text)).toMatchObject({
             results: [
                 {
-                    id: "BDTOPO_V3:batiment",
+                    typename: "BDTOPO_V3:batiment",
                 },
             ],
         });
@@ -63,7 +86,48 @@ describe("Test GpfSearchTypesTool",() => {
         expect(response.structuredContent).toMatchObject({
             results: [
                 {
-                    id: "BDTOPO_V3:batiment",
+                    typename: "BDTOPO_V3:batiment",
+                },
+            ],
+        });
+        expect(
+            validateStructuredContentAgainstOutputSchema(
+                tool.toolDefinition.outputSchema,
+                response.structuredContent,
+            ),
+        ).toBeNull();
+    });
+
+    it("should include MiniSearch metadata fields in text and structuredContent when present", async () => {
+        const tool = new TestableGpfSearchTypesToolWithMetadata();
+        const response = await tool.toolCall({
+            params: {
+                name: "gpf_search_types",
+                arguments: { query: "batiment", max_results: 1 },
+            },
+        });
+
+        expect(response.isError).toBeUndefined();
+
+        const textContent = response.content[0];
+        if (textContent.type !== "text") throw new Error("expected text content");
+        const parsed = JSON.parse(textContent.text);
+        expect(parsed.results[0]).toMatchObject({
+            typename: "BDTOPO_V3:batiment",
+            score: 42.5,
+            queryTerms: ["batiment"],
+            terms: ["batiment"],
+            match: { batiment: ["name", "title"] },
+        });
+
+        expect(response.structuredContent).toMatchObject({
+            results: [
+                {
+                    typename: "BDTOPO_V3:batiment",
+                    score: 42.5,
+                    queryTerms: ["batiment"],
+                    terms: ["batiment"],
+                    match: { batiment: ["name", "title"] },
                 },
             ],
         });

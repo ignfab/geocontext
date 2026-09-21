@@ -63,10 +63,21 @@ const parcellaireExpressFeatureCollection = {
 describe("Test getParcellaireExpress", () => {
     beforeEach(() => {
         mockGetFeatureType.mockResolvedValue({
-            id: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:arrondissement",
-            properties: [
-                { name: "geometrie", type: "multipolygon", defaultCrs: "EPSG:4326" },
-            ],
+            typename: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:commune",
+            schema: {
+                $schema: "https://json-schema.org/draft/2020-12/schema",
+                $id: "https://example.test/CADASTRALPARCELS.PARCELLAIRE_EXPRESS/commune.json",
+                type: "object",
+                title: "Mock",
+                description: "Mock",
+                properties: {
+                    geometrie: {
+                        format: "geometry-multipolygon",
+                        "x-ogc-role": "primary-geometry",
+                    },
+                },
+                required: [],
+            },
         });
         mockFetchMultiTypename.mockResolvedValue(parcellaireExpressFeatureCollection);
     });

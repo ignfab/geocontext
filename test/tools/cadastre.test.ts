@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 import CadastreTool from "../../src/tools/CadastreTool";
+import { validateStructuredContentAgainstOutputSchema } from "./helpers/outputSchema";
 import { mairieLoray } from "../samples";
 
 describe("Test CadastreTool",() => {
@@ -106,6 +107,12 @@ describe("Test CadastreTool",() => {
             ]),
         });
         expect(payload).toMatchObject(response.structuredContent as Record<string, unknown>);
+        expect(
+            validateStructuredContentAgainstOutputSchema(
+                tool.toolDefinition.outputSchema,
+                response.structuredContent,
+            ),
+        ).toBeNull();
     });
 
     it("should return isError=true for invalid input", async () => {

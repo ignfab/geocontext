@@ -158,6 +158,12 @@ describe("parseEnv", () => {
       .toThrow("Invalid environment configuration");
   });
 
+  it("should reject invalid MiniSearch option values in GPF_WFS_MINISEARCH_OPTIONS", () => {
+    const opts = JSON.stringify({ fields: ["enums"] });
+    expect(() => parseEnv({ GPF_WFS_MINISEARCH_OPTIONS: opts }))
+      .toThrow("GPF_WFS_MINISEARCH_OPTIONS.fields.0");
+  });
+
   it("should accept empty string in GPF_WFS_MINISEARCH_OPTIONS (treated as undefined)", () => {
     const env = parseEnv({ GPF_WFS_MINISEARCH_OPTIONS: "" });
     expect(env.GPF_WFS_MINISEARCH_OPTIONS).toBeUndefined();

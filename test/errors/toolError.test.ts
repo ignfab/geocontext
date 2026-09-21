@@ -10,7 +10,7 @@ describe("Test toolError helper", () => {
     const { z: freshZ } = await import("zod");
 
     // Reset to default messages, then import toolError to trigger module-level install.
-    freshZ.setErrorMap((issue, ctx) => ({ message: ctx.defaultError }));
+    freshZ.setErrorMap((_, ctx) => ({ message: ctx.defaultError }));
     await import("../../src/errors/toolError.js");
 
     const schema = freshZ.object({

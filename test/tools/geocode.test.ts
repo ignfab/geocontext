@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 import GeocodeTool from "../../src/tools/GeocodeTool";
+import { validateStructuredContentAgainstOutputSchema } from "./helpers/outputSchema";
 
 describe("Test GeocodeTool",() => {
     class TestableGeocodeTool extends GeocodeTool {
@@ -70,6 +71,12 @@ describe("Test GeocodeTool",() => {
                 },
             ],
         });
+        expect(
+            validateStructuredContentAgainstOutputSchema(
+                tool.toolDefinition.outputSchema,
+                response.structuredContent,
+            ),
+        ).toBeNull();
     });
 
     it("should return isError=true for invalid input", async () => {
