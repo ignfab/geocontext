@@ -1,8 +1,15 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
 import type { Collection } from "@ignfab/gpf-schema-store";
 
 import GpfDescribeTypeTool from "../../../src/tools/GpfDescribeTypeTool";
+import { wfsSchemaStore } from "../../../src/wfs/catalog.js";
+
+vi.mock("../../../src/wfs/catalog.js", () => ({
+    wfsSchemaStore: {
+        getFeatureType: vi.fn(),
+    },
+}));
 
 describe("Test GpfDescribeTypeTool",() => {
     const mockCollection: Collection = {
@@ -125,5 +132,35 @@ describe("Test GpfDescribeTypeTool",() => {
         expect(response.structuredContent).toMatchObject({
             type: "urn:geocontext:problem:execution-error",
         });
+    });
+
+    it("should filter out geometry properties (those with defaultCrs) from the output", async () => {
+        const collectionWithGeometry: Collection = {
+            id: "BDTOPO_V3:batiment",
+            namespace: "BDTOPO_V3",
+            name: "batiment",
+            title: "Batiment",
+            description: "Description de test",
+            properties: [
+                { name: "hauteur", type: "float" },
+                { name: "geometrie", type: "polygon", defaultCrs: "EPSG:2154" },
+            ],
+        };
+
+        vi.mocked(wfsSchemaStore.getFeatureType).mockResolvedValueOnce(collectionWithGeometry);
+
+        const tool = new GpfDescribeTypeTool();
+        const response = await tool.toolCall({
+            params: {
+                name: "gpf_describe_type",
+                arguments: { typename: "BDTOPO_V3:batiment" },
+            },
+        });
+
+        expect(response.isError).toBeUndefined();
+        const properties = (response.structuredContent as { properties: { name: string }[] }).properties;
+        expect(properties).toHaveLength(1);
+        expect(properties[0]).toMatchObject({ name: "hauteur" });
+        expect(properties.find(p => p.name === "geometrie")).toBeUndefined();
     });
 });

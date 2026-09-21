@@ -4,7 +4,7 @@
 
 import BaseTool from "./BaseTool.js";
 import { z } from "zod";
-import type { Collection } from "@ignfab/gpf-schema-store";
+import type { Collection, CollectionProperty } from "@ignfab/gpf-schema-store";
 
 import { wfsSchemaStore } from "../wfs/catalog.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
@@ -71,7 +71,9 @@ class GpfDescribeTypeTool extends BaseTool<GpfDescribeTypeInput> {
 
     try {
       const featureType: Collection = await wfsSchemaStore.getFeatureType(input.typename);
-      return featureType;
+      // Hide the geometric property from the LLM-facing output to prevent it
+      // from querying it in the `select` of GpfGetFeatures or GpfGetFeatureById.
+      return { ...featureType, properties: featureType.properties.filter((p: CollectionProperty) => !p.defaultCrs) };
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : String(e);
       throw new Error(`${message}. Utiliser gpf_search_types pour trouver un type valide.`);
