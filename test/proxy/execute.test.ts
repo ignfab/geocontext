@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 import type { GpfFeatureType } from "../../src/wfs/catalog.js";
 
-import { runGeometryFeatureQuery, runGeometryFeatureByIdQuery, type WfsClientLike, type TravelTimeResolver } from "../../src/proxy/execute";
+import { runGeometryFeatureQuery, runGeometryFeatureByIdQuery, runGeometryIsolineQuery, type WfsClientLike, type IsolineResolver } from "../../src/proxy/execute";
 import type { CompiledRequest } from "../../src/wfs/request";
 import type { WfsFeatureCollectionResponse } from "../../src/wfs/types";
 import type { GpfGetFeaturesInput } from "../../src/wfs/schema";
@@ -96,18 +96,18 @@ function makeClient(overrides?: {
   return { client, requests };
 }
 
-// A resolver stub for the non-travel_time cases: `resolveTravelTime` is a required
+// A resolver stub for the non-isoline cases: `resolveIsoline` is a required
 // dependency, but these queries must never invoke it — so this throws if they do,
-// turning an accidental travel_time path into a loud test failure.
-const unexpectedResolveTravelTime: TravelTimeResolver = () => {
-  throw new Error("resolveTravelTime should not be called for a non-travel_time query");
+// turning an accidental isoline path into a loud test failure.
+const unexpectedResolveIsoline: IsolineResolver = () => {
+  throw new Error("resolveIsoline should not be called for a non-isoline query");
 };
 
 describe("proxy/execute · runGeometryFeatureQuery", () => {
   it("returns the RAW FeatureCollection with geometry preserved", async () => {
     const { client } = makeClient();
 
-    const result = await runGeometryFeatureQuery(baseInput, { wfsClient: client, resolveTravelTime: unexpectedResolveTravelTime });
+    const result = await runGeometryFeatureQuery(baseInput, { wfsClient: client, resolveIsoline: unexpectedResolveIsoline });
 
     // Geometry, crs and geometry_name must survive (opposite of the LLM trim path).
     expect(result.features?.[0]?.geometry).toEqual(collectionWithGeometry.features?.[0]?.geometry);
@@ -119,7 +119,7 @@ describe("proxy/execute · runGeometryFeatureQuery", () => {
   it("forces the geometry column into propertyName when `select` is given", async () => {
     const { client, requests } = makeClient();
 
-    await runGeometryFeatureQuery({ ...baseInput, select: ["code_insee"] }, { wfsClient: client, resolveTravelTime: unexpectedResolveTravelTime });
+    await runGeometryFeatureQuery({ ...baseInput, select: ["code_insee"] }, { wfsClient: client, resolveIsoline: unexpectedResolveIsoline });
 
     const propertyName = requests[0].query.propertyName;
     expect(propertyName).toBeDefined();
@@ -131,7 +131,7 @@ describe("proxy/execute · runGeometryFeatureQuery", () => {
   it("requests WGS84 EPSG:4326 (lon/lat convention)", async () => {
     const { client, requests } = makeClient();
 
-    await runGeometryFeatureQuery(baseInput, { wfsClient: client, resolveTravelTime: unexpectedResolveTravelTime });
+    await runGeometryFeatureQuery(baseInput, { wfsClient: client, resolveIsoline: unexpectedResolveIsoline });
 
     // srsName lands on request.query, which the proxy transport serializes into the fetch URL.
     expect(requests[0].query.srsName).toBe("EPSG:4326");
@@ -140,7 +140,7 @@ describe("proxy/execute · runGeometryFeatureQuery", () => {
   it("includes the geometry column alongside all non-geometry props when no `select` is given", async () => {
     const { client, requests } = makeClient();
 
-    await runGeometryFeatureQuery(baseInput, { wfsClient: client, resolveTravelTime: unexpectedResolveTravelTime });
+    await runGeometryFeatureQuery(baseInput, { wfsClient: client, resolveIsoline: unexpectedResolveIsoline });
 
     // With no select, compileQueryParts materializes the non-geometry columns;
     // the runner then appends the geometry column.
@@ -157,7 +157,7 @@ describe("proxy/execute · runGeometryFeatureQuery", () => {
     ["a missing type", { features: [] }],
   ])("rejects an off-contract response (%s) as a 502, not a valid layer", async (_label, badResponse) => {
     const { client } = makeClient({ responses: [badResponse as unknown as WfsFeatureCollectionResponse] });
-    const promise = runGeometryFeatureQuery(baseInput, { wfsClient: client, resolveTravelTime: unexpectedResolveTravelTime });
+    const promise = runGeometryFeatureQuery(baseInput, { wfsClient: client, resolveIsoline: unexpectedResolveIsoline });
     // Now a ServiceResponseError(502) — an UPSTREAM anomaly — not a plain Error (which
     // server.ts would map to a misleading 500). Client still gets the generic phrase.
     await expect(promise).rejects.toMatchObject({ name: "ServiceResponseError", httpStatus: 502 });
@@ -171,7 +171,7 @@ describe("proxy/execute · runGeometryFeatureQuery", () => {
     // The client-facing message stays generic, but the internal (logged) message must
     // carry the extracted upstream cause so a 200-error-body is distinguishable from a
     // `{}` in the logs — the whole point of routing it through extractJsonServiceError.
-    const promise = runGeometryFeatureQuery(baseInput, { wfsClient: client, resolveTravelTime: unexpectedResolveTravelTime });
+    const promise = runGeometryFeatureQuery(baseInput, { wfsClient: client, resolveIsoline: unexpectedResolveIsoline });
     await expect(promise).rejects.toMatchObject({ name: "ServiceResponseError", httpStatus: 502 });
     await expect(promise).rejects.toThrow(/détail amont/);
   });
@@ -206,26 +206,26 @@ describe("proxy/execute · runGeometryFeatureQuery", () => {
       },
     };
 
-    const result = await runGeometryFeatureQuery(input, { wfsClient: client, resolveTravelTime: unexpectedResolveTravelTime });
+    const result = await runGeometryFeatureQuery(input, { wfsClient: client, resolveIsoline: unexpectedResolveIsoline });
 
     expect(client.fetchFeatureCollection).toHaveBeenCalledTimes(2);
     expect(requests[1].body).toContain("INTERSECTS");
     expect(result.type).toBe("FeatureCollection");
   });
 
-  it("resolves travel_time_filter via the injected isochrone resolver", async () => {
+  it("resolves isoline_filter via the injected isochrone resolver", async () => {
     const { client, requests } = makeClient();
-    const resolveTravelTime = vi.fn(async () => ({
+    const resolveIsoline = vi.fn(async () => ({
       geometry_ewkt: "SRID=4326;POLYGON((2 48,2.2 48,2.2 48.2,2 48))",
     }));
     const input: GpfGetFeaturesInput = {
       ...baseInput,
-      travel_time_filter: { lon: 2.35, lat: 48.85, minutes: 15, profile: "pedestrian" },
+      isoline_filter: { lon: 2.35, lat: 48.85, cost_type: "time", cost_value: 15, profile: "pedestrian" },
     };
 
-    const result = await runGeometryFeatureQuery(input, { wfsClient: client, resolveTravelTime });
+    const result = await runGeometryFeatureQuery(input, { wfsClient: client, resolveIsoline });
 
-    expect(resolveTravelTime).toHaveBeenCalledOnce();
+    expect(resolveIsoline).toHaveBeenCalledOnce();
     // The compiled main request carries an INTERSECTS predicate built from the isochrone.
     expect(requests[0].body).toContain("INTERSECTS");
     expect(result.type).toBe("FeatureCollection");
@@ -262,7 +262,7 @@ describe("proxy/execute · runGeometryFeatureQuery", () => {
       },
     };
 
-    const result = await runGeometryFeatureQuery(input, { wfsClient: client, resolveTravelTime: unexpectedResolveTravelTime });
+    const result = await runGeometryFeatureQuery(input, { wfsClient: client, resolveIsoline: unexpectedResolveIsoline });
 
     // Two upstream fetches: reference-by-id, then the main query.
     expect(client.fetchFeatureCollection).toHaveBeenCalledTimes(2);
@@ -289,7 +289,7 @@ describe("proxy/execute · runGeometryFeatureQuery", () => {
     };
 
     await expect(
-      runGeometryFeatureQuery(baseInput, { wfsClient: client, resolveTravelTime: unexpectedResolveTravelTime }),
+      runGeometryFeatureQuery(baseInput, { wfsClient: client, resolveIsoline: unexpectedResolveIsoline }),
     ).rejects.toThrow(/catalogue embarqué est probablement désynchronisé/);
   });
 
@@ -308,7 +308,7 @@ describe("proxy/execute · runGeometryFeatureQuery", () => {
     // Must propagate as-is (same instance), so server.ts maps it to 502 — not be
     // swallowed by the desync branch nor rewritten.
     await expect(
-      runGeometryFeatureQuery(baseInput, { wfsClient: client, resolveTravelTime: unexpectedResolveTravelTime }),
+      runGeometryFeatureQuery(baseInput, { wfsClient: client, resolveIsoline: unexpectedResolveIsoline }),
     ).rejects.toBe(upstream);
   });
 });
@@ -410,5 +410,43 @@ describe("proxy/execute · runGeometryFeatureByIdQuery", () => {
     const promise = runGeometryFeatureByIdQuery(byIdInput, { wfsClient: client });
     await expect(promise).rejects.toMatchObject({ name: "ServiceResponseError", httpStatus: 502 });
     await expect(promise).rejects.toThrow(/FeatureCollection GeoJSON exploitable/);
+  });
+});
+
+describe("proxy/execute · runGeometryIsolineQuery", () => {
+  const isolineInput = {
+    lon: 2.35, lat: 48.85, profile: "pedestrian" as const,
+    cost_type: "time" as const, cost_value: 15,
+  };
+  const isolineGeometry = { type: "Polygon", coordinates: [[[2, 48], [2.1, 48], [2, 48]]] };
+
+  it("returns the isoline as a FeatureCollection", async () => {
+    const result = await runGeometryIsolineQuery(isolineInput, {
+      getGeometry: async () => isolineGeometry,
+    });
+
+    expect(result).toEqual({
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          geometry: isolineGeometry,
+          properties: { profile: "pedestrian", cost_type: "time", cost_value: 15 },
+        }
+      ]
+    });
+  });
+
+  it("maps the layer input onto the isoline client input", async () => {
+    const calls: unknown[] = [];
+
+    await runGeometryIsolineQuery(isolineInput, {
+      getGeometry: async (input) => {
+        calls.push(input);
+        return isolineGeometry;
+      },
+    });
+
+    expect(calls).toEqual([{ lon: 2.35, lat: 48.85, costType: "time", costValue: 15, profile: "pedestrian" }]);
   });
 });

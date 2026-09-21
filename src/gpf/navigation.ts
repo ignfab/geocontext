@@ -4,15 +4,19 @@ import type { JsonFetcher } from "../helpers/http.js";
 import { RateLimiter } from "../helpers/RateLimiter.js";
 import { getEnv } from "../config/env.js";
 
-export const NAVIGATION_SOURCE = "Géoplateforme (calcul d'isochrone)";
+export const NAVIGATION_SOURCE = "Géoplateforme (calcul d'isochrone / d'isodistance)";
 export const NAVIGATION_ISOCHRONE_URL = "https://data.geopf.fr/navigation/isochrone";
-export const TRAVEL_TIME_RESOURCE = "bdtopo-valhalla";
-export const TRAVEL_TIME_MAX_MINUTES = 120;
-export const TRAVEL_TIME_PROFILES = ["car", "pedestrian"] as const;
+export const NAVIGATION_ISOCHRONE_RESOURCE = "bdtopo-valhalla";
+// Upstream ceilings accepted by the GPF isochrone service, per cost type.
+export const NAVIGATION_MAX_TIME_MINUTES = 600;
+export const NAVIGATION_MAX_DISTANCE_METERS = 50_000;
+export const NAVIGATION_PROFILES = ["car", "pedestrian"] as const;
+export const NAVIGATION_COST_TYPES = ["time", "distance"] as const;
 
-export type TravelTimeProfile = typeof TRAVEL_TIME_PROFILES[number];
+export type NavigationProfile = typeof NAVIGATION_PROFILES[number];
+export type NavigationCostType = typeof NAVIGATION_COST_TYPES[number];
 
-type GeoJsonGeometryLike = {
+export type GeoJsonGeometryLike = {
   type: string;
   coordinates: unknown;
 };
@@ -21,11 +25,12 @@ type RawIsochroneResponse = {
   geometry?: unknown;
 };
 
-export type TravelTimeGeometryInput = {
+export type IsolineGeometryInput = {
   lon: number;
   lat: number;
-  minutes: number;
-  profile: TravelTimeProfile;
+  costType: NavigationCostType;
+  costValue: number;
+  profile: NavigationProfile;
 };
 
 function isGeoJsonGeometryLike(value: unknown): value is GeoJsonGeometryLike {
@@ -44,16 +49,16 @@ export class NavigationIsochroneClient {
     private fetcher: JsonFetcher<RawIsochroneResponse> = fetchJSONGet,
   ) {}
 
-  async getTravelTimeGeometry(input: TravelTimeGeometryInput): Promise<GeoJsonGeometryLike> {
+  async getGeometry(input: IsolineGeometryInput): Promise<GeoJsonGeometryLike> {
     await this.rateLimiter.limit();
-    logger.debug(`[gpf:navigation] getTravelTimeGeometry(${JSON.stringify(input)})...`);
+    logger.debug(`[gpf:navigation] getGeometry(${JSON.stringify(input)})...`);
 
     const url = `${NAVIGATION_ISOCHRONE_URL}?${new URLSearchParams({
-      resource: TRAVEL_TIME_RESOURCE,
+      resource: NAVIGATION_ISOCHRONE_RESOURCE,
       point: `${input.lon},${input.lat}`,
       direction: "departure",
-      costType: "time",
-      costValue: String(input.minutes),
+      costType: input.costType,
+      costValue: String(input.costValue),
       profile: input.profile,
       timeUnit: "minute",
       distanceUnit: "meter",
@@ -80,7 +85,7 @@ function getDefaultNavigationIsochroneClient() {
 }
 
 export const navigationIsochroneClient = {
-  getTravelTimeGeometry(input: TravelTimeGeometryInput) {
-    return getDefaultNavigationIsochroneClient().getTravelTimeGeometry(input);
+  getGeometry(input: IsolineGeometryInput) {
+    return getDefaultNavigationIsochroneClient().getGeometry(input);
   },
 };

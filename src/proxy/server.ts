@@ -14,13 +14,19 @@ import { GPF_WFS_URL } from "../wfs/catalog.js";
 import {
   gpfGetFeaturesLayerInputSchema,
   gpfGetFeatureByIdLayerInputObjectSchema,
+  gpfIsolineLayerInputSchema,
   PROXY_TOKEN_KIND,
 } from "../wfs/schema.js";
-import { runGeometryFeatureQuery, runGeometryFeatureByIdQuery } from "./execute.js";
+import {
+  runGeometryFeatureQuery,
+  runGeometryFeatureByIdQuery,
+  runGeometryIsolineQuery,
+} from "./execute.js";
 import { FeatureNotFoundError, FeatureCardinalityError } from "../wfs/byId.js";
 import {
   getDefaultGeometryFeatureQueryDeps,
   getDefaultGeometryFeatureByIdQueryDeps,
+  getDefaultGeometryIsolineQueryDeps,
 } from "./transport.js";
 import {
   decodeToken,
@@ -164,7 +170,7 @@ async function handleLayerRequest(token: string, res: ServerResponse): Promise<v
     return;
   }
 
-  let featureCollection: unknown;
+  let geoJsonBody: unknown;
   try {
     const params = decodeToken(token, env.PROXY_URL_SECRET);
 
@@ -176,13 +182,19 @@ async function handleLayerRequest(token: string, res: ServerResponse): Promise<v
 
     if (kind === PROXY_TOKEN_KIND.byId) {
       const input = gpfGetFeatureByIdLayerInputObjectSchema.parse(payload);
-      featureCollection = await runGeometryFeatureByIdQuery(
+      geoJsonBody = await runGeometryFeatureByIdQuery(
         input,
         getDefaultGeometryFeatureByIdQueryDeps(),
       );
+    } else if (kind === PROXY_TOKEN_KIND.isoline) {
+      const input = gpfIsolineLayerInputSchema.parse(payload);
+      geoJsonBody = await runGeometryIsolineQuery(
+        input,
+        getDefaultGeometryIsolineQueryDeps(),
+      );
     } else if (kind === PROXY_TOKEN_KIND.query) {
       const input = gpfGetFeaturesLayerInputSchema.parse(payload);
-      featureCollection = await runGeometryFeatureQuery(input, getDefaultGeometryFeatureQueryDeps());
+      geoJsonBody = await runGeometryFeatureQuery(input, getDefaultGeometryFeatureQueryDeps());
     } else {
       throw new ProxyTokenMalformedError(`Unknown proxy token kind: ${String(kind)}.`);
     }
@@ -198,7 +210,7 @@ async function handleLayerRequest(token: string, res: ServerResponse): Promise<v
   }
 
   res.writeHead(200, { "Content-Type": "application/geo+json; charset=utf-8" });
-  res.end(JSON.stringify(featureCollection));
+  res.end(JSON.stringify(geoJsonBody));
 }
 
 /**
