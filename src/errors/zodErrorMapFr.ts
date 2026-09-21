@@ -25,14 +25,35 @@ let isInstalled = false;
 
 // --- Shared Helpers ---
 
-function issueName(path: IssuePath) {
-  for (let index = path.length - 1; index >= 0; index -= 1) {
-    const segment = path[index];
-    if (typeof segment === "string" && segment.length > 0) {
-      return segment;
+/**
+ * Builds a user-friendly parameter name from a Zod issue path.
+ *
+ * String segments are joined with `.` to keep nested fields unambiguous
+ * (`bbox.lon`, not a bare `lon` that two objects could both produce). Array
+ * indices are kept as `[i]` so per-element errors stay distinguishable
+ * (`tags[0]` vs `tags[1]`) instead of collapsing into identical messages.
+ *
+ * @param path Zod issue path.
+ * @returns Parameter name, or `undefined` when the path is empty.
+ */
+export function issueName(path: IssuePath) {
+  let name = "";
+
+  for (const segment of path) {
+    if (typeof segment === "number") {
+      // A leading index has no field to suffix (root-level array): keep it
+      // standalone rather than dropping it, or every element would collapse
+      // to the same nameless message.
+      name += `[${segment}]`;
+      continue;
     }
+    if (typeof segment !== "string" || segment.length === 0) {
+      continue;
+    }
+    name = name.length > 0 ? `${name}.${segment}` : segment;
   }
-  return undefined;
+
+  return name.length > 0 ? name : undefined;
 }
 
 function describeExpectedType(expected: string) {

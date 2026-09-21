@@ -191,8 +191,8 @@ export function renderResponseContractSection(definition) {
   const errorRow = {
     caseName: "Erreur",
     content: "oui",
-    structuredContent: "oui",
-    relation: "`content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`.",
+    structuredContent: "non",
+    relation: "`content[0].text` porte le message d'erreur ; aucun `structuredContent` n'est ajouté (réservé au `outputSchema` du cas de succès).",
   };
 
   if (definition.name === "gpf_get_features") {
@@ -489,6 +489,7 @@ export function buildValidationErrorExampleForTool(tool, normalizeToolError) {
     }
 
     const payload = normalizeToolError(result.error);
+    // Mirrors `BaseTool.createErrorResponse`, which omits `structuredContent`.
     const response = normalizeErrorResponse({
       isError: true,
       content: [
@@ -497,7 +498,6 @@ export function buildValidationErrorExampleForTool(tool, normalizeToolError) {
           text: String(payload.detail ?? "Erreur de validation."),
         },
       ],
-      structuredContent: payload,
     });
 
     if (!response) {
@@ -542,8 +542,8 @@ async function buildErrorContractSection(tools) {
     "## Contrat d’erreur MCP",
     "",
     "- En cas d'échec, chaque tool renvoie `isError: true`.",
-    "- `content.text` contient le message de détail en français (aligné avec `structuredContent.detail`).",
-    "- `structuredContent` contient l'objet canonique exploitable par un client.",
+    "- `content.text` contient le message de détail en français.",
+    "- Aucun `structuredContent` n'est renvoyé : ce champ est réservé au `outputSchema` du cas de succès.",
     "",
     "Exemple complet généré automatiquement à partir d'un appel de tool invalide (contrainte de validation) :",
     "",

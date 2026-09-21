@@ -221,9 +221,6 @@ describe("Test GpfCountFeaturesTool", () => {
     }
     expect(textContent.text).toContain("catalogue embarqué est rejeté");
     expect(textContent.text).toContain("géométrique 'geometrie'");
-    expect(response.structuredContent).toMatchObject({
-      type: "urn:geocontext:problem:execution-error",
-    });
   });
 
   it.each([
@@ -249,8 +246,5 @@ describe("Test GpfCountFeaturesTool", () => {
       throw new Error("expected text content");
     }
     expect(textContent.text).toContain(errorMessage);
-    expect(response.structuredContent).toMatchObject({
-      type: "urn:geocontext:problem:execution-error",
-    });
   });
 });
