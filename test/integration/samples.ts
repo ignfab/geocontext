@@ -19,6 +19,7 @@ export const EXPECTED_TOOL_NAMES = [
   "cadastre",
   "urbanisme",
   "assiette_sup",
+  "distance",
   "gpf_search_types",
   "gpf_describe_type",
   "gpf_get_features",
