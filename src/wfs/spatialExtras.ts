@@ -41,11 +41,11 @@ function spatialFilterToGeometry(spatialFilter: SpatialFilter, resolvedGeometryR
 function spatialFilterToCentroid(spatialFilter: SpatialFilter, resolvedGeometryRef?: Geometry) : Point {
   switch (spatialFilter.operator) {
     case "dwithin_point" :
+    case "travel_time":
     case "intersects_point": {
       return { type: "Point", coordinates: [spatialFilter.lon, spatialFilter.lat] };
     }
     case "intersects_feature":
-    case "travel_time":
     case "bbox":
       return centroid(spatialFilterToGeometry(spatialFilter, resolvedGeometryRef)).geometry;
     default: // Make a compile-time error if a filter is missing from the switch
@@ -87,6 +87,48 @@ function geometryToPolygons(geom: Geometry) : Polygon | MultiPolygon | null {
   }
 }
 
+type SpatialContext = {
+  filterCentroid?: Point,
+  filterPolygons?: Polygon | MultiPolygon
+}
+
+export function prepareSpatialContext(input: FeatureCollectionPostProcessInput, resolvedGeometryRef?: Geometry) : SpatialContext {
+  const requires_distance_to_filter = input.spatial_extras.includes("distance_to_filter");
+  const requires_intersection_area = input.spatial_extras.includes("intersection_area");
+
+  const context : Record<string, unknown> = {};
+
+  if (!requires_distance_to_filter && !requires_intersection_area) {
+    // short-circuit: don't compute the spatial filter
+    return context;
+  }
+
+  // The existence of a spatial filter has already been validated, hence the final "!".
+  // In case of internal error, the associated spatial_extra will be set to null.
+  const spatialFilter = getSpatialFilter(input)!;
+
+  if (requires_distance_to_filter) {
+    try {
+      context.filterCentroid = spatialFilterToCentroid(spatialFilter, resolvedGeometryRef);
+    } catch {
+      context.filterCentroid = null;
+    }
+  }
+
+  if (requires_intersection_area) {
+    try {
+      if (["dwithin_point", "intersects_feature", "travel_time"].includes(spatialFilter.operator)) {
+        const spatialFilterGeometry = spatialFilterToGeometry(spatialFilter, resolvedGeometryRef)
+        context.filterPolygons = geometryToPolygons(spatialFilterGeometry);
+      }
+    } catch {
+      context.filterPolygons = null;
+    }
+  }
+
+  return context;
+}
+
 /** Strip the empty rings `@turf/bbox-clip` emits for parts lying outside the box.
  *
  * A fully-clipped-away Polygon comes back as `{ coordinates: [] }` and a
@@ -109,7 +151,7 @@ export function dropEmptyRings(geom: Geometry) : Polygon | MultiPolygon | null {
 /** Return the areal (2D) intersection between a geometry and a spatial filter.
  * null if the intersection has no area.
  */
-function intersectionAreaWithSpatialFilter(geom: Geometry, spatialFilter: SpatialFilter, resolvedGeometryRef?: Geometry) : Polygon | MultiPolygon | null {
+function intersectionAreaWithSpatialFilter(geom: Geometry, spatialFilter: SpatialFilter, filterPolygons?: Polygon | MultiPolygon) : Polygon | MultiPolygon | null {
   const geo = geometryToPolygons(geom);
   if (!geo) {
     return null;
@@ -123,9 +165,13 @@ function intersectionAreaWithSpatialFilter(geom: Geometry, spatialFilter: Spatia
     case "dwithin_point":
     case "intersects_feature":
     case "travel_time": {
-      const spatialFilterGeometry = spatialFilterToGeometry(spatialFilter, resolvedGeometryRef)
-      const filterPolygons = geometryToPolygons(spatialFilterGeometry);
-      const inter = filterPolygons ? intersect(featureCollection([feature(filterPolygons), feature(geo)])) : null;
+      if (!filterPolygons) return null;
+      // Whatever lies outside the feature's bbox cannot intersect it, so clipping the
+      // reference first leaves the result unchanged while polyclip only ever processes
+      // the neighbouring vertices.
+      const clippedFilter = dropEmptyRings(bboxClip(filterPolygons, bbox(geo)).geometry);
+      if (!clippedFilter) return null;
+      const inter = intersect(featureCollection([feature(clippedFilter), feature(geo)]));
       return inter == null ? null : inter.geometry;
     }
     case "bbox": {
@@ -138,7 +184,7 @@ function intersectionAreaWithSpatialFilter(geom: Geometry, spatialFilter: Spatia
   }
 }
 
-export function deriveFromGeometry(geometry: unknown, input: FeatureCollectionPostProcessInput, resolvedGeometryRef?: Geometry) {
+export function deriveFromGeometry(geometry: unknown, input: FeatureCollectionPostProcessInput, context: SpatialContext) {
   const spatial_extras = input.spatial_extras;
 
   const ret : Record<string, unknown> = {};
@@ -202,7 +248,7 @@ export function deriveFromGeometry(geometry: unknown, input: FeatureCollectionPo
 
   if (requires_distance_to_filter) {
     try {
-      const filterCentroid = spatialFilterToCentroid(spatialFilter, resolvedGeometryRef);
+      const filterCentroid = context.filterCentroid!;
       ret.distance_to_filter = distance(geo, filterCentroid);
     } catch {
       ret.distance_to_filter = null;
@@ -211,7 +257,7 @@ export function deriveFromGeometry(geometry: unknown, input: FeatureCollectionPo
 
   if (requires_intersection_area) {
     try {
-      const intersection = intersectionAreaWithSpatialFilter(geo, spatialFilter, resolvedGeometryRef);
+      const intersection = intersectionAreaWithSpatialFilter(geo, spatialFilter, context.filterPolygons);
       ret.intersection_area = intersection ? area(intersection) : 0;
     } catch {
       ret.intersection_area = null;
