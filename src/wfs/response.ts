@@ -7,7 +7,7 @@
  */
 
 import type { WfsFeatureCollectionResponse } from "./types.js";
-import { deriveFromGeometry, type FeatureCollectionPostProcessInput } from "./spatialExtras.js"
+import { deriveFromGeometry, prepareSpatialContext, type FeatureCollectionPostProcessInput } from "./spatialExtras.js"
 import { Geometry } from "geojson";
 
 // --- Response Types ---
@@ -91,13 +91,15 @@ export function transformFeatureCollectionResponse(
     return featureCollection;
   }
 
+  const spatialContext = prepareSpatialContext(input, resolvedGeometryRef);
+
   const transformedFeatures = featureCollection.features.map((feature) => {
     const { geometry: _geometry, geometry_name: _geometryName, ...rest } = feature;
 
     const nextFeature: Record<string, unknown> = {
       ...rest,
       geometry: null,
-      ...deriveFromGeometry(_geometry, input, resolvedGeometryRef),
+      ...deriveFromGeometry(_geometry, input, spatialContext),
     };
 
     if (typeof feature.id === "string") {

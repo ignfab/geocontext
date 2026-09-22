@@ -1,3 +1,4 @@
+import { performance } from "node:perf_hooks";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -6,6 +7,7 @@ import {
   transformFeatureCollectionResponse,
   postProcessFeatureCollection,
 } from "../../src/wfs/response";
+import { type SpatialExtraOptions } from "../../src/wfs/schema";
 
 describe("wfs_engine/response", () => {
   function getFeatures(
@@ -204,6 +206,76 @@ describe("wfs_engine/response", () => {
 
       const features = getFeatures(result);
       expect(features[0].distance_to_filter as number).toBeCloseTo(2340.9971606708805, 6);
+    });
+
+    it("should stay fast when computing centroid, area, and intersection_area for a large region against many polygons", () => {
+      const regionCenterLon = 2.35;
+      const regionCenterLat = 48.85;
+      const regionVertices = 3000;
+      const polygonSides = 20;
+      const featureCount = 100;
+
+      function regularRing(centerLon: number, centerLat: number, radius: number, sides: number) {
+        return Array.from({ length: sides }, (_, index) => {
+          const angle = (Math.PI * 2 * index) / sides - Math.PI / 2;
+          return [centerLon + radius * Math.cos(angle), centerLat + radius * Math.sin(angle)] as [number, number];
+        });
+      }
+
+      const regionGeometry = {
+        type: "Polygon" as const,
+        coordinates: [
+          Array.from({ length: regionVertices }, (_, index) => {
+            const angle = (Math.PI * 2 * index) / regionVertices;
+            const radius = 0.22 + 0.03 * Math.sin(7 * angle);
+            return [
+              regionCenterLon + radius * Math.cos(angle),
+              regionCenterLat + radius * Math.sin(angle),
+            ];
+          }),
+        ],
+      };
+
+      const featureCollection = {
+        type: "FeatureCollection",
+        features: Array.from({ length: featureCount }, (_, index) => {
+          const column = index % 100;
+          const row = Math.floor(index / 100) % 50;
+          const centerLon = regionCenterLon + (column - 49.5) * 0.0035;
+          const centerLat = regionCenterLat + (row - 24.5) * 0.0028;
+          const radius = 0.002 + (index % 7) * 0.00025;
+
+          return {
+            id: `poly.${index}`,
+            geometry: {
+              type: "Polygon",
+              coordinates: [regularRing(centerLon, centerLat, radius, polygonSides)],
+            },
+            properties: { name: `poly-${index}` },
+          };
+        }),
+      };
+
+      const input = {
+        typename: "TEST:type",
+        spatial_extras: ["centroid", "area", "intersection_area"] as SpatialExtraOptions[],
+        intersects_feature_filter: {
+          typename: "TEST:region",
+          feature_id: "region.1",
+        },
+      };
+
+      const start = performance.now();
+      const result = transformFeatureCollectionResponse(featureCollection, input, regionGeometry);
+      const elapsedMs = performance.now() - start;
+
+      const features = getFeatures(result);
+      expect(features).toHaveLength(featureCount);
+      expect(features[0].centroid).toMatchObject({ lon: expect.any(Number), lat: expect.any(Number) });
+      expect(features[0].area).toEqual(expect.any(Number));
+      expect(features[0].intersection_area).toEqual(expect.any(Number));
+      expect(features[0].intersection_area).toBeGreaterThanOrEqual(0);
+      expect(elapsedMs).toBeLessThan(500);
     });
 
     // Regression: `dwithin_point` used to short-circuit `intersection_area` and

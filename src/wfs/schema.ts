@@ -177,8 +177,8 @@ const gpfGetFeaturesGeometryExtraInputSchema = z.object({
     .describe(buildSpatialExtrasDescription(
       "chaque objet",
       GPF_SPATIAL_EXTRAS_DOCNAMES,
-      "`distance_to_filter` est la distance (en m) entre la géométrie de l'objet renvoyé et le centroïde du filtre (qui doit être défini).\n"+
-      "`intersection_area` est l'aire d'intersection (en m²) entre la géométrie de l'objet renvoyé, qui doit être surfacique, et le filtre (qui doit être défini)."
+      "`distance_to_filter` est la distance (en m) entre la géométrie de l'objet renvoyé et le centroïde du filtre spatial (le point de départ dans le cas de `travel_time_filter`).\n"+
+      "`intersection_area` est l'aire d'intersection (en m²) entre la géométrie de l'objet renvoyé, qui doit être surfacique, et le filtre spatial."
     )),
 });
 
