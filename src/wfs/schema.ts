@@ -166,7 +166,21 @@ function buildSpatialExtrasDescription(
   return `Éléments calculés depuis la géométrie à renvoyer pour ${target}. Peut inclure ${allowedExtrasDocNames}, aucun par défaut.\n`+
     `${SPATIAL_EXTRAS_BASE_DESCRIPTION_LINES.join("\n")}\n`+
     optionalFilterLine+
-    "Si une valeur n'est pas calculable, elle sera remplacée par `null` dans la réponse.";
+    "Si l'élément à calculer est trivial (bbox d'un point, aire d'une géométrie linéaire), une erreur indiquera comment corriger la requête.\n"+
+    "Si une valeur n'est pas calculable pour une autre raison, elle sera remplacée par `null` dans la réponse.";
+}
+
+function assertSpatialExtraSpatialFilterConsistency(input : Record<string, unknown>, ctx : z.RefinementCtx) {
+  const usedSpatialFilters = GPF_GET_FEATURES_SPATIAL_FILTER_KEYS.filter((key) => input[key] !== undefined);
+  const usedSpatiaExtras = input.spatial_extras as SpatialExtraOptions[];
+
+  if (usedSpatialFilters.includes("intersects_point_filter") && usedSpatiaExtras.includes("intersection_area")) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["spatial_extras"],
+      message: `intersection_area ne peut être calculé que sur une géométrie surfacique, or le filtre spatial utilisé est ponctuel. Retirez intersection_area de spatial_extras.`,
+    });
+  }
 }
 
 const gpfGetFeaturesGeometryExtraInputSchema = z.object({
@@ -247,12 +261,13 @@ export const gpfGetFeaturesInputObjectSchema = gpfTypenameInputSchema
     .min(1)
     .optional()
     .describe("Liste ordonnée des critères de tri."),
-}))
+  }))
   .merge(gpfGetFeaturesGeometryExtraInputSchema)
   .strict();
 
 export const gpfGetFeaturesInputSchema = gpfGetFeaturesInputObjectSchema
-  .superRefine(assertSpatialFilterExclusion);
+  .superRefine(assertSpatialFilterExclusion)
+  .superRefine(assertSpatialExtraSpatialFilterConsistency);
 
 // --- `gpf_get_features` Types ---
 

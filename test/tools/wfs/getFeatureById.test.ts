@@ -98,7 +98,8 @@ describe("Test GpfGetFeatureByIdTool", () => {
             "`bbox` est la boîte englobante de la géométrie.\n"+
             "`length` est renvoyé en m et ne peut être utilisé qu'avec des géométries linéaires (LineString, MultiLineString).\n"+
             "`area` est renvoyé en m² et ne peut être utilisé qu'avec des géométries surfaciques (Polygon, MultiPolygon).\n"+
-            "Si une valeur n'est pas calculable, elle sera remplacée par `null` dans la réponse.",
+            "Si l'élément à calculer est trivial (bbox d'un point, aire d'une géométrie linéaire), une erreur indiquera comment corriger la requête.\n"+
+            "Si une valeur n'est pas calculable pour une autre raison, elle sera remplacée par `null` dans la réponse.",
         },
         select: {
           type: "array",
