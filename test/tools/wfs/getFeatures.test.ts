@@ -25,6 +25,9 @@ vi.doMock("../../../src/helpers/http.js", () => ({
   ServiceResponseError,
 }));
 
+const { gpfGetFeaturesInputSchema } = await import(
+  "../../../src/wfs/schema.js"
+);
 const { default: GpfGetFeaturesTool } = await import(
   "../../../src/tools/GpfGetFeaturesTool"
 );
@@ -329,6 +332,11 @@ describe("Test GpfGetFeaturesTool", () => {
     });
     expect(tool.toolDefinition.outputSchema).toBeUndefined();
   });
+
+  it("should be distinguishable from other queries thanks to the presence of `spatial_extras`", async () => {
+    expect(gpfGetFeaturesInputSchema.parse({ typename: "X" })).toHaveProperty("spatial_extras")
+  });
+
 
   it("should reject multiple spatial filters as invalid tool parameters", async () => {
     const tool = new GpfGetFeaturesTool();

@@ -185,7 +185,7 @@ const gpfGetFeaturesGeometryExtraInputSchema = z.object({
 const gpfGetFeatureByIdGeometryExtraInputSchema = z.object({
   spatial_extras: z
     .array(z.enum(GPF_GET_FEATURE_BY_ID_SPATIAL_EXTRAS))
-    .default([])
+    .default([]) // ensure that spatial_extra is not optional, which is mandatory to ensure queryIsGetFeaturesInput correctness
     .transform((val) => [...new Set(val)])
     .describe(buildSpatialExtrasDescription(
       "l'objet",
@@ -248,7 +248,7 @@ export const gpfGetFeaturesInputObjectSchema = gpfTypenameInputSchema
     .optional()
     .describe("Liste ordonnée des critères de tri."),
 }))
-  .merge(gpfGetFeaturesGeometryExtraInputSchema.required()) // must never be optional to ensure queryIsGetFeaturesInput correctness
+  .merge(gpfGetFeaturesGeometryExtraInputSchema)
   .strict();
 
 export const gpfGetFeaturesInputSchema = gpfGetFeaturesInputObjectSchema
@@ -402,7 +402,7 @@ export function queryIsGetFeaturesInput(input: GpfQueryFeaturesInput) : input is
 // --- `gpf_get_feature_by_id` ---
 
 export const gpfGetFeatureByIdInputObjectSchema = gpfFeatureByIdCoreInputSchema
-  .merge(gpfGetFeatureByIdGeometryExtraInputSchema.required())  // must never be optional to ensure queryIsGetFeaturesInput correctness
+  .merge(gpfGetFeatureByIdGeometryExtraInputSchema)
   .strict();
 
 export const gpfGetFeatureByIdInputSchema = gpfGetFeatureByIdInputObjectSchema;
