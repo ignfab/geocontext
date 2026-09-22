@@ -61,6 +61,7 @@ Tous les tools exposent les mêmes annotations MCP dans leur définition `tools/
 - [`gpf_describe_type`](#gpf_describe_type)
 - [`gpf_get_features`](#gpf_get_features)
 - [`gpf_isoline_layer`](#gpf_isoline_layer)
+- [`gpf_itinerary_layer`](#gpf_itinerary_layer)
 - [`gpf_get_features_layer`](#gpf_get_features_layer)
 - [`gpf_count_features`](#gpf_count_features)
 - [`gpf_get_feature_by_id`](#gpf_get_feature_by_id)
@@ -1201,25 +1202,25 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
           "type": "number",
           "minimum": -180,
           "maximum": 180,
-          "description": "Longitude ouest en WGS84 `lon/lat`."
+          "description": "Longitude ouest en WGS84."
         },
         "south": {
           "type": "number",
           "minimum": -90,
           "maximum": 90,
-          "description": "Latitude sud en WGS84 `lon/lat`."
+          "description": "Latitude sud en WGS84."
         },
         "east": {
           "type": "number",
           "minimum": -180,
           "maximum": 180,
-          "description": "Longitude est en WGS84 `lon/lat`."
+          "description": "Longitude est en WGS84."
         },
         "north": {
           "type": "number",
           "minimum": -90,
           "maximum": 90,
-          "description": "Latitude nord en WGS84 `lon/lat`."
+          "description": "Latitude nord en WGS84."
         }
       },
       "required": [
@@ -1238,13 +1239,13 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
           "type": "number",
           "minimum": -180,
           "maximum": 180,
-          "description": "Longitude du point en WGS84 `lon/lat`."
+          "description": "Longitude du point en WGS84."
         },
         "lat": {
           "type": "number",
           "minimum": -90,
           "maximum": 90,
-          "description": "Latitude du point en WGS84 `lon/lat`."
+          "description": "Latitude du point en WGS84."
         }
       },
       "required": [
@@ -1261,13 +1262,13 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
           "type": "number",
           "minimum": -180,
           "maximum": 180,
-          "description": "Longitude du point en WGS84 `lon/lat`."
+          "description": "Longitude du point en WGS84."
         },
         "lat": {
           "type": "number",
           "minimum": -90,
           "maximum": 90,
-          "description": "Latitude du point en WGS84 `lon/lat`."
+          "description": "Latitude du point en WGS84."
         },
         "distance_m": {
           "type": "number",
@@ -1311,13 +1312,13 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
           "type": "number",
           "minimum": -180,
           "maximum": 180,
-          "description": "Longitude du point de départ en WGS84 `lon/lat`."
+          "description": "Longitude du point de départ en WGS84."
         },
         "lat": {
           "type": "number",
           "minimum": -90,
           "maximum": 90,
-          "description": "Latitude du point de départ en WGS84 `lon/lat`."
+          "description": "Latitude du point de départ en WGS84."
         },
         "profile": {
           "type": "string",
@@ -1444,8 +1445,8 @@ L'URL est opaque et doit être transmise telle quelle à un outil cartographique
 | --- | --- | --- | --- |
 | `cost_type` | string (enum) | non | Type de coût utilisé : `time` pour une isochrone, `distance` pour une isodistance. Valeurs : time, distance. Valeur par défaut : time. |
 | `cost_value` | number | oui | Valeur du coût maximal. Interprétée en minutes si `cost_type = "time"` (maximum : 600), et en mètres si `cost_type = "distance"` (maximum : 50000). |
-| `lat` | number | oui | Latitude du point de départ en WGS84 `lon/lat`. |
-| `lon` | number | oui | Longitude du point de départ en WGS84 `lon/lat`. |
+| `lat` | number | oui | Latitude du point de départ en WGS84. |
+| `lon` | number | oui | Longitude du point de départ en WGS84. |
 | `profile` | string (enum) | oui | Mode de déplacement utilisé pour calculer l'isochrone ou l'isodistance : `car` ou `pedestrian`. Valeurs : car, pedestrian. |
 
 <details>
@@ -1459,13 +1460,13 @@ L'URL est opaque et doit être transmise telle quelle à un outil cartographique
       "type": "number",
       "minimum": -180,
       "maximum": 180,
-      "description": "Longitude du point de départ en WGS84 `lon/lat`."
+      "description": "Longitude du point de départ en WGS84."
     },
     "lat": {
       "type": "number",
       "minimum": -90,
       "maximum": 90,
-      "description": "Latitude du point de départ en WGS84 `lon/lat`."
+      "description": "Latitude du point de départ en WGS84."
     },
     "profile": {
       "type": "string",
@@ -1495,6 +1496,132 @@ L'URL est opaque et doit être transmise telle quelle à un outil cartographique
     "lat",
     "profile",
     "cost_value"
+  ],
+  "additionalProperties": false,
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}
+```
+
+</details>
+
+### Schéma de sortie
+
+| Champ | Type | Requis | Description |
+| --- | --- | --- | --- |
+| `data_url` | string | oui | URL renvoyant une FeatureCollection GeoJSON (géométries complètes) prête à être affichée dans un outil cartographique. |
+
+<details>
+<summary>Schéma de sortie brut</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "data_url": {
+      "type": "string",
+      "description": "URL renvoyant une FeatureCollection GeoJSON (géométries complètes) prête à être affichée dans un outil cartographique.",
+      "format": "uri"
+    }
+  },
+  "required": [
+    "data_url"
+  ]
+}
+```
+
+</details>
+
+### Réponse MCP
+
+| Cas | `content` | `structuredContent` | Relation entre `content` et `structuredContent` |
+| --- | --- | --- | --- |
+| Succès | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
+| Erreur | oui | oui | `content[0].text` contient `structuredContent.detail`, pas le JSON d'erreur complet de `structuredContent`. |
+
+## `gpf_itinerary_layer`
+
+Code Source : [src/tools/GpfItineraryLayerTool.ts](../src/tools/GpfItineraryLayerTool.ts)
+
+### Titre
+
+Couche cartographiable d'itinéraire GPF
+
+### Description du tool
+
+```
+Renvoie une **URL de couche cartographiable** (`data_url`) représentant l'itinéraire entre deux points calculé par la Géoplateforme.
+Utiliser `departure_lon`/`departure_lat` pour le départ, `arrival_lon`/`arrival_lat` pour l'arrivée, `profile` pour le mode de déplacement (`car` ou `pedestrian`) et `optimize` pour choisir entre l'itinéraire le plus rapide (`time`, défaut) ou le plus court (`distance`).
+La couche GeoJSON retournée contient une Feature LineString avec les propriétés `distance_meters` et `duration_minutes`.
+Le départ et l'arrivée doivent être distants d'au plus 100 km à vol d'oiseau.
+L'URL est opaque et doit être transmise telle quelle à un outil cartographique (MCP Carto, ...).
+(source : Géoplateforme (calcul d'itinéraire)).
+```
+
+### Schéma d’entrée
+
+| Champ | Type | Requis | Description |
+| --- | --- | --- | --- |
+| `arrival_lat` | number | oui | Latitude du point d'arrivée en WGS84. |
+| `arrival_lon` | number | oui | Longitude du point d'arrivée en WGS84. |
+| `departure_lat` | number | oui | Latitude du point de départ en WGS84. |
+| `departure_lon` | number | oui | Longitude du point de départ en WGS84. |
+| `optimize` | string (enum) | non | Métrique d'optimisation : `time` (itinéraire le plus rapide, défaut) ou `distance` (le plus court). Valeurs : time, distance. |
+| `profile` | string (enum) | oui | Mode de déplacement : `car` ou `pedestrian`. Valeurs : car, pedestrian. |
+
+<details>
+<summary>Schéma d’entrée brut</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "departure_lon": {
+      "type": "number",
+      "minimum": -180,
+      "maximum": 180,
+      "description": "Longitude du point de départ en WGS84."
+    },
+    "departure_lat": {
+      "type": "number",
+      "minimum": -90,
+      "maximum": 90,
+      "description": "Latitude du point de départ en WGS84."
+    },
+    "arrival_lon": {
+      "type": "number",
+      "minimum": -180,
+      "maximum": 180,
+      "description": "Longitude du point d'arrivée en WGS84."
+    },
+    "arrival_lat": {
+      "type": "number",
+      "minimum": -90,
+      "maximum": 90,
+      "description": "Latitude du point d'arrivée en WGS84."
+    },
+    "profile": {
+      "type": "string",
+      "enum": [
+        "car",
+        "pedestrian"
+      ],
+      "description": "Mode de déplacement : `car` ou `pedestrian`."
+    },
+    "optimize": {
+      "type": "string",
+      "enum": [
+        "time",
+        "distance"
+      ],
+      "description": "Métrique d'optimisation : `time` (itinéraire le plus rapide, défaut) ou `distance` (le plus court)."
+    }
+  },
+  "required": [
+    "departure_lon",
+    "departure_lat",
+    "arrival_lon",
+    "arrival_lat",
+    "profile"
   ],
   "additionalProperties": false,
   "$schema": "http://json-schema.org/draft-07/schema#"
@@ -1646,25 +1773,25 @@ Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, 
           "type": "number",
           "minimum": -180,
           "maximum": 180,
-          "description": "Longitude ouest en WGS84 `lon/lat`."
+          "description": "Longitude ouest en WGS84."
         },
         "south": {
           "type": "number",
           "minimum": -90,
           "maximum": 90,
-          "description": "Latitude sud en WGS84 `lon/lat`."
+          "description": "Latitude sud en WGS84."
         },
         "east": {
           "type": "number",
           "minimum": -180,
           "maximum": 180,
-          "description": "Longitude est en WGS84 `lon/lat`."
+          "description": "Longitude est en WGS84."
         },
         "north": {
           "type": "number",
           "minimum": -90,
           "maximum": 90,
-          "description": "Latitude nord en WGS84 `lon/lat`."
+          "description": "Latitude nord en WGS84."
         }
       },
       "required": [
@@ -1683,13 +1810,13 @@ Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, 
           "type": "number",
           "minimum": -180,
           "maximum": 180,
-          "description": "Longitude du point en WGS84 `lon/lat`."
+          "description": "Longitude du point en WGS84."
         },
         "lat": {
           "type": "number",
           "minimum": -90,
           "maximum": 90,
-          "description": "Latitude du point en WGS84 `lon/lat`."
+          "description": "Latitude du point en WGS84."
         }
       },
       "required": [
@@ -1706,13 +1833,13 @@ Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, 
           "type": "number",
           "minimum": -180,
           "maximum": 180,
-          "description": "Longitude du point en WGS84 `lon/lat`."
+          "description": "Longitude du point en WGS84."
         },
         "lat": {
           "type": "number",
           "minimum": -90,
           "maximum": 90,
-          "description": "Latitude du point en WGS84 `lon/lat`."
+          "description": "Latitude du point en WGS84."
         },
         "distance_m": {
           "type": "number",
@@ -1756,13 +1883,13 @@ Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, 
           "type": "number",
           "minimum": -180,
           "maximum": 180,
-          "description": "Longitude du point de départ en WGS84 `lon/lat`."
+          "description": "Longitude du point de départ en WGS84."
         },
         "lat": {
           "type": "number",
           "minimum": -90,
           "maximum": 90,
-          "description": "Latitude du point de départ en WGS84 `lon/lat`."
+          "description": "Latitude du point de départ en WGS84."
         },
         "profile": {
           "type": "string",
@@ -1982,25 +2109,25 @@ Les noms de propriétés utilisés dans `where` **ne peuvent pas être devinés*
           "type": "number",
           "minimum": -180,
           "maximum": 180,
-          "description": "Longitude ouest en WGS84 `lon/lat`."
+          "description": "Longitude ouest en WGS84."
         },
         "south": {
           "type": "number",
           "minimum": -90,
           "maximum": 90,
-          "description": "Latitude sud en WGS84 `lon/lat`."
+          "description": "Latitude sud en WGS84."
         },
         "east": {
           "type": "number",
           "minimum": -180,
           "maximum": 180,
-          "description": "Longitude est en WGS84 `lon/lat`."
+          "description": "Longitude est en WGS84."
         },
         "north": {
           "type": "number",
           "minimum": -90,
           "maximum": 90,
-          "description": "Latitude nord en WGS84 `lon/lat`."
+          "description": "Latitude nord en WGS84."
         }
       },
       "required": [
@@ -2019,13 +2146,13 @@ Les noms de propriétés utilisés dans `where` **ne peuvent pas être devinés*
           "type": "number",
           "minimum": -180,
           "maximum": 180,
-          "description": "Longitude du point en WGS84 `lon/lat`."
+          "description": "Longitude du point en WGS84."
         },
         "lat": {
           "type": "number",
           "minimum": -90,
           "maximum": 90,
-          "description": "Latitude du point en WGS84 `lon/lat`."
+          "description": "Latitude du point en WGS84."
         }
       },
       "required": [
@@ -2042,13 +2169,13 @@ Les noms de propriétés utilisés dans `where` **ne peuvent pas être devinés*
           "type": "number",
           "minimum": -180,
           "maximum": 180,
-          "description": "Longitude du point en WGS84 `lon/lat`."
+          "description": "Longitude du point en WGS84."
         },
         "lat": {
           "type": "number",
           "minimum": -90,
           "maximum": 90,
-          "description": "Latitude du point en WGS84 `lon/lat`."
+          "description": "Latitude du point en WGS84."
         },
         "distance_m": {
           "type": "number",
@@ -2092,13 +2219,13 @@ Les noms de propriétés utilisés dans `where` **ne peuvent pas être devinés*
           "type": "number",
           "minimum": -180,
           "maximum": 180,
-          "description": "Longitude du point de départ en WGS84 `lon/lat`."
+          "description": "Longitude du point de départ en WGS84."
         },
         "lat": {
           "type": "number",
           "minimum": -90,
           "maximum": 90,
-          "description": "Latitude du point de départ en WGS84 `lon/lat`."
+          "description": "Latitude du point de départ en WGS84."
         },
         "profile": {
           "type": "string",
