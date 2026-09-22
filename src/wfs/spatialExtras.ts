@@ -157,20 +157,19 @@ function intersectionAreaWithSpatialFilter(geom: Geometry, spatialFilter: Spatia
     return null;
   }
   switch (spatialFilter.operator) {
-    case "intersects_point": {
-      return null; // The intersection is a point, so its interior is null;
-    }
+    case "intersects_point":
+      return null; // non-2D filter
     // Note: `dwithin_point` matches a feature as soon as any part of it
     // lies within `distance_m`, so the intersection is needed even for it.
     case "dwithin_point":
     case "intersects_feature":
     case "travel_time": {
-      if (!filterPolygons) return null;
+      if (!filterPolygons) return null; // non-2D filter
       // Whatever lies outside the feature's bbox cannot intersect it, so clipping the
       // reference first leaves the result unchanged while polyclip only ever processes
       // the neighbouring vertices.
       const clippedFilter = dropEmptyRings(bboxClip(filterPolygons, bbox(geo)).geometry);
-      if (!clippedFilter) return null;
+      if (!clippedFilter) return null; // no areal overlap
       const inter = intersect(featureCollection([feature(clippedFilter), feature(geo)]));
       return inter == null ? null : inter.geometry;
     }
