@@ -17,11 +17,13 @@ import { getSpatialFilter, geometryToEwkt } from "../wfs/queryPreparation.js";
 import type { ResolvedFeatureGeometryRef } from "../wfs/queryPreparation.js";
 import type { GpfGetFeaturesInput } from "../wfs/schema.js";
 import { NavigationIsochroneClient } from "../gpf/navigation.js";
+import { NavigationItineraryLayerClient } from "../gpf/itinerary.js";
 import type {
   IsolineResolver,
   GeometryFeatureQueryDeps,
   GeometryFeatureByIdQueryDeps,
   GeometryIsolineQueryDeps,
+  GeometryItineraryQueryDeps,
 } from "./execute.js";
 import { fetchJSONPostWithLimit, fetchJSONGetWithLimit } from "../helpers/http.js";
 import { RateLimiter } from "../helpers/RateLimiter.js";
@@ -82,6 +84,22 @@ export function getProxyWfsClient(): WfsClient {
   return cachedProxyWfsClient;
 }
 
+// --- Proxy navigation rate limiter (singleton) ---
+
+let cachedProxyNavigationRateLimiter: RateLimiter | undefined;
+
+/**
+ * Returns the proxy's shared navigation rate limiter.
+ */
+function getProxyNavigationRateLimiter(): RateLimiter {
+  cachedProxyNavigationRateLimiter ??= new RateLimiter({
+    name: "GPF_NAVIGATION_PROXY",
+    maxCalls: getEnv().GPF_NAVIGATION_PROXY_RATE_LIMIT,
+    period: 1,
+  });
+  return cachedProxyNavigationRateLimiter;
+}
+
 // --- Proxy Isochrone Client (singleton) ---
 
 let cachedProxyIsochroneClient: NavigationIsochroneClient | undefined;
@@ -89,7 +107,7 @@ let cachedProxyIsochroneClient: NavigationIsochroneClient | undefined;
 /**
  * Returns the proxy isochrone client: a dedicated `NavigationIsochroneClient`
  * wired to the SAME size-bounded, shorter-timeout fetch the geodata proxy leg uses
- * (`PROXY_UPSTREAM_TIMEOUT` + `PROXY_MAX_RESPONSE_BYTES`) and its own
+ * (`PROXY_UPSTREAM_TIMEOUT` + `PROXY_MAX_RESPONSE_BYTES`) and the shared
  * `GPF_NAVIGATION_PROXY` rate limiter — NOT the default `navigationIsochroneClient`
  * singleton, which uses the unbounded `HTTP_TIMEOUT`-only `fetchJSONGet`. This
  * keeps both upstream legs of an `isoline` layer request under the same bounds,
@@ -98,7 +116,7 @@ let cachedProxyIsochroneClient: NavigationIsochroneClient | undefined;
  */
 function getProxyIsochroneClient(): NavigationIsochroneClient {
   cachedProxyIsochroneClient ??= new NavigationIsochroneClient(
-    new RateLimiter({ name: "GPF_NAVIGATION_PROXY", maxCalls: getEnv().GPF_NAVIGATION_PROXY_RATE_LIMIT, period: 1 }),
+    getProxyNavigationRateLimiter(),
     (url) => fetchJSONGetWithLimit(url, getEnv().PROXY_UPSTREAM_TIMEOUT * 1000, getEnv().PROXY_MAX_RESPONSE_BYTES, "d'isochrone"),
   );
   return cachedProxyIsochroneClient;
@@ -169,5 +187,38 @@ export function getDefaultGeometryFeatureByIdQueryDeps(): GeometryFeatureByIdQue
 export function getDefaultGeometryIsolineQueryDeps(): GeometryIsolineQueryDeps {
   return {
     getGeometry: (input) => getProxyIsochroneClient().getGeometry(input),
+  };
+}
+
+// --- Proxy Itinerary Client (singleton) ---
+
+let cachedProxyItineraryLayerClient: NavigationItineraryLayerClient | undefined;
+
+/**
+ * Returns the proxy itinerary layer client: a dedicated `NavigationItineraryLayerClient`
+ * wired to the size-bounded, shorter-timeout fetch the geodata proxy leg uses and the
+ * `GPF_NAVIGATION_PROXY` rate limiter it shares with the proxy isochrone client.
+ * Lazily built so the bounds are read from a fully-parsed environment.
+ */
+function getProxyItineraryLayerClient(): NavigationItineraryLayerClient {
+  cachedProxyItineraryLayerClient ??= new NavigationItineraryLayerClient(
+    getProxyNavigationRateLimiter(),
+    (url) => fetchJSONGetWithLimit(url, getEnv().PROXY_UPSTREAM_TIMEOUT * 1000, getEnv().PROXY_MAX_RESPONSE_BYTES, "d'itinéraire"),
+  );
+  return cachedProxyItineraryLayerClient;
+}
+
+/**
+ * Default dependency bundle for `runGeometryItineraryQuery`.
+ */
+export function getDefaultGeometryItineraryQueryDeps(): GeometryItineraryQueryDeps {
+  return {
+    getItineraryWithGeometry: (input) =>
+      getProxyItineraryLayerClient().getItineraryWithGeometry({
+        departure: { lon: input.departure_lon, lat: input.departure_lat },
+        arrival: { lon: input.arrival_lon, lat: input.arrival_lat },
+        profile: input.profile,
+        optimize: input.optimize,
+      }),
   };
 }

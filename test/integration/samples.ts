@@ -25,6 +25,7 @@ export const EXPECTED_TOOL_NAMES = [
   "gpf_get_feature_by_id",
   "gpf_count_features",
   "gpf_isoline_layer",
+  "gpf_itinerary_layer",
   "gpf_get_features_layer",
   "gpf_get_feature_by_id_layer",
 ] as const;
