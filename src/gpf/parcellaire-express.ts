@@ -13,7 +13,7 @@ import type { Point, Geometry } from 'geojson';
 import { wfsClient } from '../wfs/execution.js';
 import type { WfsFeatureCollectionResponse } from '../wfs/types.js';
 import { getGeometryName } from '../wfs/properties.js';
-import { compileDwithinSpatialFilter } from '../wfs/spatialCql.js';
+import { compileIntersectsPointSpatialFilter } from '../wfs/spatialCql.js';
 import { mapToFlatItemsWithGeometry, type FlatItem } from '../wfs/response.js';
 import type { SpatialFilter } from '../wfs/schema.js';
 
@@ -74,10 +74,10 @@ export async function getParcellaireExpress(lon: number, lat: number): Promise<P
     logger.debug(`[gpf:parcellaire-express] getParcellaireExpress(${lon},${lat}) ...`);
 
     const spatialFilter: SpatialFilter = {
-        operator: "dwithin_point",
+        operator: "intersects_point",
         lon,
         lat,
-        distance_m: 10,
+        buffer: 10,
     };
 
     // Resolve and compile one spatial filter per typename to avoid relying on
@@ -85,7 +85,7 @@ export async function getParcellaireExpress(lon: number, lat: number): Promise<P
     const cqlFilters = await Promise.all(PARCELLAIRE_EXPRESS_TYPENAMES.map(async (typename) => {
         const featureType = await wfsClient.getFeatureType(typename);
         const geometryName = getGeometryName(featureType);
-        return compileDwithinSpatialFilter(geometryName, spatialFilter);
+        return compileIntersectsPointSpatialFilter(geometryName, spatialFilter);
     }));
 
     // Execute the multi-typename WFS query

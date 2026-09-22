@@ -13,7 +13,7 @@ import type { Point, Geometry } from 'geojson';
 import { wfsClient } from '../wfs/execution.js';
 import type { WfsFeatureCollectionResponse } from '../wfs/types.js';
 import { getGeometryName } from '../wfs/properties.js';
-import { compileDwithinSpatialFilter } from '../wfs/spatialCql.js';
+import { compileIntersectsPointSpatialFilter } from '../wfs/spatialCql.js';
 import { mapToFlatItemsWithGeometry, type FlatItem } from '../wfs/response.js';
 import type { SpatialFilter } from '../wfs/schema.js';
 
@@ -67,10 +67,10 @@ export async function getUrbanisme(lon: number, lat: number): Promise<Record<str
     logger.debug(`[gpf:urbanisme] getUrbanisme(${lon},${lat})...`);
 
     const spatialFilter: SpatialFilter = {
-        operator: "dwithin_point",
+        operator: "intersects_point",
         lon,
         lat,
-        distance_m: 30,
+        buffer: 30,
     };
 
     // Resolve and compile one spatial filter per typename to avoid relying on
@@ -78,7 +78,7 @@ export async function getUrbanisme(lon: number, lat: number): Promise<Record<str
     const cqlFilters = await Promise.all(URBANISME_TYPES.map(async (typename) => {
         const featureType = await wfsClient.getFeatureType(typename);
         const geometryName = getGeometryName(featureType);
-        return compileDwithinSpatialFilter(geometryName, spatialFilter);
+        return compileIntersectsPointSpatialFilter(geometryName, spatialFilter);
     }));
 
     // Execute the multi-typename WFS query
@@ -119,10 +119,10 @@ export async function getAssiettesServitudes(lon: number, lat: number): Promise<
     logger.debug(`[gpf:urbanisme] getAssiettesServitudes(${lon},${lat})...`);
 
     const spatialFilter: SpatialFilter = {
-        operator: "dwithin_point",
+        operator: "intersects_point",
         lon,
         lat,
-        distance_m: 30,
+        buffer: 30,
     };
 
     // Resolve and compile one spatial filter per typename to avoid relying on
@@ -130,7 +130,7 @@ export async function getAssiettesServitudes(lon: number, lat: number): Promise<
     const cqlFilters = await Promise.all(ASSIETTES_SUP_TYPES.map(async (typename) => {
         const featureType = await wfsClient.getFeatureType(typename);
         const geometryName = getGeometryName(featureType);
-        return compileDwithinSpatialFilter(geometryName, spatialFilter);
+        return compileIntersectsPointSpatialFilter(geometryName, spatialFilter);
     }));
 
     // Execute the multi-typename WFS query

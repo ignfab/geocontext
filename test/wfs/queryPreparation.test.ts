@@ -43,7 +43,8 @@ describe("gpfGetFeatures/queryPreparation", () => {
   const baseInput: GpfGetFeaturesInput = {
     typename: "ADMINEXPRESS-COG.LATEST:commune",
     limit: 100,
-    spatial_extras: []
+    spatial_extras: [],
+    buffer: 0,
   };
 
   it("should compile where clauses", () => {
@@ -99,11 +100,11 @@ describe("gpfGetFeatures/queryPreparation", () => {
 
     const dwithin = compileQueryParts({
       ...baseInput,
-      dwithin_point_filter: {
+      intersects_point_filter: {
         lon: 2.3522,
         lat: 48.8566,
-        distance_m: 250,
       },
+      buffer: 250,
     }, wrappedFeatureType);
 
     expect(intersects.cqlFilter).toEqual("INTERSECTS(geometrie,SRID=4326;POINT(2.3522 48.8566))");

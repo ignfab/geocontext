@@ -10,6 +10,7 @@ const baseInput: GpfGetFeaturesInput = {
   typename: "ADMINEXPRESS-COG.LATEST:commune",
   limit: 100,
   spatial_extras: [],
+  buffer: 0,
 };
 
 describe("getSpatialFilter", () => {
@@ -17,21 +18,21 @@ describe("getSpatialFilter", () => {
     expect(getSpatialFilter(baseInput)).toBeUndefined();
   });
 
-  it("should map a dwithin_point_filter to the compiler spatial filter", () => {
+  it("should map a intersects_point_filter with a positive buffer to the compiler spatial filter", () => {
     const input: GpfGetFeaturesInput = {
       ...baseInput,
-      dwithin_point_filter: {
+      intersects_point_filter: {
         lon: 2.3522,
         lat: 48.8566,
-        distance_m: 500,
       },
+      buffer: 500,
     };
 
     expect(getSpatialFilter(input)).toEqual({
-      operator: "dwithin_point",
+      operator: "intersects_point",
       lon: 2.3522,
       lat: 48.8566,
-      distance_m: 500,
+      buffer: 500,
     });
   });
 
@@ -54,6 +55,7 @@ describe("getSpatialFilter", () => {
       cost_type: "time",
       cost_value: 15,
       profile: "pedestrian",
+      buffer: 0,
     });
   });
 });
@@ -184,5 +186,34 @@ describe("gpfGetFeaturesInputSchema spatial filters", () => {
       ...baseInput,
       spatial_operator: "bbox",
     })).toThrow();
+  });
+
+  it("should reject legacy dwithin_point spatial filter", () => {
+    expect(() => gpfGetFeaturesInputSchema.parse({
+      ...baseInput,
+      dwithin_point_filter: {
+        lon: 2.3522,
+        lat: 48.8566,
+        distance_m: 500,
+      }
+    })).toThrow();
+  });
+
+  it("should reject invalid negative buffer", () => {
+    expect(() => gpfGetFeaturesInputSchema.parse({
+      ...baseInput,
+      intersects_point_filter: {
+        lon: 2.3,
+        lat: 48.8,
+      },
+      buffer: -30,
+    })).toThrow("Impossible d'utiliser un buffer négatif avec intersects_point_filter");
+  });
+
+  it("should reject a buffer without a spatial filter", () => {
+    expect(() => gpfGetFeaturesInputSchema.parse({
+      ...baseInput,
+      buffer: 100,
+    })).toThrow("Impossible de spécifier un buffer non nul sans choisir un filtre spatial");
   });
 });

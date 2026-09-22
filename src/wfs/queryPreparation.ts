@@ -33,7 +33,6 @@ import {
 
 import {
   compileBboxSpatialFilter,
-  compileDwithinSpatialFilter,
   compileIntersectsFeatureSpatialFilter,
   compileIntersectsPointSpatialFilter,
 } from "./spatialCql.js";
@@ -199,20 +198,17 @@ export function compileQueryParts(
       case "intersects_point":
         fragments.push(compileIntersectsPointSpatialFilter(geometryName, spatialFilter));
         break;
-      case "dwithin_point":
-        fragments.push(compileDwithinSpatialFilter(geometryName, spatialFilter));
-        break;
       case "intersects_feature":
         if (!resolvedGeometryRef) {
           throw new Error("Le filtre spatial `intersects_feature` exige la résolution préalable de la géométrie de référence.");
         }
-        fragments.push(compileIntersectsFeatureSpatialFilter(geometryName, resolvedGeometryRef.geometry_ewkt));
+        fragments.push(compileIntersectsFeatureSpatialFilter(geometryName, resolvedGeometryRef.geometry_ewkt, spatialFilter.buffer));
         break;
       case "isoline":
         if (!resolvedGeometryRef) {
           throw new Error("Le filtre spatial `isoline` exige la résolution préalable de la géométrie d'isochrone/isodistance.");
         }
-        fragments.push(compileIntersectsFeatureSpatialFilter(geometryName, resolvedGeometryRef.geometry_ewkt));
+        fragments.push(compileIntersectsFeatureSpatialFilter(geometryName, resolvedGeometryRef.geometry_ewkt, spatialFilter.buffer));
         break;
     }
   }

@@ -174,6 +174,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
       typename: "ADMINEXPRESS-COG.LATEST:commune",
       where: [{ property: "code_insee", operator: "eq", value: "01001" }],
       limit: 50,
+      buffer: 0,
     });
   });
 

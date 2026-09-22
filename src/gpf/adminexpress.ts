@@ -47,7 +47,7 @@ const ADMINEXPRESS_TYPENAMES = ADMINEXPRESS_TYPES.map((type) => `ADMINEXPRESS-CO
 export async function getAdminUnits(lon: number, lat: number): Promise<AdminUnit[]> {
     logger.debug(`[gpf:adminexpress] getAdminUnits(${lon},${lat})...`);
 
-    const spatialFilter: SpatialFilter = { operator: "intersects_point", lon, lat };
+    const spatialFilter: SpatialFilter = { operator: "intersects_point", lon, lat, buffer: 0 };
 
     // Resolve and compile one spatial filter per typename to avoid relying on
     // cross-layer geometry property homogeneity.

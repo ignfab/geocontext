@@ -149,7 +149,7 @@ function assertUsableFeatureCollection(
  * proxy deliberately allows it and does not reuse that guard.
  *
  * Assumes at most one spatial filter (enforced upstream by the layer schema's
- * `assertSpatialFilterExclusion`): `getSpatialFilter` returns the first filter in
+ * `assertSpatialFilterConsistency`): `getSpatialFilter` returns the first filter in
  * key order, so a same-input combination would silently ignore the others.
  *
  * @param input Normalized layer query input.

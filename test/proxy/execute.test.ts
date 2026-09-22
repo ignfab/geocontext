@@ -64,6 +64,7 @@ const baseInput: GpfGetFeaturesInput = {
   typename: "ADMINEXPRESS-COG.LATEST:commune",
   limit: 100,
   spatial_extras: [],
+  buffer: 0,
 };
 
 /** Builds a WfsClientLike double, recording the requests it executes. */

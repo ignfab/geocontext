@@ -36,7 +36,8 @@ const PARAM_SHAPES: Record<string, unknown> = {
   },
   dwithin_point: {
     typename: "BDTOPO_V3:batiment",
-    dwithin_point_filter: { lon: 2.35, lat: 48.85, distance_m: 500 },
+    intersects_point_filter: { lon: 2.35, lat: 48.85 },
+    buffer: 500,
     limit: 100,
   },
   intersects_feature: {

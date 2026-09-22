@@ -27,7 +27,6 @@ export const ORDER_DIRECTIONS = ["asc", "desc"] as const;
 export const GPF_GET_FEATURES_SPATIAL_FILTER_KEYS = [
   "bbox_filter",
   "intersects_point_filter",
-  "dwithin_point_filter",
   "intersects_feature_filter",
   "isoline_filter"
 ] as const;
@@ -71,12 +70,6 @@ const intersectsPointFilterSchema = z.object({
   lat: latSchema.describe("Latitude du point en WGS84 `lon/lat`."),
 }).strict().describe("Filtre les objets dont la géométrie intersecte un point.");
 
-const dwithinPointFilterSchema = z.object({
-  lon: lonSchema.describe("Longitude du point en WGS84 `lon/lat`."),
-  lat: latSchema.describe("Latitude du point en WGS84 `lon/lat`."),
-  distance_m: z.number().finite().positive().describe("Distance maximale en mètres."),
-}).strict().describe("Filtre les objets situés à une distance maximale d'un point.");
-
 const intersectsFeatureFilterSchema = z.object({
   typename: z.string().trim().min(1).describe("Type GPF du feature de référence."),
   feature_id: z.string().trim().min(1).describe("Identifiant du feature de référence."),
@@ -86,9 +79,8 @@ const navigationProfileSchema = z
   .enum(NAVIGATION_PROFILES)
   .describe("Mode de déplacement utilisé pour calculer l'isochrone ou l'isodistance : `car` ou `pedestrian`.");
 
-// Departure point of an isoline. Flat `lon`/`lat`, exactly like every spatial
-// filter (`intersects_point_filter`, `dwithin_point_filter`, ...), so the LLM sees
-// one point convention across the whole surface.
+// Departure point of an isoline. Flat `lon`/`lat`, exactly like `intersects_point_filter`,
+// so the LLM sees one point convention across the whole surface.
 const isolinePointSchema = z.object({
   lon: lonSchema.describe("Longitude du point de départ en WGS84 `lon/lat`."),
   lat: latSchema.describe("Latitude du point de départ en WGS84 `lon/lat`."),
@@ -138,6 +130,14 @@ function assertIsolineCostValue(input: { cost_type: NavigationCostType; cost_val
   }
 }
 
+const bufferSchema = z.object({
+  buffer: z.number().default(0).describe([
+    "Distance du tampon, en mètres. La zone tampon élargit le filtre spatial par la valeur de buffer.",
+    "Une distance positive agrandit le filtre, une distance négative le rétrécit. Valeur par défaut : 0 m.",
+    "Exemple : pour déterminer tous les objets à moins de 10 m d'un point, utiliser intersects_point_filter sur le point, combiné à buffer=10."
+  ].join("\n"))
+})
+
 // --- Shared GPF Inputs ---
 
 const gpfTypenameInputSchema = z.object({
@@ -163,9 +163,6 @@ const gpfSpatialFilterInputSchema = z.object({
   intersects_point_filter: intersectsPointFilterSchema
     .optional()
     .describe("Filtre spatial par intersection avec un point. Exclusif avec les autres filtres spatiaux."),
-  dwithin_point_filter: dwithinPointFilterSchema
-    .optional()
-    .describe("Filtre spatial par distance à un point à vol d'oiseau. Exclusif avec les autres filtres spatiaux."),
   intersects_feature_filter: intersectsFeatureFilterSchema
     .optional()
     .describe("Filtre spatial par intersection avec un feature GPF de référence. Exclusif avec les autres filtres spatiaux."),
@@ -173,6 +170,7 @@ const gpfSpatialFilterInputSchema = z.object({
     .optional()
     .describe("Filtre spatial par temps de trajet (isochrone) ou par distance (isodistance) depuis un point avec un profil voiture ou piéton. Exclusif avec les autres filtres spatiaux."),
 })
+  .merge(bufferSchema);
 
 const gpfGeometryExtraInputSchema = z.object({
   spatial_extras: z
@@ -182,7 +180,7 @@ const gpfGeometryExtraInputSchema = z.object({
     .describe(`Éléments calculés depuis la géométrie à renvoyer pour chaque objet. Peut inclure ${GPF_SPATIAL_EXTRAS_DOCNAMES}, aucun par défaut.`),
 })
 
-function assertSpatialFilterExclusion(input : Record<string, unknown>, ctx : z.RefinementCtx) {
+function assertSpatialFilterConsistency(input : Record<string, unknown>, ctx : z.RefinementCtx) {
   const usedSpatialFilters = GPF_GET_FEATURES_SPATIAL_FILTER_KEYS.filter((key) => input[key] !== undefined);
 
   if (usedSpatialFilters.length > 1) {
@@ -192,6 +190,22 @@ function assertSpatialFilterExclusion(input : Record<string, unknown>, ctx : z.R
       message: `Un seul filtre spatial est autorisé (${usedSpatialFilters.join(", ")} fournis).`,
     });
   }
+
+  if (usedSpatialFilters.length == 0 && input.buffer != 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["buffer"],
+      message: `Impossible de spécifier un buffer non nul sans choisir un filtre spatial sur lequel l'appliquer. Utilise un des champs ${GPF_SPATIAL_FILTER_DOCNAMES}, ou bien n'utilise pas de buffer.`
+    })
+  }
+
+  if (usedSpatialFilters.length == 1 && usedSpatialFilters[0] == "intersects_point_filter" && (input.buffer as number) < 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["buffer"],
+      message: `Impossible d'utiliser un buffer négatif avec intersects_point_filter.`
+    })
+  }
 }
 
 // --- Shared GPF types ---
@@ -200,12 +214,13 @@ export type WhereClause = z.infer<typeof whereClauseSchema>;
 
 export type OrderByClause = z.infer<typeof orderBySchema>;
 
-export type SpatialFilter =
+export type SpatialFilterChoice =
   | ({ operator: "bbox" } & z.infer<typeof bboxFilterSchema>)
   | ({ operator: "intersects_point" } & z.infer<typeof intersectsPointFilterSchema>)
-  | ({ operator: "dwithin_point" } & z.infer<typeof dwithinPointFilterSchema>)
   | ({ operator: "intersects_feature" } & z.infer<typeof intersectsFeatureFilterSchema>)
   | ({ operator: "isoline" } & z.infer<typeof isolineFilterSchema>);
+
+export type SpatialFilter = SpatialFilterChoice & { buffer: number };
 
 // --- `gpf_get_features` ---
 
@@ -237,7 +252,7 @@ export const gpfGetFeaturesInputObjectSchema = gpfTypenameInputSchema
   .strict();
 
 export const gpfGetFeaturesInputSchema = gpfGetFeaturesInputObjectSchema
-  .superRefine(assertSpatialFilterExclusion);
+  .superRefine(assertSpatialFilterConsistency);
 
 // --- `gpf_get_features` Types ---
 
@@ -283,7 +298,7 @@ export const gpfGetFeaturesLayerInputSchema = gpfGetFeaturesLayerInputObjectSche
     ...value,
     spatial_extras: [],
   }))
-  .superRefine((value, ctx) => assertSpatialFilterExclusion(value, ctx));
+  .superRefine((value, ctx) => assertSpatialFilterConsistency(value, ctx));
 
 export type GpfGetFeaturesLayerInput = z.input<typeof gpfGetFeaturesLayerInputSchema>;
 
@@ -373,7 +388,7 @@ export const gpfCountFeaturesInputObjectSchema = gpfTypenameInputSchema
   .merge(gpfSpatialFilterInputSchema)
   .strict();
 
-export const gpfCountFeaturesInputSchema = gpfCountFeaturesInputObjectSchema.superRefine(assertSpatialFilterExclusion);
+export const gpfCountFeaturesInputSchema = gpfCountFeaturesInputObjectSchema.superRefine(assertSpatialFilterConsistency);
 
 // --- `gpf_count_features` Outputs ---
 

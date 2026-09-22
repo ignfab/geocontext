@@ -110,6 +110,7 @@ describe("proxy/transport · resolveProxyIsolineGeometry", () => {
     limit: 100,
     spatial_extras: [],
     isoline_filter: { lon: 2.35, lat: 48.85, cost_type: "time", cost_value: 15, profile: "pedestrian" },
+    buffer: 0,
   };
 
   it("resolves the isochrone through the BOUNDED fetch (PROXY_UPSTREAM_TIMEOUT + PROXY_MAX_RESPONSE_BYTES) and returns EWKT", async () => {
@@ -144,6 +145,7 @@ describe("proxy/transport · resolveProxyIsolineGeometry", () => {
       typename: "BDTOPO_V3:batiment",
       limit: 100,
       spatial_extras: [],
+      buffer: 0,
     };
     await expect(resolveProxyIsolineGeometry(noFilter)).rejects.toThrow(/isoline/);
     expect(fetchJSONGetWithLimit).not.toHaveBeenCalled();

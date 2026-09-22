@@ -222,12 +222,11 @@ describe("Test GpfGetFeaturesTool", () => {
     const tool = new GpfGetFeaturesTool();
 
     expect(hasJsonSchemaComposition(tool.toolDefinition.inputSchema)).toBe(false);
-    expect(tool.toolDefinition.inputSchema.properties?.dwithin_point_filter).toMatchObject({
+    expect(tool.toolDefinition.inputSchema.properties?.intersects_point_filter).toMatchObject({
       type: "object",
       properties: expect.objectContaining({
         lon: expect.objectContaining({ type: "number" }),
         lat: expect.objectContaining({ type: "number" }),
-        distance_m: expect.objectContaining({ type: "number" }),
       }),
     });
     expect(tool.toolDefinition.inputSchema.properties?.isoline_filter).toMatchObject({

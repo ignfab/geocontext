@@ -11,7 +11,6 @@ import { GPF_GET_FEATURES_SPATIAL_FILTER_KEYS } from "./schema.js";
 const FILTER_KEY_TO_OPERATOR = {
   bbox_filter: "bbox",
   intersects_point_filter: "intersects_point",
-  dwithin_point_filter: "dwithin_point",
   intersects_feature_filter: "intersects_feature",
   isoline_filter: "isoline",
 } as const satisfies Record<(typeof GPF_GET_FEATURES_SPATIAL_FILTER_KEYS)[number], string>;
@@ -31,7 +30,7 @@ export function getSpatialFilter(input: GpfQueryFeaturesInput): SpatialFilter | 
   for (const key of GPF_GET_FEATURES_SPATIAL_FILTER_KEYS) {
     const value = input[key];
     if (value) {
-      return { operator: FILTER_KEY_TO_OPERATOR[key], ...value } as SpatialFilter;
+      return { operator: FILTER_KEY_TO_OPERATOR[key], ...value, buffer: input.buffer } as SpatialFilter;
     }
   }
   return undefined;
