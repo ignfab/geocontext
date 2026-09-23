@@ -227,7 +227,7 @@ export type WhereClause = z.infer<typeof whereClauseSchema>;
 export type OrderByClause = z.infer<typeof orderBySchema>;
 
 type SpatialFilterKey = (typeof GPF_GET_FEATURES_SPATIAL_FILTER_KEYS)[number];
-type SpatialFilterInput = z.infer<typeof gpfSpatialFilterInputSchema>;
+export type SpatialFilterInput = z.infer<typeof gpfSpatialFilterInputSchema>;
 
 type SpatialFilterEntry<K extends SpatialFilterKey> =
   K extends `${infer Operator}_filter`

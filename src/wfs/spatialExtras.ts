@@ -9,10 +9,17 @@ import type { Geometry, MultiPolygon, Point, Polygon, Position } from "geojson";
 import distance from "../helpers/distance.js";
 import { feature, featureCollection } from "@turf/helpers";
 import { getSpatialFilter } from "./spatialFilter.js";
-import type { GpfGetFeaturesInput, SpatialFilter } from "./schema.js";
+import type {
+  SpatialFilterInput,
+  SpatialExtraOptions,
+  SpatialFilter,
+} from "./schema.js";
 import { bboxClip } from "@turf/bbox-clip";
 
-export type FeatureCollectionPostProcessInput = Omit<GpfGetFeaturesInput, "limit">;
+export type FeatureCollectionPostProcessInput = {
+    typename: string,
+    spatial_extras: SpatialExtraOptions[];
+  } & SpatialFilterInput;
 
 /** Extract the geometry of the unique spatial filter, if any, otherwise return undefined */
 function spatialFilterToGeometry(spatialFilter: SpatialFilter, resolvedGeometryRef?: Geometry) : Geometry {
