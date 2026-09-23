@@ -24,7 +24,7 @@ import type {
 import { fetchJSONPostWithLimit, fetchJSONGetWithLimit } from "../helpers/http.js";
 import { RateLimiter } from "../helpers/RateLimiter.js";
 import { getEnv } from "../config/env.js";
-import { Geometry } from "geojson";
+import type { Geometry } from "geojson";
 
 // --- Proxy Transport ---
 

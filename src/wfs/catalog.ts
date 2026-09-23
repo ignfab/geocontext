@@ -1,12 +1,12 @@
 // --- Imports ---
 
-import {
+import type {
     OgcCollectionSchema,
     CollectionSearchMatch,
-    getCollectionCatalog,
     CollectionCatalogOptions,
     MiniSearchCollectionSearchOptions,
 } from '@ignfab/gpf-schema-store';
+import { getCollectionCatalog } from '@ignfab/gpf-schema-store';
 import { getEnv, MINISEARCH_INDEXED_OPTION_KEYS, miniSearchOptionsSchema } from '../config/env.js';
 
 export type GpfFeatureType = {

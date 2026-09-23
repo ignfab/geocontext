@@ -3,7 +3,7 @@ import logger from "../logger.js";
 import type { JsonFetcher } from "../helpers/http.js";
 import { RateLimiter } from "../helpers/RateLimiter.js";
 import { getEnv } from "../config/env.js";
-import { Geometry } from "geojson";
+import type { Geometry } from "geojson";
 import { isGeometryLike } from "../helpers/geojson.js";
 
 export const NAVIGATION_SOURCE = "Géoplateforme (calcul d'isochrone)";

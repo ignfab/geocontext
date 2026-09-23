@@ -26,7 +26,7 @@ import {
 } from "./request.js";
 import { postProcessFeatureCollection } from "./response.js";
 import { queryIsGetFeaturesInput, type GpfQueryFeaturesInput } from "./schema.js";
-import { Geometry } from "geojson";
+import type { Geometry } from "geojson";
 
 // --- Types ---
 

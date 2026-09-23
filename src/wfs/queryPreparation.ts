@@ -41,7 +41,7 @@ import {
   compileIntersectsFeatureSpatialFilter,
   compileIntersectsPointSpatialFilter,
 } from "./spatialCql.js";
-import { Geometry } from "geojson";
+import type { Geometry } from "geojson";
 
 // --- Re-exports ---
 

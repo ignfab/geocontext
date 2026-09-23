@@ -5,11 +5,11 @@ import { area } from "@turf/area";
 import { intersect } from "@turf/intersect";
 import { circle } from "@turf/circle";
 import { bboxPolygon } from "@turf/bbox-polygon";
-import { Geometry, MultiPolygon, Point, Polygon, Position } from "geojson";
+import type { Geometry, MultiPolygon, Point, Polygon, Position } from "geojson";
 import distance from "../helpers/distance.js";
 import { feature, featureCollection } from "@turf/helpers";
 import { getSpatialFilter } from "./spatialFilter.js";
-import { GpfGetFeaturesInput, SpatialFilter } from "./schema.js";
+import type { GpfGetFeaturesInput, SpatialFilter } from "./schema.js";
 import { bboxClip } from "@turf/bbox-clip";
 
 export type FeatureCollectionPostProcessInput = Omit<GpfGetFeaturesInput, "limit">;

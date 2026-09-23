@@ -15,7 +15,7 @@ import type {
 import { buildGetFeatureByIdRequest } from "./request.js";
 import { buildPropertyName } from "./properties.js";
 import { postProcessFeatureCollection } from "./response.js";
-import { GpfGetFeatureByIdInput } from "./schema.js";
+import type { GpfGetFeatureByIdInput } from "./schema.js";
 
 // --- Cardinality Errors ---
 

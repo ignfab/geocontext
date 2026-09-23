@@ -8,7 +8,7 @@
 
 import type { WfsFeatureCollectionResponse } from "./types.js";
 import { deriveFromGeometry, prepareSpatialContext, type FeatureCollectionPostProcessInput } from "./spatialExtras.js"
-import { Geometry } from "geojson";
+import type { Geometry } from "geojson";
 
 // --- Response Types ---
 

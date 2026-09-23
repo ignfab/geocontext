@@ -21,7 +21,7 @@ import { buildGetFeatureByIdRequest, type CompiledRequest } from "./request.js";
 import { requireSingleFeatureById } from "./byId.js";
 import type { WfsFeatureCollectionResponse } from "./types.js";
 import { isGeometryLike } from "../helpers/geojson.js";
-import { Geometry } from "geojson";
+import type { Geometry } from "geojson";
 
 /**
  * Minimal WFS client surface needed to resolve a reference feature's geometry:

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { geometryToEwkt } from "../../src/wfs/geometry";
-import { Geometry } from "geojson";
+import type { Geometry } from "geojson";
 import { isGeometryLike } from "../../src/helpers/geojson";
 import { dropEmptyRings } from "../../src/wfs/spatialExtras";
 
