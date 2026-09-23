@@ -217,6 +217,9 @@ export function compileQueryParts(
         }
         fragments.push(compileIntersectsFeatureSpatialFilter(geometryName, resolvedGeometryRef));
         break;
+      default: // Make a compile-time error if a filter is missing from the switch
+        const noFilter: never = spatialFilter;
+        throw new Error(`Unhandled filter case: ${noFilter}`);
     }
   } else if (spatialExtras.length > 0) {
     const faultyExtra = spatialExtras.filter(spatialExtraRequiresFilter);
