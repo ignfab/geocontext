@@ -1,12 +1,12 @@
 // --- Imports ---
 
-import {
+import type {
     OgcCollectionSchema,
     CollectionSearchMatch,
-    getCollectionCatalog,
     CollectionCatalogOptions,
     MiniSearchCollectionSearchOptions,
 } from '@ignfab/gpf-schema-store';
+import { getCollectionCatalog } from '@ignfab/gpf-schema-store';
 import { getEnv, MINISEARCH_INDEXED_OPTION_KEYS, miniSearchOptionsSchema } from '../config/env.js';
 
 export type GpfFeatureType = {
@@ -36,7 +36,7 @@ export type DetailedCollectionSearchMatch = CollectionSearchMatch & {
 
 export class FeatureTypeNotFoundError extends Error {
     constructor(name: string) {
-        super(`Le type '${name}' est introuvable`);
+        super(`Le type '${name}' n'existe pas. Utilise le tool gpf_search_types pour trouver les types existants et pertinents pour ta recherche.`);
         this.name = "FeatureTypeNotFoundError";
     }
 }

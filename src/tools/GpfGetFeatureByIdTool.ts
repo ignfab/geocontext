@@ -86,12 +86,7 @@ class GpfGetFeatureByIdTool extends BaseTool<GpfGetFeatureByIdInput> {
       input: validatedInput
     });
 
-    return executeGetFeatureById({
-      typename: validatedInput.typename,
-      feature_id: validatedInput.feature_id,
-      select: validatedInput.select,
-      spatial_extras: validatedInput.spatial_extras,
-    });
+    return executeGetFeatureById(validatedInput);
   }
 }
 
