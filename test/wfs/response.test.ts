@@ -419,6 +419,8 @@ describe("wfs_engine/response", () => {
       const features = getFeatures(result);
 
       expect(features[0]).not.toHaveProperty("feature_ref");
+      // check that an impossible-to compute spatial_extra is returned as null
+      expect(features[0].bbox).toStrictEqual(null);
     });
 
     it("should inject typename into feature_ref for multiple features", () => {
