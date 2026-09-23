@@ -28,8 +28,8 @@ describe("geometryToEwkt", () => {
   // --- Previously uncovered types ---
 
   it("should serialize a MultiLineString", () => {
-    const geometry: Geometry = {
-      type: "MultiLineString",
+    const geometry = {
+      type: "MultiLineString" as const,
       coordinates: [
         [[2.3, 48.8], [2.4, 48.9]],
         [[3.0, 49.0], [3.1, 49.1]],
@@ -42,8 +42,8 @@ describe("geometryToEwkt", () => {
   });
 
   it("should serialize a Polygon with a single ring", () => {
-    const geometry: Geometry = {
-      type: "Polygon",
+    const geometry = {
+      type: "Polygon" as const,
       coordinates: [
         [[2.0, 48.0], [2.2, 48.0], [2.2, 48.2], [2.0, 48.0]],
       ],
@@ -55,8 +55,8 @@ describe("geometryToEwkt", () => {
   });
 
   it("should serialize a Polygon with multiple rings (outer + hole)", () => {
-    const geometry: Geometry = {
-      type: "Polygon",
+    const geometry = {
+      type: "Polygon" as const,
       coordinates: [
         [[0, 0], [10, 0], [10, 10], [0, 10], [0, 0]],
         [[2, 2], [8, 2], [8, 8], [2, 8], [2, 2]],
@@ -69,8 +69,8 @@ describe("geometryToEwkt", () => {
   });
 
   it("should serialize a MultiPolygon with a single polygon", () => {
-    const geometry: Geometry = {
-      type: "MultiPolygon",
+    const geometry = {
+      type: "MultiPolygon" as const,
       coordinates: [
         [[[2, 48], [2.2, 48], [2.2, 48.2], [2, 48]]],
       ],
@@ -82,8 +82,8 @@ describe("geometryToEwkt", () => {
   });
 
   it("should serialize a MultiPolygon with multiple polygons", () => {
-    const geometry: Geometry = {
-      type: "MultiPolygon",
+    const geometry = {
+      type: "MultiPolygon" as const,
       coordinates: [
         [[[0, 0], [1, 0], [1, 1], [0, 0]]],
         [[[5, 5], [6, 5], [6, 6], [5, 5]]],
@@ -103,6 +103,11 @@ describe("geometryToEwkt", () => {
 });
 
 describe("isGeometryLike", () => {
+  it("should throw for a completely unknown type", () => {
+    expect(() =>
+      geometryToEwkt({ type: "CustomType", coordinates: null } as unknown as Geometry),
+    ).toThrow("Le type de géométrie 'CustomType' n'est pas supporté pour `intersects_feature`.");
+  });
   it("returns true for a Point geometry", () => {
     expect(isGeometryLike({ type: "Point", coordinates: [2.35, 48.85] })).toBe(true);
   });
@@ -154,14 +159,14 @@ describe("dropEmptyRings", () => {
   });
 
   it("should pass a fully-surviving Polygon through untouched", () => {
-    const polygon: Geometry = { type: "Polygon", coordinates: [ring] };
+    const polygon = { type: "Polygon" as const, coordinates: [ring] };
 
     expect(dropEmptyRings(polygon)).toEqual(polygon);
   });
 
   it("should preserve interior rings", () => {
     const hole = [[2.02, 48.02], [2.05, 48.02], [2.05, 48.05], [2.02, 48.05], [2.02, 48.02]];
-    const polygon: Geometry = { type: "Polygon", coordinates: [ring, hole] };
+    const polygon = { type: "Polygon" as const, coordinates: [ring, hole] };
 
     expect(dropEmptyRings(polygon)).toEqual(polygon);
   });
