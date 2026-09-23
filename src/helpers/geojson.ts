@@ -1,4 +1,4 @@
-import type { Geometry } from "geojson";
+import type { Geometry, GeometryCollection } from "geojson";
 
 /**
  * Narrow guard for the minimal GeoJSON geometry shape `geometryToEwkt` requires.
@@ -6,7 +6,7 @@ import type { Geometry } from "geojson";
  * @param value Unknown feature geometry value.
  * @returns `true` when the value looks like a GeoJSON geometry object.
  */
-export function isGeometryLike(value: unknown): value is Geometry {
+export function isGeometryLike(value: unknown): value is Exclude<Geometry, GeometryCollection> {
   return (
     typeof value === "object" &&
     value !== null &&
