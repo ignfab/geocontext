@@ -5,7 +5,7 @@
  * can be combined with attribute predicates in the final query.
  */
 
-import { Geometry } from "geojson";
+import type { Geometry } from "geojson";
 import type { SpatialFilter } from "./schema.js";
 import { geometryToEwkt } from "./geometry.js";
 

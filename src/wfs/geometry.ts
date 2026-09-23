@@ -5,7 +5,7 @@
  * in spatial CQL predicates such as `intersects_feature`.
  */
 
-import { Geometry } from "geojson";
+import type { Geometry } from "geojson";
 
 // --- Coordinate Serialization ---
 

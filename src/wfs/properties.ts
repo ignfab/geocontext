@@ -9,8 +9,8 @@
 
 import type { GpfFeatureType } from "./catalog.js";
 import type { OgcCollectionProperty } from "@ignfab/gpf-schema-store";
-import { Geometry } from "geojson";
-import { SpatialExtraOptions } from "./schema.js";
+import type { Geometry } from "geojson";
+import type { SpatialExtraOptions } from "./schema.js";
 
 // --- Geometry Resolution ---
 

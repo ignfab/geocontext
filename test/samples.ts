@@ -1,4 +1,4 @@
-import { LineString, Point } from "geojson";
+import type { LineString, Point } from "geojson";
 
 export const chamonix: Point = { "type": "Point", "coordinates": [6.869433, 45.923697] };
 export const paris: Point = { "type": "Point", "coordinates": [2.333333, 48.866667] };

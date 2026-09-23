@@ -38,7 +38,7 @@ import { rethrowIdentifiedCatalogDesyncError } from "../wfs/catalogDesync.js";
 import { ServiceResponseError, extractJsonServiceError } from "../helpers/http.js";
 import type { WfsFeatureCollectionResponse } from "../wfs/types.js";
 import type { GpfGetFeaturesInput, GpfGetFeatureByIdLayerInput } from "../wfs/schema.js";
-import { Geometry } from "geojson";
+import type { Geometry } from "geojson";
 
 // --- Injected Dependencies ---
 

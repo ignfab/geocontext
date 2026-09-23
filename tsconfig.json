@@ -33,7 +33,8 @@
         // Erreur sur les paramètres de fonctions déclarés mais jamais utilisés.
         "noUnusedParameters": true,
         // Garanties plus strictes.
-        "strict": true
+        "strict": true,
+        "verbatimModuleSyntax": true,
     },
     "include": [
         "./src/**/*"

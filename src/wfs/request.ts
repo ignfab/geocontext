@@ -7,7 +7,7 @@
  */
 
 import { GPF_WFS_URL } from "./catalog.js";
-import { CompiledQuery } from "./queryPreparation.js";
+import type { CompiledQuery } from "./queryPreparation.js";
 import { queryIsGetFeaturesInput, type GpfQueryFeaturesInput } from "./schema.js";
 
 // --- Transport Types ---
