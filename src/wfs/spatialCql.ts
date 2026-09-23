@@ -51,7 +51,7 @@ export function compileDwithinSpatialFilter(geometryName: string, spatialFilter:
 }
 
 /**
- * Compiles an `intersects_feature` spatial filter once the reference geometry is already serialized.
+ * Compiles an `intersects_feature` spatial filter from the resolved reference geometry.  
  *
  * @param geometryName Geometry property already resolved for the feature type.
  * @param geometry Reference geometry.
