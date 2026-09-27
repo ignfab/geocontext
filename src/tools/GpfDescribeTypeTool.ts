@@ -22,7 +22,7 @@ const gpfDescribeTypeInputSchema = z.object({
 
 // FIXME: when mcp-framework is removed, remove this patch which is only here
 // because mcp-framework does not accept z.record field types.
-const gpfDescribeTypeOutput = zOgcCollectionSchema
+const gpfDescribeTypeOutputSchema = zOgcCollectionSchema
   .omit({ properties: true })
   .extend({ properties: z.object({}).catchall(z.unknown()) });
 
@@ -44,7 +44,7 @@ class GpfDescribeTypeTool extends BaseTool<GpfDescribeTypeInput> {
   title = "Description d’un type GPF";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
   description = GPF_DESCRIBE_TYPE_TOOL_DESCRIPTION;
-  protected outputSchemaShape = gpfDescribeTypeOutput;
+  protected outputSchemaShape = gpfDescribeTypeOutputSchema;
 
   schema = gpfDescribeTypeInputSchema;
 
