@@ -127,10 +127,9 @@ class GpfGetFeatureByIdLayerTool extends BaseTool<GpfGetFeatureByIdLayerInput> {
     // The `feature_id` cannot be validated here — that is a network lookup resolved
     // at fetch time by the proxy (runGeometryFeatureByIdQuery).
     const featureType = await wfsClient.getFeatureType(tokenParams.typename);
-    buildPropertyNameWithGeometry(featureType, tokenParams.select);
-
     // Also check that the typename corresponds to a collection that has a geometry.
-    getGeometryName(featureType);
+    const geometryName = getGeometryName(featureType);
+    buildPropertyNameWithGeometry(featureType, tokenParams.select, geometryName);
 
     logger.info(`[tool] execute ${this.name} ...`, {
       input: tokenParams,

@@ -70,7 +70,7 @@ class GeocodeTool extends BaseTool<GeocodeInput> {
     logger.info(`[tool] execute ${this.name} ...`, {
       input: input
     });
-  
+
     return {
       results: await geocodeClient.geocode(input.text, input.maximumResponses),
     };
