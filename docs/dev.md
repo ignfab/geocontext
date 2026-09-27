@@ -12,9 +12,6 @@ nvm install
 nvm use
 ```
 
-</details>
-
-
 ## Installation
 
 ```bash
@@ -28,8 +25,8 @@ npm ci
 
 ## Construction
 
-!!!tip
-    La commande ci-après doit être relancé après chaque modification du code pour **reconstruction du `dist/`**
+> [!TIP]
+> La commande ci-après doit être relancée après chaque modification du code pour **reconstruction du `dist/`**.
 
 ```bash
 npm run build
@@ -56,27 +53,27 @@ Avec certains clients MCP, vous serez amené à éditer un fichier JSON. Par exe
 }
 ```
 
-!!!tip
-    - L'option `--use-env-proxy` est facultative. Voir la [configuration du proxy réseau](./config/corporate-proxy.md).
-    - Voir [configuration du serveur MCP](./config.md) pour les paramètres disponibles
+> [!TIP]
+> - L'option `--use-env-proxy` est facultative. Voir la [configuration du proxy réseau](./config/corporate-proxy.md).
+> - Voir [configuration du serveur MCP](./config.md) pour les paramètres disponibles
 
 
 ## Activer les tools cartographiques en local
 
-Les tools `gpf_get_features_layer` et `gpf_get_feature_by_id_layer` renvoient une `data_url` opaque, servie par le **proxy geodata**, un processus séparé du serveur MCP. Ils sont listés dans tous les transports mais échouent tant qu'aucun proxy joignable n'est configuré. Comme le proxy est **indépendant du transport**, on peut les activer en local — **même en `stdio`** — en lançant les deux composants côte à côte, sans Docker.
+Les tools `gpf_get_features_layer` et `gpf_get_feature_by_id_layer` renvoient une `data_url` opaque, servie par le **proxy geodata**, un processus séparé du serveur MCP. Ces tools sont listés dans tous les transports mais échouent tant qu'aucun proxy geodata joignable n'est configuré. Comme le proxy geodata est **indépendant du transport**, on peut les activer en local (**même en `stdio`**) en lançant les deux composants côte à côte, sans Docker.
 
-Il faut une clé partagée (`PROXY_URL_SECRET`) entre les deux processus, et pointer le MCP vers le proxy local via `PROXY_PUBLIC_BASE_URL`.
+Il faut une clé partagée (`PROXY_URL_SECRET`) entre les deux processus, et pointer le MCP vers le proxy geodata local via `PROXY_PUBLIC_BASE_URL`.
 
 ```bash
 # 1. Générer une clé, partagée par le MCP et le proxy (une seule fois)
 export PROXY_URL_SECRET=$(openssl rand -hex 32)
 
-# 2. Démarrer le proxy geodata (processus séparé) — écoute par défaut sur http://localhost:3002
+# 2. Démarrer le proxy geodata (processus séparé) qui écoute par défaut sur http://localhost:3002
 node --use-env-proxy dist/proxy/index.js
 ```
 
 ```bash
-# 3. Dans un autre terminal : le MCP en stdio, pointé vers le proxy local
+# 3. Dans un autre terminal : le MCP en stdio, pointé vers le proxy geodata local
 export PROXY_URL_SECRET=<la même clé qu'à l'étape 1>
 export PROXY_PUBLIC_BASE_URL=http://localhost:3002
 node --use-env-proxy dist/index.js
@@ -101,8 +98,8 @@ Pour un client MCP configuré par fichier JSON, ajoutez les variables dans le bl
 }
 ```
 
-!!!tip
-    Sans ces deux variables, les tools `*_layer` échouent avec un message explicite. Utiliser alors `gpf_get_features` / `gpf_get_feature_by_id` (attributs, sans géométrie).
+> [!TIP]
+>  Sans ces deux variables, les tools `*_layer` échouent avec un message explicite. Utiliser alors `gpf_get_features` / `gpf_get_feature_by_id` (attributs, sans géométrie).
 
 ## Déboguer avec MCP Inspector
 
@@ -225,19 +222,18 @@ npm run test:e2e
 
 ### Mettre à jour des dépendances
 
-!!!warning
-    **zod doit rester en version 3**
+> [!WARNING]
+> **zod doit rester en version 3**
 
 L'utilisation de [npm-check-updates](https://www.npmjs.com/package/npm-check-updates?activeTab=readme) est recommandée pour gérer les montées de version :
 
 ```bash
-# étudier les nouvelles versions disponible
+# étudier les nouvelles versions disponibles
 npx -y npm-check-updates
 
-# mettre à jour les versions mineurs
+# mettre à jour les versions mineures
 npx -y npm-check-updates -t minor -u
 ```
-
 
 ### Générer la documentation des tools MCP
 
@@ -246,4 +242,3 @@ Pour mettre à jour `docs/mcp-tools.md` à partir des métadonnées des tools :
 ```bash
 npm run docs:mcp
 ```
-

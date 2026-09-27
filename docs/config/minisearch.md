@@ -4,7 +4,7 @@
 
 La recherche des tables disponibles ( `gpf_search_types` ) s'appuie sur le moteur de recherche MiniSearch qui est intégré au dépôt [ignfab/gpf-schema-store](https://github.com/ignfab/gpf-schema-store#readme).
 
-**Cette documentation est à destination des développeurs** souhaitant tester des modifications sur les poids.
+**Cette documentation est à destination des développeurs** souhaitant tester des modifications sur les pondérations appliquées par MiniSearch.
 
 ## Configuration de la recherche
 
@@ -37,4 +37,3 @@ Exemple plus complet :
 ```bash
 export GPF_WFS_MINISEARCH_OPTIONS='{"fields":["title","identifierTokens","propertyNames","oneOfConsts"],"combineWith":"OR","fuzzy":0.05,"boost":{"title":4,"name":5,"identifierTokens":3,"oneOfConsts":1.5}}'
 ```
-
