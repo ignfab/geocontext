@@ -37,17 +37,19 @@ type AssietteSupInput = z.infer<typeof assietteSupInputSchema>;
 
 // --- Tool ---
 
+const ASSIETTE_SUP_TOOL_DESCRIPTION = [
+  "Renvoie, pour un point donné par sa longitude et sa latitude, la liste des assiettes de servitudes d'utilité publique (SUP) pertinentes à proximité, avec leurs propriétés associées.",
+  "Une SUP est une contrainte légale sur l'usage du sol liée à un équipement ou une infrastructure publique (ex : AC pour patrimoine, EL pour voirie, PT pour télécoms, I pour installations classées...).",
+  "Les résultats peuvent inclure des assiettes ponctuelles, linéaires ou surfaciques et exposent un `feature_ref` GPF réutilisable quand il est disponible.",
+  "Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gpf_get_feature_by_id`.",
+  `(source : ${URBANISME_SOURCE}).`
+].join("\n");
+
 class AssietteSupTool extends BaseTool<AssietteSupInput> {
   name = "assiette_sup";
   title = "Servitudes d’utilité publique";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
-  description = [
-    "Renvoie, pour un point donné par sa longitude et sa latitude, la liste des assiettes de servitudes d'utilité publique (SUP) pertinentes à proximité, avec leurs propriétés associées.",
-    "Une SUP est une contrainte légale sur l'usage du sol liée à un équipement ou une infrastructure publique (ex : AC pour patrimoine, EL pour voirie, PT pour télécoms, I pour installations classées...).",
-    "Les résultats peuvent inclure des assiettes ponctuelles, linéaires ou surfaciques et exposent un `feature_ref` GPF réutilisable quand il est disponible.",
-    "Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gpf_get_feature_by_id`.",
-    `(source : ${URBANISME_SOURCE}).`
-  ].join("\n");
+  description = ASSIETTE_SUP_TOOL_DESCRIPTION;
   protected outputSchemaShape = assietteSupOutputSchema;
 
   schema = assietteSupInputSchema;

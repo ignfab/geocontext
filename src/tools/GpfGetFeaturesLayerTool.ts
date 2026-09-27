@@ -39,16 +39,18 @@ import logger from "../logger.js";
 
 // --- Tool ---
 
+const GPF_GET_FEATURES_LAYER_TOOL_DESCRIPTION = [
+  "Interroge un type GPF et renvoie une **URL de couche cartographiable** (`data_url`) : une URL opaque, à passer telle quelle à un outil d'affichage cartographique (MCP Carto, ...). L'ouvrir renvoie une FeatureCollection GeoJSON avec les géométries complètes.",
+  "À utiliser dès qu'il faut **afficher / cartographier** des objets GPF. Pour des attributs sans géométrie, utiliser `gpf_get_features`.",
+  `Mêmes filtres que \`gpf_get_features\` : \`select\` pour choisir les propriétés, \`where\` pour filtrer, \`order_by\` pour trier et un filtre spatial dédié (${GPF_SPATIAL_FILTER_DOCNAMES}) pour le spatial.`,
+  "**OBLIGATOIRE : toujours appeler `gpf_describe_type` avant ce tool, sauf si `gpf_describe_type` a déjà été appelé pour ce même typename dans la conversation en cours.** Les noms de propriétés ne peuvent pas être devinés."
+].join("\n");
+
 class GpfGetFeaturesLayerTool extends BaseTool<GpfGetFeaturesLayerInput> {
   name = "gpf_get_features_layer";
   title = "Couche cartographiable d’objets GPF";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
-  description = [
-    "Interroge un type GPF et renvoie une **URL de couche cartographiable** (`data_url`) : une URL opaque, à passer telle quelle à un outil d'affichage cartographique (MCP Carto, ...). L'ouvrir renvoie une FeatureCollection GeoJSON avec les géométries complètes.",
-    "À utiliser dès qu'il faut **afficher / cartographier** des objets GPF. Pour des attributs sans géométrie, utiliser `gpf_get_features`.",
-    `Mêmes filtres que \`gpf_get_features\` : \`select\` pour choisir les propriétés, \`where\` pour filtrer, \`order_by\` pour trier et un filtre spatial dédié (${GPF_SPATIAL_FILTER_DOCNAMES}) pour le spatial.`,
-    "**OBLIGATOIRE : toujours appeler `gpf_describe_type` avant ce tool, sauf si `gpf_describe_type` a déjà été appelé pour ce même typename dans la conversation en cours.** Les noms de propriétés ne peuvent pas être devinés."
-  ].join("\n");
+  description = GPF_GET_FEATURES_LAYER_TOOL_DESCRIPTION;
   protected outputSchemaShape = gpfGetFeaturesLayerOutputSchema;
 
   // The framework requires a plain Zod object here to publish a compatible

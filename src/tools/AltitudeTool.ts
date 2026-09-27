@@ -30,11 +30,13 @@ type AltitudeInput = z.infer<typeof altitudeInputSchema>;
 
 // --- Tool ---
 
+const ALTITUDE_TOOL_DESCRIPTION = `Renvoie l'altitude (en mètres) et la précision de la mesure (accuracy) d'un point géographique à partir de sa longitude et de sa latitude. (source : ${ALTITUDE_SOURCE}).`;
+
 class AltitudeTool extends BaseTool<AltitudeInput> {
   name = "altitude";
   title = "Altitude d'une position";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
-  description = `Renvoie l'altitude (en mètres) et la précision de la mesure (accuracy) d'un point géographique à partir de sa longitude et de sa latitude. (source : ${ALTITUDE_SOURCE}).`;
+  description = ALTITUDE_TOOL_DESCRIPTION;
   protected outputSchemaShape = altitudeResultSchema;
 
   schema = altitudeInputSchema;

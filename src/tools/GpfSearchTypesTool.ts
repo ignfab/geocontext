@@ -62,17 +62,19 @@ type GpfSearchTypesInput = z.infer<typeof gpfSearchTypesInputSchema>;
 
 // --- Tool ---
 
+const GPF_SEARCH_TYPES_TOOL_DESCRIPTION = [
+  "Recherche des types de la Géoplateforme (GPF) à partir de mots-clés afin de trouver un identifiant de type (`typename`) valide.",
+  "La recherche est textuelle (mini-search) et retourne une liste ordonnée de candidats, avec, pour chacun, son identifiant, son titre, sa description, un score de pertinence éventuel ainsi que son lien avec les mots-clés de la requête.",
+  "Le paramètre `max_results` permet d'élargir le nombre de candidats retournés (10 par défaut).",
+  "**Important** : Utiliser ce tool avant `gpf_describe_type` ou `gpf_get_features` lorsque le nom exact du type n'est pas connu.",
+  "**Important** : Privilégier des termes métier en français pour la recherche."
+].join("\n");
+
 class GpfSearchTypesTool extends BaseTool<GpfSearchTypesInput> {
   name = "gpf_search_types";
   title = "Recherche de types GPF";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
-  description = [
-    "Recherche des types de la Géoplateforme (GPF) à partir de mots-clés afin de trouver un identifiant de type (`typename`) valide.",
-    "La recherche est textuelle (mini-search) et retourne une liste ordonnée de candidats, avec, pour chacun, son identifiant, son titre, sa description, un score de pertinence éventuel ainsi que son lien avec les mots-clés de la requête.",
-    "Le paramètre `max_results` permet d'élargir le nombre de candidats retournés (10 par défaut).",
-    "**Important** : Utiliser ce tool avant `gpf_describe_type` ou `gpf_get_features` lorsque le nom exact du type n'est pas connu.",
-    "**Important** : Privilégier des termes métier en français pour la recherche."
-  ].join("\n");
+  description = GPF_SEARCH_TYPES_TOOL_DESCRIPTION;
   protected outputSchemaShape = gpfSearchTypesOutputSchema;
 
   schema = gpfSearchTypesInputSchema;
