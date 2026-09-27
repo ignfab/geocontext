@@ -1,3 +1,10 @@
+/**
+ * MCP tool exposing structured WFS feature search.
+ *
+ * The tool remains responsible for MCP schema exposure and response formatting.
+ * WFS request preparation and execution live in the structured WFS engine.
+ */
+
 import BaseTool from "./BaseTool.js";
 
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
@@ -12,13 +19,6 @@ import {
   GPF_SPATIAL_FILTER_DOCNAMES,
 } from "../wfs/schema.js";
 import logger from "../logger.js";
-
-/**
- * MCP tool exposing structured WFS feature search.
- *
- * The tool remains responsible for MCP schema exposure and response formatting.
- * WFS request preparation and execution live in the structured WFS engine.
- */
 
 // --- Tool ---
 

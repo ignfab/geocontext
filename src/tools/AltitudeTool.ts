@@ -17,7 +17,7 @@ const altitudeInputSchema = z.object({
   lat: latSchema,
 }).strict();
 
-const altitudeResultSchema = z.object({
+const altitudeOutputSchema = z.object({
   lon: z.number().describe("La longitude du point."),
   lat: z.number().describe("La latitude du point."),
   altitude: z.number().describe("L'altitude du point."),
@@ -37,7 +37,7 @@ class AltitudeTool extends BaseTool<AltitudeInput> {
   title = "Altitude d'une position";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
   description = ALTITUDE_TOOL_DESCRIPTION;
-  protected outputSchemaShape = altitudeResultSchema;
+  protected outputSchemaShape = altitudeOutputSchema;
 
   schema = altitudeInputSchema;
 

@@ -1,3 +1,10 @@
+/**
+ * MCP tool returning the number of GPF features matching a query.
+ *
+ * Counting counterpart of GpfGetFeaturesTool: same filters, but returns only
+ * the match count via the shared WFS execution path.
+ */
+
 import BaseTool from "./BaseTool.js";
 
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
@@ -13,13 +20,6 @@ import {
   GPF_SPATIAL_FILTER_DOCNAMES,
 } from "../wfs/schema.js";
 import logger from "../logger.js";
-
-/**
- * MCP tool returning the number of GPF features matching a query.
- *
- * Counting counterpart of GpfGetFeaturesTool: same filters, but returns only
- * the match count via the shared WFS execution path.
- */
 
 // --- Tool ---
 
@@ -84,8 +84,8 @@ class GpfCountFeaturesTool extends BaseTool<GpfCountFeaturesInput> {
   /**
    * Orchestrates the MCP-facing execution flow.
    *
-   * Request previews stay in the tool because they are a tool-specific output
-   * mode, while the WFS-side preparation and execution live in `features.ts`.
+   * WFS-side preparation and execution live in `features.ts`; the tool only
+   * validates the input and delegates.
    *
    * @param input Normalized tool input.
    * @returns A hit count.

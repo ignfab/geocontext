@@ -27,7 +27,7 @@ const gpfSearchTypesInputSchema = z.object({
     .describe("Le nombre maximum de résultats à retourner (entre 1 et 50). Défaut : 10."),
 }).strict();
 
-const gpfSearchTypeResultSchema = z.object({
+const gpfSearchTypesResultSchema = z.object({
   typename: z.string().describe("L'identifiant du type GPF."),
   title: z.string().describe("Le titre lisible du type GPF."),
   description: z.string().describe("La description du type GPF."),
@@ -53,7 +53,7 @@ const gpfSearchTypeResultSchema = z.object({
 });
 
 const gpfSearchTypesOutputSchema = z.object({
-  results: z.array(gpfSearchTypeResultSchema).describe("La liste ordonnée des types GPF trouvés."),
+  results: z.array(gpfSearchTypesResultSchema).describe("La liste ordonnée des types GPF trouvés."),
 });
 
 // --- Types ---
