@@ -10,16 +10,12 @@ import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotation
 import { featureRefSchema, lonSchema, latSchema } from "../helpers/schemas.js";
 import logger from "../logger.js";
 
-// --- Schema ---
+// --- Schemas ---
 
 const adminexpressInputSchema = z.object({
   lon: lonSchema,
   lat: latSchema,
 }).strict();
-
-// --- Types ---
-
-type AdminexpressInput = z.infer<typeof adminexpressInputSchema>;
 
 const adminexpressResultSchema = z
   .object({
@@ -33,6 +29,10 @@ const adminexpressResultSchema = z
 const adminexpressOutputSchema = z.object({
   results: z.array(adminexpressResultSchema).describe("La liste des unités administratives couvrant le point demandé."),
 });
+
+// --- Types ---
+
+type AdminexpressInput = z.infer<typeof adminexpressInputSchema>;
 
 // --- Tool ---
 

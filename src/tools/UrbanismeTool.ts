@@ -10,16 +10,12 @@ import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotation
 import { featureRefSchema, lonSchema, latSchema } from "../helpers/schemas.js";
 import logger from "../logger.js";
 
-// --- Schema ---
+// --- Schemas ---
 
 const urbanismeInputSchema = z.object({
   lon: lonSchema,
   lat: latSchema,
 }).strict();
-
-// --- Types ---
-
-type UrbanismeInput = z.infer<typeof urbanismeInputSchema>;
 
 const urbanismeResultSchema = z
   .object({
@@ -35,6 +31,12 @@ const urbanismeOutputSchema = z.object({
   results: z.array(urbanismeResultSchema).describe("La liste des objets d'urbanisme pertinents pour le point demandé."),
 });
 
+// --- Types ---
+
+type UrbanismeInput = z.infer<typeof urbanismeInputSchema>;
+
+// --- Tool ---
+
 const URBANISME_TOOL_DESCRIPTION = [
   `Renvoie, pour un point donné par sa \`longitude\` et sa \`latitude\`, la liste des objets d'urbanisme pertinents du Géoportail de l'Urbanisme (document, zones, prescriptions, informations, etc.), avec leurs propriétés associées. (source : ${URBANISME_SOURCE}).`,
   "Les résultats peuvent notamment inclure le document d'urbanisme applicable ainsi que des éléments réglementaires associés à proximité du point.",
@@ -46,8 +48,6 @@ const URBANISME_TOOL_DESCRIPTION = [
   "- carte: https://www.geoportail-urbanisme.gouv.fr/map/?documentId={gpu_doc_id}",
   "- fichier: https://www.geoportail-urbanisme.gouv.fr/api/document/{gpu_doc_id}/files/{nomfic}",
 ].join("\n");
-
-// --- Tool ---
 
 class UrbanismeTool extends BaseTool<UrbanismeInput> {
   name = "urbanisme";

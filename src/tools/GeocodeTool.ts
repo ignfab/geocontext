@@ -9,7 +9,7 @@ import { geocodeClient, GEOCODE_SOURCE } from "../gpf/geocode.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import logger from "../logger.js";
 
-// --- Schema ---
+// --- Schemas ---
 
 const geocodeInputSchema = z.object({
   text: z
@@ -26,10 +26,6 @@ const geocodeInputSchema = z.object({
     .describe("Le nombre maximum de résultats à retourner (entre 1 et 10). Défaut : 3."),
 }).strict();
 
-// --- Types ---
-
-type GeocodeInput = z.infer<typeof geocodeInputSchema>;
-
 const geocodeResultSchema = z.object({
   lon: z.number().describe("La longitude du résultat."),
   lat: z.number().describe("La latitude du résultat."),
@@ -42,6 +38,10 @@ const geocodeResultSchema = z.object({
 const geocodeOutputSchema = z.object({
   results: z.array(geocodeResultSchema).describe("La liste ordonnée des résultats géocodés."),
 });
+
+// --- Types ---
+
+type GeocodeInput = z.infer<typeof geocodeInputSchema>;
 
 // --- Tool ---
 

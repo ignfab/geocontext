@@ -10,7 +10,7 @@ import { wfsSchemaStore } from "../wfs/catalog.js";
 import type { DetailedCollectionSearchMatch } from "../wfs/catalog.js";
 import logger from "../logger.js";
 
-// --- Schema ---
+// --- Schemas ---
 
 const gpfSearchTypesInputSchema = z.object({
   query: z
@@ -26,10 +26,6 @@ const gpfSearchTypesInputSchema = z.object({
     .optional()
     .describe("Le nombre maximum de résultats à retourner (entre 1 et 50). Défaut : 10."),
 }).strict();
-
-// --- Types ---
-
-type GpfSearchTypesInput = z.infer<typeof gpfSearchTypesInputSchema>;
 
 const gpfSearchTypeResultSchema = z.object({
   typename: z.string().describe("L'identifiant du type GPF."),
@@ -59,6 +55,10 @@ const gpfSearchTypeResultSchema = z.object({
 const gpfSearchTypesOutputSchema = z.object({
   results: z.array(gpfSearchTypeResultSchema).describe("La liste ordonnée des types GPF trouvés."),
 });
+
+// --- Types ---
+
+type GpfSearchTypesInput = z.infer<typeof gpfSearchTypesInputSchema>;
 
 // --- Tool ---
 

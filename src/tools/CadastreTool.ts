@@ -10,16 +10,12 @@ import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotation
 import { featureRefSchema, lonSchema, latSchema } from "../helpers/schemas.js";
 import logger from "../logger.js";
 
-// --- Schema ---
+// --- Schemas ---
 
 const cadastreInputSchema = z.object({
   lon: lonSchema,
   lat: latSchema,
 }).strict();
-
-// --- Types ---
-
-type CadastreInput = z.infer<typeof cadastreInputSchema>;
 
 const cadastreResultSchema = z
   .object({
@@ -35,6 +31,10 @@ const cadastreResultSchema = z
 const cadastreOutputSchema = z.object({
   results: z.array(cadastreResultSchema).describe("La liste des objets cadastraux les plus proches du point demandé."),
 });
+
+// --- Types ---
+
+type CadastreInput = z.infer<typeof cadastreInputSchema>;
 
 // --- Tool ---
 

@@ -10,7 +10,7 @@ import { wfsSchemaStore } from "../wfs/catalog.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import logger from "../logger.js";
 
-// --- Schema ---
+// --- Schemas ---
 
 const gpfDescribeTypeInputSchema = z.object({
   typename: z
@@ -25,7 +25,6 @@ const gpfDescribeTypeInputSchema = z.object({
 const gpfDescribeTypeOutput = zOgcCollectionSchema
   .omit({ properties: true })
   .extend({ properties: z.object({}).catchall(z.unknown()) });
-
 
 // --- Types ---
 

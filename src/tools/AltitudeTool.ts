@@ -10,16 +10,12 @@ import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotation
 import { lonSchema, latSchema } from "../helpers/schemas.js";
 import logger from "../logger.js";
 
-// --- Schema ---
+// --- Schemas ---
 
 const altitudeInputSchema = z.object({
   lon: lonSchema,
   lat: latSchema,
 }).strict();
-
-// --- Types ---
-
-type AltitudeInput = z.infer<typeof altitudeInputSchema>;
 
 const altitudeResultSchema = z.object({
   lon: z.number().describe("La longitude du point."),
@@ -27,6 +23,10 @@ const altitudeResultSchema = z.object({
   altitude: z.number().describe("L'altitude du point."),
   accuracy: z.string().describe("L'information de précision associée à l'altitude."),
 });
+
+// --- Types ---
+
+type AltitudeInput = z.infer<typeof altitudeInputSchema>;
 
 // --- Tool ---
 

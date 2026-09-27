@@ -10,16 +10,12 @@ import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotation
 import { featureRefSchema, lonSchema, latSchema } from "../helpers/schemas.js";
 import logger from "../logger.js";
 
-// --- Schema ---
+// --- Schemas ---
 
 const assietteSupInputSchema = z.object({
   lon: lonSchema,
   lat: latSchema,
 }).strict();
-
-// --- Types ---
-
-type AssietteSupInput = z.infer<typeof assietteSupInputSchema>;
 
 const assietteSupResultSchema = z
   .object({
@@ -34,6 +30,10 @@ const assietteSupResultSchema = z
 const assietteSupOutputSchema = z.object({
   results: z.array(assietteSupResultSchema).describe("La liste des assiettes de servitudes d'utilité publique pertinentes pour le point demandé."),
 });
+
+// --- Types ---
+
+type AssietteSupInput = z.infer<typeof assietteSupInputSchema>;
 
 // --- Tool ---
 
