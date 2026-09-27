@@ -10,7 +10,7 @@ import { wfsSchemaStore } from "../wfs/catalog.js";
 import type { DetailedCollectionSearchMatch } from "../wfs/catalog.js";
 import logger from "../logger.js";
 
-// --- Schema ---
+// --- Schemas ---
 
 const gpfSearchTypesInputSchema = z.object({
   query: z
@@ -27,11 +27,7 @@ const gpfSearchTypesInputSchema = z.object({
     .describe("Le nombre maximum de résultats à retourner (entre 1 et 50). Défaut : 10."),
 }).strict();
 
-// --- Types ---
-
-type GpfSearchTypesInput = z.infer<typeof gpfSearchTypesInputSchema>;
-
-const gpfSearchTypeResultSchema = z.object({
+const gpfSearchTypesResultSchema = z.object({
   typename: z.string().describe("L'identifiant du type GPF."),
   title: z.string().describe("Le titre lisible du type GPF."),
   description: z.string().describe("La description du type GPF."),
@@ -57,22 +53,28 @@ const gpfSearchTypeResultSchema = z.object({
 });
 
 const gpfSearchTypesOutputSchema = z.object({
-  results: z.array(gpfSearchTypeResultSchema).describe("La liste ordonnée des types GPF trouvés."),
+  results: z.array(gpfSearchTypesResultSchema).describe("La liste ordonnée des types GPF trouvés."),
 });
 
+// --- Types ---
+
+type GpfSearchTypesInput = z.infer<typeof gpfSearchTypesInputSchema>;
+
 // --- Tool ---
+
+const GPF_SEARCH_TYPES_TOOL_DESCRIPTION = [
+  "Recherche des types de la Géoplateforme (GPF) à partir de mots-clés afin de trouver un identifiant de type (`typename`) valide.",
+  "La recherche est textuelle (mini-search) et retourne une liste ordonnée de candidats, avec, pour chacun, son identifiant, son titre, sa description, un score de pertinence éventuel ainsi que son lien avec les mots-clés de la requête.",
+  "Le paramètre `max_results` permet d'élargir le nombre de candidats retournés (10 par défaut).",
+  "**Important** : Utiliser ce tool avant `gpf_describe_type` ou `gpf_get_features` lorsque le nom exact du type n'est pas connu.",
+  "**Important** : Privilégier des termes métier en français pour la recherche."
+].join("\n");
 
 class GpfSearchTypesTool extends BaseTool<GpfSearchTypesInput> {
   name = "gpf_search_types";
   title = "Recherche de types GPF";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
-  description = [
-    "Recherche des types de la Géoplateforme (GPF) à partir de mots-clés afin de trouver un identifiant de type (`typename`) valide.",
-    "La recherche est textuelle (mini-search) et retourne une liste ordonnée de candidats, avec, pour chacun, son identifiant, son titre, sa description, un score de pertinence éventuel ainsi que son lien avec les mots-clés de la requête.",
-    "Le paramètre `max_results` permet d'élargir le nombre de candidats retournés (10 par défaut).",
-    "**Important** : Utiliser ce tool avant `gpf_describe_type` ou `gpf_get_features` lorsque le nom exact du type n'est pas connu.",
-    "**Important** : Privilégier des termes métier en français pour la recherche."
-  ].join("\n");
+  description = GPF_SEARCH_TYPES_TOOL_DESCRIPTION;
   protected outputSchemaShape = gpfSearchTypesOutputSchema;
 
   schema = gpfSearchTypesInputSchema;

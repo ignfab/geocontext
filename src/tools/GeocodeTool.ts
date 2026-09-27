@@ -9,7 +9,7 @@ import { geocodeClient, GEOCODE_SOURCE } from "../gpf/geocode.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import logger from "../logger.js";
 
-// --- Schema ---
+// --- Schemas ---
 
 const geocodeInputSchema = z.object({
   text: z
@@ -26,10 +26,6 @@ const geocodeInputSchema = z.object({
     .describe("Le nombre maximum de résultats à retourner (entre 1 et 10). Défaut : 3."),
 }).strict();
 
-// --- Types ---
-
-type GeocodeInput = z.infer<typeof geocodeInputSchema>;
-
 const geocodeResultSchema = z.object({
   lon: z.number().describe("La longitude du résultat."),
   lat: z.number().describe("La latitude du résultat."),
@@ -43,17 +39,23 @@ const geocodeOutputSchema = z.object({
   results: z.array(geocodeResultSchema).describe("La liste ordonnée des résultats géocodés."),
 });
 
+// --- Types ---
+
+type GeocodeInput = z.infer<typeof geocodeInputSchema>;
+
 // --- Tool ---
+
+const GEOCODE_TOOL_DESCRIPTION = [
+  "Renvoie des résultats d'autocomplétion géocodés à partir d'un texte libre (lieu, adresse, POI), avec coordonnées, libellé complet et informations de localisation (`kind`, `city`, `zipcode`).",
+  "Les coordonnées `lon/lat` retournées sont directement réutilisables dans tous les autres tools. Le champ `kind` indique le type de résultat (ex : `monument`, `street`, `city`, `locality`).",
+  `(source : ${GEOCODE_SOURCE}).`
+].join("\n");
 
 class GeocodeTool extends BaseTool<GeocodeInput> {
   name = "geocode";
   title = "Géocodage de lieux et d’adresses";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
-  description = [
-    "Renvoie des résultats d'autocomplétion géocodés à partir d'un texte libre (lieu, adresse, POI), avec coordonnées, libellé complet et informations de localisation (`kind`, `city`, `zipcode`).",
-    "Les coordonnées `lon/lat` retournées sont directement réutilisables dans tous les autres tools. Le champ `kind` indique le type de résultat (ex : `monument`, `street`, `city`, `locality`).",
-    `(source : ${GEOCODE_SOURCE}).`
-  ].join("\n");
+  description = GEOCODE_TOOL_DESCRIPTION;
   protected outputSchemaShape = geocodeOutputSchema;
 
   schema = geocodeInputSchema;

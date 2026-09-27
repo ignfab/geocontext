@@ -10,32 +10,34 @@ import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotation
 import { lonSchema, latSchema } from "../helpers/schemas.js";
 import logger from "../logger.js";
 
-// --- Schema ---
+// --- Schemas ---
 
 const altitudeInputSchema = z.object({
   lon: lonSchema,
   lat: latSchema,
 }).strict();
 
-// --- Types ---
-
-type AltitudeInput = z.infer<typeof altitudeInputSchema>;
-
-const altitudeResultSchema = z.object({
+const altitudeOutputSchema = z.object({
   lon: z.number().describe("La longitude du point."),
   lat: z.number().describe("La latitude du point."),
   altitude: z.number().describe("L'altitude du point."),
   accuracy: z.string().describe("L'information de précision associée à l'altitude."),
 });
 
+// --- Types ---
+
+type AltitudeInput = z.infer<typeof altitudeInputSchema>;
+
 // --- Tool ---
+
+const ALTITUDE_TOOL_DESCRIPTION = `Renvoie l'altitude (en mètres) et la précision de la mesure (accuracy) d'un point géographique à partir de sa longitude et de sa latitude. (source : ${ALTITUDE_SOURCE}).`;
 
 class AltitudeTool extends BaseTool<AltitudeInput> {
   name = "altitude";
   title = "Altitude d'une position";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
-  description = `Renvoie l'altitude (en mètres) et la précision de la mesure (accuracy) d'un point géographique à partir de sa longitude et de sa latitude. (source : ${ALTITUDE_SOURCE}).`;
-  protected outputSchemaShape = altitudeResultSchema;
+  description = ALTITUDE_TOOL_DESCRIPTION;
+  protected outputSchemaShape = altitudeOutputSchema;
 
   schema = altitudeInputSchema;
 

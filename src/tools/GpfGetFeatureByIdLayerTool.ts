@@ -44,17 +44,19 @@ import logger from "../logger.js";
 
 // --- Tool ---
 
+const GPF_GET_FEATURE_BY_ID_LAYER_TOOL_DESCRIPTION = [
+  "Renvoie une **URL de couche cartographiable** (`data_url`) pour exactement un objet GPF, identifié par `typename` et `feature_id` : une URL opaque, à passer telle quelle à un outil d'affichage cartographique (MCP Carto, ...). L'ouvrir renvoie une FeatureCollection GeoJSON contenant le seul objet demandé, avec sa géométrie complète.",
+  "C'est le pendant cartographique de `gpf_get_feature_by_id` : utiliser ce tool dès qu'il faut **afficher / cartographier** un objet précis dont on connaît déjà la `feature_ref { typename, feature_id }` (issue d'un autre tool : `adminexpress`, `cadastre`, `urbanisme`, `assiette_sup`, `gpf_get_features`). Pour récupérer ses attributs sans géométrie, utiliser `gpf_get_feature_by_id`.",
+  "Utiliser `select` pour limiter les propriétés attributaires retournées.",
+  "Aucun filtre attributaire ni spatial n'est accepté : ce tool cible un objet unique par son identifiant, utiliser `gpf_get_features_layer` pour cibler des objets par filtrage.",
+  "Cet outil ne peut renvoyer qu'un unique objet (0 ou plusieurs résultats provoquent une erreur explicite).",
+].join("\n");
+
 class GpfGetFeatureByIdLayerTool extends BaseTool<GpfGetFeatureByIdLayerInput> {
   name = "gpf_get_feature_by_id_layer";
   title = "Couche cartographiable d’un objet GPF par identifiant";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
-  description = [
-    "Renvoie une **URL de couche cartographiable** (`data_url`) pour exactement un objet GPF, identifié par `typename` et `feature_id` : une URL opaque, à passer telle quelle à un outil d'affichage cartographique (MCP Carto, ...). L'ouvrir renvoie une FeatureCollection GeoJSON contenant le seul objet demandé, avec sa géométrie complète.",
-    "C'est le pendant cartographique de `gpf_get_feature_by_id` : utiliser ce tool dès qu'il faut **afficher / cartographier** un objet précis dont on connaît déjà la `feature_ref { typename, feature_id }` (issue d'un autre tool : `adminexpress`, `cadastre`, `urbanisme`, `assiette_sup`, `gpf_get_features`). Pour récupérer ses attributs sans géométrie, utiliser `gpf_get_feature_by_id`.",
-    "Utiliser `select` pour limiter les propriétés attributaires retournées.",
-    "Aucun filtre attributaire ni spatial n'est accepté : ce tool cible un objet unique par son identifiant, utiliser `gpf_get_features_layer` pour cibler des objets par filtrage.",
-    "Cet outil ne peut renvoyer qu'un unique objet (0 ou plusieurs résultats provoquent une erreur explicite).",
-  ].join("\n");
+  description = GPF_GET_FEATURE_BY_ID_LAYER_TOOL_DESCRIPTION;
   protected outputSchemaShape = gpfGetFeaturesLayerOutputSchema;
 
   // The framework requires a plain Zod object here to publish a compatible input

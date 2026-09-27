@@ -19,16 +19,18 @@ import logger from "../logger.js";
 
 // --- Tool ---
 
+const GPF_GET_FEATURE_BY_ID_TOOL_DESCRIPTION = [
+  "Récupère exactement un objet GPF à partir de `typename` et `feature_id`, sans filtre attributaire ni spatial.",
+  "Ce tool est le chemin robuste quand vous disposez déjà d'une `feature_ref { typename, feature_id }` issue d'un autre tool (`adminexpress`, `cadastre`, `urbanisme`, `assiette_sup`, `gpf_get_features`).",
+  "Le contrat garantit une cardinalité stricte : 0 résultat ou plusieurs résultats provoquent une erreur explicite.",
+  "Utiliser `spatial_extras` pour renvoyer une information géométrique dérivée (bbox, centroïde, ...) de l'objet."
+].join("\n");
+
 class GpfGetFeatureByIdTool extends BaseTool<GpfGetFeatureByIdInput> {
   name = "gpf_get_feature_by_id";
   title = "Lecture d’un objet GPF par identifiant";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
-  description = [
-    "Récupère exactement un objet GPF à partir de `typename` et `feature_id`, sans filtre attributaire ni spatial.",
-    "Ce tool est le chemin robuste quand vous disposez déjà d'une `feature_ref { typename, feature_id }` issue d'un autre tool (`adminexpress`, `cadastre`, `urbanisme`, `assiette_sup`, `gpf_get_features`).",
-    "Le contrat garantit une cardinalité stricte : 0 résultat ou plusieurs résultats provoquent une erreur explicite.",
-    "Utiliser `spatial_extras` pour renvoyer une information géométrique dérivée (bbox, centroïde, ...) de l'objet."
-  ].join("\n");
+  description = GPF_GET_FEATURE_BY_ID_TOOL_DESCRIPTION;
 
   // `schema` remains the runtime validation source, while `inputSchema`
   // publishes the MCP-facing variant expected by clients.

@@ -10,16 +10,12 @@ import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotation
 import { featureRefSchema, lonSchema, latSchema } from "../helpers/schemas.js";
 import logger from "../logger.js";
 
-// --- Schema ---
+// --- Schemas ---
 
 const adminexpressInputSchema = z.object({
   lon: lonSchema,
   lat: latSchema,
 }).strict();
-
-// --- Types ---
-
-type AdminexpressInput = z.infer<typeof adminexpressInputSchema>;
 
 const adminexpressResultSchema = z
   .object({
@@ -34,19 +30,25 @@ const adminexpressOutputSchema = z.object({
   results: z.array(adminexpressResultSchema).describe("La liste des unités administratives couvrant le point demandé."),
 });
 
+// --- Types ---
+
+type AdminexpressInput = z.infer<typeof adminexpressInputSchema>;
+
 // --- Tool ---
+
+const ADMINEXPRESS_TOOL_DESCRIPTION = [
+  `Renvoie, pour un point donné par sa \`longitude\` et sa \`latitude\`, la liste des unités administratives (${ADMINEXPRESS_TYPES.join(", ")}) qui le couvrent, sous forme d'objets typés contenant leurs propriétés administratives.`,
+  "Les résultats incluent un `feature_ref` GPF réutilisable. Les propriétés incluent notamment le code INSEE.",
+  "Le `feature_ref` de chaque unité administrative est directement réutilisable dans `gpf_get_features` avec `intersects_feature_filter` pour interroger d'autres données sur cette emprise.",
+  "Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gpf_get_feature_by_id`.",
+  `(source : ${ADMINEXPRESS_SOURCE}).`
+].join("\n");
 
 class AdminexpressTool extends BaseTool<AdminexpressInput> {
   name = "adminexpress";
   title = "Unités administratives";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
-  description = [
-    `Renvoie, pour un point donné par sa \`longitude\` et sa \`latitude\`, la liste des unités administratives (${ADMINEXPRESS_TYPES.join(", ")}) qui le couvrent, sous forme d'objets typés contenant leurs propriétés administratives.`,
-    "Les résultats incluent un `feature_ref` GPF réutilisable. Les propriétés incluent notamment le code INSEE.",
-    "Le `feature_ref` de chaque unité administrative est directement réutilisable dans `gpf_get_features` avec `intersects_feature_filter` pour interroger d'autres données sur cette emprise.",
-    "Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gpf_get_feature_by_id`.",
-    `(source : ${ADMINEXPRESS_SOURCE}).`
-  ].join("\n");
+  description = ADMINEXPRESS_TOOL_DESCRIPTION;
   protected outputSchemaShape = adminexpressOutputSchema;
 
   schema = adminexpressInputSchema;

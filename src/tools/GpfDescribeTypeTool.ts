@@ -10,7 +10,7 @@ import { wfsSchemaStore } from "../wfs/catalog.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import logger from "../logger.js";
 
-// --- Schema ---
+// --- Schemas ---
 
 const gpfDescribeTypeInputSchema = z.object({
   typename: z
@@ -22,10 +22,9 @@ const gpfDescribeTypeInputSchema = z.object({
 
 // FIXME: when mcp-framework is removed, remove this patch which is only here
 // because mcp-framework does not accept z.record field types.
-const gpfDescribeTypeOutput = zOgcCollectionSchema
+const gpfDescribeTypeOutputSchema = zOgcCollectionSchema
   .omit({ properties: true })
   .extend({ properties: z.object({}).catchall(z.unknown()) });
-
 
 // --- Types ---
 
@@ -33,17 +32,19 @@ type GpfDescribeTypeInput = z.infer<typeof gpfDescribeTypeInputSchema>;
 
 // --- Tool ---
 
+const GPF_DESCRIBE_TYPE_TOOL_DESCRIPTION = [
+  "Renvoie le schéma détaillé d'un type GPF à partir de son identifiant (`typename`).",
+  "Ce schéma contient notamment la description du type et un champ `properties` qui détaille, pour chaque propriété, son type, sa description et la liste des ses valeurs possibles (`oneOf`) lorsqu'elle est fixée.",
+  "Utiliser ce tool après `gpf_search_types` pour inspecter les propriétés disponibles avant d'appeler `gpf_get_features`.",
+  "**IMPORTANT : Appel fortement recommandé si les noms exacts des propriétés ne sont pas connus : un nom de propriété incorrect provoque une erreur**."
+].join("\n");
+
 class GpfDescribeTypeTool extends BaseTool<GpfDescribeTypeInput> {
   name = "gpf_describe_type";
   title = "Description d’un type GPF";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
-  description = [
-    "Renvoie le schéma détaillé d'un type GPF à partir de son identifiant (`typename`).",
-    "Ce schéma contient notamment la description du type et un champ `properties` qui détaille, pour chaque propriété, son type, sa description et la liste des ses valeurs possibles (`oneOf`) lorsqu'elle est fixée.",
-    "Utiliser ce tool après `gpf_search_types` pour inspecter les propriétés disponibles avant d'appeler `gpf_get_features`.",
-    "**IMPORTANT : Appel fortement recommandé si les noms exacts des propriétés ne sont pas connus : un nom de propriété incorrect provoque une erreur**."
-  ].join("\n");
-  protected outputSchemaShape = gpfDescribeTypeOutput;
+  description = GPF_DESCRIBE_TYPE_TOOL_DESCRIPTION;
+  protected outputSchemaShape = gpfDescribeTypeOutputSchema;
 
   schema = gpfDescribeTypeInputSchema;
 
