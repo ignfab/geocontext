@@ -21,7 +21,7 @@ export type FeatureCollectionPostProcessInput = {
     spatial_extras: SpatialExtraOptions[];
   } & SpatialFilterInput;
 
-/** Extract the geometry of the unique spatial filter, if any, otherwise return undefined */
+/** Extract the geometry of the unique spatial filter */
 function spatialFilterToGeometry(spatialFilter: SpatialFilter, resolvedGeometryRef?: Geometry) : Geometry {
   switch (spatialFilter.operator) {
     case "bbox": {
@@ -38,7 +38,10 @@ function spatialFilterToGeometry(spatialFilter: SpatialFilter, resolvedGeometryR
     }
     case "intersects_feature":
     case "travel_time":
-      return resolvedGeometryRef!;
+      if (!resolvedGeometryRef) {
+        throw new Error(`Le filtre spatial \`${spatialFilter.operator}\` exige la résolution préalable de la géométrie de référence.`);
+      }
+      return resolvedGeometryRef;
     default: // Make a compile-time error if a filter is missing from the switch
       const noFilter: never = spatialFilter;
       throw new Error(`Unhandled filter case: ${noFilter}`)
