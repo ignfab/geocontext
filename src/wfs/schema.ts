@@ -166,7 +166,7 @@ function buildSpatialExtrasDescription(
   return `Éléments calculés depuis la géométrie à renvoyer pour ${target}. Peut inclure ${allowedExtrasDocNames}, aucun par défaut.\n`+
     `${SPATIAL_EXTRAS_BASE_DESCRIPTION_LINES.join("\n")}\n`+
     optionalFilterLine+
-    "Si l'élément à calculer est trivial (bbox d'un point, aire d'une géométrie linéaire), une erreur indiquera comment corriger la requête.\n"+
+    "Si l'élément à calculer est incompatible avec la géométrie (exemple : bbox d'un point, aire d'une géométrie linéaire) et que le type de la géométrie est connu à l'avance, une erreur indiquera comment corriger la requête.\n"+
     "Si une valeur n'est pas calculable pour une autre raison, elle sera remplacée par `null` dans la réponse.";
 }
 

@@ -78,7 +78,7 @@ function getGeometryTypeDimension(geometryType: Geometry["type"]) {
     case "MultiLineString": return "linéaire";
     case "Polygon":
     case "MultiPolygon": return "surfacique";
-    case "GeometryCollection": return "?";
+    case "GeometryCollection": return "?"; // skip dimension checks when the geometry type is unknown
   }
 }
 
