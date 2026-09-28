@@ -10,7 +10,7 @@
 import type { GpfFeatureType } from "./catalog.js";
 import type { OgcCollectionProperty } from "@ignfab/gpf-schema-store";
 import type { Geometry } from "geojson";
-import type { SpatialExtraOptions } from "./schema.js";
+import { GPF_GET_FEATURES_SPATIAL_EXTRAS, type SpatialExtraOptions } from "./schema.js";
 
 // --- Geometry Resolution ---
 
@@ -99,8 +99,12 @@ export function resolveNonGeometryProperty(featureType: GpfFeatureType, property
     const nonGeometryProperties = (Object.entries(featureType.schema.properties))
       .filter(([_propertyName, property]) => Boolean((property as OgcCollectionProperty).type))
       .map(([propertyName]) => propertyName);
+    // A spatial extra name is a likely mix-up (e.g. `order_by: area`): say what it is.
+    const spatialExtraHint = (GPF_GET_FEATURES_SPATIAL_EXTRAS as readonly string[]).includes(propertyName)
+      ? ` \`${propertyName}\` désigne un élément calculé par \`spatial_extras\` dans \`gpf_get_features\`, pas une propriété du type : il n'est utilisable ni dans \`select\`, ni dans \`where\`, ni dans \`order_by\`.`
+      : "";
     throw new Error(
-      `La propriété '${propertyName}' n'existe pas pour '${featureType.typename}'. ` +
+      `La propriété '${propertyName}' n'existe pas pour '${featureType.typename}'.${spatialExtraHint} ` +
       `Propriétés non géométriques disponibles : ${nonGeometryProperties.join(", ")}. ` +
       `Appelle \`gpf_describe_type\` pour obtenir la signification de ces propriétés.`,
     );

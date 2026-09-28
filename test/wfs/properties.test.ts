@@ -156,6 +156,16 @@ describe("getGeometryName", () => {
 });
 
 describe("resolveNonGeometryProperty", () => {
+  it("should accept a real catalog property named like a spatial extra", () => {
+    const collection: OgcCollectionSchema = {
+      ...singleGeometryCollection,
+      properties: { ...singleGeometryCollection.properties, area: populationProperty },
+    };
+
+    expect(resolveNonGeometryProperty(asFeatureType("SINGLE:GEO", collection), "area", "Error message"))
+      .toEqual(populationProperty);
+  });
+
   it("should return the property when it is non-geometric", () => {
     const result = resolveNonGeometryProperty(
       asFeatureType("SINGLE:GEO", singleGeometryCollection),
