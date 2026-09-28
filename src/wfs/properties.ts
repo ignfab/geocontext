@@ -132,7 +132,9 @@ export function validateSelectProperty(featureType: GpfFeatureType, propertyName
 // --- Spatial Extras Validation ---
 
 function validateSpatialExtras(featureType: GpfFeatureType, geometryName: string, spatial_extras?: SpatialExtraOptions[]) {
-  if (!spatial_extras) {
+  // Nothing to validate without extras: do not read the geometry format, which
+  // cartographic callers (always `[]`) never need.
+  if (!spatial_extras?.length) {
     return;
   }
   const geometryType = getGeometryType(featureType, geometryName);
