@@ -96,10 +96,10 @@ describe("Test GpfGetFeatureByIdTool", () => {
           description: "Éléments calculés depuis la géométrie à renvoyer pour l'objet. Peut inclure `centroid`, `bbox`, `length` et `area`, aucun par défaut.\n"+
             "`centroid` est le centroïde (moyenne arithmétique des sommets) de la géométrie.\n"+
             "`bbox` est la boîte englobante de la géométrie.\n"+
-            "`length` est renvoyé en m et ne peut être utilisé qu'avec des géométries linéaires (LineString, MultiLineString).\n"+
-            "`area` est renvoyé en m² et ne peut être utilisé qu'avec des géométries surfaciques (Polygon, MultiPolygon).\n"+
+            "`length` est la somme des longueurs (en m) des parties linéaires de la géométrie (LineString, MultiLineString).\n"+
+            "`area` est la somme des surfaces (en m²) des parties surfaciques de la géométrie (Polygon, MultiPolygon).\n"+
             "Si l'élément à calculer est incompatible avec la géométrie (exemple : bbox d'un point, aire d'une géométrie linéaire) et que le type de la géométrie est connu à l'avance, une erreur indiquera comment corriger la requête.\n"+
-            "Si une valeur n'est pas calculable pour une autre raison, elle sera remplacée par `null` dans la réponse.",
+            "Sinon, un élément qui n'est pas calculable pour un objet (géométrie absente ou vide, aucune partie de la dimension requise) vaut `null`. Une valeur numérique, `0` compris, signifie que le calcul a bien eu lieu.",
         },
         select: {
           type: "array",

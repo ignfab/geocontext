@@ -8,6 +8,7 @@ import {
   postProcessFeatureCollection,
 } from "../../src/wfs/response";
 import { type SpatialExtraOptions } from "../../src/wfs/schema";
+import type { Geometry } from "geojson";
 
 describe("wfs_engine/response", () => {
   function getFeatures(
@@ -376,6 +377,139 @@ describe("wfs_engine/response", () => {
         intersectionArea([[insideRing]]), 6,
       );
       expect(intersectionArea([[outsideRing]])).toEqual(0);
+    });
+
+    // Contract shared by every extra: `null` when the value cannot be computed for
+    // this feature, a number (`0` included) when the computation ran.
+    describe("spatial_extras contract", () => {
+      const square = [[2, 48], [2.1, 48], [2.1, 48.1], [2, 48.1], [2, 48]];
+      const bbox_filter = { west: 1.9, south: 47.9, east: 2.2, north: 48.2 };
+      const intersects_feature_filter = { typename: "REF:type", feature_id: "ref.1" };
+
+      function derive(
+        geometry: unknown,
+        spatial_extras: string[],
+        filters: Record<string, unknown> = {},
+        resolvedGeometryRef?: Geometry,
+      ) {
+        const result = transformFeatureCollectionResponse({
+          type: "FeatureCollection",
+          features: [{ id: "f.1", geometry, properties: {} }],
+        }, {
+          typename: "TEST:type",
+          spatial_extras,
+          ...filters,
+        } as Parameters<typeof transformFeatureCollectionResponse>[1], resolvedGeometryRef);
+
+        return getFeatures(result)[0];
+      }
+
+      it.each([
+        ["an absent geometry", undefined],
+        ["a null geometry", null],
+        ["an empty Point", { type: "Point", coordinates: [] }],
+        ["an empty Polygon", { type: "Polygon", coordinates: [] }],
+        ["an empty GeometryCollection", { type: "GeometryCollection", geometries: [] }],
+      ])("should return null for every extra on %s", (_label, geometry) => {
+        const feature = derive(
+          geometry,
+          ["centroid", "bbox", "length", "area", "distance_to_filter", "intersection_area"],
+          { bbox_filter },
+        );
+
+        expect(feature).toMatchObject({
+          centroid: null,
+          bbox: null,
+          length: null,
+          area: null,
+          distance_to_filter: null,
+          intersection_area: null,
+        });
+      });
+
+      it("should return null for intersection_area on a non-areal feature, like area", () => {
+        const feature = derive(
+          { type: "LineString", coordinates: [[2, 48], [2.1, 48.1]] },
+          ["area", "intersection_area"],
+          { bbox_filter },
+        );
+
+        expect(feature.area).toBeNull();
+        expect(feature.intersection_area).toBeNull();
+      });
+
+      it("should return null for intersection_area when the intersects_feature reference is not areal", () => {
+        const feature = derive(
+          { type: "Polygon", coordinates: [square] },
+          ["intersection_area"],
+          { intersects_feature_filter },
+          { type: "LineString", coordinates: [[1.9, 47.9], [2.2, 48.2]] },
+        );
+
+        expect(feature.intersection_area).toBeNull();
+      });
+
+      it("should return null for filter-dependent extras when the reference geometry could not be prepared", () => {
+        const feature = derive(
+          { type: "Polygon", coordinates: [square] },
+          ["distance_to_filter", "intersection_area"],
+          { intersects_feature_filter },
+        );
+
+        expect(feature.distance_to_filter).toBeNull();
+        expect(feature.intersection_area).toBeNull();
+      });
+
+      it("should return 0 for intersection_area when both geometries are areal and do not overlap", () => {
+        const farSquare = square.map(([lon, lat]) => [lon + 5, lat]);
+        const feature = derive(
+          { type: "Polygon", coordinates: [farSquare] },
+          ["intersection_area"],
+          { intersects_feature_filter },
+          { type: "Polygon", coordinates: [square] },
+        );
+
+        expect(feature.intersection_area).toEqual(0);
+      });
+
+      it("should sum the linear parts of a GeometryCollection for length and ignore the other parts", () => {
+        const line = { type: "LineString", coordinates: [[2.3, 48.8], [2.31, 48.81]] };
+        const lineLength = derive(line, ["length"]).length as number;
+
+        const feature = derive({
+          type: "GeometryCollection",
+          geometries: [line, line, { type: "Polygon", coordinates: [square] }],
+        }, ["length"]);
+
+        expect(feature.length as number).toBeCloseTo(2 * lineLength, 6);
+      });
+
+      it("should sum the polygons of a GeometryCollection for area, overlaps included, like JTS", () => {
+        const shifted = square.map(([lon, lat]) => [lon + 0.05, lat]); // overlaps half of `square`
+        const squareArea = derive({ type: "Polygon", coordinates: [square] }, ["area"]).area as number;
+
+        const feature = derive({
+          type: "GeometryCollection",
+          geometries: [
+            { type: "Polygon", coordinates: [square] },
+            { type: "Polygon", coordinates: [shifted] },
+          ],
+        }, ["area"]);
+
+        expect(feature.area as number).toBeCloseTo(2 * squareArea, 0);
+      });
+
+      it("should return null for length when a GeometryCollection has no usable linear part", () => {
+        const feature = derive({
+          type: "GeometryCollection",
+          geometries: [
+            { type: "Polygon", coordinates: [square] },
+            { type: "LineString", coordinates: [] },
+          ],
+        }, ["length"]);
+
+        expect(feature.length).toBeNull();
+      });
     });
   });
 

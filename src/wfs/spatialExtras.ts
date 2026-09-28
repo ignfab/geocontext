@@ -5,7 +5,7 @@ import { area } from "@turf/area";
 import { intersect } from "@turf/intersect";
 import { circle } from "@turf/circle";
 import { bboxPolygon } from "@turf/bbox-polygon";
-import type { Geometry, MultiPolygon, Point, Polygon, Position } from "geojson";
+import type { Geometry, LineString, MultiLineString, MultiPolygon, Point, Polygon, Position } from "geojson";
 import distance from "../helpers/distance.js";
 import { feature, featureCollection } from "@turf/helpers";
 import { getSpatialFilter } from "./spatialFilter.js";
@@ -66,6 +66,9 @@ function spatialFilterToCentroid(spatialFilter: SpatialFilter, resolvedGeometryR
 
 /** Accepts any geometry and returns it as a Polygon or MultiPolygon, filtering
  * all 0D (point) and 1D (line) sub-geometries out.
+ *
+ * The polygons of a GeometryCollection are concatenated, not unioned: measures
+ * sum their parts, overlaps included, like JTS `GeometryCollection.getArea()`.
  */
 function geometryToPolygons(geom: Geometry) : Polygon | MultiPolygon | null {
   switch(geom.type) {
@@ -93,6 +96,39 @@ function geometryToPolygons(geom: Geometry) : Polygon | MultiPolygon | null {
     }
     default:
       return null;
+  }
+}
+
+/** Accepts any geometry and returns its linear (1D) parts as a LineString or
+ * MultiLineString, dropping empty lines, points and polygons. Returns null when
+ * nothing linear remains.
+ */
+function geometryToLines(geom: Geometry) : LineString | MultiLineString | null {
+  switch (geom.type) {
+    case "LineString":
+      return geom.coordinates.length >= 2 ? geom : null;
+    case "MultiLineString": {
+      const coordinates = geom.coordinates.filter((line) => line.length >= 2);
+      return coordinates.length == 0 ? null : { type: "MultiLineString", coordinates };
+    }
+    case "GeometryCollection": {
+      const coordinates = geom.geometries
+        .map(geometryToLines)
+        .filter((lines) => lines !== null)
+        .flatMap((lines) => lines.type == "LineString" ? [lines.coordinates] : lines.coordinates);
+      return coordinates.length == 0 ? null : { type: "MultiLineString", coordinates };
+    }
+    default:
+      return null;
+  }
+}
+
+/** True when `geometry` is a GeoJSON geometry holding at least one finite position. */
+function isComputableGeometry(geometry: unknown) : geometry is Geometry {
+  try {
+    return bbox(geometry as Geometry).every(Number.isFinite);
+  } catch {
+    return false;
   }
 }
 
@@ -153,34 +189,37 @@ export function dropEmptyRings(geom: Geometry) : Polygon | MultiPolygon | null {
   return null;
 }
 
-/** Return the areal (2D) intersection between a geometry and a spatial filter.
- * null if the intersection has no area.
+/** Return the area (m²) of the part of a geometry lying inside a spatial filter.
+ *
+ * null when it cannot be computed: the geometry or the filter has no areal part,
+ * or the filter geometry could not be prepared. 0 only when both are areal and
+ * do not overlap.
  */
-function intersectionAreaWithSpatialFilter(geom: Geometry, spatialFilter: SpatialFilter, filterPolygons: Polygon | MultiPolygon | null) : Polygon | MultiPolygon | null {
+function intersectionAreaWithSpatialFilter(geom: Geometry, spatialFilter: SpatialFilter, filterPolygons: Polygon | MultiPolygon | null) : number | null {
   const geo = geometryToPolygons(geom);
   if (!geo) {
-    return null;
+    return null; // non-areal feature
   }
   switch (spatialFilter.operator) {
     case "intersects_point":
-      return null; // non-2D filter
+      return null; // non-areal filter (already rejected by the input schema)
     // Note: `dwithin_point` matches a feature as soon as any part of it
     // lies within `distance_m`, so the intersection is needed even for it.
     case "dwithin_point":
     case "intersects_feature":
     case "travel_time": {
-      if (!filterPolygons) return null; // non-2D filter
+      if (!filterPolygons) return null; // non-areal filter, or filter preparation failed
       // Whatever lies outside the feature's bbox cannot intersect it, so clipping the
       // reference first leaves the result unchanged while polyclip only ever processes
       // the neighbouring vertices.
       const clippedFilter = dropEmptyRings(bboxClip(filterPolygons, bbox(geo)).geometry);
-      if (!clippedFilter) return null; // no areal overlap
+      if (!clippedFilter) return 0; // no overlap
       const inter = intersect(featureCollection([feature(clippedFilter), feature(geo)]));
-      return inter == null ? null : inter.geometry;
+      return inter == null ? 0 : area(inter.geometry);
     }
     case "bbox": {
-      const clipped = bboxClip(geo, [spatialFilter.west, spatialFilter.south, spatialFilter.east, spatialFilter.north]);
-      return dropEmptyRings(clipped.geometry);
+      const clipped = dropEmptyRings(bboxClip(geo, [spatialFilter.west, spatialFilter.south, spatialFilter.east, spatialFilter.north]).geometry);
+      return clipped == null ? 0 : area(clipped);
     }
     default: // Make a compile-time error if a filter is missing from the switch
       const noFilter: never = spatialFilter;
@@ -188,6 +227,16 @@ function intersectionAreaWithSpatialFilter(geom: Geometry, spatialFilter: Spatia
   }
 }
 
+/** Compute the requested `spatial_extras` of one returned feature.
+ *
+ * Contract shared by every extra:
+ * 1. A mismatch that is knowable before the main WFS query (e.g. `area` on a layer
+ *    whose geometry format is linear) is rejected upstream with an error, never here.
+ * 2. A value that cannot be computed for this feature (missing or empty geometry,
+ *    no part of the required dimension, non-areal filter, internal failure) is `null`.
+ * 3. Otherwise the value is the computed one, `0` included: `0` always means the
+ *    computation ran (e.g. no overlap with the filter), never "not computable".
+ */
 export function deriveFromGeometry(geometry: unknown, input: FeatureCollectionPostProcessInput, context: SpatialContext) {
   const spatial_extras = input.spatial_extras;
 
@@ -197,8 +246,14 @@ export function deriveFromGeometry(geometry: unknown, input: FeatureCollectionPo
     return ret;
   }
 
-  // Assume that geometry is a Geometry. Otherwise, all the required spatial_extra will be set to null.
-  const geo = geometry as Geometry;
+  if (!isComputableGeometry(geometry)) {
+    // Contract case 2: nothing can be computed on a missing or empty geometry.
+    for (const extra of spatial_extras) {
+      ret[extra] = null;
+    }
+    return ret;
+  }
+  const geo = geometry;
 
   if (spatial_extras.includes("centroid")) {
     try {
@@ -223,7 +278,8 @@ export function deriveFromGeometry(geometry: unknown, input: FeatureCollectionPo
 
   if (spatial_extras.includes("length")) {
     try {
-      ret.length = (geo.type == "LineString" || geo.type == "MultiLineString") ? turfLength(feature(geo), { units: "meters" }) : null;
+      const geoAsLines = geometryToLines(geo);
+      ret.length = geoAsLines ? turfLength(feature(geoAsLines), { units: "meters" }) : null;
     } catch {
       ret.length = null;
     }
@@ -232,7 +288,7 @@ export function deriveFromGeometry(geometry: unknown, input: FeatureCollectionPo
   if (spatial_extras.includes("area")) {
     try {
       const geoAsPolygons = geometryToPolygons(geo);
-      ret.area = geoAsPolygons ? area(geo) : null;
+      ret.area = geoAsPolygons ? area(geoAsPolygons) : null;
     } catch {
       ret.area = null;
     }
@@ -261,8 +317,7 @@ export function deriveFromGeometry(geometry: unknown, input: FeatureCollectionPo
 
   if (requires_intersection_area) {
     try {
-      const intersection = intersectionAreaWithSpatialFilter(geo, spatialFilter, context.filterPolygons);
-      ret.intersection_area = intersection ? area(intersection) : 0;
+      ret.intersection_area = intersectionAreaWithSpatialFilter(geo, spatialFilter, context.filterPolygons);
     } catch {
       ret.intersection_area = null;
     }
