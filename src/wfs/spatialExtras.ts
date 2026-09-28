@@ -1,7 +1,6 @@
 import { centroid } from "@turf/centroid";
 import { bbox } from "@turf/bbox";
 import turfLength from "@turf/length";
-import { area } from "@turf/area";
 import { intersect } from "@turf/intersect";
 import { circle } from "@turf/circle";
 import { bboxPolygon } from "@turf/bbox-polygon";
@@ -15,6 +14,7 @@ import type {
   SpatialFilter,
 } from "./schema.js";
 import { bboxClip } from "@turf/bbox-clip";
+import area, { clipRingToTriangle, triangulate } from "../helpers/area.js";
 
 export type FeatureCollectionPostProcessInput = {
     typename: string,
@@ -190,6 +190,46 @@ export function dropEmptyRings(geom: Geometry) : Polygon | MultiPolygon | null {
   return null;
 }
 
+
+/** Return the area of the intersection between two areal (2D) geometries.
+ *
+ * Clipping by a triangle is simple, fast and robust, unlike general polygon
+ * clipping: `geo` is split into triangles, by which `filterPolygons` is clipped.
+ */
+function polygonsIntersectionArea(geo: Polygon | MultiPolygon, filterPolygons: Polygon | MultiPolygon) : number {
+  // Whatever lies outside the feature's bbox cannot intersect it, so clipping the
+  // reference first leaves the result unchanged while only the neighbouring
+  // vertices are processed afterwards.
+  const clippedFilter = dropEmptyRings(bboxClip(filterPolygons, bbox(geo)).geometry);
+  if (!clippedFilter) return 0; // no areal overlap
+  const filterParts = clippedFilter.type == "Polygon" ? [clippedFilter.coordinates] : clippedFilter.coordinates;
+
+  let total = 0;
+  for (const polygon of geo.type == "Polygon" ? [geo.coordinates] : geo.coordinates) {
+    const polygonGeometry : Polygon = { type: "Polygon", coordinates: polygon };
+    const triangles = triangulate(polygon);
+    if (!triangles) {
+      // Fall back on general polygon clipping.
+      const inter = intersect(featureCollection([feature(clippedFilter), feature(polygonGeometry)]));
+      total += inter == null ? 0 : area(inter.geometry);
+      continue;
+    }
+    let covered = 0;
+    for (const triangle of triangles) {
+      for (const [outer, ...holes] of filterParts) {
+        covered += area({ type: "Polygon", coordinates: [clipRingToTriangle(outer, triangle)]});
+        for (const hole of holes) {
+          covered -= area({ type: "Polygon", coordinates: [clipRingToTriangle(hole, triangle)]});
+        }
+      }
+    }
+    // Snap to 0 or to the whole polygon despite rounding errors.
+    const polygonArea = area(polygonGeometry);
+    total += covered > polygonArea * (1 - 1e-9) ? polygonArea : covered > polygonArea * 1e-9 ? covered : 0;
+  }
+  return total;
+}
+
 /** Return the area (m²) of the part of a geometry lying inside a spatial filter.
  *
  * null when it cannot be computed: the geometry or the filter has no areal part,
@@ -210,13 +250,7 @@ function intersectionAreaWithSpatialFilter(geom: Geometry, spatialFilter: Spatia
     case "intersects_feature":
     case "travel_time": {
       if (!filterPolygons) return null; // non-areal filter, or filter preparation failed
-      // Whatever lies outside the feature's bbox cannot intersect it, so clipping the
-      // reference first leaves the result unchanged while polyclip only ever processes
-      // the neighbouring vertices.
-      const clippedFilter = dropEmptyRings(bboxClip(filterPolygons, bbox(geo)).geometry);
-      if (!clippedFilter) return 0; // no overlap
-      const inter = intersect(featureCollection([feature(clippedFilter), feature(geo)]));
-      return inter == null ? 0 : area(inter.geometry);
+      return polygonsIntersectionArea(geo, filterPolygons);
     }
     case "bbox": {
       const clipped = dropEmptyRings(bboxClip(geo, [spatialFilter.west, spatialFilter.south, spatialFilter.east, spatialFilter.north]).geometry);

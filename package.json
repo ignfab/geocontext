@@ -56,7 +56,6 @@
   "dependencies": {
     "@ignfab/gpf-schema-store": "^0.2.2",
     "@rgrove/parse-xml": "^4.2.3",
-    "@turf/area": "^7.4.0",
     "@turf/bbox": "^7.3.5",
     "@turf/bbox-clip": "^7.4.0",
     "@turf/bbox-polygon": "^7.4.0",
@@ -66,6 +65,7 @@
     "@turf/helpers": "^7.3.5",
     "@turf/intersect": "^7.4.0",
     "@turf/length": "^7.4.0",
+    "earcut": "^3.2.4",
     "jsts": "^2.12.1",
     "mcp-framework": "^0.2.22",
     "node-fetch": "^3.3.2",
