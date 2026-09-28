@@ -151,7 +151,8 @@ export function prepareSpatialContext(input: FeatureCollectionPostProcessInput, 
     return context;
   }
 
-  // The existence of a spatial filter has already been validated, hence the final "!".
+  // The input schema guarantees a spatial filter when a filter-dependent extra is
+  // requested (`assertSpatialExtraSpatialFilterConsistency`), hence the final "!".
   // In case of internal error, the associated spatial_extra will be set to null.
   const spatialFilter = getSpatialFilter(input)!;
 
@@ -302,7 +303,8 @@ export function deriveFromGeometry(geometry: unknown, input: FeatureCollectionPo
     return ret;
   }
 
-  // The existence of a spatial filter has already been validated, hence the final "!".
+  // The input schema guarantees a spatial filter when a filter-dependent extra is
+  // requested (`assertSpatialExtraSpatialFilterConsistency`), hence the final "!".
   // In case of internal error, the associated spatial_extra will be set to null.
   const spatialFilter = getSpatialFilter(input)!;
 

@@ -5,10 +5,7 @@ import type { GpfFeatureType } from "../../src/wfs/catalog";
 import { compileQueryParts } from "../../src/wfs/queryPreparation";
 import type { GpfGetFeaturesInput, GpfCountFeaturesInput } from "../../src/wfs/schema";
 import { geometryToEwkt } from "../../src/wfs/geometry";
-import {
-  GPF_SPATIAL_EXTRAS_REQUIRING_FILTER,
-  queryIsGetFeaturesInput,
-} from "../../src/wfs/schema";
+import { queryIsGetFeaturesInput } from "../../src/wfs/schema";
 
 describe("gpfGetFeatures/queryPreparation", () => {
   const featureType: OgcCollectionSchema = {
@@ -207,13 +204,6 @@ describe("gpfGetFeatures/queryPreparation", () => {
     }, asFeatureType("ADMINEXPRESS-COG.LATEST:commune", nonGeometricFeatureType))).toThrow(
       "Erreur du catalogue embarqué : le type 'ADMINEXPRESS-COG.LATEST:commune' n'expose aucune propriété géométrique exploitable."
     );
-  });
-
-  it.each(GPF_SPATIAL_EXTRAS_REQUIRING_FILTER)("should reject %s without any spatial filter", (spatialExtra) => {
-    expect(() => compileQueryParts({
-      ...baseInput,
-      spatial_extras: [spatialExtra],
-    }, wrappedFeatureType)).toThrow(`Impossible de demander ${spatialExtra} sans spécifier de filtre géométrique`);
   });
 
   it("should build sortBy from structured order_by", () => {
