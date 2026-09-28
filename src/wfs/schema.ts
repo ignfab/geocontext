@@ -151,8 +151,8 @@ export const GPF_SPATIAL_FILTER_DOCNAMES = GPF_GET_FEATURES_SPATIAL_FILTER_KEYS
 const SPATIAL_EXTRAS_BASE_DESCRIPTION_LINES = [
   "`centroid` est le centroïde (moyenne arithmétique des sommets) de la géométrie.",
   "`bbox` est la boîte englobante de la géométrie.",
-  "`length` est renvoyé en m et ne peut être utilisé qu'avec des géométries linéaires (LineString, MultiLineString).",
-  "`area` est renvoyé en m² et ne peut être utilisé qu'avec des géométries surfaciques (Polygon, MultiPolygon).",
+  "`length` est la somme des longueurs (en m) des parties linéaires de la géométrie (LineString, MultiLineString).",
+  "`area` est la somme des surfaces (en m²) des parties surfaciques de la géométrie (Polygon, MultiPolygon).",
 ] as const;
 
 function buildSpatialExtrasDescription(
@@ -167,7 +167,7 @@ function buildSpatialExtrasDescription(
     `${SPATIAL_EXTRAS_BASE_DESCRIPTION_LINES.join("\n")}\n`+
     optionalFilterLine+
     "Si l'élément à calculer est incompatible avec la géométrie (exemple : bbox d'un point, aire d'une géométrie linéaire) et que le type de la géométrie est connu à l'avance, une erreur indiquera comment corriger la requête.\n"+
-    "Si une valeur n'est pas calculable pour une autre raison, elle sera remplacée par `null` dans la réponse.";
+    "Sinon, un élément qui n'est pas calculable pour un objet (géométrie absente ou vide, aucune partie de la dimension requise) vaut `null`. Une valeur numérique, `0` compris, signifie que le calcul a bien eu lieu.";
 }
 
 function assertSpatialExtraSpatialFilterConsistency(input : Record<string, unknown>, ctx : z.RefinementCtx) {
@@ -192,7 +192,7 @@ const gpfGetFeaturesGeometryExtraInputSchema = z.object({
       "chaque objet",
       GPF_SPATIAL_EXTRAS_DOCNAMES,
       "`distance_to_filter` est la distance (en m) entre la géométrie de l'objet renvoyé et le centroïde du filtre spatial (le point de départ dans le cas de `travel_time_filter`).\n"+
-      "`intersection_area` est l'aire d'intersection (en m²) entre la géométrie de l'objet renvoyé, qui doit être surfacique, et le filtre spatial."
+      "`intersection_area` est l'aire (en m²) de la partie de l'objet renvoyé située dans le filtre spatial. L'objet et le filtre doivent être surfaciques, sinon la valeur est `null` ; `0` signifie que l'objet ne recouvre pas le filtre."
     )),
 });
 
