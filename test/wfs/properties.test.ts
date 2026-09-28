@@ -6,6 +6,7 @@ import {
   resolveNonGeometryProperty,
   validateSelectProperty,
   buildPropertyName,
+  buildPropertyNameWithGeometry,
 } from "../../src/wfs/properties";
 
 // --- Test fixtures ---
@@ -275,6 +276,29 @@ describe("buildPropertyName", () => {
     expect(buildPropertyName(asFeatureType("LINE:GEO", lineGeometryCollection), ["name"], ["length"]))
       .toEqual("name,geometry");
     expect(buildPropertyName(asFeatureType("POLY:GEO", polygonGeometryCollection), ["name"], ["area", "intersection_area"]))
+      .toEqual("name,geometry");
+  });
+});
+
+describe("buildPropertyNameWithGeometry", () => {
+  // Cartographic callers (by-id layer tool, proxy by-id resolve) request no
+  // spatial_extras, so the geometry format must not be read: an unlisted or
+  // missing format must not break already minted by-id layer URLs.
+  it.each([
+    ["an unlisted format", { format: "geometry-multisurface", "x-ogc-role": "primary-geometry" }],
+    ["no format", { "x-ogc-role": "primary-geometry" }],
+  ])("should not read the geometry format when the geometry has %s", (_label, geometry) => {
+    const collection: OgcCollectionSchema = {
+      ...singleGeometryCollection,
+      properties: {
+        ...singleGeometryCollection.properties,
+        geometry: geometry as unknown as OgcCollectionProperty,
+      },
+    };
+
+    expect(buildPropertyNameWithGeometry(asFeatureType("SINGLE:GEO", collection)))
+      .toEqual("geometry,name,population");
+    expect(buildPropertyNameWithGeometry(asFeatureType("SINGLE:GEO", collection), ["name"]))
       .toEqual("name,geometry");
   });
 });
