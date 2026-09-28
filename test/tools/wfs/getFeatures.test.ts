@@ -380,6 +380,74 @@ describe("Test GpfGetFeaturesTool", () => {
     expect(mockFetchJSONPost).not.toHaveBeenCalled();
   });
 
+  describe("filter-dependent spatial_extras", () => {
+    const FILTER_DEPENDENT_EXTRAS = ["distance_to_filter", "intersection_area"] as const;
+
+    async function callWith(args: Record<string, unknown>) {
+      const tool = new GpfGetFeaturesTool();
+      return tool.toolCall({
+        params: {
+          name: "gpf_get_features",
+          arguments: { typename: COMMUNE_TYPENAME, ...args },
+        },
+      });
+    }
+
+    it.each(FILTER_DEPENDENT_EXTRAS)("should reject %s without a spatial filter as invalid tool parameters", async (extra) => {
+      const response = await callWith({ spatial_extras: [extra] });
+
+      expect(response.isError).toBe(true);
+      expect(response.structuredContent).toMatchObject({
+        type: "urn:geocontext:problem:invalid-tool-params",
+        errors: [
+          expect.objectContaining({
+            code: "custom",
+            name: "spatial_extras",
+            detail: expect.stringContaining(`\`${extra}\` exige un filtre spatial`),
+          }),
+        ],
+      });
+      expect(mockGetFeatureType).not.toHaveBeenCalled();
+      expect(mockFetchJSONPost).not.toHaveBeenCalled();
+    });
+
+    it.each(FILTER_DEPENDENT_EXTRAS)("should reject %s with intersects_point_filter as invalid tool parameters", async (extra) => {
+      const response = await callWith({
+        intersects_point_filter: { lon: 2.3, lat: 48.8 },
+        spatial_extras: [extra],
+      });
+
+      expect(response.isError).toBe(true);
+      expect(response.structuredContent).toMatchObject({
+        type: "urn:geocontext:problem:invalid-tool-params",
+        errors: [
+          expect.objectContaining({
+            code: "custom",
+            name: "spatial_extras",
+            detail: expect.stringContaining("intersects_point_filter"),
+          }),
+        ],
+      });
+      expect(mockGetFeatureType).not.toHaveBeenCalled();
+      expect(mockFetchJSONPost).not.toHaveBeenCalled();
+    });
+
+    it("should accept both extras with any other spatial filter", () => {
+      for (const filter of [
+        { bbox_filter: { west: 2.1, south: 48.7, east: 2.5, north: 48.9 } },
+        { dwithin_point_filter: { lon: 2.3, lat: 48.8, distance_m: 500 } },
+        { intersects_feature_filter: { typename: "ADMINEXPRESS-COG.LATEST:departement", feature_id: "departement.1" } },
+        { travel_time_filter: { lon: 2.3, lat: 48.8, minutes: 10, profile: "pedestrian" } },
+      ]) {
+        expect(() => gpfGetFeaturesInputSchema.parse({
+          typename: COMMUNE_TYPENAME,
+          spatial_extras: [...FILTER_DEPENDENT_EXTRAS],
+          ...filter,
+        })).not.toThrow();
+      }
+    });
+  });
+
   it("should reject legacy inputs removed from the public schema", async () => {
     const tool = new GpfGetFeaturesTool();
     const response = await tool.toolCall({

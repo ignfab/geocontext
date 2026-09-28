@@ -25,7 +25,6 @@ import type {
 import {
   GPF_SPATIAL_FILTER_DOCNAMES,
   queryIsGetFeaturesInput,
-  spatialExtraRequiresFilter,
 } from "./schema.js"
 
 import {
@@ -188,7 +187,6 @@ export function compileQueryParts(
   let geometryName: string | undefined;
   const isGetFeatures = queryIsGetFeaturesInput(input);
   const spatialFilter = getSpatialFilter(input);
-  const spatialExtras = isGetFeatures ? input.spatial_extras : [];
   const fragments: string[] = [];
 
   // Keep the spatial predicate first: the GeoPlateforme GeoServer is sensitive
@@ -220,11 +218,6 @@ export function compileQueryParts(
       default: // Make a compile-time error if a filter is missing from the switch
         const noFilter: never = spatialFilter;
         throw new Error(`Unhandled filter case: ${noFilter}`);
-    }
-  } else if (spatialExtras.length > 0) {
-    const faultyExtra = spatialExtras.filter(spatialExtraRequiresFilter);
-    if (faultyExtra.length > 0) {
-      throw new Error(`Impossible de demander ${faultyExtra} sans spécifier de filtre géométrique (à choisir parmi ${GPF_SPATIAL_FILTER_DOCNAMES}).`);
     }
   }
 
