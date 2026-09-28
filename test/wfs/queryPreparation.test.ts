@@ -48,6 +48,15 @@ describe("gpfGetFeatures/queryPreparation", () => {
     spatial_extras: []
   };
 
+  it.each<[string, Partial<GpfGetFeaturesInput>]>([
+    ["select", { select: ["area"] }],
+    ["where", { where: [{ property: "area", operator: "gt", value: "1000" }] }],
+    ["order_by", { order_by: [{ property: "area", direction: "desc" }] }],
+  ])("should explain that a spatial extra is not a property when used in %s", (_clause, clause) => {
+    expect(() => compileQueryParts({ ...baseInput, ...clause }, wrappedFeatureType))
+      .toThrow("`area` désigne un élément calculé par `spatial_extras` dans `gpf_get_features`, pas une propriété du type");
+  });
+
   it("should compile where clauses", () => {
     const compiled = compileQueryParts({
       ...baseInput,
