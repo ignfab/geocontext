@@ -98,15 +98,18 @@ function geometryToPolygons(geom: Geometry) : Polygon | MultiPolygon | null {
 }
 
 type SpatialContext = {
-  filterCentroid?: Point,
-  filterPolygons?: Polygon | MultiPolygon
+  filterCentroid: Point | null,
+  filterPolygons: Polygon | MultiPolygon | null
 }
 
 export function prepareSpatialContext(input: FeatureCollectionPostProcessInput, resolvedGeometryRef?: Geometry) : SpatialContext {
   const requires_distance_to_filter = input.spatial_extras.includes("distance_to_filter");
   const requires_intersection_area = input.spatial_extras.includes("intersection_area");
 
-  const context : Record<string, unknown> = {};
+  const context : SpatialContext = {
+    filterCentroid: null,
+    filterPolygons: null,
+  };
 
   if (!requires_distance_to_filter && !requires_intersection_area) {
     // short-circuit: don't compute the spatial filter
@@ -120,20 +123,13 @@ export function prepareSpatialContext(input: FeatureCollectionPostProcessInput, 
   if (requires_distance_to_filter) {
     try {
       context.filterCentroid = spatialFilterToCentroid(spatialFilter, resolvedGeometryRef);
-    } catch {
-      context.filterCentroid = null;
-    }
+    } catch {}
   }
 
   if (requires_intersection_area) {
     try {
-      if (["dwithin_point", "intersects_feature", "travel_time"].includes(spatialFilter.operator)) {
-        const spatialFilterGeometry = spatialFilterToGeometry(spatialFilter, resolvedGeometryRef)
-        context.filterPolygons = geometryToPolygons(spatialFilterGeometry);
-      }
-    } catch {
-      context.filterPolygons = null;
-    }
+      context.filterPolygons = geometryToPolygons(spatialFilterToGeometry(spatialFilter, resolvedGeometryRef));
+    } catch {}
   }
 
   return context;
@@ -161,7 +157,7 @@ export function dropEmptyRings(geom: Geometry) : Polygon | MultiPolygon | null {
 /** Return the areal (2D) intersection between a geometry and a spatial filter.
  * null if the intersection has no area.
  */
-function intersectionAreaWithSpatialFilter(geom: Geometry, spatialFilter: SpatialFilter, filterPolygons?: Polygon | MultiPolygon) : Polygon | MultiPolygon | null {
+function intersectionAreaWithSpatialFilter(geom: Geometry, spatialFilter: SpatialFilter, filterPolygons: Polygon | MultiPolygon | null) : Polygon | MultiPolygon | null {
   const geo = geometryToPolygons(geom);
   if (!geo) {
     return null;
