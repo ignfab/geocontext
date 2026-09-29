@@ -70,11 +70,9 @@ function spatialFilterToCentroid(spatialFilter: SpatialFilter, resolvedGeometryR
 function geometryToPolygons(geom: Geometry) : Polygon | MultiPolygon | null {
   switch(geom.type) {
     case "Polygon":
-      return geom;
     case "MultiPolygon":
-      return geom.coordinates.length == 0 ? null : geom.coordinates.length > 1 ? geom :
-      { type: "Polygon", coordinates: geom.coordinates[0] };
-    case "GeometryCollection":
+      return dropEmptyRings(geom);
+    case "GeometryCollection": {
       const subGeometries = geom.geometries.map(geometryToPolygons).filter(x => x !== null);
       if (subGeometries.length == 0) {
         return null;
@@ -92,6 +90,7 @@ function geometryToPolygons(geom: Geometry) : Polygon | MultiPolygon | null {
         });
         return { type: "MultiPolygon", coordinates};
       }
+    }
     default:
       return null;
   }
