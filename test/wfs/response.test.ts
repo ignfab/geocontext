@@ -681,6 +681,15 @@ describe("wfs_engine/response", () => {
         const expected = polyclipIntersectionArea(strip, reference);
         expect(Math.abs(feature.intersection_area - expected)).toBeLessThanOrEqual(1e-6 * feature.area);
       });
+
+      it("should handle geometries smaller than the deepest tile of the reference", () => {
+        // About 1 cm wide, inside the reference and in an empty tile outside it.
+        const tinySquare = (lon: number, lat: number) => ({ type: "Polygon", coordinates: [rectangle(lon, lat, lon + 1e-7, lat + 1e-7)] });
+        const inside = deriveExtras(tinySquare(2.5, 48.5));
+
+        expect(Math.abs(inside.intersection_area - inside.area)).toBeLessThanOrEqual(1e-6 * inside.area);
+        expect(deriveExtras(tinySquare(3.5, 48.5)).intersection_area).toEqual(0);
+      });
     });
   });
 
