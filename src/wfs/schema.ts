@@ -150,7 +150,7 @@ export const GPF_SPATIAL_FILTER_DOCNAMES = GPF_GET_FEATURES_SPATIAL_FILTER_KEYS
 
 const SPATIAL_EXTRAS_BASE_DESCRIPTION_LINES = [
   "`centroid` est le centroïde (moyenne arithmétique des sommets) de la géométrie. Il peut tomber hors d'une géométrie concave : un `intersects_point_filter` sur ce point peut alors ne renvoyer ni l'objet, ni ce qui le contient.",
-  "`bbox` est la boîte englobante de la géométrie.",
+  "`bbox` est la boîte englobante de la géométrie : `[ouest, sud, est, nord]` en WGS84 `lon/lat`, dans l'ordre des champs `west`, `south`, `east` et `north` de `bbox_filter`.",
   "`length` est la somme des longueurs (en m) des parties linéaires de la géométrie (LineString, MultiLineString).",
   "`area` est la somme des surfaces (en m²) des parties surfaciques de la géométrie (Polygon, MultiPolygon).",
 ] as const;
