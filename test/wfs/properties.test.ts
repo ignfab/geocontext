@@ -263,7 +263,7 @@ describe("buildPropertyName", () => {
 
   it("should reject bbox for point geometries", () => {
     expect(() => buildPropertyName(asFeatureType("POINT:GEO", pointGeometryCollection), undefined, ["bbox"])).toThrow(
-      "La géométrie de l'objet sera de type Point, or vous avez demandé sa `bbox`",
+      "La géométrie renvoyée sera de type Point, or vous avez demandé sa `bbox`",
     );
   });
 

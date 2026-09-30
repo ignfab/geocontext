@@ -159,7 +159,7 @@ function validateSpatialExtras(featureType: GpfFeatureType, geometryName: string
     const errorEnding = spatial_extras.includes("centroid") ?
       ", ce qui est redondant avec le calcul du `centroid`, aussi demandé" :
       " : pour avoir cette information, demandez à la place le calcul du `centroid`"
-    problems.push(`La géométrie de l'objet sera de type Point, or vous avez demandé sa \`bbox\`${errorEnding}`);
+    problems.push(`La géométrie renvoyée sera de type Point, or vous avez demandé sa \`bbox\`${errorEnding}`);
     faultyExtras.push("bbox");
   }
   // `intersection_area` is only reachable from the get-features path:
