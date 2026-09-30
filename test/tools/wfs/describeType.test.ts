@@ -101,7 +101,7 @@ describe("Test GpfDescribeTypeTool", () => {
     });
   });
 
-  it("should include a description for non-geometry properties", async () => {
+  it("should include a short description cut for non-geometry properties", async () => {
     const tool = new GpfDescribeTypeTool();
     mockGetFeatureType.mockResolvedValue({ typename: COMMUNE_TYPENAME, schema: communeType });
 
@@ -116,10 +116,45 @@ describe("Test GpfDescribeTypeTool", () => {
 
     expect(response.isError).toBeUndefined();
     const payload = response.structuredContent as {
-      properties: Array<{ name: string; description?: string }>;
+      properties: Array<{ name: string; description_cut?: string }>;
     };
-    const description = payload.properties.find((p) => p.name === "code_insee")?.description;
-    expect(description).toEqual("Code INSEE officiel de la commune");
+    const descriptionCut = payload.properties.find((p) => p.name === "code_insee")?.description_cut;
+    expect(descriptionCut).toEqual("Code INSEE officiel de la commune");
+  });
+
+  it("should keep successful output for long descriptions by allowing 103 chars", async () => {
+    const tool = new GpfDescribeTypeTool();
+    mockGetFeatureType.mockResolvedValue({
+      typename: COMMUNE_TYPENAME,
+      schema: {
+        ...communeType,
+        properties: {
+          ...communeType.properties,
+          code_insee: {
+            type: "string",
+            description: "X".repeat(150),
+          },
+        },
+      },
+    });
+
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_describe_type",
+        arguments: {
+          typename: COMMUNE_TYPENAME,
+        },
+      },
+    });
+
+    expect(response.isError).toBeUndefined();
+    const payload = response.structuredContent as {
+      properties: Array<{ name: string; description_cut?: string }>;
+    };
+    const descriptionCut = payload.properties.find((p) => p.name === "code_insee")?.description_cut;
+    expect(descriptionCut).toBeDefined();
+    expect(descriptionCut?.length).toBe(101);
+    expect(descriptionCut?.endsWith("…")).toBe(true);
   });
 
   it("should return a payload that validates against its outputSchema", async () => {
