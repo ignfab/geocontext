@@ -227,7 +227,7 @@ const gpfGetFeaturesGeometryExtraInputSchema = z.object({
       "chaque objet",
       GPF_SPATIAL_EXTRAS_DOCNAMES,
       "`distance_to_filter_center` est la distance (en m) entre le centre du filtre spatial et le point le plus proche de l'objet renvoyé, `0` si l'objet contient ce centre. Ce centre est le point de `dwithin_point_filter`, le point de départ de `travel_time_filter`, le centre de la boîte de `bbox_filter` et le centroïde (moyenne des sommets) de l'objet de référence de `intersects_feature_filter`.\n"+
-      "`intersection_area` est l'aire (en m²) de la partie de l'objet renvoyé située dans le filtre spatial (boîte, disque, isochrone ou objet de référence). Elle vaut `null` si l'objet renvoyé ou l'objet de référence de `intersects_feature_filter` n'a pas de partie surfacique, et `0` si l'objet ne recouvre pas le filtre.\n"+
+      "`intersection_area` est l'aire (en m²) de la partie de l'objet renvoyé située dans le filtre spatial (boîte, disque, isochrone ou objet de référence surfacique). Elle vaut `null` si l'objet renvoyé n'a pas de partie surfacique, et `0` si l'objet ne recouvre pas le filtre.\n"+
       "`distance_to_filter_center` et `intersection_area` exigent un filtre spatial.\n"+
       "Les `spatial_extras` sont calculés après la requête, sur les seuls objets renvoyés : ils ne sont utilisables ni dans `where` ni dans `order_by`. Pour un classement (les N plus grands, les N plus proches) ou une somme, vérifier que `numberReturned` est égal à `numberMatched`, sinon augmenter `limit` ou restreindre le filtre spatial. Pour les N plus proches d'un point, utiliser `dwithin_point_filter` avec `distance_to_filter_center`, trier sur cette distance et élargir `distance_m` s'il y a moins de N objets."
     )),

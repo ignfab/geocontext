@@ -801,6 +801,83 @@ describe("Test GpfGetFeaturesTool", () => {
     });
   });
 
+  describe("extras that depend on the intersects_feature reference", () => {
+    const REFERENCE_TYPENAME = "TEST:reference";
+    const withGeometryFormat = (format: string): OgcCollectionSchema => ({
+      ...polygonFeatureType,
+      properties: { ...polygonFeatureType.properties, geometrie: { format, "x-ogc-role": "primary-geometry" } },
+    });
+    const callWith = (typename: string, spatial_extras: string[]) =>
+      new GpfGetFeaturesTool().toolCall({
+        params: {
+          name: "gpf_get_features",
+          arguments: {
+            typename,
+            intersects_feature_filter: { typename: REFERENCE_TYPENAME, feature_id: "reference.1" },
+            spatial_extras,
+          },
+        },
+      });
+
+    it("should reject them from the reference catalog format before any WFS request", async () => {
+      mockFeatureTypes({
+        [COMMUNE_TYPENAME]: polygonFeatureType,
+        [REFERENCE_TYPENAME]: withGeometryFormat("geometry-point"),
+      });
+      const requests = captureRequests(featureCollection);
+
+      const response = await callWith(COMMUNE_TYPENAME, ["distance_to_filter_center", "intersection_area"]);
+
+      expect(response.isError).toBe(true);
+      expect(response.content[0]).toMatchObject({
+        type: "text",
+        text: expect.stringContaining("Sinon, retirez `distance_to_filter_center` et `intersection_area` de spatial_extras."),
+      });
+      expect(requests).toHaveLength(0);
+    });
+
+    it.each([
+      ["intersection_area", { type: "LineString", coordinates: [[2.3, 48.8], [2.4, 48.9]] }],
+      ["distance_to_filter_center", { type: "MultiPoint", coordinates: [[2.3, 48.8], [2.3, 48.8]] }],
+    ])("should reject %s from the fetched reference geometry before the main query", async (extra, geometry) => {
+      mockFeatureTypes({
+        [COMMUNE_TYPENAME]: polygonFeatureType,
+        [REFERENCE_TYPENAME]: withGeometryFormat("geometry-any"),
+      });
+      const requests = captureRequests({
+        type: "FeatureCollection",
+        features: [{ type: "Feature", id: "reference.1", geometry, properties: {} }],
+        totalFeatures: 1,
+      });
+
+      const response = await callWith(COMMUNE_TYPENAME, [extra]);
+
+      expect(response.isError).toBe(true);
+      expect(response.content[0]).toMatchObject({
+        type: "text",
+        text: expect.stringContaining(`Sinon, retirez \`${extra}\` de spatial_extras.`),
+      });
+      expect(requests).toHaveLength(1); // the reference fetch only
+    });
+
+    it("should reject the extras the queried layer rules out before fetching the reference", async () => {
+      mockFeatureTypes({
+        [POINT_ACCES_TYPENAME]: withGeometryFormat("geometry-point"),
+        [REFERENCE_TYPENAME]: polygonFeatureType,
+      });
+      const requests = captureRequests(featureCollection);
+
+      const response = await callWith(POINT_ACCES_TYPENAME, ["intersection_area"]);
+
+      expect(response.isError).toBe(true);
+      expect(response.content[0]).toMatchObject({
+        type: "text",
+        text: expect.stringContaining("`intersection_area` ne peut être calculé que sur une géométrie surfacique"),
+      });
+      expect(requests).toHaveLength(0);
+    });
+  });
+
   it("should reject intersects_feature on the same typename and guide to by-id tool", async () => {
     const tool = new GpfGetFeaturesTool();
     const requests = captureRequests(featureCollection);

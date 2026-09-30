@@ -25,7 +25,8 @@ import {
   type CompiledRequest,
 } from "./request.js";
 import { postProcessFeatureCollection } from "./response.js";
-import { queryIsGetFeaturesInput, type GpfQueryFeaturesInput } from "./schema.js";
+import { getGeometryName, validateReferenceSpatialExtras, validateSpatialExtras } from "./properties.js";
+import { queryIsGetFeaturesInput, spatialExtraRequiresFilter, type GpfQueryFeaturesInput } from "./schema.js";
 import type { Geometry } from "geojson";
 
 // --- Types ---
@@ -80,10 +81,18 @@ export async function resolveIntersectsFeatureGeometry(
     return undefined;
   }
 
-  return resolveFeatureGeometry(wfsClient, {
-    typename: spatialFilter.typename,
-    feature_id: spatialFilter.feature_id,
-  });
+  const reference = { typename: spatialFilter.typename, feature_id: spatialFilter.feature_id };
+  // The extras that depend on the reference are checked against its catalog
+  // type before fetching it, then against its fetched geometry.
+  const referenceExtras = queryIsGetFeaturesInput(input)
+    ? input.spatial_extras.filter(spatialExtraRequiresFilter)
+    : [];
+  if (referenceExtras.length > 0) {
+    validateReferenceSpatialExtras(await wfsClient.getFeatureType(reference.typename), referenceExtras);
+  }
+  const geometry = await resolveFeatureGeometry(wfsClient, reference);
+  validateReferenceSpatialExtras(geometry, referenceExtras);
+  return geometry;
 }
 
 /**
@@ -149,6 +158,11 @@ export async function prepareQueryFeaturesRequest(
   // Get the feature type definition from the embedded catalog to access
   // property definitions and the geometry column name.
   const featureType = await wfsClient.getFeatureType(input.typename);
+  // Reject the extras the queried layer rules out before any network call
+  // (reference or isochrone); query compilation checks them again.
+  if (queryIsGetFeaturesInput(input) && input.spatial_extras.length > 0) {
+    validateSpatialExtras(featureType, getGeometryName(featureType), input.spatial_extras);
+  }
   // Resolve external geometries needed by the selected spatial filter.
   const resolvedGeometryRef = await resolveSpatialFilterGeometry(input);
   // Compile query fragments from the normalized input, feature type, and

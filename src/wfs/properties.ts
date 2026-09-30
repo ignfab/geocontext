@@ -143,7 +143,7 @@ function formatExtraNames(extras: readonly string[]) {
     .replace(/, ([^,]*)$/, " et $1");
 }
 
-function validateSpatialExtras(featureType: GpfFeatureType, geometryName: string, spatial_extras?: SpatialExtraOptions[]) {
+export function validateSpatialExtras(featureType: GpfFeatureType, geometryName: string, spatial_extras?: SpatialExtraOptions[]) {
   // Nothing to validate without extras: do not read the geometry format, which
   // cartographic callers (always `[]`) never need.
   if (!spatial_extras?.length) {
@@ -182,6 +182,50 @@ function validateSpatialExtras(featureType: GpfFeatureType, geometryName: string
     // Listed in the order of the request.
     const extrasToRemove = spatial_extras.filter((extra) => faultyExtras.includes(extra));
     throw new Error(`${problems.join(". ")}. Retirez ${formatExtraNames(extrasToRemove)} de spatial_extras.`);
+  }
+}
+
+/** True for a Point, or for a MultiPoint whose positions are all the same. */
+function isSinglePosition(geometry: Geometry) {
+  if (geometry.type === "Point") {
+    return true;
+  }
+  if (geometry.type !== "MultiPoint" || geometry.coordinates.length === 0) {
+    return false;
+  }
+  const [x, y] = geometry.coordinates[0];
+  return geometry.coordinates.every(([px, py]) => px === x && py === y);
+}
+
+/**
+ * Rejects the extras that the `intersects_feature_filter` reference makes
+ * impossible (`intersection_area` needs an areal reference) or trivial
+ * (`distance_to_filter_center` is always 0 from a single position).
+ *
+ * Called with the reference's catalog feature type before it is fetched, then
+ * with its fetched geometry, which alone settles a `geometry-any` type or a
+ * MultiPoint reduced to a single position.
+ */
+export function validateReferenceSpatialExtras(reference: GpfFeatureType | Geometry, spatial_extras: SpatialExtraOptions[]) {
+  if (spatial_extras.length === 0) {
+    return;
+  }
+  const isFeatureType = "schema" in reference;
+  const geometryType = isFeatureType ? getGeometryType(reference, getGeometryName(reference)) : reference.type;
+  const dimensionName = getGeometryTypeDimension(geometryType);
+  const problems: string[] = [];
+  const faultyExtras: SpatialExtraOptions[] = [];
+  if (spatial_extras.includes("intersection_area") && dimensionName != "surfacique" && dimensionName != "?") {
+    problems.push(`\`intersection_area\` ne peut pas être calculé avec une référence ${dimensionName} dans \`intersects_feature_filter\`, car elle n'a pas de surface : choisissez une référence surfacique`);
+    faultyExtras.push("intersection_area");
+  }
+  if (spatial_extras.includes("distance_to_filter_center") && (isFeatureType ? geometryType == "Point" : isSinglePosition(reference))) {
+    problems.push("`distance_to_filter_center` vaut toujours 0 avec une référence réduite à un point dans `intersects_feature_filter`, puisque chaque objet renvoyé contient ce point : pour classer des objets selon leur distance à un point, utilisez plutôt `dwithin_point_filter`");
+    faultyExtras.push("distance_to_filter_center");
+  }
+  if (problems.length > 0) {
+    const extrasToRemove = spatial_extras.filter((extra) => faultyExtras.includes(extra));
+    throw new Error(`${problems.join(". ")}. Sinon, retirez ${formatExtraNames(extrasToRemove)} de spatial_extras.`);
   }
 }
 
