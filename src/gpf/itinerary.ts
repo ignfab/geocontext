@@ -1,0 +1,116 @@
+import { fetchJSONGet, ServiceResponseError } from "../helpers/http.js";
+import logger from "../logger.js";
+import type { JsonFetcher } from "../helpers/http.js";
+import type { RateLimiter } from "../helpers/RateLimiter.js";
+import type { NavigationProfile, NavigationCostType } from "./navigation.js";
+import type { Geometry } from "geojson";
+import { isGeometryLike } from "../helpers/geojson.js";
+
+export const NAVIGATION_ITINERARY_SOURCE = "Géoplateforme (calcul d'itinéraire)";
+export const NAVIGATION_ITINERARY_URL = "https://data.geopf.fr/navigation/itineraire";
+export const ITINERARY_RESOURCE = "bdtopo-osrm";
+
+/**
+ * Maximum crow-flies distance accepted between departure and arrival. Caps the
+ * upstream compute and the size of the returned LineString: a route this long
+ * already yields thousands of vertices.
+ */
+export const ITINERARY_MAX_DIRECT_DISTANCE_METERS = 100_000;
+
+// Same travel modes and same cost metrics as the isoline service
+export type ItineraryProfile = NavigationProfile;
+export type ItineraryMetric = NavigationCostType;
+
+export type ItineraryGeometryInput = {
+  departure: {
+    lon: number;
+    lat: number;
+  };
+  arrival: {
+    lon: number;
+    lat: number;
+  };
+  profile: ItineraryProfile;
+  /** Metric the route is optimized for: `time` (fastest) or `distance` (shortest). Defaults to `time`. */
+  optimize?: ItineraryMetric;
+};
+
+/**
+ * Builds the itinerary request URL.
+ */
+function buildItineraryUrl(input: ItineraryGeometryInput): string {
+  const urlsearch = new URLSearchParams({
+    resource: ITINERARY_RESOURCE,
+    start: `${input.departure.lon},${input.departure.lat}`,
+    end: `${input.arrival.lon},${input.arrival.lat}`,
+    profile: input.profile,
+    optimization: input.optimize === "distance" ? "shortest" : "fastest",
+    timeUnit: "minute",
+    distanceUnit: "meter",
+    crs: "EPSG:4326",
+    geometryFormat: "geojson",
+    getSteps: "false",
+    getBbox: "false",
+  });
+  return `${NAVIGATION_ITINERARY_URL}?${urlsearch.toString()}`;
+}
+
+/**
+ * Validates the numeric cost fields the client promises its callers, and returns them
+ * narrowed. Throw if the service omitted either one.
+ */
+function parseItineraryCosts(distance: unknown, duration: unknown): { distance: number; duration: number } {
+  if (typeof distance !== "number" || typeof duration !== "number") {
+    throw new ServiceResponseError(
+      `Le service d'itinéraire n'a pas renvoyé de distance et de durée exploitables (distance=${distance}, duration=${duration}).`,
+      {
+        http: { status: 502, statusText: "Bad Gateway" },
+        service: { code: "invalid_upstream_body", detail: "distance/duration manquantes ou non numériques" },
+      },
+    );
+  }
+  return { distance, duration };
+}
+
+type ItineraryLayerRawResponse = {
+  geometry?: unknown;
+  distance?: unknown;
+  duration?: unknown;
+};
+
+export type ItineraryWithGeometryResult = {
+  geometry: Geometry;
+  distance: number;
+  duration: number;
+};
+
+/**
+ * Client for the itinerary layer tool. Requests the route with `geometryFormat: "geojson"`
+ * so the response includes the route geometry (a LineString) alongside distance and duration.
+ */
+export class NavigationItineraryLayerClient {
+  constructor(
+    private rateLimiter: RateLimiter,
+    private fetcher: JsonFetcher<ItineraryLayerRawResponse> = fetchJSONGet,
+  ) {}
+
+  async getItineraryWithGeometry(input: ItineraryGeometryInput): Promise<ItineraryWithGeometryResult> {
+    await this.rateLimiter.limit();
+    logger.debug(`[gpf:navigation] getItineraryWithGeometry(${JSON.stringify(input)})...`);
+
+    const result = await this.fetcher(buildItineraryUrl(input));
+    if (!(isGeometryLike(result.geometry) && result.geometry.type === "LineString")) {
+      throw new ServiceResponseError(
+        "Le service d'itinéraire n'a pas renvoyé de LineString exploitable.",
+        {
+          http: { status: 502, statusText: "Bad Gateway" },
+          service: { code: "invalid_upstream_body", detail: "geometry manquante ou non-LineString" },
+        },
+      );
+    }
+    return {
+      geometry: result.geometry,
+      ...parseItineraryCosts(result.distance, result.duration),
+    };
+  }
+}
