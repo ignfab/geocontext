@@ -149,7 +149,7 @@ export const GPF_SPATIAL_FILTER_DOCNAMES = GPF_GET_FEATURES_SPATIAL_FILTER_KEYS
   .replace(/, ([^,]*)$/, ' ou $1');
 
 const SPATIAL_EXTRAS_BASE_DESCRIPTION_LINES = [
-  "`centroid` est le centroïde (moyenne arithmétique des sommets) de la géométrie.",
+  "`centroid` est le centroïde (moyenne arithmétique des sommets) de la géométrie. Il peut tomber hors d'une géométrie concave : un `intersects_point_filter` sur ce point peut alors ne renvoyer ni l'objet, ni ce qui le contient.",
   "`bbox` est la boîte englobante de la géométrie.",
   "`length` est la somme des longueurs (en m) des parties linéaires de la géométrie (LineString, MultiLineString).",
   "`area` est la somme des surfaces (en m²) des parties surfaciques de la géométrie (Polygon, MultiPolygon).",
@@ -226,10 +226,10 @@ const gpfGetFeaturesGeometryExtraInputSchema = z.object({
     .describe(buildSpatialExtrasDescription(
       "chaque objet",
       GPF_SPATIAL_EXTRAS_DOCNAMES,
-      "`distance_to_filter_center` est la distance (en m) entre la géométrie de l'objet renvoyé et le centroïde du filtre spatial (le point de départ dans le cas de `travel_time_filter`).\n"+
-      "`intersection_area` est l'aire (en m²) de la partie de l'objet renvoyé située dans le filtre spatial. L'objet et le filtre doivent être surfaciques, sinon la valeur est `null` ; `0` signifie que l'objet ne recouvre pas le filtre.\n"+
+      "`distance_to_filter_center` est la distance (en m) entre le centre du filtre spatial et le point le plus proche de l'objet renvoyé, `0` si l'objet contient ce centre. Ce centre est le point de `dwithin_point_filter`, le point de départ de `travel_time_filter`, le centre de la boîte de `bbox_filter` et le centroïde (moyenne des sommets) de l'objet de référence de `intersects_feature_filter`.\n"+
+      "`intersection_area` est l'aire (en m²) de la partie de l'objet renvoyé située dans le filtre spatial (boîte, disque, isochrone ou objet de référence). Elle vaut `null` si l'objet renvoyé ou l'objet de référence de `intersects_feature_filter` n'a pas de partie surfacique, et `0` si l'objet ne recouvre pas le filtre.\n"+
       "`distance_to_filter_center` et `intersection_area` exigent un filtre spatial.\n"+
-      "Les `spatial_extras` sont calculés après la requête, sur les seuls objets renvoyés : ils ne sont utilisables ni dans `where` ni dans `order_by`. Pour un classement (les N plus grands, le plus proche) ou une somme, vérifier que `numberReturned` est égal à `numberMatched`, sinon augmenter `limit`."
+      "Les `spatial_extras` sont calculés après la requête, sur les seuls objets renvoyés : ils ne sont utilisables ni dans `where` ni dans `order_by`. Pour un classement (les N plus grands, les N plus proches) ou une somme, vérifier que `numberReturned` est égal à `numberMatched`, sinon augmenter `limit` ou restreindre le filtre spatial. Pour les N plus proches d'un point, utiliser `dwithin_point_filter` avec `distance_to_filter_center`, trier sur cette distance et élargir `distance_m` s'il y a moins de N objets."
     )),
 });
 

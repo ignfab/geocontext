@@ -282,6 +282,15 @@ describe("buildPropertyName", () => {
     );
   });
 
+  it("should list every incompatible extra in a single error", () => {
+    expect(() => buildPropertyName(asFeatureType("POINT:GEO", pointGeometryCollection), undefined, ["bbox", "length", "area", "intersection_area"])).toThrow(
+      "Retirez `bbox`, `length`, `area` et `intersection_area` de spatial_extras.",
+    );
+    expect(() => buildPropertyName(asFeatureType("LINE:GEO", lineGeometryCollection), undefined, ["area", "intersection_area"])).toThrow(
+      "`area` et `intersection_area` ne peuvent être calculés que sur une géométrie surfacique, or la géométrie renvoyée sera linéaire. Retirez `area` et `intersection_area` de spatial_extras.",
+    );
+  });
+
   it("should accept length for linear geometries and area for surface geometries", () => {
     expect(buildPropertyName(asFeatureType("LINE:GEO", lineGeometryCollection), ["name"], ["length"]))
       .toEqual("name,geometry");

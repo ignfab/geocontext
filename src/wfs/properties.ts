@@ -135,6 +135,14 @@ export function validateSelectProperty(featureType: GpfFeatureType, propertyName
 
 // --- Spatial Extras Validation ---
 
+/** Formats extra names for an error message: "`a`", "`a` et `b`", "`a`, `b` et `c`". */
+function formatExtraNames(extras: readonly string[]) {
+  return extras
+    .map((extra) => `\`${extra}\``)
+    .join(", ")
+    .replace(/, ([^,]*)$/, " et $1");
+}
+
 function validateSpatialExtras(featureType: GpfFeatureType, geometryName: string, spatial_extras?: SpatialExtraOptions[]) {
   // Nothing to validate without extras: do not read the geometry format, which
   // cartographic callers (always `[]`) never need.
@@ -143,11 +151,16 @@ function validateSpatialExtras(featureType: GpfFeatureType, geometryName: string
   }
   const geometryType = getGeometryType(featureType, geometryName);
   const dimensionName = getGeometryTypeDimension(geometryType)
+  // Every incompatibility is collected, so that a single error lists all the
+  // extras to remove instead of one per call.
+  const problems: string[] = [];
+  const faultyExtras: SpatialExtraOptions[] = [];
   if (geometryType == "Point" && spatial_extras.includes("bbox")) {
     const errorEnding = spatial_extras.includes("centroid") ?
-      "ce qui est redondant avec le calcul du `centroid`, aussi demandé" :
-      ": pour avoir cette information, demandez à la place le calcul du `centroid`."
-    throw new Error(`La géométrie de l'objet sera de type Point, or vous avez demandé sa \`bbox\` ${errorEnding}. Retirez \`bbox\` de spatial_extras.`)
+      ", ce qui est redondant avec le calcul du `centroid`, aussi demandé" :
+      " : pour avoir cette information, demandez à la place le calcul du `centroid`"
+    problems.push(`La géométrie de l'objet sera de type Point, or vous avez demandé sa \`bbox\`${errorEnding}`);
+    faultyExtras.push("bbox");
   }
   // `intersection_area` is only reachable from the get-features path:
   // `GPF_GET_FEATURE_BY_ID_SPATIAL_EXTRAS` excludes it, so the by-id path never
@@ -159,9 +172,16 @@ function validateSpatialExtras(featureType: GpfFeatureType, geometryName: string
     if (dimensionName != required && dimensionName != "?") {
       const faultyExtra = spatial_extras.filter(x => extras.includes(x));
       if (faultyExtra.length > 0) {
-        throw new Error(`\`${faultyExtra[0]}\` ne peut être calculé que sur une géométrie ${required}, or la géométrie renvoyée sera ${dimensionName}. Retirez \`${faultyExtra[0]}\` de spatial_extras.`);
+        const verb = faultyExtra.length > 1 ? "ne peuvent être calculés" : "ne peut être calculé";
+        problems.push(`${formatExtraNames(faultyExtra)} ${verb} que sur une géométrie ${required}, or la géométrie renvoyée sera ${dimensionName}`);
+        faultyExtras.push(...faultyExtra);
       }
     }
+  }
+  if (problems.length > 0) {
+    // Listed in the order of the request.
+    const extrasToRemove = spatial_extras.filter((extra) => faultyExtras.includes(extra));
+    throw new Error(`${problems.join(". ")}. Retirez ${formatExtraNames(extrasToRemove)} de spatial_extras.`);
   }
 }
 
