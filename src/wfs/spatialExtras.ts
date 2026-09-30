@@ -224,44 +224,90 @@ function makeFilterClipper(filter: Polygon | MultiPolygon) : FilterClipper {
   };
 }
 
-/** Return the area of the intersection between two areal (2D) geometries.
+/** Polygons of a polygonal geometry, as lists of rings. */
+function polygonsOf(geo: Polygon | MultiPolygon) : Position[][][] {
+  return geo.type == "Polygon" ? [geo.coordinates] : geo.coordinates;
+}
+
+function positionCount(geo: Polygon | MultiPolygon) : number {
+  return polygonsOf(geo).flat().reduce((count, ring) => count + ring.length, 0);
+}
+
+/** True when `geo` is the whole `box`, as clipping returns a geometry covering it. */
+function isBox(geo: Polygon | MultiPolygon, [west, south, east, north]: BBox) : boolean {
+  const rings = polygonsOf(geo).flat();
+  if (rings.length != 1 || rings[0].length != 5) return false;
+  const corners = rings[0].slice(0, -1);
+  return corners.every(([x, y]) => (x == west || x == east) && (y == south || y == north))
+    && new Set(corners.map(String)).size == 4;
+}
+
+/** Beyond this many positions, geometries are split before being triangulated. */
+const MAX_TRIANGULATED_POSITIONS = 32;
+/** Bound on the number of halvings, in case positions pile up at the same place. */
+const MAX_HALVINGS = 24;
+
+/** Return the area of the intersection between two areal geometries lying in `box`.
  *
  * Clipping by a triangle is simple, fast and robust, unlike general polygon
- * clipping: `geo` is split into triangles, by which the filter is clipped.
+ * clipping: the geometry with fewer positions is split into triangles, by which
+ * the other one is clipped. As this costs the product of their numbers of
+ * positions, the box is first halved until one of them is small.
  */
-function polygonsIntersectionArea(geo: Polygon | MultiPolygon, clipFilter: FilterClipper) : number {
-  // Whatever lies outside the feature's bbox cannot intersect it, so clipping the
-  // reference first leaves the result unchanged while only the neighbouring
-  // vertices are processed afterwards.
-  const geoBbox = bbox(geo);
-  const nearFilter = clipFilter(geoBbox);
-  const clippedFilter = nearFilter && dropEmptyRings(bboxClip(nearFilter, geoBbox).geometry);
-  if (!clippedFilter) return 0; // no areal overlap
+function boxIntersectionArea(a: Polygon | MultiPolygon, b: Polygon | MultiPolygon, box: BBox, halvings = 0) : number {
+  const [small, large] = positionCount(a) <= positionCount(b) ? [a, b] : [b, a];
+  if (positionCount(small) > MAX_TRIANGULATED_POSITIONS && halvings < MAX_HALVINGS) {
+    const [west, south, east, north] = box;
+    const halves : BBox[] = east - west > north - south
+      ? [[west, south, (west + east) / 2, north], [(west + east) / 2, south, east, north]]
+      : [[west, south, east, (south + north) / 2], [west, (south + north) / 2, east, north]];
+    return halves.reduce((total, half) => {
+      const smallHalf = dropEmptyRings(bboxClip(small, half).geometry);
+      const largeHalf = smallHalf && dropEmptyRings(bboxClip(large, half).geometry);
+      return largeHalf ? total + boxIntersectionArea(smallHalf, largeHalf, half, halvings + 1) : total;
+    }, 0);
+  }
 
+  if (isBox(small, box)) return area(large);
+  const triangulations = polygonsOf(small).map(triangulate);
+  if (triangulations.includes(null)) {
+    // Fall back on general polygon clipping, as for self-intersecting rings.
+    const inter = intersect(featureCollection<Polygon | MultiPolygon>([feature(small), feature(large)]));
+    return inter == null ? 0 : area(inter.geometry);
+  }
   let total = 0;
-  for (const polygon of geo.type == "Polygon" ? [geo.coordinates] : geo.coordinates) {
+  for (const triangle of triangulations.flatMap((triangles) => triangles!)) {
+    total += area({ type: "MultiPolygon", coordinates: polygonsOf(large).map((rings) => rings.map((ring) => clipRingToTriangle(ring, triangle))) });
+  }
+  return total;
+}
+
+/** Return the area of the intersection between two areal (2D) geometries. */
+function polygonsIntersectionArea(geo: Polygon | MultiPolygon, clipFilter: FilterClipper) : number {
+  let total = 0;
+  for (const polygon of polygonsOf(geo)) {
     const polygonGeometry : Polygon = { type: "Polygon", coordinates: polygon };
-    const triangles = triangulate(polygon);
-    if (!triangles) {
-      // Fall back on general polygon clipping.
-      const inter = intersect(featureCollection([feature(clippedFilter), feature(polygonGeometry)]));
-      total += inter == null ? 0 : area(inter.geometry);
+    // Whatever lies outside the bbox of one geometry cannot intersect it, so
+    // clipping the other first leaves the result unchanged while only the
+    // neighbouring positions are processed afterwards.
+    const polygonBbox = bbox(polygonGeometry);
+    const nearFilter = clipFilter(polygonBbox);
+    const clippedFilter = nearFilter && dropEmptyRings(bboxClip(nearFilter, polygonBbox).geometry);
+    if (!clippedFilter) continue; // no areal overlap
+    const polygonArea = area(polygonGeometry);
+    if (isBox(clippedFilter, polygonBbox)) { // the filter contains the polygon
+      total += polygonArea;
       continue;
     }
-    let covered = 0;
-    for (const triangle of triangles) {
-      // For a large polygon, clipping the filter near each triangle is faster.
-      const nearTriangle = triangles.length >= 128 ? clippedFilter : clipFilter(bbox({ type: "MultiPoint", coordinates: triangle }));
-      if (!nearTriangle) continue;
-      for (const [outer, ...holes] of nearTriangle.type == "Polygon" ? [nearTriangle.coordinates] : nearTriangle.coordinates) {
-        covered += area({ type: "Polygon", coordinates: [clipRingToTriangle(outer, triangle)]});
-        for (const hole of holes) {
-          covered -= area({ type: "Polygon", coordinates: [clipRingToTriangle(hole, triangle)]});
-        }
-      }
-    }
+    const filterBbox = bbox(clippedFilter);
+    // Clipping the polygon to its own bbox would only copy it.
+    const clippedPolygon = filterBbox.every((value, index) => value == polygonBbox[index])
+      ? polygonGeometry
+      : dropEmptyRings(bboxClip(polygonGeometry, filterBbox).geometry);
+    if (!clippedPolygon) continue;
+
+    const covered = boxIntersectionArea(clippedPolygon, clippedFilter, filterBbox);
     // Snap to 0 or to the whole polygon despite rounding errors.
-    const polygonArea = area(polygonGeometry);
     total += covered > polygonArea * (1 - 1e-9) ? polygonArea : covered > polygonArea * 1e-9 ? covered : 0;
   }
   return total;

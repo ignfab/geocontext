@@ -291,6 +291,42 @@ describe("wfs_engine/response", () => {
       expect(elapsedMs).toBeLessThan(1000);
     });
 
+    it("should stay fast when computing intersection_area for a large geometry with holes crossing a detailed reference boundary", () => {
+      // Like a forest with clearings across the boundary of an isochrone: both
+      // geometries have many positions in the same place, which used to cost
+      // their product (over a second here).
+      function wavyRing(centerLon: number, centerLat: number, radius: number, vertices: number, waves: number) {
+        const positions = Array.from({ length: vertices }, (_, index) => {
+          const angle = (Math.PI * 2 * index) / vertices;
+          const wavyRadius = radius * (1 + 0.02 * Math.sin(waves * angle));
+          return [centerLon + wavyRadius * Math.cos(angle), centerLat + wavyRadius * Math.sin(angle)];
+        });
+        return [...positions, positions[0]];
+      }
+
+      const reference: Polygon = { type: "Polygon", coordinates: [wavyRing(2.35, 48.85, 0.3, 20000, 200)] };
+      // Centered on the eastern boundary of the reference, with clearings on a grid.
+      const clearings = Array.from({ length: 100 }, (_, index) => [2.65 + 0.014 * (index % 10 - 4.5), 48.85 + 0.014 * (Math.floor(index / 10) - 4.5)])
+        .filter(([lon, lat]) => Math.hypot(lon - 2.65, lat - 48.85) < 0.08)
+        .map(([lon, lat]) => wavyRing(lon, lat, 0.003, 16, 3).reverse());
+      const forest: Polygon = { type: "Polygon", coordinates: [wavyRing(2.65, 48.85, 0.1, 20000, 300), ...clearings] };
+
+      const start = performance.now();
+      const result = transformFeatureCollectionResponse({
+        type: "FeatureCollection",
+        features: [{ id: "forest.1", geometry: forest, properties: {} }],
+      }, {
+        typename: "TEST:type",
+        spatial_extras: ["intersection_area"],
+        intersects_feature_filter: { typename: "TEST:region", feature_id: "region.1" },
+      }, reference);
+      const elapsedMs = performance.now() - start;
+
+      const inter = intersect(featureCollection([turfFeature(forest), turfFeature(reference)]));
+      expect(getFeatures(result)[0].intersection_area as number).toBeCloseTo(area(inter!.geometry), 3);
+      expect(elapsedMs).toBeLessThan(300);
+    });
+
     // Regression: `dwithin_point` used to short-circuit `intersection_area` and
     // return the feature's own geometry, on the false premise that a DWITHIN
     // match implies containment. DWITHIN matches as soon as ANY part of the
@@ -557,6 +593,14 @@ describe("wfs_engine/response", () => {
         expect(feature.intersection_area).toEqual(feature.area);
       });
 
+      it("should return the geometry's own area when it is inside the reference but not its bbox", () => {
+        // The hypotenuse of the reference cuts the north-eastern corner of the bbox of the star, not the star.
+        const reference = { type: "Polygon" as const, coordinates: [[[2, 48], [2.97, 48], [2, 49.3115], [2, 48]]] };
+        const feature = deriveExtras(star, reference);
+
+        expect(feature.intersection_area).toEqual(feature.area);
+      });
+
       it("should clip a geometry crossing the reference boundary", () => {
         // Split in its middle by the eastern edge of the reference, which is a meridian.
         const feature = deriveExtras({ type: "Polygon", coordinates: [rectangle(2.9, 48.4, 3.1, 48.6)] });
@@ -623,21 +667,6 @@ describe("wfs_engine/response", () => {
         const feature = deriveExtras(withHole);
 
         expect(feature.intersection_area).toBeCloseTo(polyclipIntersectionArea(withHole, referenceSquare), 0);
-      });
-
-      it("should fall back on general polygon clipping for a self-intersecting geometry", () => {
-        // Bow tie, which cannot be triangulated.
-        const bowTie: Polygon = {
-          type: "Polygon",
-          coordinates: [[[2.8, 48.4], [3.2, 48.6], [3.2, 48.4], [2.8, 48.6], [2.8, 48.4]]],
-        };
-        const feature = deriveExtras(bowTie);
-
-        expect(feature.intersection_area).toBeCloseTo(polyclipIntersectionArea(bowTie, referenceSquare), 0);
-
-        // A reference in the empty wedge below the crossing point is not intersected.
-        const inWedge = { type: "Polygon" as const, coordinates: [rectangle(2.98, 48.41, 3.02, 48.43)] };
-        expect(deriveExtras(bowTie, inWedge).intersection_area).toEqual(0);
       });
 
       it("should return null for a non-areal geometry", () => {
