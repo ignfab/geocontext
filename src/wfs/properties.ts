@@ -101,7 +101,7 @@ export function resolveNonGeometryProperty(featureType: GpfFeatureType, property
       .map(([propertyName]) => propertyName);
     // A spatial extra name is a likely mix-up (e.g. `order_by: area`): say what it is.
     const spatialExtraHint = (GPF_GET_FEATURES_SPATIAL_EXTRAS as readonly string[]).includes(propertyName)
-      ? ` \`${propertyName}\` désigne un élément calculé par \`spatial_extras\` dans \`gpf_get_features\`, pas une propriété du type : il n'est utilisable ni dans \`select\`, ni dans \`where\`, ni dans \`order_by\`.`
+      ? ` \`${propertyName}\` désigne un élément calculé via \`spatial_extras\`, pas une propriété du type : il n'est utilisable ni dans \`select\`, ni dans \`where\`, ni dans \`order_by\`.`
       : "";
     throw new Error(
       `La propriété '${propertyName}' n'existe pas pour '${featureType.typename}'.${spatialExtraHint} ` +
