@@ -26,7 +26,7 @@ export const GPF_GET_FEATURE_BY_ID_SPATIAL_EXTRAS = [
   "area",
 ] as const;
 export const GPF_SPATIAL_EXTRAS_REQUIRING_FILTER = [
-  "distance_to_filter",
+  "distance_to_filter_center",
   "intersection_area",
 ] as const;
 export const GPF_GET_FEATURES_SPATIAL_EXTRAS = [
@@ -175,7 +175,7 @@ const FILTER_DEPENDENT_EXTRA_RULES: Record<SpatialExtraRequiringFilterOption, {
   incompatibleFilter: SpatialFilterKey;
   incompatibleReason: string;
 }> = {
-  distance_to_filter: {
+  distance_to_filter_center: {
     incompatibleFilter: "intersects_point_filter",
     incompatibleReason: "vaut toujours 0 avec `intersects_point_filter`, puisque chaque objet renvoyé contient le point : pour classer des objets selon leur distance à un point, utilisez plutôt `dwithin_point_filter`",
   },
@@ -186,7 +186,7 @@ const FILTER_DEPENDENT_EXTRA_RULES: Record<SpatialExtraRequiringFilterOption, {
 };
 
 /**
- * Rejects the filter-dependent extras (`distance_to_filter`, `intersection_area`)
+ * Rejects the filter-dependent extras (`distance_to_filter_center`, `intersection_area`)
  * when no spatial filter is given, or when the given filter makes them meaningless.
  * Both only depend on the input, hence invalid tool parameters rather than
  * execution errors.
@@ -226,9 +226,9 @@ const gpfGetFeaturesGeometryExtraInputSchema = z.object({
     .describe(buildSpatialExtrasDescription(
       "chaque objet",
       GPF_SPATIAL_EXTRAS_DOCNAMES,
-      "`distance_to_filter` est la distance (en m) entre la géométrie de l'objet renvoyé et le centroïde du filtre spatial (le point de départ dans le cas de `travel_time_filter`).\n"+
+      "`distance_to_filter_center` est la distance (en m) entre la géométrie de l'objet renvoyé et le centroïde du filtre spatial (le point de départ dans le cas de `travel_time_filter`).\n"+
       "`intersection_area` est l'aire (en m²) de la partie de l'objet renvoyé située dans le filtre spatial. L'objet et le filtre doivent être surfaciques, sinon la valeur est `null` ; `0` signifie que l'objet ne recouvre pas le filtre.\n"+
-      "`distance_to_filter` et `intersection_area` exigent un filtre spatial.\n"+
+      "`distance_to_filter_center` et `intersection_area` exigent un filtre spatial.\n"+
       "Les `spatial_extras` sont calculés après la requête, sur les seuls objets renvoyés : ils ne sont utilisables ni dans `where` ni dans `order_by`. Pour un classement (les N plus grands, le plus proche) ou une somme, vérifier que `numberReturned` est égal à `numberMatched`, sinon augmenter `limit`."
     )),
 });

@@ -152,7 +152,7 @@ describe("wfs_engine/response", () => {
       expect(polygonFeatures[0].area as number).toBeCloseTo(81361416.69722056, 6);
     });
 
-    it("should compute non-zero distance_to_filter and intersection_area when a spatial filter is provided", () => {
+    it("should compute non-zero distance_to_filter_center and intersection_area when a spatial filter is provided", () => {
       const result = transformFeatureCollectionResponse({
         type: "FeatureCollection",
         features: [
@@ -167,7 +167,7 @@ describe("wfs_engine/response", () => {
         ],
       }, {
         typename: "TEST:type",
-        spatial_extras: ["distance_to_filter", "intersection_area"],
+        spatial_extras: ["distance_to_filter_center", "intersection_area"],
         bbox_filter: {
           west: 2.36,
           south: 48.86,
@@ -177,11 +177,11 @@ describe("wfs_engine/response", () => {
       });
 
       const features = getFeatures(result);
-      expect(features[0].distance_to_filter as number).toBeCloseTo(1330.6551992128234, 6);
+      expect(features[0].distance_to_filter_center as number).toBeCloseTo(1330.6551992128234, 6);
       expect(features[0].intersection_area as number).toBeCloseTo(13010026.562313082, 6);
     });
 
-    it("should compute non-zero distance_to_filter for an off-center point in a bbox filter", () => {
+    it("should compute non-zero distance_to_filter_center for an off-center point in a bbox filter", () => {
       const result = transformFeatureCollectionResponse({
         type: "FeatureCollection",
         features: [
@@ -196,7 +196,7 @@ describe("wfs_engine/response", () => {
         ],
       }, {
         typename: "TEST:type",
-        spatial_extras: ["distance_to_filter"],
+        spatial_extras: ["distance_to_filter_center"],
         bbox_filter: {
           west: 2.3,
           south: 48.8,
@@ -206,7 +206,7 @@ describe("wfs_engine/response", () => {
       });
 
       const features = getFeatures(result);
-      expect(features[0].distance_to_filter as number).toBeCloseTo(2340.9971606708805, 6);
+      expect(features[0].distance_to_filter_center as number).toBeCloseTo(2340.9971606708805, 6);
     });
 
     it("should stay fast when computing centroid, area, and intersection_area for a large region against many polygons", () => {
@@ -342,10 +342,10 @@ describe("wfs_engine/response", () => {
         expect(deriveExtras(disjointPolygon, ["intersection_area"]).intersection_area).toEqual(0);
       });
 
-      it("should still compute distance_to_filter alongside intersection_area", () => {
-        const feature = deriveExtras(quadrantPolygon, ["distance_to_filter", "intersection_area"]);
+      it("should still compute distance_to_filter_center alongside intersection_area", () => {
+        const feature = deriveExtras(quadrantPolygon, ["distance_to_filter_center", "intersection_area"]);
 
-        expect(feature.distance_to_filter).toEqual(0);
+        expect(feature.distance_to_filter_center).toEqual(0);
         expect(feature.intersection_area as number).toBeLessThanOrEqual(DISC_AREA);
       });
     });
@@ -413,7 +413,7 @@ describe("wfs_engine/response", () => {
       ])("should return null for every extra on %s", (_label, geometry) => {
         const feature = derive(
           geometry,
-          ["centroid", "bbox", "length", "area", "distance_to_filter", "intersection_area"],
+          ["centroid", "bbox", "length", "area", "distance_to_filter_center", "intersection_area"],
           { bbox_filter },
         );
 
@@ -422,7 +422,7 @@ describe("wfs_engine/response", () => {
           bbox: null,
           length: null,
           area: null,
-          distance_to_filter: null,
+          distance_to_filter_center: null,
           intersection_area: null,
         });
       });
@@ -452,11 +452,11 @@ describe("wfs_engine/response", () => {
       it("should return null for filter-dependent extras when the reference geometry could not be prepared", () => {
         const feature = derive(
           { type: "Polygon", coordinates: [square] },
-          ["distance_to_filter", "intersection_area"],
+          ["distance_to_filter_center", "intersection_area"],
           { intersects_feature_filter },
         );
 
-        expect(feature.distance_to_filter).toBeNull();
+        expect(feature.distance_to_filter_center).toBeNull();
         expect(feature.intersection_area).toBeNull();
       });
 

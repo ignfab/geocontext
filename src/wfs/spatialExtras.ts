@@ -138,7 +138,7 @@ type SpatialContext = {
 }
 
 export function prepareSpatialContext(input: FeatureCollectionPostProcessInput, resolvedGeometryRef?: Geometry) : SpatialContext {
-  const requires_distance_to_filter = input.spatial_extras.includes("distance_to_filter");
+  const requires_distance_to_filter_center = input.spatial_extras.includes("distance_to_filter_center");
   const requires_intersection_area = input.spatial_extras.includes("intersection_area");
 
   const context : SpatialContext = {
@@ -146,7 +146,7 @@ export function prepareSpatialContext(input: FeatureCollectionPostProcessInput, 
     filterPolygons: null,
   };
 
-  if (!requires_distance_to_filter && !requires_intersection_area) {
+  if (!requires_distance_to_filter_center && !requires_intersection_area) {
     // short-circuit: don't compute the spatial filter
     return context;
   }
@@ -156,7 +156,7 @@ export function prepareSpatialContext(input: FeatureCollectionPostProcessInput, 
   // In case of internal error, the associated spatial_extra will be set to null.
   const spatialFilter = getSpatialFilter(input)!;
 
-  if (requires_distance_to_filter) {
+  if (requires_distance_to_filter_center) {
     try {
       context.filterCentroid = spatialFilterToCentroid(spatialFilter, resolvedGeometryRef);
     } catch {}
@@ -295,10 +295,10 @@ export function deriveFromGeometry(geometry: unknown, input: FeatureCollectionPo
     }
   }
 
-  const requires_distance_to_filter = spatial_extras.includes("distance_to_filter");
+  const requires_distance_to_filter_center = spatial_extras.includes("distance_to_filter_center");
   const requires_intersection_area = spatial_extras.includes("intersection_area");
 
-  if (!requires_distance_to_filter && !requires_intersection_area) {
+  if (!requires_distance_to_filter_center && !requires_intersection_area) {
     // short-circuit: don't compute the spatial filter
     return ret;
   }
@@ -308,12 +308,12 @@ export function deriveFromGeometry(geometry: unknown, input: FeatureCollectionPo
   // In case of internal error, the associated spatial_extra will be set to null.
   const spatialFilter = getSpatialFilter(input)!;
 
-  if (requires_distance_to_filter) {
+  if (requires_distance_to_filter_center) {
     try {
       const filterCentroid = context.filterCentroid!;
-      ret.distance_to_filter = distance(geo, filterCentroid);
+      ret.distance_to_filter_center = distance(geo, filterCentroid);
     } catch {
-      ret.distance_to_filter = null;
+      ret.distance_to_filter_center = null;
     }
   }
 

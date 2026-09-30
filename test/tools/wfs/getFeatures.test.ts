@@ -381,7 +381,7 @@ describe("Test GpfGetFeaturesTool", () => {
   });
 
   describe("filter-dependent spatial_extras", () => {
-    const FILTER_DEPENDENT_EXTRAS = ["distance_to_filter", "intersection_area"] as const;
+    const FILTER_DEPENDENT_EXTRAS = ["distance_to_filter_center", "intersection_area"] as const;
 
     async function callWith(args: Record<string, unknown>) {
       const tool = new GpfGetFeaturesTool();
