@@ -639,7 +639,8 @@ describe("wfs_engine/response", () => {
         const inside = rectangle(2.4, 48.4, 2.6, 48.6);
         const feature = deriveExtras({ type: "MultiPolygon", coordinates: [[rectangle(3, 48.4, 3.2, 48.6)], [inside]] });
 
-        expect(feature.intersection_area).toEqual(area({ type: "Polygon", coordinates: [inside] }));
+        // Not snapped to the area of the inside part: the MultiPolygon is integrated as a whole.
+        expect(feature.intersection_area).toBeCloseTo(area({ type: "Polygon", coordinates: [inside] }), 3);
       });
 
       /** Area of the intersection computed by general polygon clipping, as a reference. */
@@ -667,6 +668,25 @@ describe("wfs_engine/response", () => {
         const feature = deriveExtras(withHole);
 
         expect(feature.intersection_area).toBeCloseTo(polyclipIntersectionArea(withHole, referenceSquare), 0);
+      });
+
+      it("should fall back on general polygon clipping for a self-intersecting geometry", () => {
+        // Bow tie, whose lobes cancel in its signed area.
+        const bowTie: Polygon = {
+          type: "Polygon",
+          coordinates: [[[2.8, 48.4], [3.2, 48.6], [3.2, 48.4], [2.8, 48.6], [2.8, 48.4]]],
+        };
+        const feature = deriveExtras(bowTie);
+
+        expect(feature.intersection_area).toBeCloseTo(polyclipIntersectionArea(bowTie, referenceSquare), 0);
+
+        // A reference in the empty wedge below the crossing point is not intersected.
+        const inWedge = { type: "Polygon" as const, coordinates: [rectangle(2.98, 48.41, 3.02, 48.43)] };
+        expect(deriveExtras(bowTie, inWedge).intersection_area).toEqual(0);
+
+        // Nor is a bow tie lying inside the reference reduced to its signed area.
+        const inside = { type: "Polygon" as const, coordinates: [rectangle(2, 48, 4, 49)] };
+        expect(deriveExtras(bowTie, inside).intersection_area).toBeCloseTo(polyclipIntersectionArea(bowTie, inside), 0);
       });
 
       it("should return null for a non-areal geometry", () => {

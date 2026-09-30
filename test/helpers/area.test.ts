@@ -1,17 +1,22 @@
 import { describe, expect, it } from "vitest";
 
-import { clipRingToTriangle, sphericalRingArea } from "../../src/helpers/area.js";
+import { sphericalRingArea } from "../../src/helpers/area.js";
 
 describe("helpers/area", () => {
-  describe("clipRingToTriangle", () => {
-    it("should clip by a triangle whatever its winding", () => {
-      // The triangle covers the north-eastern quarter of the square.
-      const square = [[0, 0], [2, 0], [2, 2], [0, 2], [0, 0]];
-      const quarter = sphericalRingArea([[1, 1], [2, 1], [2, 2], [1, 2], [1, 1]]);
-      const [a, b, c] = [[1, 1], [3, 1], [1, 3]];
+  describe("sphericalRingArea", () => {
+    it("should be exact for a lon/lat box", () => {
+      // dLon · (sin(north) - sin(south)) on the unit sphere
+      const box = [[2, 48], [3, 48], [3, 49], [2, 49], [2, 48]];
+      const expected = (Math.PI / 180) * (Math.sin(49 * Math.PI / 180) - Math.sin(48 * Math.PI / 180));
 
-      expect(sphericalRingArea(clipRingToTriangle(square, [a, b, c]))).toBeCloseTo(quarter, 12);
-      expect(sphericalRingArea(clipRingToTriangle(square, [a, c, b]))).toBeCloseTo(quarter, 12);
+      expect(sphericalRingArea(box)).toBeCloseTo(expected, 15);
+    });
+
+    it("should not change when an edge is split, as clipping does", () => {
+      const triangle = [[2, 48], [3, 48.2], [2.4, 49], [2, 48]];
+      const split = [[2, 48], [2.5, 48.1], [3, 48.2], [2.4, 49], [2, 48]];
+
+      expect(sphericalRingArea(split)).toBeCloseTo(sphericalRingArea(triangle), 15);
     });
   });
 });

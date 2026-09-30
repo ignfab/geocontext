@@ -1,12 +1,11 @@
 import { centroid } from "@turf/centroid";
 import { bbox } from "@turf/bbox";
 import turfLength from "@turf/length";
-import { intersect } from "@turf/intersect";
 import { circle } from "@turf/circle";
 import { bboxPolygon } from "@turf/bbox-polygon";
-import type { BBox, Geometry, LineString, MultiLineString, MultiPolygon, Point, Polygon, Position } from "geojson";
+import type { Geometry, LineString, MultiLineString, MultiPolygon, Point, Polygon, Position } from "geojson";
 import distance from "../helpers/distance.js";
-import { feature, featureCollection } from "@turf/helpers";
+import { feature } from "@turf/helpers";
 import { getSpatialFilter } from "./spatialFilter.js";
 import type {
   SpatialFilterInput,
@@ -14,7 +13,9 @@ import type {
   SpatialFilter,
 } from "./schema.js";
 import { bboxClip } from "@turf/bbox-clip";
-import area, { clipRingToTriangle, triangulate } from "../helpers/area.js";
+import area from "../helpers/area.js";
+import { dropEmptyRings } from "../helpers/geojson.js";
+import { makeIntersectionArea, type IntersectionArea } from "../helpers/intersectionArea.js";
 
 export type FeatureCollectionPostProcessInput = {
     typename: string,
@@ -134,7 +135,7 @@ function isComputableGeometry(geometry: unknown) : geometry is Geometry {
 
 type SpatialContext = {
   filterCentroid: Point | null,
-  clipFilter: FilterClipper | null
+  intersectionArea: IntersectionArea | null
 }
 
 export function prepareSpatialContext(input: FeatureCollectionPostProcessInput, resolvedGeometryRef?: Geometry) : SpatialContext {
@@ -143,7 +144,7 @@ export function prepareSpatialContext(input: FeatureCollectionPostProcessInput, 
 
   const context : SpatialContext = {
     filterCentroid: null,
-    clipFilter: null,
+    intersectionArea: null,
   };
 
   if (!requires_distance_to_filter_center && !requires_intersection_area) {
@@ -165,152 +166,11 @@ export function prepareSpatialContext(input: FeatureCollectionPostProcessInput, 
   if (requires_intersection_area) {
     try {
       const filterPolygons = geometryToPolygons(spatialFilterToGeometry(spatialFilter, resolvedGeometryRef));
-      context.clipFilter = filterPolygons && makeFilterClipper(filterPolygons);
+      context.intersectionArea = filterPolygons && makeIntersectionArea(filterPolygons);
     } catch {}
   }
 
   return context;
-}
-
-/** Strip the empty rings `@turf/bbox-clip` emits for parts lying outside the box.
- *
- * A fully-clipped-away Polygon comes back as `{ coordinates: [] }` and a
- * MultiPolygon keeps one empty entry per discarded part (`[[...], []]`), both of
- * which are invalid GeoJSON. Returns null when nothing areal survives.
- */
-export function dropEmptyRings(geom: Geometry) : Polygon | MultiPolygon | null {
-  if (geom.type == "Polygon") {
-    return geom.coordinates.length == 0 ? null : geom;
-  }
-  if (geom.type == "MultiPolygon") {
-    const coordinates = geom.coordinates.filter((polygon) => polygon.length > 0);
-    return coordinates.length == 0 ? null : { type: "MultiPolygon", coordinates };
-  }
-  // `bboxClip` is typed over every geometry it accepts, but the caller only ever
-  // passes polygons, so a non-areal result means nothing areal survived.
-  return null;
-}
-
-/** Return the filter clipped to a tile containing the bbox, or null if nothing areal remains. */
-type FilterClipper = (bbox: BBox) => Polygon | MultiPolygon | null;
-
-/** Build a `FilterClipper` which only processes the filter vertices near the bbox.
- *
- * The filter is clipped to nested tiles, each from the cached clip of its parent.
- * Tiles are 1.5 times as wide as their cell, so that a bbox at most half a cell
- * wide lies in the tile of the cell containing its south-west corner.
- */
-function makeFilterClipper(filter: Polygon | MultiPolygon) : FilterClipper {
-  const [west, south, east, north] = bbox(filter);
-  const size = Math.max(east - west, north - south);
-  const tiles = new Map<string, Polygon | MultiPolygon | null>();
-  function tile(zoom: number, x: number, y: number) : Polygon | MultiPolygon | null {
-    if (zoom == 0) return filter;
-    const key = `${zoom}/${x}/${y}`;
-    if (!tiles.has(key)) {
-      const parent = tile(zoom - 1, Math.floor(x / 2), Math.floor(y / 2));
-      const cell = size / 2 ** zoom;
-      tiles.set(key, parent && dropEmptyRings(bboxClip(parent, [west + x * cell, south + y * cell, west + (x + 1.5) * cell, south + (y + 1.5) * cell]).geometry));
-    }
-    return tiles.get(key) ?? null;
-  }
-  return ([minX, minY, maxX, maxY]) => {
-    // Deepest tile whose cell is at least twice as wide as the bbox.
-    const width = Math.max(maxX - minX, maxY - minY);
-    let zoom = 0;
-    while (zoom < 20 && 2 * width <= size / 2 ** (zoom + 1)) zoom++;
-    const cell = size / 2 ** zoom;
-    return tile(zoom, Math.floor((minX - west) / cell), Math.floor((minY - south) / cell));
-  };
-}
-
-/** Polygons of a polygonal geometry, as lists of rings. */
-function polygonsOf(geo: Polygon | MultiPolygon) : Position[][][] {
-  return geo.type == "Polygon" ? [geo.coordinates] : geo.coordinates;
-}
-
-function positionCount(geo: Polygon | MultiPolygon) : number {
-  return polygonsOf(geo).flat().reduce((count, ring) => count + ring.length, 0);
-}
-
-/** True when `geo` is the whole `box`, as clipping returns a geometry covering it. */
-function isBox(geo: Polygon | MultiPolygon, [west, south, east, north]: BBox) : boolean {
-  const rings = polygonsOf(geo).flat();
-  if (rings.length != 1 || rings[0].length != 5) return false;
-  const corners = rings[0].slice(0, -1);
-  return corners.every(([x, y]) => (x == west || x == east) && (y == south || y == north))
-    && new Set(corners.map(String)).size == 4;
-}
-
-/** Beyond this many positions, geometries are split before being triangulated. */
-const MAX_TRIANGULATED_POSITIONS = 32;
-/** Bound on the number of halvings, in case positions pile up at the same place. */
-const MAX_HALVINGS = 24;
-
-/** Return the area of the intersection between two areal geometries lying in `box`.
- *
- * Clipping by a triangle is simple, fast and robust, unlike general polygon
- * clipping: the geometry with fewer positions is split into triangles, by which
- * the other one is clipped. As this costs the product of their numbers of
- * positions, the box is first halved until one of them is small.
- */
-function boxIntersectionArea(a: Polygon | MultiPolygon, b: Polygon | MultiPolygon, box: BBox, halvings = 0) : number {
-  const [small, large] = positionCount(a) <= positionCount(b) ? [a, b] : [b, a];
-  if (positionCount(small) > MAX_TRIANGULATED_POSITIONS && halvings < MAX_HALVINGS) {
-    const [west, south, east, north] = box;
-    const halves : BBox[] = east - west > north - south
-      ? [[west, south, (west + east) / 2, north], [(west + east) / 2, south, east, north]]
-      : [[west, south, east, (south + north) / 2], [west, (south + north) / 2, east, north]];
-    return halves.reduce((total, half) => {
-      const smallHalf = dropEmptyRings(bboxClip(small, half).geometry);
-      const largeHalf = smallHalf && dropEmptyRings(bboxClip(large, half).geometry);
-      return largeHalf ? total + boxIntersectionArea(smallHalf, largeHalf, half, halvings + 1) : total;
-    }, 0);
-  }
-
-  if (isBox(small, box)) return area(large);
-  const triangulations = polygonsOf(small).map(triangulate);
-  if (triangulations.includes(null)) {
-    // Fall back on general polygon clipping, as for self-intersecting rings.
-    const inter = intersect(featureCollection<Polygon | MultiPolygon>([feature(small), feature(large)]));
-    return inter == null ? 0 : area(inter.geometry);
-  }
-  let total = 0;
-  for (const triangle of triangulations.flatMap((triangles) => triangles!)) {
-    total += area({ type: "MultiPolygon", coordinates: polygonsOf(large).map((rings) => rings.map((ring) => clipRingToTriangle(ring, triangle))) });
-  }
-  return total;
-}
-
-/** Return the area of the intersection between two areal (2D) geometries. */
-function polygonsIntersectionArea(geo: Polygon | MultiPolygon, clipFilter: FilterClipper) : number {
-  let total = 0;
-  for (const polygon of polygonsOf(geo)) {
-    const polygonGeometry : Polygon = { type: "Polygon", coordinates: polygon };
-    // Whatever lies outside the bbox of one geometry cannot intersect it, so
-    // clipping the other first leaves the result unchanged while only the
-    // neighbouring positions are processed afterwards.
-    const polygonBbox = bbox(polygonGeometry);
-    const nearFilter = clipFilter(polygonBbox);
-    const clippedFilter = nearFilter && dropEmptyRings(bboxClip(nearFilter, polygonBbox).geometry);
-    if (!clippedFilter) continue; // no areal overlap
-    const polygonArea = area(polygonGeometry);
-    if (isBox(clippedFilter, polygonBbox)) { // the filter contains the polygon
-      total += polygonArea;
-      continue;
-    }
-    const filterBbox = bbox(clippedFilter);
-    // Clipping the polygon to its own bbox would only copy it.
-    const clippedPolygon = filterBbox.every((value, index) => value == polygonBbox[index])
-      ? polygonGeometry
-      : dropEmptyRings(bboxClip(polygonGeometry, filterBbox).geometry);
-    if (!clippedPolygon) continue;
-
-    const covered = boxIntersectionArea(clippedPolygon, clippedFilter, filterBbox);
-    // Snap to 0 or to the whole polygon despite rounding errors.
-    total += covered > polygonArea * (1 - 1e-9) ? polygonArea : covered > polygonArea * 1e-9 ? covered : 0;
-  }
-  return total;
 }
 
 /** Return the area (m²) of the part of a geometry lying inside a spatial filter.
@@ -319,7 +179,7 @@ function polygonsIntersectionArea(geo: Polygon | MultiPolygon, clipFilter: Filte
  * or the filter geometry could not be prepared. 0 only when both are areal and
  * do not overlap.
  */
-function intersectionAreaWithSpatialFilter(geom: Geometry, spatialFilter: SpatialFilter, clipFilter: FilterClipper | null) : number | null {
+function intersectionAreaWithSpatialFilter(geom: Geometry, spatialFilter: SpatialFilter, intersectionArea: IntersectionArea | null) : number | null {
   const geo = geometryToPolygons(geom);
   if (!geo) {
     return null; // non-areal feature
@@ -332,8 +192,8 @@ function intersectionAreaWithSpatialFilter(geom: Geometry, spatialFilter: Spatia
     case "dwithin_point":
     case "intersects_feature":
     case "travel_time": {
-      if (!clipFilter) return null; // non-areal filter, or filter preparation failed
-      return polygonsIntersectionArea(geo, clipFilter);
+      if (!intersectionArea) return null; // non-areal filter, or filter preparation failed
+      return intersectionArea(geo);
     }
     case "bbox": {
       const clipped = dropEmptyRings(bboxClip(geo, [spatialFilter.west, spatialFilter.south, spatialFilter.east, spatialFilter.north]).geometry);
@@ -436,7 +296,7 @@ export function deriveFromGeometry(geometry: unknown, input: FeatureCollectionPo
 
   if (requires_intersection_area) {
     try {
-      ret.intersection_area = intersectionAreaWithSpatialFilter(geo, spatialFilter, context.clipFilter);
+      ret.intersection_area = intersectionAreaWithSpatialFilter(geo, spatialFilter, context.intersectionArea);
     } catch {
       ret.intersection_area = null;
     }
