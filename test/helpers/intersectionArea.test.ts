@@ -4,7 +4,7 @@ import { feature, featureCollection } from "@turf/helpers";
 import type { MultiPolygon, Polygon, Position } from "geojson";
 
 import area from "../../src/helpers/area.js";
-import { makeIntersectionArea } from "../../src/helpers/intersectionArea.js";
+import { InvalidGeometryError, makeIntersectionArea } from "../../src/helpers/intersectionArea.js";
 
 function rectangle(west: number, south: number, east: number, north: number) : Position[] {
   return [[west, south], [east, south], [east, north], [west, north], [west, south]];
@@ -57,13 +57,39 @@ describe("helpers/intersectionArea", () => {
     }
   });
 
-  it("should fall back on general polygon clipping for a self-intersecting filter", () => {
+  it("should ignore repeated positions", () => {
+    // Both boundaries pass through the tip of a notch, repeated on both sides: the
+    // repetitions all end in the deepest boxes around it.
+    const tip: Position = [2.95, 48.5];
+    const withTip = (times: number) => Array.from({ length: times }, () => tip);
+    const notchedFilter = (times: number) : Polygon => ({ type: "Polygon", coordinates: [[[2, 48], [3, 48], ...withTip(times), [3, 49], [2, 49], [2, 48]]] });
+    const notchedGeo = (times: number) : Polygon => ({ type: "Polygon", coordinates: [[[2.9, 48.45], [3.05, 48.45], ...withTip(times), [3.05, 48.55], [2.9, 48.55], [2.9, 48.45]]] });
+
+    expect(makeIntersectionArea(notchedFilter(100000))(notchedGeo(100000))).toEqual(makeIntersectionArea(notchedFilter(1))(notchedGeo(1)));
+  });
+
+  it("should reject a self-intersecting filter", () => {
     const bowTie: Polygon = {
       type: "Polygon",
       coordinates: [[[2, 48], [3, 49], [3, 48], [2, 49], [2, 48]]],
     };
-    const geo: Polygon = { type: "Polygon", coordinates: [rectangle(2.1, 48.1, 2.9, 48.4)] };
 
-    expect(makeIntersectionArea(bowTie)(geo)).toBeCloseTo(polyclipArea(geo, bowTie), 0);
+    expect(() => makeIntersectionArea(bowTie)).toThrow(InvalidGeometryError);
+  });
+
+  it("should reject a self-intersecting geometry whose part inside the filter has the wrong orientation", () => {
+    // Figure eight: its larger lobe, counterclockwise, lies mostly east of the filter, its
+    // smaller lobe, clockwise, inside it, so that the piece west of the eastern edge is clockwise.
+    const larger = Array.from({ length: 40 }, (_, index) => {
+      const angle = Math.PI + (Math.PI * 2 * index) / 40;
+      return [3.08 + 0.1 * Math.cos(angle), 48.5 + 0.1 * Math.sin(angle)];
+    });
+    const smaller = Array.from({ length: 40 }, (_, index) => {
+      const angle = (Math.PI * 2 * index) / 40;
+      return [2.95 + 0.03 * Math.cos(angle), 48.5 - 0.03 * Math.sin(angle)];
+    });
+    const figureEight: Polygon = { type: "Polygon", coordinates: [[...larger, ...smaller, larger[0]]] };
+
+    expect(() => makeIntersectionArea(filter)(figureEight)).toThrow(InvalidGeometryError);
   });
 });

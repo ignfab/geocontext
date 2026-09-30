@@ -1,11 +1,7 @@
 import earcut, { deviation } from "earcut";
 import { bbox } from "@turf/bbox";
-import { bboxClip } from "@turf/bbox-clip";
-import { intersect } from "@turf/intersect";
-import { feature, featureCollection } from "@turf/helpers";
 import type { BBox, MultiPolygon, Polygon, Position } from "geojson";
 import area, { EARTH_RADIUS } from "./area.js";
-import { dropEmptyRings } from "./geojson.js";
 
 /**
  * Area of the part of areal features lying inside an areal filter.
@@ -25,8 +21,10 @@ import { dropEmptyRings } from "./geojson.js";
  * the product of both multiplicities: the polygons of a MultiPolygon are summed, overlaps
  * included, as `area` does.
  *
- * Self-intersecting rings (a bow tie, a clipped piece with the wrong orientation, a proper
- * crossing where earcut fails) and oversized leaves are left to `@turf/intersect`.
+ * A ring detected as self-intersecting (no area but some extent, like a bow tie; a clipped
+ * piece with the wrong orientation; a proper crossing where earcut fails) throws an
+ * `InvalidGeometryError`. Detection is not exhaustive: a self-intersecting ring whose pieces
+ * all keep its orientation counts with its winding numbers, as in `area`.
  *
  * Areas are exact on the sphere for edges straight in lon/lat (same integral and radius as
  * `area`), evaluated relative to a local origin to avoid cancellation on small rings.
@@ -35,13 +33,15 @@ import { dropEmptyRings } from "./geojson.js";
 /** Area (m²) of the part of an areal feature lying inside the prepared filter. */
 export type IntersectionArea = (geo: Polygon | MultiPolygon) => number;
 
-/** A box becomes a leaf when small × big <= max(LEAF_PRODUCT, LEAF_FACTOR × (small + big)) positions. */
+/**
+ * A box becomes a leaf when small × big <= min(MAX_LEAF_OPERATIONS, max(LEAF_PRODUCT, LEAF_FACTOR × (small + big)))
+ * positions, a leaf costing about small × big triangle × position operations.
+ */
 const LEAF_PRODUCT = 1024;
 const LEAF_FACTOR = 16;
-/** Bound on the recursion, in case positions pile up at the same place. */
-const MAX_DEPTH = 60;
-/** Triangle × position operations of a leaf above which `@turf/intersect` takes over. */
 const MAX_LEAF_OPERATIONS = 1e6;
+/** Bound on the recursion, in case positions pile up at the same place: the leaf is then computed whatever its size. */
+const MAX_DEPTH = 60;
 /** Relative snap to the feature area, and to 0 (tighter, so that real slivers survive). */
 const SNAP_FULL = 1e-9;
 const SNAP_ZERO = 1e-12;
@@ -52,8 +52,13 @@ const DEGREES_TO_RADIANS = Math.PI / 180;
 const HALF_DEGREES_TO_RADIANS = DEGREES_TO_RADIANS / 2;
 const R2 = EARTH_RADIUS ** 2;
 
-/** Thrown to hand a feature over to `@turf/intersect`. */
-const FALLBACK = Symbol("fallback");
+/** Thrown when a ring of the feature or of the filter is detected as self-intersecting. */
+export class InvalidGeometryError extends Error {
+  constructor(message = "Un anneau auto-intersectant a été détecté dans l'objet ou dans le filtre spatial.") {
+    super(message);
+    this.name = "InvalidGeometryError";
+  }
+}
 
 /**
  * A ring in flat local coordinates `[x0, y0, x1, y1, ...]`, without its closing position,
@@ -110,30 +115,33 @@ function makeRing(src: Float64Array, count2: number, mu: number, o: number) : Ri
   // rounding, reveals a self-intersecting ring.
   const extent = Math.max(x1 - x0, y1 - y0);
   const tolerance = 2e-6 * (x1 - x0) * (y1 - y0) + 1e-12 * n * extent * extent;
-  if (area2 * o < -tolerance) throw FALLBACK;
+  if (area2 * o < -tolerance) throw new InvalidGeometryError();
   return { c, n, x0, y0, x1, y1, mu, o };
 }
 
-/** Local copy of a GeoJSON ring (x = lon - lon0, y = lat - lat0) without its closing position, or null below 3 positions. */
+/**
+ * Local copy of a GeoJSON ring (x = lon - lon0, y = lat - lat0), or null below 3 positions.
+ * Repeated consecutive positions, the closing one included, are dropped: they add no area,
+ * only work, and would pile up in the smallest boxes.
+ */
 function localRing(positions: Position[], lon0: number, lat0: number) : Ring | null {
-  let n = positions.length;
-  if (n > 1) {
-    const first = positions[0], last = positions[n - 1];
-    if (first[0] === last[0] && first[1] === last[1]) n--;
-  }
-  if (n < 3) return null;
-  const c = new Float64Array(2 * n);
+  const c = new Float64Array(2 * positions.length);
+  let n = 0;
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-  for (let i = 0; i < n; i++) {
-    const x = positions[i][0] - lon0, y = positions[i][1] - lat0;
-    c[2 * i] = x;
-    c[2 * i + 1] = y;
+  for (const position of positions) {
+    const x = position[0] - lon0, y = position[1] - lat0;
+    if (n > 0 && x === c[2 * n - 2] && y === c[2 * n - 1]) continue;
+    c[2 * n] = x;
+    c[2 * n + 1] = y;
+    n++;
     if (x < x0) x0 = x;
     if (x > x1) x1 = x;
     if (y < y0) y0 = y;
     if (y > y1) y1 = y;
   }
-  return { c, n, x0, y0, x1, y1, mu: 0, o: 0 };
+  while (n > 1 && c[2 * n - 2] === c[0] && c[2 * n - 1] === c[1]) n--;
+  if (n < 3) return null;
+  return { c: c.subarray(0, 2 * n), n, x0, y0, x1, y1, mu: 0, o: 0 };
 }
 
 /** Twice the planar signed area (positive counterclockwise), as a fan from the first position. */
@@ -383,7 +391,7 @@ function boxIntegral(F: Ring[], G: Ring[], x0: number, y0: number, x1: number, y
 function solve(F: Ring[], G: Ring[], x0: number, y0: number, x1: number, y1: number, depth: number, ctx: AreaContext) : number {
   const nF = countPositions(F), nG = countPositions(G);
   const small = Math.min(nF, nG), big = Math.max(nF, nG);
-  if (depth >= MAX_DEPTH || small * big <= Math.max(LEAF_PRODUCT, LEAF_FACTOR * (small + big))) {
+  if (depth >= MAX_DEPTH || small * big <= Math.min(MAX_LEAF_OPERATIONS, Math.max(LEAF_PRODUCT, LEAF_FACTOR * (small + big)))) {
     return leaf(F, G, nF, nG, ctx);
   }
   const FL: Ring[] = [], FH: Ring[] = [], GL: Ring[] = [], GH: Ring[] = [];
@@ -404,9 +412,7 @@ function solve(F: Ring[], G: Ring[], x0: number, y0: number, x1: number, y1: num
 // --- Leaves: triangulate the smaller side, clip the other side's rings by each triangle ---
 
 function leaf(F: Ring[], G: Ring[], nF: number, nG: number, ctx: AreaContext) : number {
-  const [A, B, nA, nB]: [Ring[], Ring[], number, number] = nF <= nG ? [F, G, nF, nG] : [G, F, nG, nF];
-  // About one triangle per position of A, each clipping every position of B.
-  if (nA * nB > MAX_LEAF_OPERATIONS) throw FALLBACK;
+  const [A, B] = nF <= nG ? [F, G] : [G, F];
   let total = 0;
   for (const a of A) total += a.mu * ringIntegral(a, B, ctx);
   return total;
@@ -429,8 +435,8 @@ function ringIntegral(a: Ring, B: Ring[], ctx: AreaContext) : number {
     return area2 > 0 ? total : -total;
   }
   // earcut fails on the zero-width bridges left by Sutherland-Hodgman, which a signed fan
-  // handles exactly, but also on self-intersecting rings, left to `@turf/intersect`.
-  if (hasProperCrossing(c, n)) throw FALLBACK;
+  // handles exactly, but also on self-intersecting rings, rejected.
+  if (hasProperCrossing(c, n)) throw new InvalidGeometryError();
   // Signed fan from the first position: winding(a) = sum of the signed windings of its triangles.
   let total = 0;
   const ax = c[0], ay = c[1];
@@ -494,7 +500,7 @@ function triangleIntegral(B: Ring[], ax: number, ay: number, bx: number, by: num
   for (const r of B) {
     if (r.x1 < tx0 || r.x0 > tx1 || r.y1 < ty0 || r.y0 > ty1) continue;
     const clipped = clippedArea(r, ax, ay, bx, by, cx, cy, ctx);
-    if (clipped * r.o < -(relative + rounding * r.n)) throw FALLBACK;
+    if (clipped * r.o < -(relative + rounding * r.n)) throw new InvalidGeometryError();
     total += r.mu * clipped;
   }
   return total;
@@ -557,8 +563,6 @@ type PreparedFilter = {
   /** Local origin: the centre of the filter bbox. */
   ox: number;
   oy: number;
-  /** True when a filter ring has no area but some extent (self-intersecting, like a bow tie). */
-  invalid: boolean;
   /** Rings of the tile containing an absolute bbox, in local coordinates. */
   near: (minX: number, minY: number, maxX: number, maxY: number) => Ring[];
 };
@@ -574,14 +578,14 @@ function prepareFilter(filter: Polygon | MultiPolygon) : PreparedFilter {
   const ox = (west + east) / 2, oy = (south + north) / 2;
   const size = Math.max(east - west, north - south);
   const root: Ring[] = [];
-  let invalid = false;
   for (const polygon of polygonsOf(filter)) {
     for (let index = 0; index < polygon.length; index++) {
       const ring = localRing(polygon[index], ox, oy);
       if (!ring) continue;
       const area2 = planarArea2(ring.c, ring.n);
       if (Math.abs(area2) <= 1e-12 * 2 * (ring.x1 - ring.x0) * (ring.y1 - ring.y0)) {
-        if (ring.x1 > ring.x0 && ring.y1 > ring.y0) invalid = true;
+        // No area but some extent: self-intersecting (a bow tie) or zero-width. Without extent, it covers nothing.
+        if (ring.x1 > ring.x0 && ring.y1 > ring.y0) throw new InvalidGeometryError("Le filtre spatial contient un anneau auto-intersectant.");
         continue;
       }
       ring.o = area2 > 0 ? 1 : -1;
@@ -604,7 +608,7 @@ function prepareFilter(filter: Polygon | MultiPolygon) : PreparedFilter {
     return rings;
   }
   return {
-    ox, oy, invalid,
+    ox, oy,
     near(minX, minY, maxX, maxY) {
       // Deepest tile whose cell is at least twice as wide as the bbox.
       const width = Math.max(maxX - minX, maxY - minY);
@@ -620,25 +624,18 @@ function prepareFilter(filter: Polygon | MultiPolygon) : PreparedFilter {
 
 /**
  * Prepare the filter once (per request), and return the function computing the area (m²)
- * of the part of each feature lying inside it.
+ * of the part of each feature lying inside it. Both throw an `InvalidGeometryError` on a
+ * ring detected as self-intersecting.
  */
 export function makeIntersectionArea(filter: Polygon | MultiPolygon) : IntersectionArea {
   const prepared = prepareFilter(filter);
   return (geo) => {
     const featureBbox = bbox(geo);
-    if (prepared.invalid) return filterFallback(filter, geo, featureBbox);
     // The filter near the feature: its tile, then exactly the feature bbox.
     const [f0, f1, f2, f3] = featureBbox;
     const { ox, oy } = prepared;
     const fx0 = f0 - ox, fy0 = f1 - oy, fx1 = f2 - ox, fy1 = f3 - oy;
-    let near: Ring[];
-    try {
-      near = clipRings(prepared.near(f0, f1, f2, f3), fx0, fy0, fx1, fy1);
-    } catch (error) {
-      // A tile piece with the wrong orientation: self-intersecting filter ring.
-      if (error !== FALLBACK) throw error;
-      return filterFallback(filter, geo, featureBbox);
-    }
+    const near = clipRings(prepared.near(f0, f1, f2, f3), fx0, fy0, fx1, fy1);
     if (near.length == 0) return 0;
     let W0 = Infinity, W1 = Infinity, W2 = -Infinity, W3 = -Infinity;
     for (const r of near) {
@@ -654,37 +651,14 @@ export function makeIntersectionArea(filter: Polygon | MultiPolygon) : Intersect
       const result = Number.isNaN(constant) ? null : insideShortcut(constant, geo, featureBbox);
       if (result !== null) return result;
     }
-    const fallbackInputs = () : [Polygon | MultiPolygon, BBox] | null => {
-      const clippedFilter = dropEmptyRings(bboxClip(filter, featureBbox).geometry);
-      return clippedFilter ? [clippedFilter, bbox(clippedFilter)] : null;
-    };
-    return featureIntegral(geo, near, W0, W1, W2, W3, ox, oy, fallbackInputs);
+    return featureIntegral(geo, near, W0, W1, W2, W3, ox, oy);
   };
-}
-
-/** `@turf/intersect` on the feature and the whole filter clipped to its bbox. */
-function filterFallback(filter: Polygon | MultiPolygon, geo: Polygon | MultiPolygon, featureBbox: BBox) : number {
-  const clippedFilter = dropEmptyRings(bboxClip(filter, featureBbox).geometry);
-  if (!clippedFilter) return 0;
-  return snap(polyclipFallback(geo, clippedFilter, bbox(clippedFilter)), geo, area(geo), false);
-}
-
-/** `@turf/intersect` on the pre-clipped pair, one feature polygon at a time, so that polygons are summed. */
-function polyclipFallback(geo: Polygon | MultiPolygon, clippedFilter: Polygon | MultiPolygon, workingBox: BBox) : number {
-  let total = 0;
-  for (const polygon of polygonsOf(geo)) {
-    const clipped = dropEmptyRings(bboxClip({ type: "Polygon", coordinates: polygon }, workingBox).geometry);
-    if (!clipped) continue;
-    const inter = intersect(featureCollection<Polygon | MultiPolygon>([feature(clipped), feature(clippedFilter)]));
-    total += inter == null ? 0 : area(inter.geometry);
-  }
-  return total;
 }
 
 /**
  * Result when the filter has a constant multiplicity over the whole feature bbox, or null to
  * take the general path: a feature without area but with some extent may be a bow tie,
- * whose `area` is not the area it covers.
+ * which the general path rejects.
  */
 function insideShortcut(constant: number, geo: Polygon | MultiPolygon, [f0, f1, f2, f3]: BBox) : number | null {
   if (constant <= 0) return 0;
@@ -703,7 +677,6 @@ function featureIntegral(
   G: Ring[],
   bx0: number, by0: number, bx1: number, by1: number,
   lon0: number, lat0: number,
-  fallbackInputs: () => [Polygon | MultiPolygon, BBox] | null,
 ) : number {
   const phi0 = lat0 * DEGREES_TO_RADIANS;
   const ctx: AreaContext = { phi0, s0: Math.sin(phi0), c0: Math.cos(phi0) };
@@ -712,7 +685,6 @@ function featureIntegral(
   const F: Ring[] = [];
   const whole: Ring[] = []; // every ring of the feature, unclipped, for the snapping decision
   let clipped = false;
-  let invalid = false;
   let planarFeature2 = 0; // twice the planar area of the feature, for the snapping estimate
   for (const polygon of polygonsOf(geo)) {
     for (let index = 0; index < polygon.length; index++) {
@@ -721,9 +693,9 @@ function featureIntegral(
       const area2 = planarArea2(ring.c, ring.n);
       const bboxArea2 = 2 * (ring.x1 - ring.x0) * (ring.y1 - ring.y0);
       if (Math.abs(area2) <= 1e-12 * bboxArea2) {
-        // No area but some extent: a self-intersecting ring whose lobes cancel (bow tie)
-        // is left to `@turf/intersect`; a zero-width ring is only slower there.
-        if (bboxArea2 > 0) invalid = true;
+        // No area but some extent: self-intersecting (a bow tie whose lobes cancel) or
+        // zero-width. Without extent, it covers nothing.
+        if (bboxArea2 > 0) throw new InvalidGeometryError("L'objet contient un anneau auto-intersectant.");
         continue;
       }
       const role = index == 0 ? 1 : -1;
@@ -736,57 +708,41 @@ function featureIntegral(
         continue;
       }
       clipped = true;
-      if (ring.x1 < bx0 || ring.x0 > bx1 || ring.y1 < by0 || ring.y0 > by1 || invalid) continue;
-      try {
-        const piece = clipRingToBox(ring, bx0, by0, bx1, by1);
-        if (piece) F.push(piece);
-      } catch (error) {
-        if (error !== FALLBACK) throw error;
-        invalid = true; // a piece with the wrong orientation: self-intersecting ring
-      }
+      if (ring.x1 < bx0 || ring.x0 > bx1 || ring.y1 < by0 || ring.y0 > by1) continue;
+      const piece = clipRingToBox(ring, bx0, by0, bx1, by1);
+      if (piece) F.push(piece);
     }
   }
   const estimate = planarFeature2 / 2 * DEGREES_TO_RADIANS * DEGREES_TO_RADIANS * ctx.c0 * R2;
 
-  if (!invalid) {
-    try {
-      const F2: Ring[] = [], G2: Ring[] = [];
-      const cF = extractConstant(F, bx0, by0, bx1, by1, F2);
-      const cG = extractConstant(G, bx0, by0, bx1, by1, G2);
-      if (G2.length == 0 && !clipped) {
-        // The filter covers the whole working box, which contains the feature, or none of it.
-        return cG > 0 ? area(geo) : 0;
-      }
-      let total = 0;
-      if (cF !== 0 && cG !== 0) total += cF * cG * boxArea(bx0, by0, bx1, by1, ctx);
-      if (cF !== 0 && G2.length) total += cF * sumArea(G2, ctx);
-      if (cG !== 0 && F2.length) total += cG * sumArea(F2, ctx);
-      if (F2.length && G2.length) total += solve(F2, G2, bx0, by0, bx1, by1, 0, ctx);
-      // Capped at the feature area.
-      return snap(total * R2, geo, estimate, true, () => sumArea(whole, ctx) * R2);
-    } catch (error) {
-      if (error !== FALLBACK) throw error;
-    }
+  const F2: Ring[] = [], G2: Ring[] = [];
+  const cF = extractConstant(F, bx0, by0, bx1, by1, F2);
+  const cG = extractConstant(G, bx0, by0, bx1, by1, G2);
+  if (G2.length == 0 && !clipped) {
+    // The filter covers the whole working box, which contains the feature, or none of it.
+    return cG > 0 ? area(geo) : 0;
   }
-  // Not capped: for a self-intersecting feature, `area` is not the area it covers.
-  const inputs = fallbackInputs();
-  if (!inputs) return 0;
-  return snap(polyclipFallback(geo, inputs[0], inputs[1]), geo, estimate, false);
+  let total = 0;
+  if (cF !== 0 && cG !== 0) total += cF * cG * boxArea(bx0, by0, bx1, by1, ctx);
+  if (cF !== 0 && G2.length) total += cF * sumArea(G2, ctx);
+  if (cG !== 0 && F2.length) total += cG * sumArea(F2, ctx);
+  if (F2.length && G2.length) total += solve(F2, G2, bx0, by0, bx1, by1, 0, ctx);
+  return snap(total * R2, geo, estimate, () => sumArea(whole, ctx) * R2);
 }
 
 /**
- * Snap to the feature area (within SNAP_FULL, or above it when `cap`) or to 0 (within
+ * Snap to the feature area (within SNAP_FULL, or above it: capped) or to 0 (within
  * SNAP_ZERO). The exact feature area is only computed when the planar estimate says that
  * the result may be close to either.
  */
-function snap(total: number, geo: Polygon | MultiPolygon, estimate: number, cap: boolean, localFeatureArea?: () => number) : number {
+function snap(total: number, geo: Polygon | MultiPolygon, estimate: number, localFeatureArea: () => number) : number {
   if (Number.isNaN(total)) throw new Error("intersection area is NaN");
   if (total <= 0) return 0;
   if (total <= 100 * SNAP_ZERO * estimate || total >= 0.5 * estimate) {
-    // Decided on the same (local) formula as `total` when available; the snapped value is
-    // `area`, so that a feature inside the filter gets exactly its `area`.
-    const featureArea = localFeatureArea ? localFeatureArea() : area(geo);
-    if (total >= featureArea * (1 - SNAP_FULL) && (cap || total <= featureArea * (1 + SNAP_FULL))) return area(geo);
+    // Decided on the same (local) formula as `total`; the snapped value is `area`, so that
+    // a feature inside the filter gets exactly its `area`.
+    const featureArea = localFeatureArea();
+    if (total >= featureArea * (1 - SNAP_FULL)) return area(geo);
     if (total <= featureArea * SNAP_ZERO) return 0;
   }
   return total;

@@ -670,23 +670,26 @@ describe("wfs_engine/response", () => {
         expect(feature.intersection_area).toBeCloseTo(polyclipIntersectionArea(withHole, referenceSquare), 0);
       });
 
-      it("should fall back on general polygon clipping for a self-intersecting geometry", () => {
+      it("should return null for a self-intersecting geometry", () => {
         // Bow tie, whose lobes cancel in its signed area.
         const bowTie: Polygon = {
           type: "Polygon",
           coordinates: [[[2.8, 48.4], [3.2, 48.6], [3.2, 48.4], [2.8, 48.6], [2.8, 48.4]]],
         };
-        const feature = deriveExtras(bowTie);
 
-        expect(feature.intersection_area).toBeCloseTo(polyclipIntersectionArea(bowTie, referenceSquare), 0);
-
-        // A reference in the empty wedge below the crossing point is not intersected.
+        // Across the reference boundary, around its crossing point, and inside the reference.
+        expect(deriveExtras(bowTie).intersection_area).toBeNull();
         const inWedge = { type: "Polygon" as const, coordinates: [rectangle(2.98, 48.41, 3.02, 48.43)] };
-        expect(deriveExtras(bowTie, inWedge).intersection_area).toEqual(0);
-
-        // Nor is a bow tie lying inside the reference reduced to its signed area.
+        expect(deriveExtras(bowTie, inWedge).intersection_area).toBeNull();
         const inside = { type: "Polygon" as const, coordinates: [rectangle(2, 48, 4, 49)] };
-        expect(deriveExtras(bowTie, inside).intersection_area).toBeCloseTo(polyclipIntersectionArea(bowTie, inside), 0);
+        expect(deriveExtras(bowTie, inside).intersection_area).toBeNull();
+      });
+
+      it("should return null for a self-intersecting reference", () => {
+        const bowTie = { type: "Polygon" as const, coordinates: [[[2, 48], [3, 49], [3, 48], [2, 49], [2, 48]]] };
+        const feature = deriveExtras({ type: "Polygon", coordinates: [rectangle(2.1, 48.1, 2.9, 48.4)] }, bowTie);
+
+        expect(feature.intersection_area).toBeNull();
       });
 
       it("should return null for a non-areal geometry", () => {
