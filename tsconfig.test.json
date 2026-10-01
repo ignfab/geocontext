@@ -12,7 +12,6 @@
   },
   "include": [
     "./test/**/*",
-    "./src/types/**/*.d.ts",
     "./vitest*.mts"
   ],
   "exclude": [

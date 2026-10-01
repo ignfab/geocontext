@@ -53,6 +53,12 @@ describe("distance helper", () => {
       expect(result.point2).toEqual(marseille.coordinates);
     });
 
+    it("computes the ellipsoidal distance between antipodal points", () => {
+      // Vincenty's iteration has no answer here; Karney's algorithm goes over the pole.
+      const antipode = [paris.coordinates[0] - 180, -paris.coordinates[1]];
+      expect(distanceVincenty(paris.coordinates, antipode)).toBeCloseTo(20003931.46, 2);
+    });
+
     it("computes Paris->Marseille", () => {
       const result = distance(paris, marseille);
       expectCloseRatio(result.distance, 662_488.38, 0.0005, "Paris-Marseille distance");

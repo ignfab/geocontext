@@ -3,7 +3,7 @@ import DistanceOp from "jsts/org/locationtech/jts/operation/distance/DistanceOp.
 import IndexedFacetDistance from "jsts/org/locationtech/jts/operation/distance/IndexedFacetDistance.js";
 import RelateOp from "jsts/org/locationtech/jts/operation/relate/RelateOp.js";
 import type { Geometry, Position } from "geojson";
-import { distVincenty } from "node-vincenty";
+import geodesic from "geographiclib-geodesic";
 import { GeometryFactory } from "jsts/org/locationtech/jts/geom.js";
 import GeometryLocation from "jsts/org/locationtech/jts/operation/distance/GeometryLocation.js";
 import { midpoint } from "@turf/midpoint";
@@ -62,7 +62,7 @@ type JstsGeometry = {
 const EARTH_RADIUS_M = 6_371_000;
 const DEG_TO_RAD = Math.PI / 180;
 
-/** WGS84 ellipsoid parameters — the ellipsoid `distVincenty` solves on. */
+/** WGS84 ellipsoid parameters, the ellipsoid `distanceVincenty` solves on. */
 const WGS84_SEMI_MAJOR_M = 6_378_137;
 const WGS84_FLATTENING = 1 / 298.257223563;
 const WGS84_ECCENTRICITY_SQ = WGS84_FLATTENING * (2 - WGS84_FLATTENING);
@@ -443,14 +443,14 @@ export function distance(gA: Geometry, gB: Geometry, metric: Metric = "haversine
   return { ...best, distance: Math.round(best.distance * 100) / 100 };
 }
 
-/** Computes Vincenty distance between two lat/lon points through node-vincenty. */
+/**
+ * Computes the geodesic distance on WGS84 between two lon/lat points, with
+ * Karney's algorithm (geographiclib). Unlike Vincenty's iteration, it is
+ * defined for every pair, antipodal points included.
+ */
 export function distanceVincenty(a: Position, b: Position) {
-  // distVincenty takes lat1, lon1, lat2, lon2
-  const result = distVincenty(a[1], a[0], b[1], b[0]);
-  if (typeof result !== "object" || result === null) {
-    throw new Error("Vincenty formula failed to converge (antipodal or near-antipodal points)");
-  }
-  return result.distance;
+  // Inverse takes lat1, lon1, lat2, lon2; asking for DISTANCE always sets s12.
+  return geodesic.Geodesic.WGS84.Inverse(a[1], a[0], b[1], b[0], geodesic.Geodesic.DISTANCE).s12!;
 }
 
 export default distance;
