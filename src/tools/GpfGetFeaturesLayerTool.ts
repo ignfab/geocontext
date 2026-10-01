@@ -20,7 +20,7 @@
 
 import BaseTool from "./BaseTool.js";
 
-import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
+import { READ_ONLY_CLOSED_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import { getEnv } from "../config/env.js";
 import { encodeToken } from "../proxy/token.js";
 import { buildDataUrl } from "../proxy/dataUrl.js";
@@ -49,7 +49,7 @@ const GPF_GET_FEATURES_LAYER_TOOL_DESCRIPTION = [
 class GpfGetFeaturesLayerTool extends BaseTool<GpfGetFeaturesLayerInput> {
   name = "gpf_get_features_layer";
   title = "Couche cartographiable d’objets GPF";
-  annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
+  annotations = READ_ONLY_CLOSED_WORLD_TOOL_ANNOTATIONS;
   description = GPF_GET_FEATURES_LAYER_TOOL_DESCRIPTION;
   protected outputSchemaShape = gpfGetFeaturesLayerOutputSchema;
 

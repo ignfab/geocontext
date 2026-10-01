@@ -553,27 +553,39 @@ async function buildErrorContractSection(tools) {
   ];
 }
 
-export function buildAnnotationsSection(tools) {
-  const annotations = tools.map((tool) => tool.annotations);
-  const hasSharedAnnotations =
-    annotations.length > 0 &&
-    annotations.every((annotation) => JSON.stringify(annotation) === JSON.stringify(annotations[0]));
+/** The value most tools share for `key`, followed by the tools that differ from it. */
+function describeAnnotationValue(tools, key) {
+  const values = tools.map((tool) => Boolean(tool.annotations[key]));
+  const usual = values.filter(Boolean).length * 2 >= values.length;
+  const exceptions = tools
+    .filter((_tool, index) => values[index] !== usual)
+    .map((tool) => `\`${tool.name}\``);
+  const format = (value) => (value ? "oui" : "non");
+  if (exceptions.length === 0) {
+    return format(usual);
+  }
+  const names = exceptions.join(", ").replace(/, ([^,]*)$/, " et $1");
+  return `${format(usual)} (${format(!usual)} pour ${names})`;
+}
 
-  if (!hasSharedAnnotations || !annotations[0]) {
+export function buildAnnotationsSection(tools) {
+  const annotatedTools = tools.filter((tool) => tool.annotations);
+
+  if (annotatedTools.length === 0) {
     return [];
   }
 
   return [
     "## Annotations MCP",
     "",
-    "Tous les tools exposent les mêmes annotations MCP dans leur définition `tools/list` :",
+    "Annotations MCP exposées dans la définition `tools/list` de chaque tool :",
     "",
     "| Annotation | Valeur | Signification |",
     "| --- | --- | --- |",
-    `| \`readOnlyHint\` | ${annotations[0].readOnlyHint ? "oui" : "non"} | Le tool consulte des données sans modifier d'état côté serveur. |`,
-    `| \`destructiveHint\` | ${annotations[0].destructiveHint ? "oui" : "non"} | Le tool n'est pas signalé comme destructif. |`,
-    `| \`idempotentHint\` | ${annotations[0].idempotentHint ? "oui" : "non"} | Répéter le même appel ne déclenche pas d'effet de bord supplémentaire attendu. |`,
-    `| \`openWorldHint\` | ${annotations[0].openWorldHint ? "oui" : "non"} | Le tool interroge des sources externes ou ouvertes, dont le contenu peut évoluer. |`,
+    `| \`readOnlyHint\` | ${describeAnnotationValue(annotatedTools, "readOnlyHint")} | Le tool consulte des données sans modifier d'état côté serveur. |`,
+    `| \`destructiveHint\` | ${describeAnnotationValue(annotatedTools, "destructiveHint")} | Le tool n'est pas signalé comme destructif. |`,
+    `| \`idempotentHint\` | ${describeAnnotationValue(annotatedTools, "idempotentHint")} | Répéter le même appel ne déclenche pas d'effet de bord supplémentaire attendu. |`,
+    `| \`openWorldHint\` | ${describeAnnotationValue(annotatedTools, "openWorldHint")} | Le tool interroge des sources externes ou ouvertes, dont le contenu peut évoluer. |`,
   ];
 }
 

@@ -9,7 +9,7 @@ type DocsHelpersModule = {
   renderPropertyTable: (schema: unknown) => string;
   renderDescription: (description: string | undefined) => string;
   renderResponseContractSection: (definition: { name: string; outputSchema?: unknown }) => string;
-  buildAnnotationsSection: (tools: Array<{ annotations?: Record<string, boolean> }>) => string[];
+  buildAnnotationsSection: (tools: Array<{ name?: string; annotations?: Record<string, boolean> }>) => string[];
   sortToolDefinitions: <T extends { name: string }>(definitions: T[]) => T[];
   buildValidationErrorExampleForTool: (
     tool: unknown,
@@ -176,16 +176,28 @@ describe("generate-mcp-docs helpers", () => {
 
     const markdown = section.join("\n");
     expect(markdown).toContain("## Annotations MCP");
-    expect(markdown).toContain("Tous les tools exposent les mêmes annotations MCP");
+    expect(markdown).toContain("Annotations MCP exposées dans la définition `tools/list` de chaque tool");
     expect(markdown).toContain("| `readOnlyHint` | oui |");
     expect(markdown).toContain("| `destructiveHint` | non |");
     expect(markdown).toContain("| `idempotentHint` | oui |");
     expect(markdown).toContain("| `openWorldHint` | oui |");
 
-    expect(buildAnnotationsSection([
-      { annotations: { readOnlyHint: true } },
-      { annotations: { readOnlyHint: false } },
-    ])).toEqual([]);
+    expect(buildAnnotationsSection([{}, {}])).toEqual([]);
+  });
+
+  it("should name the tools whose MCP annotations differ from the others", async () => {
+    const { buildAnnotationsSection } = await loadDocsHelpers();
+
+    const markdown = buildAnnotationsSection([
+      { name: "tool_a", annotations: { readOnlyHint: true, openWorldHint: true } },
+      { name: "tool_b", annotations: { readOnlyHint: true, openWorldHint: false } },
+      { name: "tool_c", annotations: { readOnlyHint: true, openWorldHint: false } },
+      { name: "tool_d", annotations: { readOnlyHint: true, openWorldHint: true } },
+      { name: "tool_e", annotations: { readOnlyHint: true, openWorldHint: true } },
+    ]).join("\n");
+
+    expect(markdown).toContain("| `readOnlyHint` | oui |");
+    expect(markdown).toContain("| `openWorldHint` | oui (non pour `tool_b` et `tool_c`) |");
   });
 
   it("should build a validation example without executing the tool", async () => {
