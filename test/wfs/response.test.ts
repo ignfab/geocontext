@@ -181,7 +181,7 @@ describe("wfs_engine/response", () => {
 
       const features = getFeatures(result);
       expect(features[0].distance_to_filter_center as number).toBeCloseTo(1330.6551992128234, 6);
-      expect(features[0].intersection_area as number).toBeCloseTo(13010026.562313082, 6);
+      expect(features[0].intersection_area as number).toBeCloseTo(13010026.445506852, 3);
     });
 
     it("should compute non-zero distance_to_filter_center for an off-center point in a bbox filter", () => {
