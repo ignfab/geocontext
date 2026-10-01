@@ -17,6 +17,7 @@ import {
   type GpfGetFeaturesInput,
   gpfGetFeaturesPublishedInputSchema,
   GPF_SPATIAL_FILTER_DOCNAMES,
+  GPF_SPATIAL_EXTRAS_DOCNAMES,
 } from "../wfs/schema.js";
 import logger from "../logger.js";
 
@@ -25,6 +26,7 @@ import logger from "../logger.js";
 const GPF_GET_FEATURES_TOOL_DESCRIPTION = [
   "Interroge un type GPF et renvoie des résultats structurés (propriétés attributaires ; les géométries ne sont pas incluses). Pour obtenir une couche cartographiable, utiliser `gpf_get_features_layer`.",
   `Utiliser \`select\` pour choisir les propriétés, \`where\` pour filtrer, \`order_by\` pour trier et un filtre spatial dédié (${GPF_SPATIAL_FILTER_DOCNAMES}) pour le spatial.`,
+  `Utiliser \`spatial_extras\` pour obtenir des mesures calculées sur la géométrie (${GPF_SPATIAL_EXTRAS_DOCNAMES}). Elles portent uniquement sur les objets renvoyés.`,
   "Exemple attributaire : `where=[{ property: \"code_insee\", operator: \"eq\", value: \"75056\" }]`.",
   "Exemple bbox : `bbox_filter={ west: 2.1, south: 48.7, east: 2.5, north: 48.9 }`.",
   "Exemple point dans géométrie : `intersects_point_filter={ lon: 2.35, lat: 48.85 }`.",

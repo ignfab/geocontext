@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 import type { GpfFeatureType } from "../../src/wfs/catalog";
 
-import { compileQueryParts, geometryToEwkt } from "../../src/wfs/queryPreparation";
-import type { GpfGetFeaturesInput } from "../../src/wfs/schema";
+import { compileQueryParts } from "../../src/wfs/queryPreparation";
+import type { GpfGetFeaturesInput, GpfCountFeaturesInput } from "../../src/wfs/schema";
+import { geometryToEwkt } from "../../src/wfs/geometry";
+import { queryIsGetFeaturesInput } from "../../src/wfs/schema";
 
 describe("gpfGetFeatures/queryPreparation", () => {
   const featureType: OgcCollectionSchema = {
@@ -45,6 +47,15 @@ describe("gpfGetFeatures/queryPreparation", () => {
     limit: 100,
     spatial_extras: []
   };
+
+  it.each<[string, Partial<GpfGetFeaturesInput>]>([
+    ["select", { select: ["area"] }],
+    ["where", { where: [{ property: "area", operator: "gt", value: "1000" }] }],
+    ["order_by", { order_by: [{ property: "area", direction: "desc" }] }],
+  ])("should explain that a spatial extra is not a property when used in %s", (_clause, clause) => {
+    expect(() => compileQueryParts({ ...baseInput, ...clause }, wrappedFeatureType))
+      .toThrow("`area` désigne un élément calculé via `spatial_extras`, pas une propriété du type");
+  });
 
   it("should compile where clauses", () => {
     const compiled = compileQueryParts({
@@ -118,10 +129,29 @@ describe("gpfGetFeatures/queryPreparation", () => {
         feature_id: "commune.1",
       },
     }, wrappedFeatureType, {
-      geometry_ewkt: "SRID=4326;MULTIPOLYGON(((2 48,2.2 48,2.2 48.2,2 48,2 48)))",
+      type: "MultiPolygon" as const,
+      coordinates: [[[[2, 48], [2.2, 48], [2.2, 48.2], [2, 48], [2, 48]]]]
     });
 
     expect(compiled.cqlFilter).toEqual("INTERSECTS(geometrie,SRID=4326;MULTIPOLYGON(((2 48,2.2 48,2.2 48.2,2 48,2 48))))");
+  });
+
+  it("should propagate resolvedGeometryRef in GetFeatures output for intersects_feature", () => {
+    const resolvedGeometryRef = {
+      type: "MultiPolygon" as const,
+      coordinates: [[[[2, 48], [2.2, 48], [2.2, 48.2], [2, 48], [2, 48]]]]
+    };
+
+    const compiled = compileQueryParts({
+      ...baseInput,
+      intersects_feature_filter: {
+        typename: "ADMINEXPRESS-COG.LATEST:commune",
+        feature_id: "commune.1",
+      },
+      spatial_extras: ["intersection_area"],
+    }, wrappedFeatureType, resolvedGeometryRef);
+
+    expect(compiled.resolvedGeometryRef).toBe(resolvedGeometryRef);
   });
 
   it("should compile travel_time with resolved isochrone geometry", () => {
@@ -133,9 +163,12 @@ describe("gpfGetFeatures/queryPreparation", () => {
         minutes: 15,
         profile: "pedestrian",
       },
-    }, wrappedFeatureType, {
-      geometry_ewkt: "SRID=4326;POLYGON((2 48,2.2 48,2.2 48.2,2 48))",
-    });
+    }, wrappedFeatureType,
+    {
+      type: "Polygon" as const,
+      coordinates: [[[2, 48], [2.2, 48], [2.2, 48.2], [2, 48]]]
+    }
+  );
 
     expect(compiled.cqlFilter).toEqual("INTERSECTS(geometrie,SRID=4326;POLYGON((2 48,2.2 48,2.2 48.2,2 48)))");
   });
@@ -200,4 +233,24 @@ describe("gpfGetFeatures/queryPreparation", () => {
     expect(geometryToEwkt({ type: "LineString", coordinates: [[2.3, 48.8], [2.4, 48.9]] })).toEqual("SRID=4326;LINESTRING(2.3 48.8,2.4 48.9)");
   });
 
+});
+
+describe("queryIsGetFeaturesInput", () => {
+  const getFeaturesInput: GpfGetFeaturesInput = {
+    typename: "ADMINEXPRESS-COG.LATEST:commune",
+    limit: 10,
+    spatial_extras: [],
+  };
+
+  const countFeaturesInput: GpfCountFeaturesInput = {
+    typename: "ADMINEXPRESS-COG.LATEST:commune",
+  };
+
+  it("returns true for a GpfGetFeaturesInput", () => {
+    expect(queryIsGetFeaturesInput(getFeaturesInput)).toBe(true);
+  });
+
+  it("returns false for a GpfCountFeaturesInput", () => {
+    expect(queryIsGetFeaturesInput(countFeaturesInput)).toBe(false);
+  });
 });

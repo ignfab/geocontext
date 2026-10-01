@@ -18,26 +18,41 @@ export const DEFAULT_LIMIT = 100;
 export const MAX_LIMIT = 5000;
 export const WHERE_OPERATORS = ["eq", "ne", "lt", "lte", "gt", "gte", "in", "is_null"] as const;
 export const ORDER_DIRECTIONS = ["asc", "desc"] as const;
-export const GPF_GET_FEATURES_SPATIAL_FILTER_KEYS = [
-  "bbox_filter",
-  "intersects_point_filter",
-  "dwithin_point_filter",
-  "intersects_feature_filter",
-  "travel_time_filter"
-] as const;
-export const GPF_SPATIAL_FILTER_DOCNAMES = GPF_GET_FEATURES_SPATIAL_FILTER_KEYS
-  .map((name) => `\`${name}\``)
-  .join(", ")
-  .replace(/, ([^,]*)$/, ' ou $1')
 
-export const GPF_GET_FEATURES_SPATIAL_EXTRAS = [
+export const GPF_GET_FEATURE_BY_ID_SPATIAL_EXTRAS = [
   "centroid",
-  "bbox"
+  "bbox",
+  "length",
+  "area",
 ] as const;
+export const GPF_SPATIAL_EXTRAS_REQUIRING_FILTER = [
+  "distance_to_filter_center",
+  "intersection_area",
+] as const;
+export const GPF_GET_FEATURES_SPATIAL_EXTRAS = [
+  ...GPF_GET_FEATURE_BY_ID_SPATIAL_EXTRAS,
+  ...GPF_SPATIAL_EXTRAS_REQUIRING_FILTER,
+] as const;
+
+export type SpatialExtraRequiringFilterOption = typeof GPF_SPATIAL_EXTRAS_REQUIRING_FILTER[number];
+
+export type SpatialExtraOptions = typeof GPF_GET_FEATURES_SPATIAL_EXTRAS[number];
+
+export function spatialExtraRequiresFilter(
+  extra: SpatialExtraOptions,
+): extra is SpatialExtraRequiringFilterOption {
+  return GPF_SPATIAL_EXTRAS_REQUIRING_FILTER.includes(extra as SpatialExtraRequiringFilterOption);
+}
+
 export const GPF_SPATIAL_EXTRAS_DOCNAMES = GPF_GET_FEATURES_SPATIAL_EXTRAS
   .map((name) => `\`${name}\``)
   .join(", ")
-  .replace(/, ([^,]*)$/, ' et $1')
+  .replace(/, ([^,]*)$/, ' et $1');
+
+export const GPF_GET_FEATURE_BY_ID_SPATIAL_EXTRAS_DOCNAMES = GPF_GET_FEATURE_BY_ID_SPATIAL_EXTRAS
+  .map((name) => `\`${name}\``)
+  .join(", ")
+  .replace(/, ([^,]*)$/, ' et $1');
 
 // --- Shared Clauses ---
 
@@ -126,13 +141,120 @@ const gpfSpatialFilterInputSchema = z.object({
     .describe("Filtre spatial par temps de trajet depuis un point (`profile` voiture ou piéton). Exclusif avec les autres filtres spatiaux."),
 })
 
-const gpfGeometryExtraInputSchema = z.object({
+export const GPF_GET_FEATURES_SPATIAL_FILTER_KEYS =
+  gpfSpatialFilterInputSchema.keyof().options;
+export const GPF_SPATIAL_FILTER_DOCNAMES = GPF_GET_FEATURES_SPATIAL_FILTER_KEYS
+  .map((name) => `\`${name}\``)
+  .join(", ")
+  .replace(/, ([^,]*)$/, ' ou $1');
+
+/**
+ * Lines shared by both `spatial_extras` descriptions. How `centroid` and `bbox`
+ * feed `intersects_point_filter` and `bbox_filter` is only told by a tool that
+ * has these filters (not `gpf_get_feature_by_id`).
+ */
+function spatialExtrasBaseDescriptionLines(withSpatialFilters: boolean) {
+  return [
+    "`centroid` est le centroïde (moyenne arithmétique des sommets) de la géométrie. Il peut tomber hors d'une géométrie concave" +
+      (withSpatialFilters ? " : un `intersects_point_filter` sur ce point peut alors ne renvoyer ni l'objet, ni ce qui le contient." : "."),
+    "`bbox` est la boîte englobante de la géométrie : `[ouest, sud, est, nord]` en WGS84 `lon/lat`" +
+      (withSpatialFilters ? ", dans l'ordre des champs `west`, `south`, `east` et `north` de `bbox_filter`." : "."),
+    "`length` est la somme des longueurs (en m) des parties linéaires de la géométrie (LineString, MultiLineString).",
+    "`area` est la somme des surfaces (en m²) des parties surfaciques de la géométrie (Polygon, MultiPolygon).",
+  ];
+}
+
+function buildSpatialExtrasDescription(
+  target: string,
+  allowedExtrasDocNames: string,
+  filterDependentDescriptionLine: string,
+) {
+  // Only a tool with spatial filters has filter-dependent extras.
+  const withSpatialFilters = filterDependentDescriptionLine !== "";
+  const optionalFilterLine = withSpatialFilters
+    ? `${filterDependentDescriptionLine}\n`
+    : "";
+  return `Éléments calculés depuis la géométrie à renvoyer pour ${target}. Peut inclure ${allowedExtrasDocNames}, aucun par défaut.\n`+
+    `${spatialExtrasBaseDescriptionLines(withSpatialFilters).join("\n")}\n`+
+    optionalFilterLine+
+    "Si l'élément à calculer est incompatible avec la géométrie (exemple : bbox d'un point, aire d'une géométrie linéaire) et que le type de la géométrie est connu à l'avance, une erreur indiquera comment corriger la requête.\n"+
+    "Sinon, un élément qui n'est pas calculable pour un objet (géométrie absente ou vide, aucune partie de la dimension requise) vaut `null`. Une valeur numérique, `0` compris, signifie que le calcul a bien eu lieu.";
+}
+
+/** For each filter-dependent extra, the spatial filter that makes it meaningless, and why. */
+const FILTER_DEPENDENT_EXTRA_RULES: Record<SpatialExtraRequiringFilterOption, {
+  incompatibleFilter: SpatialFilterKey;
+  incompatibleReason: string;
+}> = {
+  distance_to_filter_center: {
+    incompatibleFilter: "intersects_point_filter",
+    incompatibleReason: "vaut toujours 0 avec `intersects_point_filter`, puisque chaque objet renvoyé contient le point : pour classer des objets selon leur distance à un point, utilisez plutôt `dwithin_point_filter`",
+  },
+  intersection_area: {
+    incompatibleFilter: "intersects_point_filter",
+    incompatibleReason: "ne peut pas être calculé avec `intersects_point_filter`, car un point n'a pas de surface : utilisez plutôt un filtre surfacique",
+  },
+};
+
+/**
+ * Rejects the filter-dependent extras (`distance_to_filter_center`, `intersection_area`)
+ * when no spatial filter is given, or when the given filter makes them meaningless.
+ * Both only depend on the input, hence invalid tool parameters rather than
+ * execution errors.
+ */
+function assertSpatialExtraSpatialFilterConsistency(input: z.infer<typeof gpfGetFeaturesInputObjectSchema>, ctx: z.RefinementCtx) {
+  const usedSpatialFilters = GPF_GET_FEATURES_SPATIAL_FILTER_KEYS.filter((key) => input[key] !== undefined);
+
+  for (const extra of input.spatial_extras.filter(spatialExtraRequiresFilter)) {
+    const { incompatibleFilter, incompatibleReason } = FILTER_DEPENDENT_EXTRA_RULES[extra];
+
+    if (usedSpatialFilters.length === 0) {
+      const compatibleFilters = GPF_GET_FEATURES_SPATIAL_FILTER_KEYS
+        .filter((key) => key !== incompatibleFilter)
+        .map((name) => `\`${name}\``)
+        .join(", ")
+        .replace(/, ([^,]*)$/, ' ou $1');
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["spatial_extras"],
+        message: `\`${extra}\` exige un filtre spatial (${compatibleFilters}) : ajoutez un de ces filtres, ou retirez \`${extra}\` de \`spatial_extras\`.`,
+      });
+    } else if (usedSpatialFilters.includes(incompatibleFilter)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["spatial_extras"],
+        message: `\`${extra}\` ${incompatibleReason}, ou retirez \`${extra}\` de \`spatial_extras\`.`,
+      });
+    }
+  }
+}
+
+const gpfGetFeaturesGeometryExtraInputSchema = z.object({
   spatial_extras: z
     .array(z.enum(GPF_GET_FEATURES_SPATIAL_EXTRAS))
     .default([])
     .transform((val) => [...new Set(val)])
-    .describe(`Éléments calculés depuis la géométrie à renvoyer pour chaque objet. Peut inclure ${GPF_SPATIAL_EXTRAS_DOCNAMES}, aucun par défaut.`),
-})
+    .describe(buildSpatialExtrasDescription(
+      "chaque objet",
+      GPF_SPATIAL_EXTRAS_DOCNAMES,
+      "`distance_to_filter_center` est la distance (en m) entre le centre du filtre spatial et le point le plus proche de l'objet renvoyé, `0` si l'objet contient ce centre. Ce centre est le point de `dwithin_point_filter`, le point de départ de `travel_time_filter`, le centre de la boîte de `bbox_filter` et le centroïde (moyenne des sommets) de l'objet de référence de `intersects_feature_filter`.\n"+
+      "`intersection_area` est l'aire (en m²) de la partie de l'objet renvoyé située dans le filtre spatial (boîte, disque, isochrone ou objet de référence surfacique). Elle vaut `null` si l'objet renvoyé n'a pas de partie surfacique, et `0` si l'objet ne recouvre pas le filtre.\n"+
+      "`distance_to_filter_center` et `intersection_area` exigent un filtre spatial.\n"+
+      "Les `spatial_extras` sont calculés après la requête, sur les seuls objets renvoyés : ils ne sont utilisables ni dans `where` ni dans `order_by`. Pour un classement (les N plus grands, les N plus proches) ou une somme, vérifier que `numberReturned` est égal à `numberMatched`, sinon augmenter `limit` ou restreindre le filtre spatial. Pour les N plus proches d'un point, utiliser `dwithin_point_filter` avec `distance_to_filter_center`, trier sur cette distance et élargir `distance_m` s'il y a moins de N objets."
+    )),
+});
+
+const gpfGetFeatureByIdGeometryExtraInputSchema = z.object({
+  spatial_extras: z
+    .array(z.enum(GPF_GET_FEATURE_BY_ID_SPATIAL_EXTRAS))
+    .default([]) // ensure that spatial_extra is not optional, which is mandatory to ensure queryIsGetFeaturesInput correctness
+    .transform((val) => [...new Set(val)])
+    .describe(buildSpatialExtrasDescription(
+      "l'objet",
+      GPF_GET_FEATURE_BY_ID_SPATIAL_EXTRAS_DOCNAMES,
+      "",
+    )),
+});
 
 function assertSpatialFilterExclusion(input : Record<string, unknown>, ctx : z.RefinementCtx) {
   const usedSpatialFilters = GPF_GET_FEATURES_SPATIAL_FILTER_KEYS.filter((key) => input[key] !== undefined);
@@ -152,12 +274,15 @@ export type WhereClause = z.infer<typeof whereClauseSchema>;
 
 export type OrderByClause = z.infer<typeof orderBySchema>;
 
-export type SpatialFilter =
-  | ({ operator: "bbox" } & z.infer<typeof bboxFilterSchema>)
-  | ({ operator: "intersects_point" } & z.infer<typeof intersectsPointFilterSchema>)
-  | ({ operator: "dwithin_point" } & z.infer<typeof dwithinPointFilterSchema>)
-  | ({ operator: "intersects_feature" } & z.infer<typeof intersectsFeatureFilterSchema>)
-  | ({ operator: "travel_time" } & z.infer<typeof travelTimeFilterSchema>);
+type SpatialFilterKey = (typeof GPF_GET_FEATURES_SPATIAL_FILTER_KEYS)[number];
+export type SpatialFilterInput = z.infer<typeof gpfSpatialFilterInputSchema>;
+
+type SpatialFilterEntry<K extends SpatialFilterKey> =
+  K extends `${infer Operator}_filter`
+    ? { operator: Operator } & SpatialFilterInput[K]
+    : never;
+
+export type SpatialFilter = SpatialFilterEntry<SpatialFilterKey>;
 
 // --- `gpf_get_features` ---
 
@@ -184,12 +309,13 @@ export const gpfGetFeaturesInputObjectSchema = gpfTypenameInputSchema
     .min(1)
     .optional()
     .describe("Liste ordonnée des critères de tri."),
-}))
-  .merge(gpfGeometryExtraInputSchema)
+  }))
+  .merge(gpfGetFeaturesGeometryExtraInputSchema)
   .strict();
 
 export const gpfGetFeaturesInputSchema = gpfGetFeaturesInputObjectSchema
-  .superRefine(assertSpatialFilterExclusion);
+  .superRefine(assertSpatialFilterExclusion)
+  .superRefine(assertSpatialExtraSpatialFilterConsistency);
 
 // --- `gpf_get_features` Types ---
 
@@ -331,10 +457,15 @@ export const gpfCountFeaturesPublishedInputSchema = generatePublishedInputSchema
 
 export type GpfQueryFeaturesInput = GpfGetFeaturesInput | GpfCountFeaturesInput
 
+/** Checks whether the input is that of a GetFeatures / GetFeatureById, instead of a CountFeatures request */
+export function queryIsGetFeaturesInput(input: GpfQueryFeaturesInput) : input is GpfGetFeaturesInput {
+  return "spatial_extras" in input;
+}
+
 // --- `gpf_get_feature_by_id` ---
 
 export const gpfGetFeatureByIdInputObjectSchema = gpfFeatureByIdCoreInputSchema
-  .merge(gpfGeometryExtraInputSchema)
+  .merge(gpfGetFeatureByIdGeometryExtraInputSchema)
   .strict();
 
 export const gpfGetFeatureByIdInputSchema = gpfGetFeatureByIdInputObjectSchema;

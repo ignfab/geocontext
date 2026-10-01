@@ -130,6 +130,7 @@ Les niveaux 1 et 2 nécessitent un build à jour (`npm run build`) et un accès 
 | `npm run test:integration`  | Tests d'intégration niveau 1                                    |
 | `npm run test:e2e`          | Tests E2E agent niveau 2                                        |
 | `npm run test:coverage`     | Tests unitaires avec couverture                                 |
+| `npm run bench`             | Benchmark du calcul de `intersection_area`                      |
 | `npm run verify:fast`       | `typecheck` + `typecheck:test` + `build` + `test:unit`          |
 | `npm run verify`            | `verify:fast` + `test:integration`                              |
 | `npm run verify:full`       | `verify` + `test:e2e`                                           |

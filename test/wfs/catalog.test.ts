@@ -147,6 +147,10 @@ describe("Test WfsSchemaStore",() => {
         it("should throw an error if the feature type does not exist", async () => {
             await expect(wfsSchemaStore.getFeatureType("BDTOPO_V3:not_found")).rejects.toThrow(FeatureTypeNotFoundError);
         });
+
+        it("should mention gpf_search_types in the error message for an unknown typename", async () => {
+            await expect(wfsSchemaStore.getFeatureType("BDTOPO_V3:not_found")).rejects.toThrow(/gpf_search_types/);
+        });
     });
 
 });

@@ -22,7 +22,10 @@ import type {
   OrderByClause,
   WhereClause,
 } from "./schema.js";
-import { GPF_SPATIAL_FILTER_DOCNAMES } from "./schema.js"
+import {
+  GPF_SPATIAL_FILTER_DOCNAMES,
+  queryIsGetFeaturesInput,
+} from "./schema.js"
 
 import {
   formatScalarValue,
@@ -37,10 +40,10 @@ import {
   compileIntersectsFeatureSpatialFilter,
   compileIntersectsPointSpatialFilter,
 } from "./spatialCql.js";
+import type { Geometry } from "geojson";
 
 // --- Re-exports ---
 
-export { geometryToEwkt } from "./geometry.js";
 export { getGeometryName } from "./properties.js";
 export { getSpatialFilter } from "./spatialFilter.js";
 
@@ -59,15 +62,12 @@ type InClause = Extract<ReturnType<typeof normalizeWhereClause>, { operator: "in
 
 // --- Public Types ---
 
-export type ResolvedFeatureGeometryRef = {
-  geometry_ewkt: string;
-};
-
 export type CompiledQuery = {
   geometryName?: string;
   propertyName: string;
   cqlFilter?: string;
   sortBy?: string;
+  resolvedGeometryRef?: Geometry;
 };
 
 // --- Attribute Compilation ---
@@ -182,9 +182,10 @@ function compileOrderByClause(featureType: GpfFeatureType, clause: OrderByClause
 export function compileQueryParts(
   input: GpfQueryFeaturesInput,
   featureType: GpfFeatureType,
-  resolvedGeometryRef?: ResolvedFeatureGeometryRef,
+  resolvedGeometryRef?: Geometry,
 ): CompiledQuery {
   let geometryName: string | undefined;
+  const isGetFeatures = queryIsGetFeaturesInput(input);
   const spatialFilter = getSpatialFilter(input);
   const fragments: string[] = [];
 
@@ -206,14 +207,17 @@ export function compileQueryParts(
         if (!resolvedGeometryRef) {
           throw new Error("Le filtre spatial `intersects_feature` exige la résolution préalable de la géométrie de référence.");
         }
-        fragments.push(compileIntersectsFeatureSpatialFilter(geometryName, resolvedGeometryRef.geometry_ewkt));
+        fragments.push(compileIntersectsFeatureSpatialFilter(geometryName, resolvedGeometryRef));
         break;
       case "travel_time":
         if (!resolvedGeometryRef) {
           throw new Error("Le filtre spatial `travel_time` exige la résolution préalable de la géométrie d'isochrone.");
         }
-        fragments.push(compileIntersectsFeatureSpatialFilter(geometryName, resolvedGeometryRef.geometry_ewkt));
+        fragments.push(compileIntersectsFeatureSpatialFilter(geometryName, resolvedGeometryRef));
         break;
+      default: // Make a compile-time error if a filter is missing from the switch
+        const noFilter: never = spatialFilter;
+        throw new Error(`Unhandled filter case: ${noFilter}`);
     }
   }
 
@@ -223,13 +227,13 @@ export function compileQueryParts(
 
   const cqlFilter = fragments.length > 0 ? fragments.join(" AND ") : undefined;
 
-  // TODO: use a more solid guard that will not break at the first contract change
-  if (!("spatial_extras" in input)) {
+  if (!isGetFeatures) {
     // for CountFeatures: only return the required parts
     return {
       cqlFilter,
       geometryName,
       propertyName: "",
+      resolvedGeometryRef
     };
   }
 
@@ -254,5 +258,6 @@ export function compileQueryParts(
     cqlFilter,
     propertyName,
     sortBy,
+    resolvedGeometryRef,
   };
 }

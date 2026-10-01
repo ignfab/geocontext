@@ -5,7 +5,9 @@
  * can be combined with attribute predicates in the final query.
  */
 
+import type { Geometry } from "geojson";
 import type { SpatialFilter } from "./schema.js";
+import { geometryToEwkt } from "./geometry.js";
 
 // --- Spatial Predicate Compilation ---
 
@@ -49,12 +51,12 @@ export function compileDwithinSpatialFilter(geometryName: string, spatialFilter:
 }
 
 /**
- * Compiles an `intersects_feature` spatial filter once the reference geometry is already serialized.
+ * Compiles an `intersects_feature` spatial filter from the resolved reference geometry.  
  *
  * @param geometryName Geometry property already resolved for the feature type.
- * @param geometryEwkt Reference geometry serialized as EWKT.
+ * @param geometry Reference geometry.
  * @returns A CQL intersects predicate.
  */
-export function compileIntersectsFeatureSpatialFilter(geometryName: string, geometryEwkt: string) {
-  return `INTERSECTS(${geometryName},${geometryEwkt})`;
+export function compileIntersectsFeatureSpatialFilter(geometryName: string, geometry: Geometry) {
+  return `INTERSECTS(${geometryName},${geometryToEwkt(geometry)})`;
 }

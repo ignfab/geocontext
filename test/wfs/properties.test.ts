@@ -6,6 +6,7 @@ import {
   resolveNonGeometryProperty,
   validateSelectProperty,
   buildPropertyName,
+  buildPropertyNameWithGeometry,
 } from "../../src/wfs/properties";
 
 // --- Test fixtures ---
@@ -88,6 +89,42 @@ const noGeometryCollection: OgcCollectionSchema = {
   required: [],
 };
 
+const pointGeometryCollection: OgcCollectionSchema = {
+  ...singleGeometryCollection,
+  title: "PointGeo",
+  properties: {
+    ...singleGeometryCollection.properties,
+    geometry: {
+      format: "geometry-point",
+      "x-ogc-role": "primary-geometry",
+    },
+  },
+};
+
+const lineGeometryCollection: OgcCollectionSchema = {
+  ...singleGeometryCollection,
+  title: "LineGeo",
+  properties: {
+    ...singleGeometryCollection.properties,
+    geometry: {
+      format: "geometry-linestring",
+      "x-ogc-role": "primary-geometry",
+    },
+  },
+};
+
+const polygonGeometryCollection: OgcCollectionSchema = {
+  ...singleGeometryCollection,
+  title: "PolygonGeo",
+  properties: {
+    ...singleGeometryCollection.properties,
+    geometry: {
+      format: "geometry-polygon",
+      "x-ogc-role": "primary-geometry",
+    },
+  },
+};
+
 function asFeatureType(typename: string, schema: OgcCollectionSchema): GpfFeatureType {
   return { typename, schema };
 }
@@ -119,6 +156,16 @@ describe("getGeometryName", () => {
 });
 
 describe("resolveNonGeometryProperty", () => {
+  it("should accept a real catalog property named like a spatial extra", () => {
+    const collection: OgcCollectionSchema = {
+      ...singleGeometryCollection,
+      properties: { ...singleGeometryCollection.properties, area: populationProperty },
+    };
+
+    expect(resolveNonGeometryProperty(asFeatureType("SINGLE:GEO", collection), "area", "Error message"))
+      .toEqual(populationProperty);
+  });
+
   it("should return the property when it is non-geometric", () => {
     const result = resolveNonGeometryProperty(
       asFeatureType("SINGLE:GEO", singleGeometryCollection),
@@ -212,5 +259,65 @@ describe("buildPropertyName", () => {
     expect(() => buildPropertyName(asFeatureType("SINGLE:GEO", singleGeometryCollection), ["geometry"])).toThrow(
       "La propriété 'geometry' est géométrique. `select` accepte uniquement des propriétés non géométriques.",
     );
+  });
+
+  it("should reject bbox for point geometries", () => {
+    expect(() => buildPropertyName(asFeatureType("POINT:GEO", pointGeometryCollection), undefined, ["bbox"])).toThrow(
+      "La géométrie renvoyée sera de type Point, or vous avez demandé sa `bbox`",
+    );
+  });
+
+  it("should reject length for non-linear geometries", () => {
+    expect(() => buildPropertyName(asFeatureType("POINT:GEO", pointGeometryCollection), undefined, ["length"])).toThrow(
+      "`length` ne peut être calculé que sur une géométrie linéaire",
+    );
+  });
+
+  it("should reject area and intersection_area for non-surface geometries", () => {
+    expect(() => buildPropertyName(asFeatureType("LINE:GEO", lineGeometryCollection), undefined, ["area"])).toThrow(
+      "`area` ne peut être calculé que sur une géométrie surfacique",
+    );
+    expect(() => buildPropertyName(asFeatureType("LINE:GEO", lineGeometryCollection), undefined, ["intersection_area"])).toThrow(
+      "`intersection_area` ne peut être calculé que sur une géométrie surfacique",
+    );
+  });
+
+  it("should list every incompatible extra in a single error", () => {
+    expect(() => buildPropertyName(asFeatureType("POINT:GEO", pointGeometryCollection), undefined, ["bbox", "length", "area", "intersection_area"])).toThrow(
+      "Retirez `bbox`, `length`, `area` et `intersection_area` de spatial_extras.",
+    );
+    expect(() => buildPropertyName(asFeatureType("LINE:GEO", lineGeometryCollection), undefined, ["area", "intersection_area"])).toThrow(
+      "`area` et `intersection_area` ne peuvent être calculés que sur une géométrie surfacique, or la géométrie renvoyée sera linéaire. Retirez `area` et `intersection_area` de spatial_extras.",
+    );
+  });
+
+  it("should accept length for linear geometries and area for surface geometries", () => {
+    expect(buildPropertyName(asFeatureType("LINE:GEO", lineGeometryCollection), ["name"], ["length"]))
+      .toEqual("name,geometry");
+    expect(buildPropertyName(asFeatureType("POLY:GEO", polygonGeometryCollection), ["name"], ["area", "intersection_area"]))
+      .toEqual("name,geometry");
+  });
+});
+
+describe("buildPropertyNameWithGeometry", () => {
+  // Cartographic callers (by-id layer tool, proxy by-id resolve) request no
+  // spatial_extras, so the geometry format must not be read: an unlisted or
+  // missing format must not break already minted by-id layer URLs.
+  it.each([
+    ["an unlisted format", { format: "geometry-multisurface", "x-ogc-role": "primary-geometry" }],
+    ["no format", { "x-ogc-role": "primary-geometry" }],
+  ])("should not read the geometry format when the geometry has %s", (_label, geometry) => {
+    const collection: OgcCollectionSchema = {
+      ...singleGeometryCollection,
+      properties: {
+        ...singleGeometryCollection.properties,
+        geometry: geometry as unknown as OgcCollectionProperty,
+      },
+    };
+
+    expect(buildPropertyNameWithGeometry(asFeatureType("SINGLE:GEO", collection)))
+      .toEqual("geometry,name,population");
+    expect(buildPropertyNameWithGeometry(asFeatureType("SINGLE:GEO", collection), ["name"]))
+      .toEqual("name,geometry");
   });
 });

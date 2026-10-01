@@ -215,9 +215,9 @@ describe("proxy/execute · runGeometryFeatureQuery", () => {
 
   it("resolves travel_time_filter via the injected isochrone resolver", async () => {
     const { client, requests } = makeClient();
-    const resolveTravelTime = vi.fn(async () => ({
-      geometry_ewkt: "SRID=4326;POLYGON((2 48,2.2 48,2.2 48.2,2 48))",
-    }));
+    const resolveTravelTime = vi.fn(async () => (
+      { type: "Polygon" as const, coordinates: [[[2, 48], [2.2, 48], [2.2, 48.2], [2, 48]]] }
+    ));
     const input: GpfGetFeaturesInput = {
       ...baseInput,
       travel_time_filter: { lon: 2.35, lat: 48.85, minutes: 15, profile: "pedestrian" },

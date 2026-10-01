@@ -1,4 +1,5 @@
-import { MCPServer, TransportConfig } from "mcp-framework";
+import { MCPServer } from "mcp-framework";
+import type { TransportConfig }  from "mcp-framework";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
 import { createRequire } from "node:module";
