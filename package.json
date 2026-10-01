@@ -92,6 +92,9 @@
     "typescript": "^7.0.2",
     "vitest": "^5.0.3"
   },
+  "allowScripts": {
+    "@modelcontextprotocol/inspector": false
+  },
   "engines": {
     "node": ">=22.21.0 <23 || >=24.5.0"
   },
