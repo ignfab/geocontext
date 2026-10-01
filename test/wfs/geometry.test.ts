@@ -138,19 +138,17 @@ describe("isGeometryLike", () => {
 });
 
 describe("dropEmptyRings", () => {
-  // `@turf/bbox-clip` emits an empty ring for each part it clips away, producing
-  // invalid GeoJSON: `{ coordinates: [] }` for a Polygon and `[[...], []]` for a
-  // MultiPolygon. `area()` tolerates those rings, so only a structural
-  // assertion catches them.
+  // Invalid GeoJSON with empty parts: `{ coordinates: [] }` for a Polygon and
+  // `[[...], []]` for a MultiPolygon.
   const ring = [[2, 48], [2.1, 48], [2.1, 48.1], [2, 48.1], [2, 48]];
 
-  it("should strip the empty rings a partial clip leaves behind", () => {
+  it("should strip the empty parts of a MultiPolygon", () => {
     const cleaned = dropEmptyRings({ type: "MultiPolygon", coordinates: [[ring], []] });
 
     expect(cleaned).toEqual({ type: "MultiPolygon", coordinates: [[ring]] });
   });
 
-  it("should return null when every part was clipped away", () => {
+  it("should return null when every part is empty", () => {
     expect(dropEmptyRings({ type: "MultiPolygon", coordinates: [[], []] })).toBeNull();
   });
 

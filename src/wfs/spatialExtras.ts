@@ -12,7 +12,6 @@ import type {
   SpatialExtraOptions,
   SpatialFilter,
 } from "./schema.js";
-import { bboxClip } from "@turf/bbox-clip";
 import area from "../helpers/area.js";
 import { dropEmptyRings } from "../helpers/geojson.js";
 import { makeIntersectionArea, type IntersectionArea } from "../helpers/intersectionArea.js";
@@ -191,13 +190,10 @@ function intersectionAreaWithSpatialFilter(geom: Geometry, spatialFilter: Spatia
     // lies within `distance_m`, so the intersection is needed even for it.
     case "dwithin_point":
     case "intersects_feature":
-    case "travel_time": {
+    case "travel_time":
+    case "bbox": {
       if (!intersectionArea) return null; // non-areal filter, or filter preparation failed
       return intersectionArea(geo);
-    }
-    case "bbox": {
-      const clipped = dropEmptyRings(bboxClip(geo, [spatialFilter.west, spatialFilter.south, spatialFilter.east, spatialFilter.north]).geometry);
-      return clipped == null ? 0 : area(clipped);
     }
     default: // Make a compile-time error if a filter is missing from the switch
       const noFilter: never = spatialFilter;

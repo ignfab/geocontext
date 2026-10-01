@@ -58,7 +58,6 @@
     "@ignfab/gpf-schema-store": "^0.2.2",
     "@rgrove/parse-xml": "^4.2.3",
     "@turf/bbox": "^7.3.5",
-    "@turf/bbox-clip": "^7.4.0",
     "@turf/bbox-polygon": "^7.4.0",
     "@turf/centroid": "^7.3.5",
     "@turf/circle": "^7.4.0",

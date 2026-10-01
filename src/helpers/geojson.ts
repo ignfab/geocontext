@@ -16,11 +16,10 @@ export function isGeometryLike(value: unknown): value is Exclude<Geometry, Geome
   );
 }
 
-/** Strip the empty rings `@turf/bbox-clip` emits for parts lying outside the box.
+/** Strip the empty parts of a Polygon or MultiPolygon.
  *
- * A fully-clipped-away Polygon comes back as `{ coordinates: [] }` and a
- * MultiPolygon keeps one empty entry per discarded part (`[[...], []]`), both of
- * which are invalid GeoJSON. Returns null when nothing areal survives.
+ * A Polygon without rings (`{ coordinates: [] }`) and a MultiPolygon with empty
+ * parts (`[[...], []]`) are invalid GeoJSON. Returns null when nothing areal survives.
  */
 export function dropEmptyRings(geom: Geometry) : Polygon | MultiPolygon | null {
   if (geom.type == "Polygon") {
@@ -30,7 +29,5 @@ export function dropEmptyRings(geom: Geometry) : Polygon | MultiPolygon | null {
     const coordinates = geom.coordinates.filter((polygon) => polygon.length > 0);
     return coordinates.length == 0 ? null : { type: "MultiPolygon", coordinates };
   }
-  // `bboxClip` is typed over every geometry it accepts, but the caller only ever
-  // passes polygons, so a non-areal result means nothing areal survived.
-  return null;
+  return null; // not areal
 }

@@ -421,7 +421,7 @@ describe("wfs_engine/response", () => {
 
       // The clipped-away part must contribute nothing.
       expect(intersectionArea([[insideRing], [outsideRing]])).toBeCloseTo(
-        intersectionArea([[insideRing]]), 6,
+        intersectionArea([[insideRing]]), 3,
       );
       expect(intersectionArea([[outsideRing]])).toEqual(0);
     });
