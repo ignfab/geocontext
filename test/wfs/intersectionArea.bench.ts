@@ -4,10 +4,11 @@
  *
  *   npm run bench
  *
- * To compare two revisions: `npm run bench -- --outputJson before.json` on the first one,
- * then `npm run bench -- --compare before.json` on the second one.
+ * To compare two revisions: `BENCH_SAVE=tmp/before npm run bench` on the first one,
+ * then `BENCH_COMPARE=tmp/before npm run bench` on the second one. Vitest only accepts
+ * paths inside the project, and fails every benchmark whose baseline file is missing.
  */
-import { bench, describe } from "vitest";
+import { test } from "vitest";
 import type { Polygon, Position } from "geojson";
 
 import { transformFeatureCollectionResponse } from "../../src/wfs/response.js";
@@ -61,18 +62,24 @@ const scenarios: Record<string, Polygon[]> = {
   }),
 };
 
-for (const [name, geometries] of Object.entries(scenarios)) {
+const { BENCH_SAVE, BENCH_COMPARE } = process.env;
+
+for (const [scenarioIndex, [name, geometries]] of Object.entries(scenarios).entries()) {
   const featureCollection = {
     type: "FeatureCollection",
     features: geometries.map((geometry, index) => ({ id: `feature.${index}`, geometry, properties: {} })),
   };
-  describe(name, () => {
-    bench("intersection_area", () => {
+  test(name, async ({ bench }) => {
+    const options = BENCH_SAVE ? { writeResult: `${BENCH_SAVE}/${scenarioIndex}.json` } : {};
+    const current = bench("intersection_area", options, () => {
       transformFeatureCollectionResponse(featureCollection, {
         typename: "BENCH:feature",
         spatial_extras: ["intersection_area"],
         intersects_feature_filter: { typename: "BENCH:region", feature_id: "region.1" },
       }, region);
     });
+    await (BENCH_COMPARE
+      ? bench.compare(current, bench.from("baseline", `${BENCH_COMPARE}/${scenarioIndex}.json`))
+      : current.run());
   });
 }

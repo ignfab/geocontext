@@ -4,7 +4,7 @@
  * Ports of the Python level 2 scenarios from geocontext-test.
  */
 
-import type { MultiServerMCPClient } from "@langchain/mcp-adapters";
+import type { MCPAdapter } from "@langchain/mcp-adapters";
 import { afterAll, beforeAll, describe, it, expect } from "vitest";
 import {
   CONNECT_TIMEOUT,
@@ -100,12 +100,12 @@ describeIfProvider("Agent E2E: basic questions (no tools)", () => {
 });
 
 describeIfProvider("Agent E2E: MCP-backed scenarios", () => {
-  let client: MultiServerMCPClient | undefined;
-  let tools: Awaited<ReturnType<MultiServerMCPClient["getTools"]>> | undefined;
+  let client: MCPAdapter | undefined;
+  let tools: Awaited<ReturnType<MCPAdapter["listTools"]>> | undefined;
 
   beforeAll(async () => {
     client = createMcpClient();
-    tools = await client.getTools();
+    tools = await client.listTools();
   }, CONNECT_TIMEOUT);
 
   afterAll(async () => {

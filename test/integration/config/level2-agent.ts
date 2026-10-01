@@ -10,7 +10,7 @@
  */
 
 import { initChatModel } from "langchain";
-import { MultiServerMCPClient } from "@langchain/mcp-adapters";
+import { MCPAdapter } from "@langchain/mcp-adapters";
 import { INTEGRATION_CONFIG, MILLISECONDS } from "./shared.js";
 
 /** Model name for the LLM */
@@ -59,17 +59,21 @@ export async function createModel() {
 }
 
 /**
- * Create a MultiServerMCPClient connected to the geocontext server via stdio.
+ * Create an MCPAdapter connected to the geocontext server via stdio.
  *
- * Uses the local built geocontext server entrypoint.
+ * Uses the local built geocontext server entrypoint. Tool names are not prefixed
+ * with the server name (`geocode`, not `geocontext__geocode`), as in `requiredToolCalls`.
  */
-export function createMcpClient(): MultiServerMCPClient {
-  return new MultiServerMCPClient({
-    geocontext: {
-      transport: "stdio",
-      command: INTEGRATION_CONFIG.serverCommand,
-      args: [...INTEGRATION_CONFIG.serverArgs],
-      env: INTEGRATION_CONFIG.serverEnv(),
+export function createMcpClient(): MCPAdapter {
+  return new MCPAdapter({
+    prefixToolNameWithServerName: false,
+    servers: {
+      geocontext: {
+        transport: "stdio",
+        command: INTEGRATION_CONFIG.serverCommand,
+        args: [...INTEGRATION_CONFIG.serverArgs],
+        env: INTEGRATION_CONFIG.serverEnv(),
+      },
     },
   });
 }
