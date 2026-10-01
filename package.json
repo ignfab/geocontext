@@ -59,7 +59,6 @@
     "@modelcontextprotocol/sdk": "^1.31.0",
     "@rgrove/parse-xml": "^5.0.0",
     "@turf/bbox": "^7.4.0",
-    "@turf/bbox-clip": "^7.4.0",
     "@turf/bbox-polygon": "^7.4.0",
     "@turf/centroid": "^7.4.0",
     "@turf/circle": "^7.4.0",
