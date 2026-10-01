@@ -1,13 +1,11 @@
 import { centroid } from "@turf/centroid";
 import { bbox } from "@turf/bbox";
 import turfLength from "@turf/length";
-import { area } from "@turf/area";
-import { intersect } from "@turf/intersect";
 import { circle } from "@turf/circle";
 import { bboxPolygon } from "@turf/bbox-polygon";
 import type { Geometry, LineString, MultiLineString, MultiPolygon, Point, Polygon, Position } from "geojson";
 import distance from "../helpers/distance.js";
-import { feature, featureCollection } from "@turf/helpers";
+import { feature } from "@turf/helpers";
 import { getSpatialFilter } from "./spatialFilter.js";
 import type {
   SpatialFilterInput,
@@ -15,6 +13,9 @@ import type {
   SpatialFilter,
 } from "./schema.js";
 import { bboxClip } from "@turf/bbox-clip";
+import area from "../helpers/area.js";
+import { dropEmptyRings } from "../helpers/geojson.js";
+import { makeIntersectionArea, type IntersectionArea } from "../helpers/intersectionArea.js";
 
 export type FeatureCollectionPostProcessInput = {
     typename: string,
@@ -134,7 +135,7 @@ function isComputableGeometry(geometry: unknown) : geometry is Geometry {
 
 type SpatialContext = {
   filterCentroid: Point | null,
-  filterPolygons: Polygon | MultiPolygon | null
+  intersectionArea: IntersectionArea | null
 }
 
 export function prepareSpatialContext(input: FeatureCollectionPostProcessInput, resolvedGeometryRef?: Geometry) : SpatialContext {
@@ -143,7 +144,7 @@ export function prepareSpatialContext(input: FeatureCollectionPostProcessInput, 
 
   const context : SpatialContext = {
     filterCentroid: null,
-    filterPolygons: null,
+    intersectionArea: null,
   };
 
   if (!requires_distance_to_filter_center && !requires_intersection_area) {
@@ -164,30 +165,12 @@ export function prepareSpatialContext(input: FeatureCollectionPostProcessInput, 
 
   if (requires_intersection_area) {
     try {
-      context.filterPolygons = geometryToPolygons(spatialFilterToGeometry(spatialFilter, resolvedGeometryRef));
+      const filterPolygons = geometryToPolygons(spatialFilterToGeometry(spatialFilter, resolvedGeometryRef));
+      context.intersectionArea = filterPolygons && makeIntersectionArea(filterPolygons);
     } catch {}
   }
 
   return context;
-}
-
-/** Strip the empty rings `@turf/bbox-clip` emits for parts lying outside the box.
- *
- * A fully-clipped-away Polygon comes back as `{ coordinates: [] }` and a
- * MultiPolygon keeps one empty entry per discarded part (`[[...], []]`), both of
- * which are invalid GeoJSON. Returns null when nothing areal survives.
- */
-export function dropEmptyRings(geom: Geometry) : Polygon | MultiPolygon | null {
-  if (geom.type == "Polygon") {
-    return geom.coordinates.length == 0 ? null : geom;
-  }
-  if (geom.type == "MultiPolygon") {
-    const coordinates = geom.coordinates.filter((polygon) => polygon.length > 0);
-    return coordinates.length == 0 ? null : { type: "MultiPolygon", coordinates };
-  }
-  // `bboxClip` is typed over every geometry it accepts, but the caller only ever
-  // passes polygons, so a non-areal result means nothing areal survived.
-  return null;
 }
 
 /** Return the area (m²) of the part of a geometry lying inside a spatial filter.
@@ -196,7 +179,7 @@ export function dropEmptyRings(geom: Geometry) : Polygon | MultiPolygon | null {
  * or the filter geometry could not be prepared. 0 only when both are areal and
  * do not overlap.
  */
-function intersectionAreaWithSpatialFilter(geom: Geometry, spatialFilter: SpatialFilter, filterPolygons: Polygon | MultiPolygon | null) : number | null {
+function intersectionAreaWithSpatialFilter(geom: Geometry, spatialFilter: SpatialFilter, intersectionArea: IntersectionArea | null) : number | null {
   const geo = geometryToPolygons(geom);
   if (!geo) {
     return null; // non-areal feature
@@ -209,14 +192,8 @@ function intersectionAreaWithSpatialFilter(geom: Geometry, spatialFilter: Spatia
     case "dwithin_point":
     case "intersects_feature":
     case "travel_time": {
-      if (!filterPolygons) return null; // non-areal filter, or filter preparation failed
-      // Whatever lies outside the feature's bbox cannot intersect it, so clipping the
-      // reference first leaves the result unchanged while polyclip only ever processes
-      // the neighbouring vertices.
-      const clippedFilter = dropEmptyRings(bboxClip(filterPolygons, bbox(geo)).geometry);
-      if (!clippedFilter) return 0; // no overlap
-      const inter = intersect(featureCollection([feature(clippedFilter), feature(geo)]));
-      return inter == null ? 0 : area(inter.geometry);
+      if (!intersectionArea) return null; // non-areal filter, or filter preparation failed
+      return intersectionArea(geo);
     }
     case "bbox": {
       const clipped = dropEmptyRings(bboxClip(geo, [spatialFilter.west, spatialFilter.south, spatialFilter.east, spatialFilter.north]).geometry);
@@ -319,7 +296,7 @@ export function deriveFromGeometry(geometry: unknown, input: FeatureCollectionPo
 
   if (requires_intersection_area) {
     try {
-      ret.intersection_area = intersectionAreaWithSpatialFilter(geo, spatialFilter, context.filterPolygons);
+      ret.intersection_area = intersectionAreaWithSpatialFilter(geo, spatialFilter, context.intersectionArea);
     } catch {
       ret.intersection_area = null;
     }

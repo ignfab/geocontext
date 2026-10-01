@@ -1,5 +1,9 @@
 import { performance } from "node:perf_hooks";
 import { describe, expect, it } from "vitest";
+import { intersect } from "@turf/intersect";
+import { feature as turfFeature, featureCollection } from "@turf/helpers";
+import type { Geometry, MultiPolygon, Polygon } from "geojson";
+import area from "../../src/helpers/area";
 
 import {
   mapToFlatItems,
@@ -8,7 +12,6 @@ import {
   postProcessFeatureCollection,
 } from "../../src/wfs/response";
 import { type SpatialExtraOptions } from "../../src/wfs/schema";
-import type { Geometry } from "geojson";
 
 describe("wfs_engine/response", () => {
   function getFeatures(
@@ -149,7 +152,7 @@ describe("wfs_engine/response", () => {
 
       const polygonFeatures = getFeatures(polygonResult);
       expect(polygonFeatures[0].length).toBeNull();
-      expect(polygonFeatures[0].area as number).toBeCloseTo(81361416.69722056, 6);
+      expect(polygonFeatures[0].area as number).toBeCloseTo(81361415.96674393, 6);
     });
 
     it("should compute non-zero distance_to_filter_center and intersection_area when a spatial filter is provided", () => {
@@ -209,41 +212,47 @@ describe("wfs_engine/response", () => {
       expect(features[0].distance_to_filter_center as number).toBeCloseTo(2340.9971606708805, 6);
     });
 
-    it("should stay fast when computing centroid, area, and intersection_area for a large region against many polygons", () => {
+    it("should stay fast when computing centroid, area, and intersection_area for a large region against many polygons crossing its boundary", () => {
       const regionCenterLon = 2.35;
       const regionCenterLat = 48.85;
       const regionVertices = 3000;
       const polygonSides = 20;
-      const featureCount = 100;
+      const featureCount = 5000;
+
+      /** Close a ring by repeating its first position, as GeoJSON requires. */
+      function closeRing<T>(positions: T[]) {
+        return [...positions, positions[0]];
+      }
 
       function regularRing(centerLon: number, centerLat: number, radius: number, sides: number) {
-        return Array.from({ length: sides }, (_, index) => {
+        return closeRing(Array.from({ length: sides }, (_, index) => {
           const angle = (Math.PI * 2 * index) / sides - Math.PI / 2;
           return [centerLon + radius * Math.cos(angle), centerLat + radius * Math.sin(angle)] as [number, number];
-        });
+        }));
+      }
+
+      /** Position on the region boundary at the given angle from its center. */
+      function regionBoundary(angle: number) {
+        const radius = 0.22 + 0.03 * Math.sin(7 * angle);
+        return [
+          regionCenterLon + radius * Math.cos(angle),
+          regionCenterLat + radius * Math.sin(angle),
+        ];
       }
 
       const regionGeometry = {
         type: "Polygon" as const,
         coordinates: [
-          Array.from({ length: regionVertices }, (_, index) => {
-            const angle = (Math.PI * 2 * index) / regionVertices;
-            const radius = 0.22 + 0.03 * Math.sin(7 * angle);
-            return [
-              regionCenterLon + radius * Math.cos(angle),
-              regionCenterLat + radius * Math.sin(angle),
-            ];
-          }),
+          closeRing(Array.from({ length: regionVertices }, (_, index) => regionBoundary((Math.PI * 2 * index) / regionVertices))),
         ],
       };
 
+      // Every polygon is centered on the region boundary, so that each one needs
+      // an actual intersection to be computed.
       const featureCollection = {
         type: "FeatureCollection",
         features: Array.from({ length: featureCount }, (_, index) => {
-          const column = index % 100;
-          const row = Math.floor(index / 100) % 50;
-          const centerLon = regionCenterLon + (column - 49.5) * 0.0035;
-          const centerLat = regionCenterLat + (row - 24.5) * 0.0028;
+          const [centerLon, centerLat] = regionBoundary((Math.PI * 2 * index) / featureCount);
           const radius = 0.002 + (index % 7) * 0.00025;
 
           return {
@@ -273,10 +282,49 @@ describe("wfs_engine/response", () => {
       const features = getFeatures(result);
       expect(features).toHaveLength(featureCount);
       expect(features[0].centroid).toMatchObject({ lon: expect.any(Number), lat: expect.any(Number) });
-      expect(features[0].area).toEqual(expect.any(Number));
-      expect(features[0].intersection_area).toEqual(expect.any(Number));
-      expect(features[0].intersection_area).toBeGreaterThanOrEqual(0);
-      expect(elapsedMs).toBeLessThan(500);
+      const notPartiallyIntersecting = features.filter((feature) => !(
+        typeof feature.intersection_area === "number"
+        && feature.intersection_area > 0
+        && feature.intersection_area < (feature.area as number)
+      ));
+      expect(notPartiallyIntersecting).toEqual([]);
+      expect(elapsedMs).toBeLessThan(1000);
+    });
+
+    it("should stay fast when computing intersection_area for a large geometry with holes crossing a detailed reference boundary", () => {
+      // Like a forest with clearings across the boundary of an isochrone: both
+      // geometries have many positions in the same place, which used to cost
+      // their product (over a second here).
+      function wavyRing(centerLon: number, centerLat: number, radius: number, vertices: number, waves: number) {
+        const positions = Array.from({ length: vertices }, (_, index) => {
+          const angle = (Math.PI * 2 * index) / vertices;
+          const wavyRadius = radius * (1 + 0.02 * Math.sin(waves * angle));
+          return [centerLon + wavyRadius * Math.cos(angle), centerLat + wavyRadius * Math.sin(angle)];
+        });
+        return [...positions, positions[0]];
+      }
+
+      const reference: Polygon = { type: "Polygon", coordinates: [wavyRing(2.35, 48.85, 0.3, 20000, 200)] };
+      // Centered on the eastern boundary of the reference, with clearings on a grid.
+      const clearings = Array.from({ length: 100 }, (_, index) => [2.65 + 0.014 * (index % 10 - 4.5), 48.85 + 0.014 * (Math.floor(index / 10) - 4.5)])
+        .filter(([lon, lat]) => Math.hypot(lon - 2.65, lat - 48.85) < 0.08)
+        .map(([lon, lat]) => wavyRing(lon, lat, 0.003, 16, 3).reverse());
+      const forest: Polygon = { type: "Polygon", coordinates: [wavyRing(2.65, 48.85, 0.1, 20000, 300), ...clearings] };
+
+      const start = performance.now();
+      const result = transformFeatureCollectionResponse({
+        type: "FeatureCollection",
+        features: [{ id: "forest.1", geometry: forest, properties: {} }],
+      }, {
+        typename: "TEST:type",
+        spatial_extras: ["intersection_area"],
+        intersects_feature_filter: { typename: "TEST:region", feature_id: "region.1" },
+      }, reference);
+      const elapsedMs = performance.now() - start;
+
+      const inter = intersect(featureCollection([turfFeature(forest), turfFeature(reference)]));
+      expect(getFeatures(result)[0].intersection_area as number).toBeCloseTo(area(inter!.geometry), 3);
+      expect(elapsedMs).toBeLessThan(300);
     });
 
     // Regression: `dwithin_point` used to short-circuit `intersection_area` and
@@ -320,16 +368,15 @@ describe("wfs_engine/response", () => {
       });
 
       it("should return the geometry's own area when it is fully inside the filter disc", () => {
+        // Not a rectangle, whose triangles happen to add up exactly to its area.
         const containedPolygon = {
           type: "Polygon",
-          coordinates: [[
-            [1.9999, 47.9999], [2.0001, 47.9999], [2.0001, 48.0001], [1.9999, 48.0001], [1.9999, 47.9999],
-          ]],
+          coordinates: [[[2.0003, 48], [2.0001, 48.0003], [1.9997, 48.0002], [1.9997, 47.9998], [2.0001, 47.9997], [2.0003, 48]]],
         };
 
         const feature = deriveExtras(containedPolygon, ["area", "intersection_area"]);
 
-        expect(feature.intersection_area as number).toBeCloseTo(feature.area as number, 6);
+        expect(feature.intersection_area).toEqual(feature.area);
         expect(feature.intersection_area as number).toBeLessThanOrEqual(DISC_AREA);
       });
 
@@ -471,7 +518,6 @@ describe("wfs_engine/response", () => {
 
         expect(feature.intersection_area).toEqual(0);
       });
-
       it("should sum the linear parts of a GeometryCollection for length and ignore the other parts", () => {
         const line = { type: "LineString", coordinates: [[2.3, 48.8], [2.31, 48.81]] };
         const lineLength = derive(line, ["length"]).length as number;
@@ -509,6 +555,192 @@ describe("wfs_engine/response", () => {
         }, ["length"]);
 
         expect(feature.length).toBeNull();
+      });
+    });
+
+    describe("intersection_area with an intersects_feature filter", () => {
+      function rectangle(west: number, south: number, east: number, north: number) {
+        return [[west, south], [east, south], [east, north], [west, north], [west, south]];
+      }
+
+      const referenceSquare = { type: "Polygon" as const, coordinates: [rectangle(2, 48, 3, 49)] };
+
+      const star: Polygon = {
+        type: "Polygon",
+        coordinates: [[
+          [2.59, 48.5], [2.5697, 48.5071], [2.5693, 48.5285], [2.5563, 48.5114], [2.5357, 48.5176],
+          [2.548, 48.5], [2.5357, 48.4824], [2.5563, 48.4886], [2.5693, 48.4715], [2.5697, 48.4929], [2.59, 48.5],
+        ]],
+      };
+
+      function deriveExtras(geometry: unknown, referenceGeometry: Geometry = referenceSquare) {
+        const result = transformFeatureCollectionResponse({
+          type: "FeatureCollection",
+          features: [{ id: "poly.1", geometry, properties: { name: "poly" } }],
+        }, {
+          typename: "TEST:type",
+          spatial_extras: ["area", "intersection_area"],
+          intersects_feature_filter: { typename: "TEST:region", feature_id: "region.1" },
+        } as Parameters<typeof transformFeatureCollectionResponse>[1], referenceGeometry);
+
+        return getFeatures(result)[0] as { area: number, intersection_area: number };
+      }
+
+      it("should return the geometry's own area when it is fully inside the reference", () => {
+        // Not a rectangle, whose triangles happen to add up exactly to its area.
+        const feature = deriveExtras(star);
+
+        expect(feature.intersection_area).toEqual(feature.area);
+      });
+
+      it("should return the geometry's own area when it is inside the reference but not its bbox", () => {
+        // The hypotenuse of the reference cuts the north-eastern corner of the bbox of the star, not the star.
+        const reference = { type: "Polygon" as const, coordinates: [[[2, 48], [2.97, 48], [2, 49.3115], [2, 48]]] };
+        const feature = deriveExtras(star, reference);
+
+        expect(feature.intersection_area).toEqual(feature.area);
+      });
+
+      it("should clip a geometry crossing the reference boundary", () => {
+        // Split in its middle by the eastern edge of the reference, which is a meridian.
+        const feature = deriveExtras({ type: "Polygon", coordinates: [rectangle(2.9, 48.4, 3.1, 48.6)] });
+
+        expect(feature.intersection_area / feature.area).toBeCloseTo(0.5, 9);
+      });
+
+      it("should return the reference's area for a geometry containing it", () => {
+        const feature = deriveExtras({ type: "Polygon", coordinates: [rectangle(1, 47, 4, 50)] });
+
+        expect(feature.intersection_area).toBeCloseTo(area(referenceSquare), 3);
+      });
+
+      it("should exclude the holes of the reference", () => {
+        const hole = rectangle(2.4, 48.4, 2.6, 48.6);
+        const referenceWithHole = { type: "Polygon" as const, coordinates: [rectangle(2, 48, 3, 49), hole] };
+        const feature = deriveExtras({ type: "Polygon", coordinates: [rectangle(2.3, 48.3, 2.7, 48.7)] }, referenceWithHole);
+
+        const holeArea = area({ type: "Polygon", coordinates: [hole] });
+        expect(feature.intersection_area).toBeCloseTo(feature.area - holeArea, 3);
+      });
+
+      it("should sum the intersections with every part of a MultiPolygon reference", () => {
+        const referenceMultiPolygon = {
+          type: "MultiPolygon" as const,
+          coordinates: [[rectangle(2, 48, 3, 49)], [rectangle(3.2, 48, 4, 49)]],
+        };
+        // Overlaps [2.9, 3] with the first part and [3.2, 3.3] with the second.
+        const feature = deriveExtras({ type: "Polygon", coordinates: [rectangle(2.9, 48.4, 3.3, 48.6)] }, referenceMultiPolygon);
+
+        expect(feature.intersection_area / feature.area).toBeCloseTo(0.5, 9);
+      });
+
+      it("should sum the intersections of every part of a MultiPolygon geometry", () => {
+        // One part only touching the eastern edge of the reference, the other inside it.
+        const inside = rectangle(2.4, 48.4, 2.6, 48.6);
+        const feature = deriveExtras({ type: "MultiPolygon", coordinates: [[rectangle(3, 48.4, 3.2, 48.6)], [inside]] });
+
+        // Not snapped to the area of the inside part: the MultiPolygon is integrated as a whole.
+        expect(feature.intersection_area).toBeCloseTo(area({ type: "Polygon", coordinates: [inside] }), 3);
+      });
+
+      /** Area of the intersection computed by general polygon clipping, as a reference. */
+      function polyclipIntersectionArea(geometry: Polygon | MultiPolygon, referenceGeometry: Polygon | MultiPolygon) {
+        const inter = intersect(featureCollection([turfFeature(geometry), turfFeature(referenceGeometry)]));
+        return inter == null ? 0 : area(inter.geometry);
+      }
+
+      it("should clip a non-convex geometry crossing the reference boundary", () => {
+        // U shape whose both branches cross the eastern edge of the reference.
+        const uShape: Polygon = {
+          type: "Polygon",
+          coordinates: [[[2.8, 48.4], [3.2, 48.4], [3.2, 48.45], [2.9, 48.45], [2.9, 48.55], [3.2, 48.55], [3.2, 48.6], [2.8, 48.6], [2.8, 48.4]]],
+        };
+        const feature = deriveExtras(uShape);
+
+        expect(feature.intersection_area).toBeCloseTo(polyclipIntersectionArea(uShape, referenceSquare), 0);
+      });
+
+      it("should exclude the holes of the geometry", () => {
+        const withHole: Polygon = {
+          type: "Polygon",
+          coordinates: [rectangle(2.8, 48.4, 3.2, 48.6), rectangle(2.9, 48.45, 3.1, 48.55)],
+        };
+        const feature = deriveExtras(withHole);
+
+        expect(feature.intersection_area).toBeCloseTo(polyclipIntersectionArea(withHole, referenceSquare), 0);
+      });
+
+      it("should return null for a self-intersecting geometry", () => {
+        // Bow tie, whose lobes cancel in its signed area.
+        const bowTie: Polygon = {
+          type: "Polygon",
+          coordinates: [[[2.8, 48.4], [3.2, 48.6], [3.2, 48.4], [2.8, 48.6], [2.8, 48.4]]],
+        };
+
+        // Across the reference boundary, around its crossing point, and inside the reference.
+        expect(deriveExtras(bowTie).intersection_area).toBeNull();
+        const inWedge = { type: "Polygon" as const, coordinates: [rectangle(2.98, 48.41, 3.02, 48.43)] };
+        expect(deriveExtras(bowTie, inWedge).intersection_area).toBeNull();
+        const inside = { type: "Polygon" as const, coordinates: [rectangle(2, 48, 4, 49)] };
+        expect(deriveExtras(bowTie, inside).intersection_area).toBeNull();
+      });
+
+      it("should return null for a self-intersecting reference", () => {
+        const bowTie = { type: "Polygon" as const, coordinates: [[[2, 48], [3, 49], [3, 48], [2, 49], [2, 48]]] };
+        const feature = deriveExtras({ type: "Polygon", coordinates: [rectangle(2.1, 48.1, 2.9, 48.4)] }, bowTie);
+
+        expect(feature.intersection_area).toBeNull();
+      });
+
+      it("should return null for a non-areal geometry", () => {
+        const feature = deriveExtras({ type: "LineString", coordinates: [[2.5, 48.5], [3.5, 48.5]] });
+
+        expect(feature.intersection_area).toBeNull();
+      });
+
+      it("should clip a non-convex geometry crossing a non-convex reference boundary", () => {
+        // Notch on the eastern side of the reference, whose tip lies inside the star.
+        const notchedReference: Polygon = {
+          type: "Polygon",
+          coordinates: [[[2.4, 48.4], [2.6, 48.4], [2.55, 48.5], [2.6, 48.6], [2.4, 48.6], [2.4, 48.4]]],
+        };
+        const feature = deriveExtras(star, notchedReference);
+
+        expect(feature.intersection_area / feature.area).toBeCloseTo(0.2856, 4);
+        expect(Math.abs(feature.intersection_area - polyclipIntersectionArea(star, notchedReference))).toBeLessThanOrEqual(1e-6 * feature.area);
+      });
+
+      it("should stay precise on long thin geometries crossing a winding reference boundary", () => {
+        // Clipping leaves zero-width spikes along the long triangles of such geometries,
+        // which must not contribute to the area.
+        const winding = Array.from({ length: 500 }, (_, index) => {
+          const angle = (Math.PI * 2 * index) / 500;
+          const radius = 0.2 * (1 + 0.05 * Math.sin(53 * angle));
+          return [2.5 + radius * Math.cos(angle), 48.5 + radius * Math.sin(angle)];
+        });
+        const reference: Polygon = { type: "Polygon", coordinates: [[...winding, winding[0]]] };
+
+        // 10 km long and 20 m wide diagonal strip, with a vertex every 100 m, centered on the boundary.
+        const side = (offset: number) => Array.from({ length: 101 }, (_, index) => {
+          const along = -0.032 + (0.064 * index) / 100;
+          return [2.7 + along - offset, 48.5 + along + offset];
+        });
+        const ring = [...side(0.00007), ...side(-0.00007).reverse()];
+        const strip: Polygon = { type: "Polygon", coordinates: [[...ring, ring[0]]] };
+
+        const feature = deriveExtras(strip, reference);
+
+        const expected = polyclipIntersectionArea(strip, reference);
+        expect(Math.abs(feature.intersection_area - expected)).toBeLessThanOrEqual(1e-6 * feature.area);
+      });
+
+      it("should handle geometries smaller than the deepest tile of the reference", () => {
+        // About 1 cm wide, inside the reference and in an empty tile outside it.
+        const tinySquare = (lon: number, lat: number) => ({ type: "Polygon", coordinates: [rectangle(lon, lat, lon + 1e-7, lat + 1e-7)] });
+        const inside = deriveExtras(tinySquare(2.5, 48.5));
+
+        expect(Math.abs(inside.intersection_area - inside.area)).toBeLessThanOrEqual(1e-6 * inside.area);
+        expect(deriveExtras(tinySquare(3.5, 48.5)).intersection_area).toEqual(0);
       });
     });
   });
