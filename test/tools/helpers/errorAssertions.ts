@@ -37,6 +37,6 @@ export function expectErrorText(response: ToolResponse) {
 export function expectInvalidLon(response: ToolResponse) {
   const text = expectErrorText(response);
   expect(text).toContain("Paramètres invalides");
-  // `detail` is the only channel left, so it must still name the bad param.
-  expect(text).toContain("lon");
+  // `detail` is the only channel left: pin param name and `too_big` wording.
+  expect(text).toContain("lon: La valeur doit être au plus 180.");
 }
