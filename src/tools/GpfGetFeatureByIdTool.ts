@@ -32,8 +32,6 @@ class GpfGetFeatureByIdTool extends BaseTool<GpfGetFeatureByIdInput> {
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
   description = GPF_GET_FEATURE_BY_ID_TOOL_DESCRIPTION;
 
-  // `schema` remains the runtime validation source, while `inputSchema`
-  // publishes the MCP-facing variant expected by clients.
   // The framework requires a plain Zod object here to publish a compatible
   // input schema. Cross-field runtime validation is applied in `execute`.
   schema = gpfGetFeatureByIdInputObjectSchema;

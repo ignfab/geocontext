@@ -64,7 +64,7 @@ class AssietteSupTool extends BaseTool<AssietteSupInput> {
     logger.info(`[tool] execute ${this.name} ...`, {
       input: input
     });
-  
+
     return {
       results: await getAssiettesServitudes(input.lon, input.lat),
     };

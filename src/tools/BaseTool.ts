@@ -50,6 +50,5 @@ export default abstract class BaseTool<TInput extends Record<string, any> = any>
       structuredContent: payload as Record<string, unknown>,
       isError: true,
     };
-    
   }
 }
