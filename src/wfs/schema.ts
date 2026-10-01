@@ -148,23 +148,34 @@ export const GPF_SPATIAL_FILTER_DOCNAMES = GPF_GET_FEATURES_SPATIAL_FILTER_KEYS
   .join(", ")
   .replace(/, ([^,]*)$/, ' ou $1');
 
-const SPATIAL_EXTRAS_BASE_DESCRIPTION_LINES = [
-  "`centroid` est le centroïde (moyenne arithmétique des sommets) de la géométrie. Il peut tomber hors d'une géométrie concave : un `intersects_point_filter` sur ce point peut alors ne renvoyer ni l'objet, ni ce qui le contient.",
-  "`bbox` est la boîte englobante de la géométrie : `[ouest, sud, est, nord]` en WGS84 `lon/lat`, dans l'ordre des champs `west`, `south`, `east` et `north` de `bbox_filter`.",
-  "`length` est la somme des longueurs (en m) des parties linéaires de la géométrie (LineString, MultiLineString).",
-  "`area` est la somme des surfaces (en m²) des parties surfaciques de la géométrie (Polygon, MultiPolygon).",
-] as const;
+/**
+ * Lines shared by both `spatial_extras` descriptions. How `centroid` and `bbox`
+ * feed `intersects_point_filter` and `bbox_filter` is only told by a tool that
+ * has these filters (not `gpf_get_feature_by_id`).
+ */
+function spatialExtrasBaseDescriptionLines(withSpatialFilters: boolean) {
+  return [
+    "`centroid` est le centroïde (moyenne arithmétique des sommets) de la géométrie. Il peut tomber hors d'une géométrie concave" +
+      (withSpatialFilters ? " : un `intersects_point_filter` sur ce point peut alors ne renvoyer ni l'objet, ni ce qui le contient." : "."),
+    "`bbox` est la boîte englobante de la géométrie : `[ouest, sud, est, nord]` en WGS84 `lon/lat`" +
+      (withSpatialFilters ? ", dans l'ordre des champs `west`, `south`, `east` et `north` de `bbox_filter`." : "."),
+    "`length` est la somme des longueurs (en m) des parties linéaires de la géométrie (LineString, MultiLineString).",
+    "`area` est la somme des surfaces (en m²) des parties surfaciques de la géométrie (Polygon, MultiPolygon).",
+  ];
+}
 
 function buildSpatialExtrasDescription(
   target: string,
   allowedExtrasDocNames: string,
   filterDependentDescriptionLine: string,
 ) {
-  const optionalFilterLine = filterDependentDescriptionLine
+  // Only a tool with spatial filters has filter-dependent extras.
+  const withSpatialFilters = filterDependentDescriptionLine !== "";
+  const optionalFilterLine = withSpatialFilters
     ? `${filterDependentDescriptionLine}\n`
     : "";
   return `Éléments calculés depuis la géométrie à renvoyer pour ${target}. Peut inclure ${allowedExtrasDocNames}, aucun par défaut.\n`+
-    `${SPATIAL_EXTRAS_BASE_DESCRIPTION_LINES.join("\n")}\n`+
+    `${spatialExtrasBaseDescriptionLines(withSpatialFilters).join("\n")}\n`+
     optionalFilterLine+
     "Si l'élément à calculer est incompatible avec la géométrie (exemple : bbox d'un point, aire d'une géométrie linéaire) et que le type de la géométrie est connu à l'avance, une erreur indiquera comment corriger la requête.\n"+
     "Sinon, un élément qui n'est pas calculable pour un objet (géométrie absente ou vide, aucune partie de la dimension requise) vaut `null`. Une valeur numérique, `0` compris, signifie que le calcul a bien eu lieu.";

@@ -94,8 +94,8 @@ describe("Test GpfGetFeatureByIdTool", () => {
           },
           default: [],
           description: "Éléments calculés depuis la géométrie à renvoyer pour l'objet. Peut inclure `centroid`, `bbox`, `length` et `area`, aucun par défaut.\n"+
-            "`centroid` est le centroïde (moyenne arithmétique des sommets) de la géométrie. Il peut tomber hors d'une géométrie concave : un `intersects_point_filter` sur ce point peut alors ne renvoyer ni l'objet, ni ce qui le contient.\n"+
-            "`bbox` est la boîte englobante de la géométrie : `[ouest, sud, est, nord]` en WGS84 `lon/lat`, dans l'ordre des champs `west`, `south`, `east` et `north` de `bbox_filter`.\n"+
+            "`centroid` est le centroïde (moyenne arithmétique des sommets) de la géométrie. Il peut tomber hors d'une géométrie concave.\n"+
+            "`bbox` est la boîte englobante de la géométrie : `[ouest, sud, est, nord]` en WGS84 `lon/lat`.\n"+
             "`length` est la somme des longueurs (en m) des parties linéaires de la géométrie (LineString, MultiLineString).\n"+
             "`area` est la somme des surfaces (en m²) des parties surfaciques de la géométrie (Polygon, MultiPolygon).\n"+
             "Si l'élément à calculer est incompatible avec la géométrie (exemple : bbox d'un point, aire d'une géométrie linéaire) et que le type de la géométrie est connu à l'avance, une erreur indiquera comment corriger la requête.\n"+

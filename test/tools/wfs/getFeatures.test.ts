@@ -218,6 +218,13 @@ describe("Test GpfGetFeaturesTool", () => {
     expect(tool.toolDefinition.inputSchema.properties?.where).toMatchObject({
       type: "array",
     });
+    // Only this tool has the spatial filters that the centroid and bbox lines refer to.
+    expect(tool.toolDefinition.inputSchema.properties?.spatial_extras).toMatchObject({
+      description: expect.stringContaining(
+        "Il peut tomber hors d'une géométrie concave : un `intersects_point_filter` sur ce point peut alors ne renvoyer ni l'objet, ni ce qui le contient.\n" +
+          "`bbox` est la boîte englobante de la géométrie : `[ouest, sud, est, nord]` en WGS84 `lon/lat`, dans l'ordre des champs `west`, `south`, `east` et `north` de `bbox_filter`.\n",
+      ),
+    });
     expect(tool.toolDefinition.outputSchema).toBeUndefined();
   });
 
