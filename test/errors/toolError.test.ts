@@ -76,7 +76,7 @@ describe("Test toolError helper", () => {
         expect.objectContaining({
           name: "typename",
           code: "too_small",
-          detail: "le nom du type ne doit pas être vide",
+          detail: "typename: le nom du type ne doit pas être vide",
         }),
       ]),
     });
@@ -135,5 +135,163 @@ describe("Test toolError helper", () => {
       type: "urn:geocontext:problem:execution-error",
       detail: "boom",
     });
+  });
+  it.each([
+    ["enum", z.object({ direction: z.enum(["asc", "desc"]) }), { direction: "sideways" }, "direction: "],
+    ["invalid type", z.object({ lon: z.number() }), { lon: "abc" }, "lon: "],
+    ["string format", z.object({ site: z.string().url() }), { site: "nope" }, "site: "],
+    ["out of range", z.object({ lon: z.number().max(180) }), { lon: 600 }, "lon: "],
+    [
+      "nested field",
+      z.object({ bbox: z.object({ lon: z.number().max(180) }) }),
+      { bbox: { lon: 999 } },
+      "bbox.lon: ",
+    ],
+    [
+      "custom refinement",
+      z.object({ a: z.number() }).superRefine((_value, ctx) => {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["a"], message: "Valeur incohérente." });
+      }),
+      { a: 1 },
+      "a: Valeur incohérente.",
+    ],
+    [
+      "array element",
+      z.object({ tags: z.array(z.string()) }),
+      { tags: ["ok", 5] },
+      "tags[1]: ",
+    ],
+  ])("should name the offending parameter for %s issues", (_label, schema, input, expectedPrefix) => {
+    const result = schema.safeParse(input);
+
+    if (result.success) {
+      throw new Error("expected parse failure");
+    }
+
+    expect(normalizeToolError(result.error).detail).toContain(expectedPrefix);
+  });
+
+  it("should keep array element errors distinguishable by index", () => {
+    const result = z.object({ tags: z.array(z.string()) }).safeParse({ tags: [1, 2] });
+
+    if (result.success) {
+      throw new Error("expected parse failure");
+    }
+
+    const payload = normalizeToolError(result.error);
+
+    expect(payload.errors.map((error) => error.name)).toEqual(["tags[0]", "tags[1]"]);
+  });
+
+  it("should keep root-level array elements distinguishable", () => {
+    const result = z.array(z.string()).safeParse([1, 2]);
+
+    if (result.success) {
+      throw new Error("expected parse failure");
+    }
+
+    const payload = normalizeToolError(result.error);
+
+    // No field name to suffix, but the indices must survive or the dedupe
+    // would collapse both elements into a single nameless error.
+    expect(payload.errors.map((error) => error.name)).toEqual(["[0]", "[1]"]);
+  });
+
+  it("should still prefix a message that quotes some other parameter", () => {
+    const schema = z.object({ a: z.string() }).superRefine((_value, ctx) => {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["a"],
+        message: "Doit valoir le paramètre 'a' du parent.",
+      });
+    });
+    const result = schema.safeParse({ a: "x" });
+
+    if (result.success) {
+      throw new Error("expected parse failure");
+    }
+
+    expect(normalizeToolError(result.error).detail).toContain("a: Doit valoir");
+  });
+
+  it("should not repeat a parameter name the message already carries", () => {
+    const result = z.object({ text: z.string() }).safeParse({});
+
+    if (result.success) {
+      throw new Error("expected parse failure");
+    }
+
+    const payload = normalizeToolError(result.error);
+
+    expect(payload.detail).toContain("Le paramètre 'text' est requis.");
+    expect(payload.detail).not.toContain("text: Le paramètre");
+  });
+
+  it("should not repeat a parameter name an unknown-key message already carries", () => {
+    const result = z.object({ a: z.string() }).strict().safeParse({ a: "x", nope: 1 });
+
+    if (result.success) {
+      throw new Error("expected parse failure");
+    }
+
+    const payload = normalizeToolError(result.error);
+
+    expect(payload.detail).toContain("Le paramètre 'nope' n'est pas reconnu.");
+    expect(payload.detail).not.toContain("nope: ");
+  });
+  it("should name every omitted parameter when truncating the summary", () => {
+    const keys = ["a", "b", "c", "d", "e", "f", "g"];
+    const shape = Object.fromEntries(keys.map((key) => [key, z.number().max(1)]));
+    const input = Object.fromEntries(keys.map((key) => [key, 9]));
+    const result = z.object(shape).safeParse(input);
+
+    if (result.success) {
+      throw new Error("expected parse failure");
+    }
+
+    const payload = normalizeToolError(result.error);
+
+    // The first five are spelled out, the rest are named but not detailed.
+    expect(payload.detail).toContain("a: La valeur doit être au plus 1.");
+    expect(payload.detail).toContain("e: La valeur doit être au plus 1.");
+    expect(payload.detail).toContain("(et 2 autre(s) erreur(s) sur : f, g).");
+  });
+
+  it("should not truncate when the summary fits", () => {
+    const result = z.object({ a: z.number().max(1), b: z.number().max(1) })
+      .safeParse({ a: 9, b: 9 });
+
+    if (result.success) {
+      throw new Error("expected parse failure");
+    }
+
+    expect(normalizeToolError(result.error).detail).not.toContain("autre(s) erreur(s)");
+  });
+
+  it("should drop duplicate messages that share a parameter name", () => {
+    const schema = z.object({
+      a: z.number().superRefine((_value, ctx) => {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Valeur incohérente." });
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Valeur incohérente." });
+      }),
+    });
+    const result = schema.safeParse({ a: 1 });
+
+    if (result.success) {
+      throw new Error("expected parse failure");
+    }
+
+    expect(normalizeToolError(result.error).errors).toHaveLength(1);
+  });
+
+  it("should keep same-wording errors on different parameters", () => {
+    const result = z.object({ tags: z.array(z.string()) }).safeParse({ tags: [1, 2] });
+
+    if (result.success) {
+      throw new Error("expected parse failure");
+    }
+
+    // Identical wording, distinct parameters: the dedupe must not merge these.
+    expect(normalizeToolError(result.error).errors).toHaveLength(2);
   });
 });
