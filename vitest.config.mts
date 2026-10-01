@@ -17,6 +17,9 @@ export default defineConfig({
     include: ["test/**/*.test.ts"],
     exclude: ["test/integration/**/*"],
     testTimeout: 60 * MILLISECONDS,
+    // Default value, set explicitly because the suite relies on per-file isolation
+    // (it also stops Vitest from suggesting `isolate: false`).
+    isolate: true,
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov"],
