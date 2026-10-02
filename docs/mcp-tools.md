@@ -2226,7 +2226,7 @@ Distance et temps de trajet entre deux points
 
 ```
 Renvoie la distance (en mètres) entre deux points à partir de leur longitude et latitude.
-Renvoie aussi une estimation du temps de trajet dans le cas où un profil (marche, voiture) est renseigné.
+Renvoie aussi une estimation du temps de trajet lorsque `profile` vaut `car` ou `pedestrian`.
 (source : Géoplateforme (calcul d'itinéraire)).
 ```
 

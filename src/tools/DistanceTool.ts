@@ -55,7 +55,7 @@ type DistanceInput = z.infer<typeof distanceInputSchema>;
 
 const DISTANCE_TOOL_DESCRIPTION = [
   `Renvoie la distance (en mètres) entre deux points à partir de leur longitude et latitude.`,
-  `Renvoie aussi une estimation du temps de trajet dans le cas où un profil (marche, voiture) est renseigné.`,
+  `Renvoie aussi une estimation du temps de trajet lorsque \`profile\` vaut \`car\` ou \`pedestrian\`.`,
   `(source : ${NAVIGATION_ITINERARY_SOURCE}).`,
 ].join("\n");
 
