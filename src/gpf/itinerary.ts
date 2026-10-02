@@ -3,11 +3,13 @@ import logger from "../logger.js";
 import type { JsonFetcher } from "../helpers/http.js";
 import type { RateLimiter } from "../helpers/RateLimiter.js";
 import { getNavigationRateLimiter } from "./navigationRateLimiter.js";
-import { TRAVEL_TIME_PROFILES } from "./navigation.js";
+import { TRAVEL_TIME_PROFILES, TRAVEL_TIME_RESOURCE } from "./navigation.js";
 
 export const NAVIGATION_ITINERARY_SOURCE = "Géoplateforme (calcul d'itinéraire)";
 export const NAVIGATION_ITINERARY_URL = "https://data.geopf.fr/navigation/itineraire";
-export const ITINERARY_RESOURCE = "bdtopo-osrm";
+// Same engine as the `travel_time_filter` isochrones, so that both report the
+// same travel times.
+export const ITINERARY_RESOURCE = TRAVEL_TIME_RESOURCE;
 export const ITINERARY_PROFILES = TRAVEL_TIME_PROFILES;
 export const ITINERARY_METRICS = ["time", "distance"] as const;
 

@@ -36,7 +36,7 @@ describe("NavigationItineraryClient", () => {
 
     const parsedUrl = new URL(urls[0]);
     expect(parsedUrl.origin + parsedUrl.pathname).toEqual("https://data.geopf.fr/navigation/itineraire");
-    expect(parsedUrl.searchParams.get("resource")).toEqual("bdtopo-osrm");
+    expect(parsedUrl.searchParams.get("resource")).toEqual("bdtopo-valhalla");
     expect(parsedUrl.searchParams.get("start")).toEqual("3.274356,49.839862");
     expect(parsedUrl.searchParams.get("end")).toEqual("5.044572,47.326213");
     expect(parsedUrl.searchParams.get("profile")).toEqual("car");
