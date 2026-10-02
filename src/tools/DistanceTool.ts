@@ -27,11 +27,11 @@ const distanceInputSchema = z.object({
     .enum(["spherical", "ellipsoidal", ...ITINERARY_PROFILES])
     .default("spherical")
     .describe(["Le type de chemin suivi :",
-      "`spherical` distance à vol d'oiseau (Terre ronde, précision à 0.5%)",
-      "`ellipsoidal` distance à vol d'oiseau (Terre ellipsoïde, plus précise et coûteuse, précision à 1mm)",
-      "`car` en voiture",
-      "`pedestrian` à pied.",
-    ].join(", ")),
+      " `spherical` distance à vol d'oiseau (Terre ronde, précision à 0.5%),",
+      " `ellipsoidal` distance à vol d'oiseau (Terre ellipsoïde, plus précise, précision à 0.5cm),",
+      " `car` en voiture,",
+      " `pedestrian` à pied.",
+    ].join("")),
   optimize: z
     .enum(ITINERARY_METRICS)
     .default("time")
@@ -55,7 +55,7 @@ type DistanceInput = z.infer<typeof distanceInputSchema>;
 
 const DISTANCE_TOOL_DESCRIPTION = [
   `Renvoie la distance (en mètres) entre deux points à partir de leur longitude et latitude.`,
-  `Renvoie aussi une estimation du temps de trajet dans le cas où un profil (marche, voiture) est renseigné.`,
+  `Renvoie aussi une estimation du temps de trajet lorsque \`profile\` vaut \`car\` ou \`pedestrian\`.`,
   `(source : ${NAVIGATION_ITINERARY_SOURCE}).`,
 ].join("\n");
 
@@ -106,8 +106,8 @@ class DistanceTool extends BaseTool<DistanceInput> {
           optimize: input.optimize,
         });
         return {
-          distance: itinerary.distance,
-          time: Math.round(itinerary.duration)
+          distance: Math.round(itinerary.distance * 100) / 100,
+          time: Math.round(itinerary.duration * 10) / 10
         };
       }
       default: {
