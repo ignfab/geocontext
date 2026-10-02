@@ -43,7 +43,7 @@ export interface DistanceResult {
 }
 
 /** Point-to-point metric: spherical great-circle, or geodesic on WGS84. */
-export type Metric = "haversine" | "vincenty";
+export type Metric = "spherical" | "ellipsoidal";
 
 type JstsCoord = { x: number; y: number };
 
@@ -62,7 +62,7 @@ type JstsGeometry = {
 const EARTH_RADIUS_M = 6_371_000;
 const DEG_TO_RAD = Math.PI / 180;
 
-/** WGS84 ellipsoid parameters, the ellipsoid `distanceVincenty` solves on. */
+/** WGS84 ellipsoid parameters, the ellipsoid `ellipsoidalDistance` solves on. */
 const WGS84_SEMI_MAJOR_M = 6_378_137;
 const WGS84_FLATTENING = 1 / 298.257223563;
 const WGS84_ECCENTRICITY_SQ = WGS84_FLATTENING * (2 - WGS84_FLATTENING);
@@ -204,7 +204,7 @@ function nearestOnSegment(p: Position, a: Position, b: Position, pointDistance: 
  * that sit within a fraction of a percent of each other.
  */
 function curvatureRadii(lat: number, metric: Metric): { meridional: number; primeVertical: number } {
-  if (metric === "haversine") return { meridional: EARTH_RADIUS_M, primeVertical: EARTH_RADIUS_M };
+  if (metric === "spherical") return { meridional: EARTH_RADIUS_M, primeVertical: EARTH_RADIUS_M };
   const sinLat = Math.sin(lat * DEG_TO_RAD);
   const w = 1 - WGS84_ECCENTRICITY_SQ * sinLat * sinLat;
   return {
@@ -230,7 +230,7 @@ function makeAzimuthalEquidistant(center: Position, metric: Metric) {
   /**
    * Euler's radius of curvature in the normal section of azimuth α, given the
    * unit direction (east, north) = (sin α, cos α) in the tangent plane. Both
-   * radii are equal under "haversine", where this collapses to the sphere.
+   * radii are equal under "spherical", where this collapses to the sphere.
    */
   function radiusInDirection(east: number, north: number): number {
     return 1 / (north * north / meridional + east * east / primeVertical);
@@ -376,10 +376,10 @@ function actualClosestOnGeometryLocation(locA: GeometryLocation, locB: GeometryL
  *
  * @param {object} gA GeoJSON Geometry
  * @param {object} gB GeoJSON Geometry
- * @param metric Point-to-point metric: "haversine" (default) or "vincenty".
+ * @param metric Point-to-point metric: "spherical" (default, haversine) or "ellipsoidal" (geographiclib).
  */
-export function distance(gA: Geometry, gB: Geometry, metric: Metric = "haversine"): DistanceResult {
-  const pointDistance = metric === "vincenty" ? distanceVincenty : haversine;
+export function distance(gA: Geometry, gB: Geometry, metric: Metric = "spherical"): DistanceResult {
+  const pointDistance = metric === "ellipsoidal" ? ellipsoidalDistance : haversine;
   if (gA.type == "Point" && gB.type == "Point") // fast-path for the common case
     return { point1: gA.coordinates, point2: gB.coordinates, distance: Math.round(pointDistance(gA.coordinates, gB.coordinates)*100)/100 };
 
@@ -448,7 +448,7 @@ export function distance(gA: Geometry, gB: Geometry, metric: Metric = "haversine
  * Karney's algorithm (geographiclib). Unlike Vincenty's iteration, it is
  * defined for every pair, antipodal points included.
  */
-export function distanceVincenty(a: Position, b: Position) {
+export function ellipsoidalDistance(a: Position, b: Position) {
   // Inverse takes lat1, lon1, lat2, lon2; asking for DISTANCE always sets s12.
   return geodesic.Geodesic.WGS84.Inverse(a[1], a[0], b[1], b[0], geodesic.Geodesic.DISTANCE).s12!;
 }

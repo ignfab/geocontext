@@ -9,7 +9,7 @@ import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotation
 import { lonSchema, latSchema } from "../helpers/schemas.js";
 import { generatePublishedInputSchema } from "../helpers/jsonSchema.js";
 import logger from "../logger.js";
-import { distanceVincenty, haversine } from "../helpers/distance.js";
+import { ellipsoidalDistance, haversine } from "../helpers/distance.js";
 
 // --- Schemas ---
 
@@ -23,12 +23,12 @@ const distanceInputSchema = z.object({
     lat: latSchema.describe("La latitude du point d'arrivée."),
   }).describe("Le point d'arrivée"),
   profile: z
-    .enum(["direct", "vincenty"])
-    .default("direct")
+    .enum(["spherical", "ellipsoidal"])
+    .default("spherical")
     .describe(["Le type de chemin suivi :",
-      " `direct` distance à vol d'oiseau (Terre ronde, précision à 0.5%),",
-      " `vincenty` distance à vol d'oiseau (Terre ellipsoïde, plus précise et coûteuse, précision à 1mm)",
-      ". Par défaut : `direct`."
+      " `spherical` distance à vol d'oiseau (Terre ronde, précision à 0.5%),",
+      " `ellipsoidal` distance à vol d'oiseau (Terre ellipsoïde, plus précise et coûteuse, précision à 1mm)",
+      ". Par défaut : `spherical`."
     ].join("")),
 }).strict();
 
@@ -71,9 +71,9 @@ class DistanceTool extends BaseTool<DistanceInput> {
     });
 
     switch (input.profile) {
-      case "direct":
-      case "vincenty": {
-        const pointDistance = input.profile == "direct" ? haversine : distanceVincenty;
+      case "spherical":
+      case "ellipsoidal": {
+        const pointDistance = input.profile == "spherical" ? haversine : ellipsoidalDistance;
         const raw = pointDistance(
           [input.departure.lon, input.departure.lat],
           [input.arrival.lon, input.arrival.lat]
