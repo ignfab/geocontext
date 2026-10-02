@@ -15,7 +15,8 @@ export default defineConfig({
     globals: false,
     environment: "node",
     include: ["test/**/*.test.ts"],
-    exclude: ["test/integration/**/*"],
+    // Timed tests run on their own (`test:perf`, vitest.perf.config.mts).
+    exclude: ["test/integration/**/*", "test/**/*.perf.test.ts"],
     testTimeout: 60 * MILLISECONDS,
     // Default value, set explicitly because the suite relies on per-file isolation
     // (it also stops Vitest from suggesting `isolate: false`).

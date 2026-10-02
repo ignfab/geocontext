@@ -122,18 +122,19 @@ Les niveaux 1 et 2 nécessitent un build à jour (`npm run build`) et un accès 
 
 ### Vue d'ensemble des commandes
 
-| Commande                    | Rôle                                                            |
-| --------------------------- | --------------------------------------------------------------- |
-| `npm run typecheck`         | Type-check de l'application (`tsconfig.json`)                   |
-| `npm run typecheck:test`    | Type-check des fichiers de test (`tsconfig.test.json`)          |
-| `npm test` / `test:unit`    | Tests unitaires                                                 |
-| `npm run test:integration`  | Tests d'intégration niveau 1                                    |
-| `npm run test:e2e`          | Tests E2E agent niveau 2                                        |
-| `npm run test:coverage`     | Tests unitaires avec couverture                                 |
-| `npm run bench`             | Benchmark du calcul de `intersection_area`                      |
-| `npm run verify:fast`       | `typecheck` + `typecheck:test` + `build` + `test:unit`          |
-| `npm run verify`            | `verify:fast` + `test:integration`                              |
-| `npm run verify:full`       | `verify` + `test:e2e`                                           |
+| Commande                   | Rôle                                                                 |
+| -------------------------- | -------------------------------------------------------------------- |
+| `npm run typecheck`        | Type-check de l'application (`tsconfig.json`)                        |
+| `npm run typecheck:test`   | Type-check des fichiers de test (`tsconfig.test.json`)               |
+| `npm test` / `test:unit`   | Tests unitaires                                                      |
+| `npm run test:perf`        | Tests chronométrés (`*.perf.test.ts`), un fichier à la fois          |
+| `npm run test:integration` | Tests d'intégration niveau 1                                         |
+| `npm run test:e2e`         | Tests E2E agent niveau 2                                             |
+| `npm run test:coverage`    | Tests unitaires avec couverture                                      |
+| `npm run bench`            | Benchmark du calcul de `intersection_area`                           |
+| `npm run verify:fast`      | `typecheck` + `typecheck:test` + `build` + `test:unit` + `test:perf` |
+| `npm run verify`           | `verify:fast` + `test:integration`                                   |
+| `npm run verify:full`      | `verify` + `test:e2e`                                                |
 
 ### Tests unitaires
 
@@ -141,6 +142,14 @@ Les niveaux 1 et 2 nécessitent un build à jour (`npm run build`) et un accès 
 npm run test:unit
 # ou simplement
 npm test
+```
+
+### Tests chronométrés
+
+Les tests qui mesurent un temps (`*.perf.test.ts`) tournent à part, un fichier à la fois, pour que les autres tests ne faussent pas la mesure. `verify:fast` les lance après les tests unitaires.
+
+```bash
+npm run test:perf
 ```
 
 ### Tests d'intégration (niveau 1)
@@ -166,7 +175,7 @@ npm run test:coverage
 ### Vérifications combinées
 
 ```bash
-npm run verify:fast   # typecheck + build + tests unitaires
+npm run verify:fast   # typecheck + build + tests unitaires et chronométrés
 npm run verify        # verify:fast + tests d'intégration niveau 1
 npm run verify:full   # verify + tests E2E niveau 2
 ```

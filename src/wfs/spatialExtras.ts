@@ -284,7 +284,7 @@ export function deriveFromGeometry(geometry: unknown, input: FeatureCollectionPo
   if (requires_distance_to_filter_center) {
     try {
       const filterCentroid = context.filterCentroid!;
-      ret.distance_to_filter_center = distance(geo, filterCentroid);
+      ret.distance_to_filter_center = distance(geo, filterCentroid).distance;
     } catch {
       ret.distance_to_filter_center = null;
     }
