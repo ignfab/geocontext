@@ -27,8 +27,7 @@ const distanceInputSchema = z.object({
     .default("spherical")
     .describe(["Le type de chemin suivi :",
       " `spherical` distance à vol d'oiseau (Terre ronde, précision à 0.5%),",
-      " `ellipsoidal` distance à vol d'oiseau (Terre ellipsoïde, plus précise et coûteuse, précision à 1mm)",
-      ". Par défaut : `spherical`."
+      " `ellipsoidal` distance à vol d'oiseau (Terre ellipsoïde, plus précise, précision à 0.5cm).",
     ].join("")),
 }).strict();
 
