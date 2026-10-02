@@ -72,7 +72,7 @@ describe("Test DistanceTool", () => {
 
   it.each([
     ["car", 395174, 212, 212],
-    ["pedestrian", 12345, 67.8, 68],
+    ["pedestrian", 12345, 67.83, 67.8],
   ] as const)("should return itinerary distance and time for %s", async (profile, distance, duration, time) => {
     const tool = new DistanceTool();
     const getItinerarySpy = vi.spyOn(navigationItineraryClient, "getItinerary").mockResolvedValue({ distance, duration });
