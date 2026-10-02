@@ -106,7 +106,7 @@ class DistanceTool extends BaseTool<DistanceInput> {
           optimize: input.optimize,
         });
         return {
-          distance: itinerary.distance,
+          distance: Math.round(itinerary.distance * 100) / 100,
           time: Math.round(itinerary.duration * 10) / 10
         };
       }
