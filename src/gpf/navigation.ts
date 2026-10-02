@@ -1,26 +1,19 @@
-import { fetchJSONGet } from "../helpers/http.js";
+import { fetchJSONGet, ServiceResponseError } from "../helpers/http.js";
 import logger from "../logger.js";
 import type { JsonFetcher } from "../helpers/http.js";
 import type { Geometry } from "geojson";
 import { isGeometryLike } from "../helpers/geojson.js";
 import type { RateLimiter } from "../helpers/RateLimiter.js";
 import { getNavigationRateLimiter } from "./navigationRateLimiter.js";
+import type { GpfIsochroneLayerInput } from "../wfs/schema.js";
 
 export const NAVIGATION_SOURCE = "Géoplateforme (calcul d'isochrone)";
 export const NAVIGATION_ISOCHRONE_URL = "https://data.geopf.fr/navigation/isochrone";
-export const TRAVEL_TIME_RESOURCE = "bdtopo-valhalla";
+export const NAVIGATION_ISOCHRONE_RESOURCE = "bdtopo-valhalla";
+// Upstream ceiling accepted by the GPF isochrone service for a time cost.
+export const NAVIGATION_ISOCHRONE_MAX_TIME_MINUTES = 600;
+export const NAVIGATION_PROFILES = ["car", "pedestrian"] as const;
 export const TRAVEL_TIME_MAX_MINUTES = 120;
-export const TRAVEL_TIME_PROFILES = ["car", "pedestrian"] as const;
-
-export type TravelTimeProfile = typeof TRAVEL_TIME_PROFILES[number];
-
-
-export type TravelTimeGeometryInput = {
-  lon: number;
-  lat: number;
-  minutes: number;
-  profile: TravelTimeProfile;
-};
 
 export class NavigationIsochroneClient {
   constructor(
@@ -28,12 +21,12 @@ export class NavigationIsochroneClient {
     private fetcher: JsonFetcher<{geometry?: unknown}> = fetchJSONGet,
   ) {}
 
-  async getTravelTimeGeometry(input: TravelTimeGeometryInput): Promise<Geometry> {
+  async getIsochrone(input: GpfIsochroneLayerInput): Promise<Geometry> {
     await this.rateLimiter.limit();
-    logger.debug(`[gpf:navigation] getTravelTimeGeometry(${JSON.stringify(input)})...`);
+    logger.debug(`[gpf:navigation] getGeometry(${JSON.stringify(input)})...`);
 
     const url = `${NAVIGATION_ISOCHRONE_URL}?${new URLSearchParams({
-      resource: TRAVEL_TIME_RESOURCE,
+      resource: NAVIGATION_ISOCHRONE_RESOURCE,
       point: `${input.lon},${input.lat}`,
       direction: "departure",
       costType: "time",
@@ -47,7 +40,9 @@ export class NavigationIsochroneClient {
 
     const json = await this.fetcher(url);
     if (!isGeometryLike(json.geometry)) {
-      throw new Error("Le service d'isochrone n'a pas renvoyé de géométrie GeoJSON exploitable.");
+      throw new ServiceResponseError("Le service d'isochrone n'a pas renvoyé de géométrie GeoJSON exploitable.", {
+        http: { status: 502, statusText: "Bad Gateway" },
+      });
     }
 
     return json.geometry;
@@ -62,7 +57,7 @@ function getDefaultNavigationIsochroneClient() {
 }
 
 export const navigationIsochroneClient = {
-  getTravelTimeGeometry(input: TravelTimeGeometryInput) {
-    return getDefaultNavigationIsochroneClient().getTravelTimeGeometry(input);
+  getIsochrone(input: GpfIsochroneLayerInput) {
+    return getDefaultNavigationIsochroneClient().getIsochrone(input);
   },
 };

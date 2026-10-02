@@ -21,7 +21,7 @@ describe("NavigationIsochroneClient", () => {
       },
     );
 
-    const geometry = await client.getTravelTimeGeometry({
+    const geometry = await client.getIsochrone({
       lon: 2.337306,
       lat: 48.849319,
       minutes: 15,
@@ -49,7 +49,7 @@ describe("NavigationIsochroneClient", () => {
       async () => ({ geometry: null }),
     );
 
-    await expect(client.getTravelTimeGeometry({
+    await expect(client.getIsochrone({
       lon: 2.337306,
       lat: 48.849319,
       minutes: 15,

@@ -109,12 +109,9 @@ export async function resolveTravelTimeGeometry(
     return undefined;
   }
 
-  return await navigationIsochroneClient.getTravelTimeGeometry({
-    lon: spatialFilter.lon,
-    lat: spatialFilter.lat,
-    minutes: spatialFilter.minutes,
-    profile: spatialFilter.profile,
-  });
+  const { operator, ...parameters } = spatialFilter;
+
+  return await navigationIsochroneClient.getIsochrone(parameters);
 }
 
 /**
