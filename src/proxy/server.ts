@@ -2,8 +2,8 @@
  * Stateless geodata proxy HTTP server.
  *
  * Serves `GET {PROXY_ENDPOINT}/<token>.json`: decode the opaque token, re-validate
- * it through the layer schema, run the geometry-full WFS query, and return a
- * GeoJSON FeatureCollection for MCP Carto to render.
+ * it through the layer schema, run the geometry-full WFS or isochrone query, and
+ * return a GeoJSON FeatureCollection for MCP Carto to render.
  */
 
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
@@ -14,13 +14,19 @@ import { GPF_WFS_URL } from "../wfs/catalog.js";
 import {
   gpfGetFeaturesLayerInputSchema,
   gpfGetFeatureByIdLayerInputObjectSchema,
+  gpfIsolineLayerInputSchema,
   PROXY_TOKEN_KIND,
 } from "../wfs/schema.js";
-import { runGeometryFeatureQuery, runGeometryFeatureByIdQuery } from "./execute.js";
+import {
+  runGeometryFeatureQuery,
+  runGeometryFeatureByIdQuery,
+  runGeometryIsolineQuery,
+} from "./execute.js";
 import { FeatureNotFoundError, FeatureCardinalityError } from "../wfs/byId.js";
 import {
   getDefaultGeometryFeatureQueryDeps,
   getDefaultGeometryFeatureByIdQueryDeps,
+  getDefaultGeometryIsolineQueryDeps,
 } from "./transport.js";
 import {
   decodeToken,
@@ -72,7 +78,7 @@ function toHttpError(error: unknown): HttpError {
   if (error instanceof FeatureCardinalityError) {
     // The client request was valid but the upstream WFS broke the single-feature
     // contract (duplicate / id mismatch / unusable body): an upstream anomaly.
-    return { status: 502, detail: "Le service WFS a renvoyé une réponse incohérente pour cet objet." };
+    return { status: 502, detail: "Le service amont a renvoyé une réponse incohérente pour cet objet." };
   }
   if (error instanceof ServiceResponseError) {
     const upstream = error.httpStatus ?? 502;
@@ -80,13 +86,13 @@ function toHttpError(error: unknown): HttpError {
     // timeout (504). Client-provided data already passed validation, so a 4xx here
     // means an upstream contract issue, not a client error on the proxy endpoint.
     const status = upstream === 504 ? 504 : 502;
-    // Do NOT forward error.serviceDetail (raw upstream WFS text, English, internal
+    // Do NOT forward error.serviceDetail (raw upstream WFS or GPF text, English, internal
     // column names) to the client: like the other branches, return a fixed FR
     // message. The upstream detail is logged server-side by the caller.
     const detail =
       status === 504
-        ? "Le service WFS n'a pas répondu à temps."
-        : "Le service WFS a renvoyé une réponse inexploitable.";
+        ? "Le service amont n'a pas répondu à temps."
+        : "Le service amont a renvoyé une réponse inexploitable.";
     return { status, detail };
   }
   return { status: 500, detail: "Erreur interne du proxy." };
@@ -164,7 +170,7 @@ async function handleLayerRequest(token: string, res: ServerResponse): Promise<v
     return;
   }
 
-  let featureCollection: unknown;
+  let geoJsonBody: unknown;
   try {
     const params = decodeToken(token, env.PROXY_URL_SECRET);
 
@@ -176,13 +182,19 @@ async function handleLayerRequest(token: string, res: ServerResponse): Promise<v
 
     if (kind === PROXY_TOKEN_KIND.byId) {
       const input = gpfGetFeatureByIdLayerInputObjectSchema.parse(payload);
-      featureCollection = await runGeometryFeatureByIdQuery(
+      geoJsonBody = await runGeometryFeatureByIdQuery(
         input,
         getDefaultGeometryFeatureByIdQueryDeps(),
       );
+    } else if (kind === PROXY_TOKEN_KIND.isoline) {
+      const input = gpfIsolineLayerInputSchema.parse(payload);
+      geoJsonBody = await runGeometryIsolineQuery(
+        input,
+        getDefaultGeometryIsolineQueryDeps(),
+      );
     } else if (kind === PROXY_TOKEN_KIND.query) {
       const input = gpfGetFeaturesLayerInputSchema.parse(payload);
-      featureCollection = await runGeometryFeatureQuery(input, getDefaultGeometryFeatureQueryDeps());
+      geoJsonBody = await runGeometryFeatureQuery(input, getDefaultGeometryFeatureQueryDeps());
     } else {
       throw new ProxyTokenMalformedError(`Unknown proxy token kind: ${String(kind)}.`);
     }
@@ -198,7 +210,7 @@ async function handleLayerRequest(token: string, res: ServerResponse): Promise<v
   }
 
   res.writeHead(200, { "Content-Type": "application/geo+json; charset=utf-8" });
-  res.end(JSON.stringify(featureCollection));
+  res.end(JSON.stringify(geoJsonBody));
 }
 
 /**

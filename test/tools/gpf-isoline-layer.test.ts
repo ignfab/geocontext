@@ -1,0 +1,269 @@
+import { vi, describe, it, expect, afterEach } from "vitest";
+
+import type { Env } from "../../src/config/env.js";
+import { decodeToken } from "../../src/proxy/token.js";
+import { NAVIGATION_ISOCHRONE_MAX_MINUTES, NAVIGATION_ISODISTANCE_MAX_METERS } from "../../src/gpf/navigation.js";
+import { PROXY_TOKEN_KIND, gpfIsolineLayerInputSchema } from "../../src/wfs/schema.js";
+import { validateStructuredContentAgainstOutputSchema } from "./helpers/outputSchema";
+
+const SECRET_HEX = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+const SECRET = Buffer.from(SECRET_HEX, "hex");
+
+const mockGetEnv = vi.fn<() => Env>();
+
+vi.doMock("../../src/config/env.js", async () => {
+  const actual = await vi.importActual<typeof import("../../src/config/env.js")>(
+    "../../src/config/env.js",
+  );
+  mockGetEnv.mockImplementation(actual.getEnv);
+  return {
+    ...actual,
+    getEnv: mockGetEnv,
+  };
+});
+
+const { default: GpfIsolineLayerTool } = await import(
+  "../../src/tools/GpfIsolineLayerTool.js"
+);
+
+function makeEnv(overrides: Partial<Env>): Env {
+  return {
+    TRANSPORT_TYPE: "http",
+    PROXY_URL_SECRET: SECRET,
+    PROXY_PUBLIC_BASE_URL: "https://proxy.example.test",
+    PROXY_ENDPOINT: "/api/v1/proxy",
+    ...overrides,
+  } as Env;
+}
+
+describe("Test GpfIsolineLayerTool", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+    mockGetEnv.mockReset();
+  });
+
+  it("publishes the time-only cost limit without capping distance costs", () => {
+    mockGetEnv.mockReturnValue(makeEnv({}));
+    const tool = new GpfIsolineLayerTool();
+
+    const properties = tool.toolDefinition.inputSchema.properties as Record<string, unknown>;
+    const costValueSchema = properties.cost_value as { description?: string; maximum?: number };
+
+    expect(properties).not.toHaveProperty("minutes");
+    expect(costValueSchema.description).toContain(`\`cost_type = "time"\` (maximum : ${NAVIGATION_ISOCHRONE_MAX_MINUTES})`);
+    expect(costValueSchema.maximum).toBeUndefined();
+  });
+
+  it.each([
+    { cost_type: "time", cost_value: NAVIGATION_ISOCHRONE_MAX_MINUTES },
+    { cost_type: "distance", cost_value: NAVIGATION_ISOCHRONE_MAX_MINUTES + 1 },
+  ])("accepts $cost_type cost at $cost_value", async ({ cost_type, cost_value }) => {
+    mockGetEnv.mockReturnValue(makeEnv({}));
+    const tool = new GpfIsolineLayerTool();
+
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_isoline_layer",
+        arguments: {
+          lon: 2.337306,
+          lat: 48.849319,
+          profile: "pedestrian",
+          cost_type,
+          cost_value,
+        },
+      },
+    });
+
+    expect(response.isError).toBeUndefined();
+    expect(response.structuredContent).toEqual({ data_url: expect.any(String) });
+  });
+
+  it("fails fast when no proxy is configured", async () => {
+    mockGetEnv.mockReturnValue(
+      makeEnv({ PROXY_URL_SECRET: undefined, PROXY_PUBLIC_BASE_URL: undefined }),
+    );
+    const tool = new GpfIsolineLayerTool();
+
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_isoline_layer",
+        arguments: {
+          lon: 2.337306,
+          lat: 48.849319,
+          profile: "pedestrian",
+          cost_type: "time",
+          cost_value: 15,
+        },
+      },
+    });
+
+    expect(response.isError).toBe(true);
+    const textContent = response.content[0];
+    if (textContent.type !== "text") {
+      throw new Error("expected text content");
+    }
+    expect(textContent.text).toContain("PROXY_URL_SECRET");
+  });
+
+  it("mints a data_url under stdio when a proxy is configured (gate is config, not transport)", async () => {
+    mockGetEnv.mockReturnValue(makeEnv({ TRANSPORT_TYPE: "stdio" }));
+    const tool = new GpfIsolineLayerTool();
+
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_isoline_layer",
+        arguments: {
+          lon: 2.337306,
+          lat: 48.849319,
+          profile: "pedestrian",
+          cost_type: "time",
+          cost_value: 15,
+        },
+      },
+    });
+
+    expect(response.isError).toBeUndefined();
+    const payload = JSON.parse((response.content[0] as { text: string }).text);
+    expect(payload.data_url).toContain("https://proxy.example.test/api/v1/proxy/");
+  });
+
+  it("builds an opaque data_url that round-trips to the tagged isoline params", async () => {
+    mockGetEnv.mockReturnValue(makeEnv({}));
+    const tool = new GpfIsolineLayerTool();
+
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_isoline_layer",
+        arguments: {
+          lon: 2.337306,
+          lat: 48.849319,
+          profile: "car",
+          cost_type: "distance",
+          cost_value: 50_000,
+        },
+      },
+    });
+
+    expect(response.isError).toBeUndefined();
+    const textContent = response.content[0];
+    if (textContent.type !== "text") {
+      throw new Error("expected text content");
+    }
+    const payload = JSON.parse(textContent.text);
+    expect(payload).toEqual(response.structuredContent);
+    expect(
+      validateStructuredContentAgainstOutputSchema(
+        tool.toolDefinition.outputSchema,
+        response.structuredContent,
+      ),
+    ).toBeNull();
+
+    const url = new URL(payload.data_url);
+    const token = url.pathname.slice("/api/v1/proxy/".length, -".json".length);
+    const decoded = decodeToken(token, SECRET);
+    expect(decoded).toEqual({
+      kind: PROXY_TOKEN_KIND.isoline,
+      lon: 2.337306,
+      lat: 48.849319,
+      profile: "car",
+      cost_type: "distance",
+      cost_value: 50_000,
+    });
+  });
+
+  it.each([
+    { type: "time", cost: NAVIGATION_ISOCHRONE_MAX_MINUTES + 1 },
+    { type: "distance", cost: NAVIGATION_ISODISTANCE_MAX_METERS + 1 },
+  ])("rejects a $type cost above the supported maximum ($cost)", async ({ type, cost }) => {
+    mockGetEnv.mockReturnValue(makeEnv({}));
+    const tool = new GpfIsolineLayerTool();
+
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_isoline_layer",
+        arguments: {
+          lon: 2.337306,
+          lat: 48.849319,
+          profile: "pedestrian",
+          cost_type: type,
+          cost_value: cost,
+        },
+      },
+    });
+
+    expect(response.isError).toBe(true);
+    expect(response.structuredContent).toBeUndefined();
+    const textContent = response.content[0];
+    if (textContent.type !== "text") {
+      throw new Error("expected text content");
+    }
+    const nom = type === "time" ? "temps" : type;
+    const units = type === "time" ? "minutes" : "mètres";
+    expect(textContent.text).toContain(`cost_value: Le coût maximal en ${nom} ne peut pas dépasser ${cost-1} ${units}.`);
+  });
+
+  it("rejects an unknown key such as kind (strict isoline surface)", async () => {
+    mockGetEnv.mockReturnValue(makeEnv({}));
+    const tool = new GpfIsolineLayerTool();
+
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_isoline_layer",
+        arguments: {
+          kind: PROXY_TOKEN_KIND.query,
+          lon: 2.337306,
+          lat: 48.849319,
+          profile: "pedestrian",
+          minutes: 15,
+        },
+      },
+    });
+
+    expect(response.isError).toBe(true);
+    expect((response.content[0] as { text: string }).text).toContain("Le paramètre 'kind' n'est pas reconnu.");
+  });
+
+  it("rejects a missing profile", async () => {
+    mockGetEnv.mockReturnValue(makeEnv({}));
+    const tool = new GpfIsolineLayerTool();
+
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_isoline_layer",
+        arguments: {
+          lon: 2.337306,
+          lat: 48.849319,
+          minutes: 15,
+        },
+      },
+    });
+
+    expect(response.isError).toBe(true);
+    expect((response.content[0] as { text: string }).text).toContain("Le paramètre 'profile' est requis.");
+  });
+
+  it("emits a `too_big` cost_value issue for an out-of-range distance", () => {
+    const result = gpfIsolineLayerInputSchema.safeParse({
+      lon: 2.337306,
+      lat: 48.849319,
+      profile: "pedestrian",
+      cost_type: "distance",
+      cost_value: 50_001,
+    });
+
+    expect(result.success).toBe(false);
+    if (result.success) {
+      throw new Error("expected parse failure");
+    }
+
+    expect(result.error.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "too_big",
+          path: ["cost_value"],
+          message: expect.stringContaining("ne peut pas dépasser"),
+        }),
+      ]),
+    );
+  });
+});

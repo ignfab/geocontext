@@ -15,11 +15,12 @@ import type { CompiledRequest } from "../wfs/request.js";
 import type { WfsFeatureCollectionResponse } from "../wfs/types.js";
 import { getSpatialFilter } from "../wfs/queryPreparation.js";
 import type { GpfGetFeaturesInput } from "../wfs/schema.js";
-import { NavigationIsochroneClient } from "../gpf/navigation.js";
+import { NavigationIsolineClient } from "../gpf/navigation.js";
 import type {
-  TravelTimeResolver,
+  IsolineResolver,
   GeometryFeatureQueryDeps,
   GeometryFeatureByIdQueryDeps,
+  GeometryIsolineQueryDeps,
 } from "./execute.js";
 import { fetchJSONPostWithLimit, fetchJSONGetWithLimit } from "../helpers/http.js";
 import { RateLimiter } from "../helpers/RateLimiter.js";
@@ -43,7 +44,7 @@ function buildProxyTransport(rateLimiter: RateLimiter): WfsTransportLike {
       const env = getEnv();
       const url = `${request.url}?${new URLSearchParams(request.query).toString()}`;
       // Bounded fetch + JSON parse + 502-on-bad-body all live in fetchJSONPostWithLimit
-      // (symmetric to the isochrone leg's fetchJSONGetWithLimit). It already throws on
+      // (symmetric to the isoline leg's fetchJSONGetWithLimit). It already throws on
       // non-2xx, on the byte cap, and on a 2xx body that is not JSON (→ 502,
       // invalid_upstream_body, labelled "WFS"). runGeometryFeatureQuery validates the
       // resulting shape (FeatureCollection + features array).
@@ -81,62 +82,59 @@ export function getProxyWfsClient(): WfsClient {
   return cachedProxyWfsClient;
 }
 
-// --- Proxy Isochrone Client (singleton) ---
+// --- Proxy Isoline Client (singleton) ---
 
-let cachedProxyIsochroneClient: NavigationIsochroneClient | undefined;
+let cachedProxyIsolineClient: NavigationIsolineClient | undefined;
 
 /**
- * Returns the proxy isochrone client: a dedicated `NavigationIsochroneClient`
+ * Returns the proxy isoline client: a dedicated `NavigationIsolineClient`
  * wired to the SAME size-bounded, shorter-timeout fetch the geodata proxy leg uses
  * (`PROXY_UPSTREAM_TIMEOUT` + `PROXY_MAX_RESPONSE_BYTES`) and its own
- * `GPF_NAVIGATION_PROXY` rate limiter — NOT the default `navigationIsochroneClient`
+ * `GPF_NAVIGATION_PROXY` rate limiter — NOT the default `navigationIsolineClient`
  * singleton, which uses the unbounded `HTTP_TIMEOUT`-only `fetchJSONGet`. This
- * keeps both upstream legs of a `travel_time` layer request under the same bounds,
+ * keeps both upstream legs of an `isoline` layer request under the same bounds,
  * so its worst case matches `intersects_feature` (2 × PROXY_UPSTREAM_TIMEOUT).
  * Lazily built so the bounds are read from a fully-parsed environment.
  */
-function getProxyIsochroneClient(): NavigationIsochroneClient {
-  cachedProxyIsochroneClient ??= new NavigationIsochroneClient(
+function getProxyIsolineClient(): NavigationIsolineClient {
+  cachedProxyIsolineClient ??= new NavigationIsolineClient(
     new RateLimiter({ name: "GPF_NAVIGATION_PROXY", maxCalls: getEnv().GPF_NAVIGATION_PROXY_RATE_LIMIT, period: 1 }),
     (url) => fetchJSONGetWithLimit(url, getEnv().PROXY_UPSTREAM_TIMEOUT * 1000, getEnv().PROXY_MAX_RESPONSE_BYTES, "d'isochrone"),
   );
-  return cachedProxyIsochroneClient;
+  return cachedProxyIsolineClient;
 }
 
-// --- Reference-geometry resolver (travel_time / isochrone) ---
+// --- Reference-geometry resolver ---
 
 /**
- * Reference-geometry resolver for the `travel_time` spatial filter: turns the
- * isochrone into a reference geometry that is fed INTO the WFS query — the
+ * Reference-geometry resolver for the `isoline` spatial filter: turns the
+ * isoline into a reference geometry that is fed INTO the WFS query — the
  * sibling of `intersects_feature`'s reference-geometry resolution
  * (`resolveFeatureGeometry`). It does NOT fetch features itself (that is the
- * WFS transport's job). Backed by the proxy isochrone client (bounded fetch +
+ * WFS transport's job). Backed by the proxy isoline client (bounded fetch +
  * `GPF_NAVIGATION_PROXY` rate limiter), and injected into `runGeometryFeatureQuery`
- * so it only fires for travel_time inputs.
+ * so it only fires for isoline inputs.
  */
-export const resolveProxyTravelTimeGeometry: TravelTimeResolver = async (
+export const resolveProxyIsolineGeometry: IsolineResolver = async (
   input: GpfGetFeaturesInput,
 ): Promise<Geometry> => {
   const spatialFilter = getSpatialFilter(input);
-  if (spatialFilter?.operator !== "travel_time") {
-    // Guarded by the caller (runGeometryFeatureQuery only calls this for travel_time);
+  if (spatialFilter?.operator !== "isoline") {
+    // Guarded by the caller (runGeometryFeatureQuery only calls this for isoline);
     // defensive check keeps the type narrow.
-    throw new Error("resolveProxyTravelTimeGeometry appelé sans filtre `travel_time`.");
+    throw new Error("resolveProxyIsolineGeometry appelé sans filtre `isoline`.");
   }
 
-  return await getProxyIsochroneClient().getTravelTimeGeometry({
-    lon: spatialFilter.lon,
-    lat: spatialFilter.lat,
-    minutes: spatialFilter.minutes,
-    profile: spatialFilter.profile,
-  });
+  const { operator, ...parameters } = spatialFilter;
+
+  return await getProxyIsolineClient().getIsoline(parameters);
 };
 
 // --- Default Engine Dependencies ---
 
 /**
  * Default (production) dependency bundle for `runGeometryFeatureQuery`: the proxy
- * WFS client and the proxy isochrone resolver. Bundling the concrete proxy wiring
+ * WFS client and the proxy isoline resolver. Bundling the concrete proxy wiring
  * here keeps `server.ts` decoupled from the individual clients — it asks the
  * transport layer for "the deps" instead of assembling them itself. Tests inject
  * their own deps into the engine directly.
@@ -144,17 +142,26 @@ export const resolveProxyTravelTimeGeometry: TravelTimeResolver = async (
 export function getDefaultGeometryFeatureQueryDeps(): GeometryFeatureQueryDeps {
   return {
     wfsClient: getProxyWfsClient(),
-    resolveTravelTime: resolveProxyTravelTimeGeometry,
+    resolveIsoline: resolveProxyIsolineGeometry,
   };
 }
 
 /**
  * Default (production) dependency bundle for `runGeometryFeatureByIdQuery`.
  * Narrower than {@link getDefaultGeometryFeatureQueryDeps}: a by-id lookup has no
- * spatial filter, so it needs only the WFS client (no isochrone resolver).
+ * spatial filter, so it needs only the WFS client (no isoline resolver).
  */
 export function getDefaultGeometryFeatureByIdQueryDeps(): GeometryFeatureByIdQueryDeps {
   return {
     wfsClient: getProxyWfsClient(),
+  };
+}
+
+/**
+ * Default dependency bundle for `runGeometryIsolineQuery`.
+ */
+export function getDefaultGeometryIsolineQueryDeps(): GeometryIsolineQueryDeps {
+  return {
+    getGeometry: (input) => getProxyIsolineClient().getIsoline(input),
   };
 }

@@ -8,17 +8,21 @@ import { resetEnv } from "../../src/config/env";
 import { PROXY_TOKEN_KIND } from "../../src/wfs/schema";
 import { FeatureNotFoundError, FeatureCardinalityError } from "../../src/wfs/byId";
 import { ServiceResponseError, ResponseTooLargeError } from "../../src/helpers/http";
+import { NAVIGATION_ISOCHRONE_MAX_MINUTES, NAVIGATION_ISODISTANCE_MAX_METERS } from "../../src/gpf/navigation";
 
 // Mock the proxy engine + transport so the server is exercised WITHOUT network.
 const runGeometryFeatureQuery = vi.fn();
 const runGeometryFeatureByIdQuery = vi.fn();
+const runGeometryIsolineQuery = vi.fn();
 vi.mock("../../src/proxy/execute", () => ({
   runGeometryFeatureQuery: (...args: unknown[]) => runGeometryFeatureQuery(...args),
   runGeometryFeatureByIdQuery: (...args: unknown[]) => runGeometryFeatureByIdQuery(...args),
+  runGeometryIsolineQuery: (...args: unknown[]) => runGeometryIsolineQuery(...args),
 }));
 vi.mock("../../src/proxy/transport", () => ({
-  getDefaultGeometryFeatureQueryDeps: () => ({ wfsClient: {}, resolveTravelTime: vi.fn() }),
+  getDefaultGeometryFeatureQueryDeps: () => ({ wfsClient: {}, resolveIsoline: vi.fn() }),
   getDefaultGeometryFeatureByIdQueryDeps: () => ({ wfsClient: {} }),
+  getDefaultGeometryIsolineQueryDeps: () => ({ getGeometry: vi.fn() }),
 }));
 
 // A fixed 32-byte hex key for the test environment.
@@ -50,6 +54,17 @@ function validByIdToken() {
   }, KEY);
 }
 
+function validIsolineToken() {
+  return encodeToken({
+    kind: PROXY_TOKEN_KIND.isoline,
+    lon: 2.35,
+    lat: 48.85,
+    profile: "pedestrian",
+    cost_type: "time",
+    cost_value: 15,
+  }, KEY);
+}
+
 beforeAll(async () => {
   process.env.TRANSPORT_TYPE = "http";
   process.env.PROXY_URL_SECRET = TEST_SECRET;
@@ -75,6 +90,7 @@ afterAll(async () => {
 beforeEach(() => {
   runGeometryFeatureQuery.mockReset();
   runGeometryFeatureByIdQuery.mockReset();
+  runGeometryIsolineQuery.mockReset();
 });
 
 describe("proxy/server", () => {
@@ -201,6 +217,58 @@ describe("proxy/server", () => {
       feature_id: "batiment.1",
       select: ["hauteur"],
     });
+  });
+
+  it("dispatches an isoline token to the isoline engine", async () => {
+    runGeometryIsolineQuery.mockResolvedValue(SAMPLE_COLLECTION);
+
+    const res = await request(baseUrl).get(layerPath(validIsolineToken()));
+
+    expect(res.status).toBe(200);
+    expect(res.headers["content-type"]).toContain("application/geo+json");
+    expect(JSON.parse(res.text)).toEqual(SAMPLE_COLLECTION);
+    expect(runGeometryIsolineQuery).toHaveBeenCalledOnce();
+    expect(runGeometryFeatureQuery).not.toHaveBeenCalled();
+    expect(runGeometryFeatureByIdQuery).not.toHaveBeenCalled();
+    const [input] = runGeometryIsolineQuery.mock.calls[0];
+    expect(input).toEqual({
+      lon: 2.35,
+      lat: 48.85,
+      profile: "pedestrian",
+      cost_type: "time",
+      cost_value: 15,
+    });
+  });
+
+  it.each([
+    ["minutes above the maximum", { minutes: NAVIGATION_ISOCHRONE_MAX_MINUTES + 1 }],
+    ["distance above the maximum", { minutes: NAVIGATION_ISODISTANCE_MAX_METERS + 1 }],
+    ["an unknown key", { typename: "BDTOPO_V3:batiment" }],
+  ])("400 when an isochrone token carries %s", async (_name, overrides) => {
+    const badToken = encodeToken({
+      kind: PROXY_TOKEN_KIND.isoline,
+      lon: 2.35,
+      lat: 48.85,
+      profile: "pedestrian",
+      minutes: 15,
+      ...overrides,
+    }, KEY);
+    const res = await request(baseUrl).get(layerPath(badToken));
+    expect(res.status).toBe(400);
+    expect(runGeometryIsolineQuery).not.toHaveBeenCalled();
+  });
+
+  it("400 on a query token whose isoline_filter exceeds the filter's lower time limit", async () => {
+    // 121 minutes is accepted by the isoline service but not by `isoline_filter`:
+    // the proxy must re-run the filter's own limit on the decoded payload.
+    const token = encodeToken({
+      kind: PROXY_TOKEN_KIND.query,
+      typename: "BDTOPO_V3:batiment",
+      isoline_filter: { lon: 2.35, lat: 48.85, profile: "car", cost_type: "time", cost_value: 121 },
+    }, KEY);
+    const res = await request(baseUrl).get(layerPath(token));
+    expect(res.status).toBe(400);
+    expect(runGeometryFeatureQuery).not.toHaveBeenCalled();
   });
 
   it("404 when the by-id feature is absent (FeatureNotFoundError)", async () => {

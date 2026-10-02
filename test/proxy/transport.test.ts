@@ -5,10 +5,10 @@ import type { GpfGetFeaturesInput } from "../../src/wfs/schema";
 
 // Mock ONLY the I/O boundaries, so the real proxy transport code runs:
 // - fetchJSONPostWithLimit (the bounded WFS fetch, parses to JSON) — but keep the real error classes;
-// - fetchJSONGetWithLimit (the bounded isochrone fetch) — asserts the travel_time leg
+// - fetchJSONGetWithLimit (the bounded isochrone fetch) — asserts the isoline leg
 //   goes through the SAME PROXY_UPSTREAM_TIMEOUT + PROXY_MAX_RESPONSE_BYTES bounds as WFS.
-//   The real NavigationIsochroneClient runs (only its fetcher is mocked), so this covers
-//   the previously-untested gap where the isochrone leg used unbounded fetchJSONGet.
+//   The real NavigationIsolineClient runs (only its fetcher is mocked), so this covers
+//   the previously-untested gap where the isoline leg used unbounded fetchJSONGet.
 // - RateLimiter (assert it is invoked, without real timing).
 // The parse + 502-on-bad-body now lives inside fetchJSON*WithLimit (helpers/http),
 // so it is covered there; here we only assert the transport wires the right args.
@@ -35,7 +35,11 @@ vi.mock("../../src/helpers/RateLimiter", () => ({
   },
 }));
 
-import { getProxyWfsClient, resolveProxyTravelTimeGeometry } from "../../src/proxy/transport";
+import {
+  getDefaultGeometryIsolineQueryDeps,
+  getProxyWfsClient,
+  resolveProxyIsolineGeometry,
+} from "../../src/proxy/transport";
 import { resetEnv } from "../../src/config/env";
 import { geometryToEwkt } from "../../src/wfs/geometry";
 
@@ -105,24 +109,24 @@ describe("proxy/transport · buildProxyTransport (via getProxyWfsClient)", () =>
   });
 });
 
-describe("proxy/transport · resolveProxyTravelTimeGeometry", () => {
-  const travelTimeInput: GpfGetFeaturesInput = {
+describe("proxy/transport · resolveProxyIsolineGeometry", () => {
+  const isolineInput: GpfGetFeaturesInput = {
     typename: "BDTOPO_V3:batiment",
     limit: 100,
     spatial_extras: [],
-    travel_time_filter: { lon: 2.35, lat: 48.85, minutes: 15, profile: "pedestrian" },
+    isoline_filter: { lon: 2.35, lat: 48.85, cost_type: "time", cost_value: 15, profile: "pedestrian" },
   };
 
   it("resolves the isochrone through the BOUNDED fetch (PROXY_UPSTREAM_TIMEOUT + PROXY_MAX_RESPONSE_BYTES) and returns EWKT", async () => {
-    // The real NavigationIsochroneClient runs; only its fetcher is mocked. This is
-    // the regression guard: the travel_time leg must NOT use the unbounded
+    // The real NavigationIsolineClient runs; only its fetcher is mocked. This is
+    // the regression guard: the isoline leg must NOT use the unbounded
     // fetchJSONGet (HTTP_TIMEOUT only) — it must go through fetchJSONGetWithLimit
-    // with the SAME bounds as the WFS leg, so a 2-call travel_time stays capped.
+    // with the SAME bounds as the WFS leg, so a 2-call isoline stays capped.
     fetchJSONGetWithLimit.mockResolvedValue({
       geometry: { type: "Polygon", coordinates: [[[2, 48], [2.2, 48], [2.2, 48.2], [2, 48]]] },
     });
 
-    const result = await resolveProxyTravelTimeGeometry(travelTimeInput);
+    const result = await resolveProxyIsolineGeometry(isolineInput);
 
     expect(fetchJSONGetWithLimit).toHaveBeenCalledOnce();
     const [url, timeoutMs, maxBytes, label] = fetchJSONGetWithLimit.mock.calls[0];
@@ -140,13 +144,40 @@ describe("proxy/transport · resolveProxyTravelTimeGeometry", () => {
     expect(geometryToEwkt(result)).toMatch(/^SRID=4326;POLYGON/);
   });
 
-  it("throws defensively if called without a travel_time filter", async () => {
+  it("throws defensively if called without an isoline filter", async () => {
     const noFilter: GpfGetFeaturesInput = {
       typename: "BDTOPO_V3:batiment",
       limit: 100,
       spatial_extras: [],
     };
-    await expect(resolveProxyTravelTimeGeometry(noFilter)).rejects.toThrow(/travel_time/);
+    await expect(resolveProxyIsolineGeometry(noFilter)).rejects.toThrow(/isoline/);
     expect(fetchJSONGetWithLimit).not.toHaveBeenCalled();
+  });
+});
+
+describe("proxy/transport · getDefaultGeometryIsolineQueryDeps", () => {
+  it("resolves the isoline through the bounded fetch (PROXY_UPSTREAM_TIMEOUT + PROXY_MAX_RESPONSE_BYTES)", async () => {
+    const geometry = { type: "Polygon", coordinates: [[[2, 48], [2.2, 48], [2.2, 48.2], [2, 48]]] };
+    fetchJSONGetWithLimit.mockResolvedValue({ geometry });
+
+    const result = await getDefaultGeometryIsolineQueryDeps().getGeometry({
+      lon: 2.35,
+      lat: 48.85,
+      cost_type: "time",
+      cost_value: 15,
+      profile: "car",
+    });
+
+    expect(fetchJSONGetWithLimit).toHaveBeenCalledOnce();
+    const [url, timeoutMs, maxBytes, label] = fetchJSONGetWithLimit.mock.calls[0];
+    expect(url).toContain("data.geopf.fr/navigation/isochrone");
+    expect(url).toContain("point=2.35%2C48.85");
+    expect(url).toContain("costValue=15");
+    expect(url).toContain("profile=car");
+    expect(timeoutMs).toBe(10 * 1000); // PROXY_UPSTREAM_TIMEOUT (s) → ms, NOT HTTP_TIMEOUT
+    expect(maxBytes).toBe(26214400); // PROXY_MAX_RESPONSE_BYTES
+    expect(label).toBe("d'isochrone");
+    expect(rateLimit).toHaveBeenCalled();
+    expect(result).toEqual(geometry);
   });
 });

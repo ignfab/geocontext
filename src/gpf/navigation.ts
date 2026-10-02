@@ -1,43 +1,40 @@
-import { fetchJSONGet } from "../helpers/http.js";
+import { fetchJSONGet, ServiceResponseError } from "../helpers/http.js";
 import logger from "../logger.js";
 import type { JsonFetcher } from "../helpers/http.js";
 import type { Geometry } from "geojson";
 import { isGeometryLike } from "../helpers/geojson.js";
 import type { RateLimiter } from "../helpers/RateLimiter.js";
 import { getNavigationRateLimiter } from "./navigationRateLimiter.js";
+import type { GpfIsolineLayerInput } from "../wfs/schema.js";
 
-export const NAVIGATION_SOURCE = "Géoplateforme (calcul d'isochrone)";
-export const NAVIGATION_ISOCHRONE_URL = "https://data.geopf.fr/navigation/isochrone";
-export const TRAVEL_TIME_RESOURCE = "bdtopo-valhalla";
-export const TRAVEL_TIME_MAX_MINUTES = 120;
-export const TRAVEL_TIME_PROFILES = ["car", "pedestrian"] as const;
+export const NAVIGATION_SOURCE = "Géoplateforme (calcul d'isochrone / d'isodistance)";
+export const NAVIGATION_ISOLINE_URL = "https://data.geopf.fr/navigation/isochrone";
+export const NAVIGATION_ISOLINE_RESOURCE = "bdtopo-valhalla";
+// Upstream ceilings accepted by the GPF isochrone service, per cost type.
+export const NAVIGATION_ISOCHRONE_MAX_MINUTES = 600;
+export const NAVIGATION_ISODISTANCE_MAX_METERS = 50_000;
+export const NAVIGATION_PROFILES = ["car", "pedestrian"] as const;
+export const NAVIGATION_METRICS = ["time", "distance"] as const;
 
-export type TravelTimeProfile = typeof TRAVEL_TIME_PROFILES[number];
+export type NavigationProfile = typeof NAVIGATION_PROFILES[number];
+export type NavigationMetrics = typeof NAVIGATION_METRICS[number];
 
-
-export type TravelTimeGeometryInput = {
-  lon: number;
-  lat: number;
-  minutes: number;
-  profile: TravelTimeProfile;
-};
-
-export class NavigationIsochroneClient {
+export class NavigationIsolineClient {
   constructor(
     private rateLimiter: RateLimiter,
     private fetcher: JsonFetcher<{geometry?: unknown}> = fetchJSONGet,
   ) {}
 
-  async getTravelTimeGeometry(input: TravelTimeGeometryInput): Promise<Geometry> {
+  async getIsoline(input: GpfIsolineLayerInput): Promise<Geometry> {
     await this.rateLimiter.limit();
-    logger.debug(`[gpf:navigation] getTravelTimeGeometry(${JSON.stringify(input)})...`);
+    logger.debug(`[gpf:navigation] getGeometry(${JSON.stringify(input)})...`);
 
-    const url = `${NAVIGATION_ISOCHRONE_URL}?${new URLSearchParams({
-      resource: TRAVEL_TIME_RESOURCE,
+    const url = `${NAVIGATION_ISOLINE_URL}?${new URLSearchParams({
+      resource: NAVIGATION_ISOLINE_RESOURCE,
       point: `${input.lon},${input.lat}`,
       direction: "departure",
-      costType: "time",
-      costValue: String(input.minutes),
+      costType: input.cost_type,
+      costValue: String(input.cost_value),
       profile: input.profile,
       timeUnit: "minute",
       distanceUnit: "meter",
@@ -47,22 +44,24 @@ export class NavigationIsochroneClient {
 
     const json = await this.fetcher(url);
     if (!isGeometryLike(json.geometry)) {
-      throw new Error("Le service d'isochrone n'a pas renvoyé de géométrie GeoJSON exploitable.");
+      throw new ServiceResponseError("Le service d'isochrone n'a pas renvoyé de géométrie GeoJSON exploitable.", {
+        http: { status: 502, statusText: "Bad Gateway" },
+      });
     }
 
     return json.geometry;
   }
 }
 
-let defaultNavigationIsochroneClient: NavigationIsochroneClient | undefined;
+let defaultNavigationIsolineClient: NavigationIsolineClient | undefined;
 
-function getDefaultNavigationIsochroneClient() {
-  defaultNavigationIsochroneClient ??= new NavigationIsochroneClient(getNavigationRateLimiter());
-  return defaultNavigationIsochroneClient;
+function getDefaultNavigationIsolineClient() {
+  defaultNavigationIsolineClient ??= new NavigationIsolineClient(getNavigationRateLimiter());
+  return defaultNavigationIsolineClient;
 }
 
-export const navigationIsochroneClient = {
-  getTravelTimeGeometry(input: TravelTimeGeometryInput) {
-    return getDefaultNavigationIsochroneClient().getTravelTimeGeometry(input);
+export const navigationIsolineClient = {
+  getIsoline(input: GpfIsolineLayerInput) {
+    return getDefaultNavigationIsolineClient().getIsoline(input);
   },
 };

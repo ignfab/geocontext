@@ -1,9 +1,9 @@
 /**
- * Proxy-side WFS execution engine.
+ * Proxy-side WFS and isochrone execution engine.
  *
  * `runGeometryFeatureQuery` (entry point) compiles and runs the layer query;
  * `resolveReferenceGeometry` (internal helper) resolves the reference geometry
- * for `intersects_feature` / `travel_time` filters.
+ * for `intersects_feature` / `isoline` filters.
  *
  * Unlike the LLM-facing `executeQueryFeatures` (which strips geometry to `null`
  * via `postProcessFeatureCollection` to save tokens), the proxy needs the OPPOSITE: a
@@ -37,8 +37,12 @@ import { resolveFeatureGeometry } from "../wfs/referenceGeometry.js";
 import { rethrowIdentifiedCatalogDesyncError } from "../wfs/catalogDesync.js";
 import { ServiceResponseError, extractJsonServiceError } from "../helpers/http.js";
 import type { WfsFeatureCollectionResponse } from "../wfs/types.js";
-import type { GpfGetFeaturesInput, GpfGetFeatureByIdLayerInput } from "../wfs/schema.js";
-import type { Geometry } from "geojson";
+import type { FeatureCollection, Geometry } from "geojson";
+import type {
+  GpfGetFeaturesInput,
+  GpfGetFeatureByIdLayerInput,
+  GpfIsolineLayerInput,
+} from "../wfs/schema.js";
 
 // --- Injected Dependencies ---
 
@@ -53,21 +57,21 @@ export type WfsClientLike = {
 };
 
 /**
- * Resolves the isochrone geometry for a `travel_time` filter. Injected by
+ * Resolves the isochrone/isodistance geometry for an `isoline` filter. Injected by
  * the HTTP layer (backed by the navigation/isochrone service). Required, because
- * `travel_time` is part of the `gpf_get_features` query contract the proxy must
+ * `isoline` is part of the `gpf_get_features` query contract the proxy must
  * honour — it is not an optional capability. The engine stays isochrone-agnostic
  * (pure, network-free, testable), exactly as it is for `wfsClient`.
  */
-export type TravelTimeResolver = (input: GpfGetFeaturesInput) => Promise<Geometry>;
+export type IsolineResolver = (input: GpfGetFeaturesInput) => Promise<Geometry>;
 
 /**
  * Dependencies injected into {@link runGeometryFeatureQuery}.
  */
 export type GeometryFeatureQueryDeps = {
   wfsClient: WfsClientLike;
-  /** Isochrone resolver, invoked only for `travel_time` filters. */
-  resolveTravelTime: TravelTimeResolver;
+  /** Isochrone/isodistance resolver, invoked only for `isoline` filters. */
+  resolveIsoline: IsolineResolver;
 };
 
 // --- Internal Helpers ---
@@ -157,10 +161,10 @@ async function resolveReferenceGeometry(
 ): Promise<Geometry | undefined> {
   const spatialFilter = getSpatialFilter(input);
 
-  // travel_time is resolved by the injected isochrone resolver, up front, so
+  // isoline is resolved by the injected isochrone/isodistance resolver, up front, so
   // compileQueryParts never sees an unresolved ref (symmetric to intersects_feature).
-  if (spatialFilter?.operator === "travel_time") {
-    return deps.resolveTravelTime(input);
+  if (spatialFilter?.operator === "isoline") {
+    return deps.resolveIsoline(input);
   }
 
   if (!spatialFilter || spatialFilter.operator !== "intersects_feature") {
@@ -186,7 +190,7 @@ async function resolveReferenceGeometry(
  * @param input Validated layer query input (same shape as `gpf_get_features`
  *   minus the LLM-only `spatial_extras` knob).
  * @param deps Injected WFS client (catalog + execution) and isochrone resolver
- *   (always required; invoked only for `travel_time` filters).
+ *   (always required; invoked only for `isoline` filters).
  * @returns The raw WFS FeatureCollection, geometry preserved.
  */
 export async function runGeometryFeatureQuery(
@@ -300,5 +304,45 @@ export async function runGeometryFeatureByIdQuery(
     totalFeatures: 1,
     numberReturned: 1,
     numberMatched: 1,
+  };
+}
+
+// --- Isochrone Public Engine ---
+
+export type IsolineGeometryResolver = (
+  input: GpfIsolineLayerInput,
+) => Promise<Geometry>;
+
+export type GeometryIsolineQueryDeps = {
+  getGeometry: IsolineGeometryResolver;
+};
+
+/**
+ * Resolves an isoline (isochrone or isodistance) and returns it as a
+ * GeoJSON `FeatureCollection` with full geometry (for map rendering by MCP Carto).
+ *
+ * Counterpart of {@link runGeometryFeatureQuery} for the isoline producer tool.
+ * The request params are echoed into `properties` so the rendered layer carries
+ * its own legend.
+ *
+ * @param input Validated isoline layer input (`{ lon, lat, profile, cost_type, cost_value }`).
+ * @param deps Injected isoline geometry resolver.
+ * @returns The isoline as a GeoJSON FeatureCollection.
+ */
+export async function runGeometryIsolineQuery(
+  input: GpfIsolineLayerInput,
+  deps: GeometryIsolineQueryDeps,
+): Promise<FeatureCollection> {
+  const geometry = await deps.getGeometry(input);
+
+  return {
+    type: "FeatureCollection" as const,
+    features: [
+      {
+        type: "Feature" as const,
+        geometry,
+        properties: input,
+      }
+    ]
   };
 }

@@ -209,9 +209,9 @@ export function compileQueryParts(
         }
         fragments.push(compileIntersectsFeatureSpatialFilter(geometryName, resolvedGeometryRef));
         break;
-      case "travel_time":
+      case "isoline":
         if (!resolvedGeometryRef) {
-          throw new Error("Le filtre spatial `travel_time` exige la résolution préalable de la géométrie d'isochrone.");
+          throw new Error("Le filtre spatial `isoline` exige la résolution préalable de la géométrie d'isochrone/isodistance.");
         }
         fragments.push(compileIntersectsFeatureSpatialFilter(geometryName, resolvedGeometryRef));
         break;
