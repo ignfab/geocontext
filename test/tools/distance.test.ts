@@ -13,13 +13,13 @@ describe("Test DistanceTool", () => {
         expect(tool.toolDefinition.title).toEqual("Distance entre deux points");
         expect(tool.toolDefinition.inputSchema.required).not.toContain("profile");
         expect(tool.toolDefinition.inputSchema.properties?.profile).toMatchObject({
-            enum: ["direct", "vincenty"],
-            default: "direct",
+            enum: ["spherical", "ellipsoidal"],
+            default: "spherical",
         });
         expect(tool.toolDefinition.outputSchema).toBeDefined();
     });
 
-    it.each([undefined, "direct", "vincenty"])("should return a structured distance for profile %s", async (profile) => {
+    it.each([undefined, "spherical", "ellipsoidal"])("should return a structured distance for profile %s", async (profile) => {
         const tool = new DistanceTool();
         const response = await tool.toolCall({
             params: {

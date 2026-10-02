@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import distance, { distanceVincenty, haversine } from "../../src/helpers/distance.js";
+import distance, { ellipsoidalDistance, haversine } from "../../src/helpers/distance.js";
 import { besancon, chamonix, marseille, paris, parisMarseille } from "../samples";
 import type {
   Geometry,
@@ -22,7 +22,7 @@ function ensureSymmetricDistance(
   a: Geometry,
   b: Geometry,
   label: string,
-  metric?: "haversine" | "vincenty",
+  metric?: "spherical" | "ellipsoidal",
 ) {
   const ab = distance(a, b, metric).distance;
   const ba = distance(b, a, metric).distance;
@@ -41,13 +41,13 @@ function expectThrowBothWays(a: Geometry, b: Geometry, error: RegExp) {
 
 describe("distance helper", () => {
   describe("baseline real-world checks", () => {
-    it("supports a Vincenty-backed point metric", () => {
+    it("supports an ellipsoidal point metric", () => {
       const defaultDistance = distance(paris, marseille).distance;
-      const vincentyDistance = ensureSymmetricDistance(paris, marseille, "Paris-Marseille Vincenty", "vincenty");
-      const result = distance(paris, marseille, "vincenty");
-      const expected = Math.round(distanceVincenty(paris.coordinates, marseille.coordinates) * 100) / 100;
+      const ellipsoidal = ensureSymmetricDistance(paris, marseille, "Paris-Marseille ellipsoidal", "ellipsoidal");
+      const result = distance(paris, marseille, "ellipsoidal");
+      const expected = Math.round(ellipsoidalDistance(paris.coordinates, marseille.coordinates) * 100) / 100;
       expect(result.distance).toBe(expected);
-      expect(result.distance).toBe(vincentyDistance);
+      expect(result.distance).toBe(ellipsoidal);
       expect(result.distance).not.toBe(defaultDistance);
       expect(result.point1).toEqual(paris.coordinates);
       expect(result.point2).toEqual(marseille.coordinates);
@@ -56,7 +56,7 @@ describe("distance helper", () => {
     it("computes the ellipsoidal distance between antipodal points", () => {
       // Vincenty's iteration has no answer here; Karney's algorithm goes over the pole.
       const antipode = [paris.coordinates[0] - 180, -paris.coordinates[1]];
-      expect(distanceVincenty(paris.coordinates, antipode)).toBeCloseTo(20003931.46, 2);
+      expect(ellipsoidalDistance(paris.coordinates, antipode)).toBeCloseTo(20003931.46, 2);
     });
 
     it("computes Paris->Marseille", () => {
@@ -760,7 +760,7 @@ describe("distance helper", () => {
   // Candidate edges have to be ranked in the same metric the answer is
   // reported in. The planar searches inside the helper run in a projection, and
   // if that projection carries a sphere's local scale while the caller asked
-  // for Vincenty, an edge that is genuinely nearer on WGS84 loses to one that
+  // for the ellipsoid, an edge that is genuinely nearer on WGS84 loses to one that
   // is only nearer on a sphere. The pairs below sit inside the narrow window
   // where the two metrics disagree, so each one fails if the projection and the
   // metric ever drift apart again.
@@ -777,7 +777,7 @@ describe("distance helper", () => {
       { lat: 60, dLon: 1.998318 }, // window (1.996636, 2.000000)
     ];
 
-    it.each(cases)("prefers the parallel edge under Vincenty at lat $lat", ({ lat, dLon }) => {
+    it.each(cases)("prefers the parallel edge on the ellipsoid at lat $lat", ({ lat, dLon }) => {
       const p: Geometry = { type: "Point", coordinates: [0, lat] };
       const edges: Geometry = {
         type: "MultiLineString",
@@ -786,15 +786,15 @@ describe("distance helper", () => {
           [[-dLon, lat + 1], [dLon, lat + 1]],  // parallel edge: nearer on WGS84
         ],
       };
-      const parallelEdge = distanceVincenty([0, lat], [0, lat + 1]);
-      const meridianEdge = distanceVincenty([0, lat], [dLon, lat]);
+      const parallelEdge = ellipsoidalDistance([0, lat], [0, lat + 1]);
+      const meridianEdge = ellipsoidalDistance([0, lat], [dLon, lat]);
       expect(parallelEdge, `lat ${lat}: the case only bites if WGS84 prefers the parallel edge`).toBeLessThan(meridianEdge);
 
-      const d = ensureSymmetricDistance(p, edges, `Vincenty edge ranking at lat ${lat}`, "vincenty");
+      const d = ensureSymmetricDistance(p, edges, `ellipsoidal edge ranking at lat ${lat}`, "ellipsoidal");
       expect(d, `lat ${lat}: expected the parallel edge at ~${parallelEdge.toFixed(2)}, got ${d}`).toBeCloseTo(parallelEdge, 1);
     });
 
-    it.each(cases)("prefers the meridian edge under haversine at lat $lat", ({ lat, dLon }) => {
+    it.each(cases)("prefers the meridian edge on the sphere at lat $lat", ({ lat, dLon }) => {
       const p: Geometry = { type: "Point", coordinates: [0, lat] };
       const edges: Geometry = {
         type: "MultiLineString",
@@ -810,7 +810,7 @@ describe("distance helper", () => {
       // The mirror of the test above: the fix has to follow the requested
       // metric, not hardcode the ellipsoid. A geodesic ranking here would
       // return the parallel edge instead.
-      const d = ensureSymmetricDistance(p, edges, `haversine edge ranking at lat ${lat}`, "haversine");
+      const d = ensureSymmetricDistance(p, edges, `spherical edge ranking at lat ${lat}`, "spherical");
       expect(d, `lat ${lat}: expected the meridian edge at ~${meridianEdge.toFixed(2)}, got ${d}`).toBeLessThan(parallelEdge);
       expectCloseRatio(d, meridianEdge, 0.001, `haversine edge ranking at lat ${lat}`);
     });
