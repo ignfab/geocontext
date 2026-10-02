@@ -2220,12 +2220,14 @@ Code Source : [src/tools/DistanceTool.ts](../src/tools/DistanceTool.ts)
 
 ### Titre
 
-Distance entre deux points
+Distance et temps de trajet entre deux points
 
 ### Description du tool
 
 ```
 Renvoie la distance (en mètres) entre deux points à partir de leur longitude et latitude.
+Renvoie aussi une estimation du temps de trajet lorsque `profile` vaut `car` ou `pedestrian`.
+(source : Géoplateforme (calcul d'itinéraire)).
 ```
 
 ### Schéma d’entrée
@@ -2234,7 +2236,8 @@ Renvoie la distance (en mètres) entre deux points à partir de leur longitude e
 | --- | --- | --- | --- |
 | `arrival` | object | oui | Le point d'arrivée |
 | `departure` | object | oui | Le point de départ |
-| `profile` | string (enum) | non | Le type de chemin suivi : `spherical` distance à vol d'oiseau (Terre ronde, précision à 0.5%), `ellipsoidal` distance à vol d'oiseau (Terre ellipsoïde, plus précise, précision à 0.5cm). Valeurs : spherical, ellipsoidal. Valeur par défaut : spherical. |
+| `optimize` | string (enum) | non | La métrique à optimiser, lorsqu'il y a un choix : `time` chemin le plus rapide, `distance` chemin le plus court. Cette option est sans effet lorsque `profile=spherical` ou `ellipsoidal`. Valeurs : time, distance. Valeur par défaut : time. |
+| `profile` | string (enum) | non | Le type de chemin suivi : `spherical` distance à vol d'oiseau (Terre ronde, précision à 0.5%), `ellipsoidal` distance à vol d'oiseau (Terre ellipsoïde, plus précise, précision à 0.5cm), `car` en voiture, `pedestrian` à pied. Valeurs : spherical, ellipsoidal, car, pedestrian. Valeur par défaut : spherical. |
 
 <details>
 <summary>Schéma d’entrée brut</summary>
@@ -2293,10 +2296,21 @@ Renvoie la distance (en mètres) entre deux points à partir de leur longitude e
       "type": "string",
       "enum": [
         "spherical",
-        "ellipsoidal"
+        "ellipsoidal",
+        "car",
+        "pedestrian"
       ],
       "default": "spherical",
-      "description": "Le type de chemin suivi : `spherical` distance à vol d'oiseau (Terre ronde, précision à 0.5%), `ellipsoidal` distance à vol d'oiseau (Terre ellipsoïde, plus précise, précision à 0.5cm)."
+      "description": "Le type de chemin suivi : `spherical` distance à vol d'oiseau (Terre ronde, précision à 0.5%), `ellipsoidal` distance à vol d'oiseau (Terre ellipsoïde, plus précise, précision à 0.5cm), `car` en voiture, `pedestrian` à pied."
+    },
+    "optimize": {
+      "type": "string",
+      "enum": [
+        "time",
+        "distance"
+      ],
+      "default": "time",
+      "description": "La métrique à optimiser, lorsqu'il y a un choix : `time` chemin le plus rapide, `distance` chemin le plus court. Cette option est sans effet lorsque `profile=spherical` ou `ellipsoidal`."
     }
   },
   "required": [
@@ -2315,6 +2329,7 @@ Renvoie la distance (en mètres) entre deux points à partir de leur longitude e
 | Champ | Type | Requis | Description |
 | --- | --- | --- | --- |
 | `distance` | number | oui | La distance entre les deux points, en mètres. |
+| `time` | number | non | Estimation du temps de trajet, en minutes. Absent si `profile=spherical` ou `ellipsoidal`. |
 
 <details>
 <summary>Schéma de sortie brut</summary>
@@ -2326,6 +2341,10 @@ Renvoie la distance (en mètres) entre deux points à partir de leur longitude e
     "distance": {
       "type": "number",
       "description": "La distance entre les deux points, en mètres."
+    },
+    "time": {
+      "type": "number",
+      "description": "Estimation du temps de trajet, en minutes. Absent si `profile=spherical` ou `ellipsoidal`."
     }
   },
   "required": [
