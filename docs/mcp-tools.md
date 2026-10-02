@@ -2234,7 +2234,7 @@ Renvoie la distance (en mètres) entre deux points à partir de leur longitude e
 | --- | --- | --- | --- |
 | `arrival` | object | oui | Le point d'arrivée |
 | `departure` | object | oui | Le point de départ |
-| `profile` | string (enum) | non | Le type de chemin suivi : `spherical` distance à vol d'oiseau (Terre ronde, précision à 0.5%), `ellipsoidal` distance à vol d'oiseau (Terre ellipsoïde, plus précise et coûteuse, précision à 1mm). Par défaut : `spherical`. Valeurs : spherical, ellipsoidal. Valeur par défaut : spherical. |
+| `profile` | string (enum) | non | Le type de chemin suivi : `spherical` distance à vol d'oiseau (Terre ronde, précision à 0.5%), `ellipsoidal` distance à vol d'oiseau (Terre ellipsoïde, plus précise, précision à 0.5cm). Valeurs : spherical, ellipsoidal. Valeur par défaut : spherical. |
 
 <details>
 <summary>Schéma d’entrée brut</summary>
@@ -2296,7 +2296,7 @@ Renvoie la distance (en mètres) entre deux points à partir de leur longitude e
         "ellipsoidal"
       ],
       "default": "spherical",
-      "description": "Le type de chemin suivi : `spherical` distance à vol d'oiseau (Terre ronde, précision à 0.5%), `ellipsoidal` distance à vol d'oiseau (Terre ellipsoïde, plus précise et coûteuse, précision à 1mm). Par défaut : `spherical`."
+      "description": "Le type de chemin suivi : `spherical` distance à vol d'oiseau (Terre ronde, précision à 0.5%), `ellipsoidal` distance à vol d'oiseau (Terre ellipsoïde, plus précise, précision à 0.5cm)."
     }
   },
   "required": [
