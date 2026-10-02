@@ -527,6 +527,19 @@ describe("distance helper", () => {
   });
 
   describe("line/segment regression scenarios", () => {
+    it("handles a 7-vertex line whose nearest point is its last vertex", () => {
+      // jsts indexes a line in chunks of 6 segments: 7 vertices leave a
+      // single-vertex chunk at the end, located with the last vertex index.
+      const line: LineString = {
+        type: "LineString",
+        coordinates: Array.from({ length: 7 }, (_, i) => [2 + 0.01 * i, 48.85]),
+      };
+      const end = line.coordinates[6];
+      const point: Point = { type: "Point", coordinates: [end[0] + 0.005, end[1]] };
+      const expected = Math.round(haversine(point.coordinates, end) * 100) / 100;
+      expect(ensureSymmetricDistance(point, line, "point beyond the end of a 7-vertex line")).toBe(expected);
+    });
+
     it("returns zero when line crosses polygon edge", () => {
       const polygon: Polygon = {
         type: "Polygon",

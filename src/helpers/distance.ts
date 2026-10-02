@@ -338,7 +338,10 @@ function actualClosestOnGeometryLocation(locA: GeometryLocation, locB: GeometryL
   function getSegment(loc: GeometryLocation) {
     const coords: JstsCoord[] = loc.getGeometryComponent().getCoordinates();
     if (coords.length > 1) {
-      const idx: number = loc.getSegmentIndex();
+      // jsts indexes facets in chunks of 6 segments, so a line of 6k+1 vertices
+      // ends with a single-vertex chunk whose location carries the last vertex
+      // index: its segment is then the last one.
+      const idx = Math.min(loc.getSegmentIndex(), coords.length - 2);
       return { start: unproj(coords[idx]), stop: unproj(coords[idx + 1]) };
     }
   }
