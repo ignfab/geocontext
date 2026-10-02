@@ -62,7 +62,6 @@
     "@turf/bbox-polygon": "^7.4.0",
     "@turf/centroid": "^7.4.0",
     "@turf/circle": "^7.4.0",
-    "@turf/distance": "^7.4.0",
     "@turf/helpers": "^7.4.0",
     "@turf/length": "^7.4.0",
     "@turf/midpoint": "^7.4.0",
