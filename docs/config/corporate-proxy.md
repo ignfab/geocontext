@@ -12,7 +12,6 @@ Le support du proxy est activé par l'environnement dans les principaux contexte
 
 - En exécution locale, le serveur démarre avec `node --use-env-proxy`.
 - Les tests d'intégration propagent `NODE_USE_ENV_PROXY=1` au sous-processus MCP lancé en `stdio`.
-- Les tests E2E démarrent les workers Vitest avec `--use-env-proxy`.
 
 Il suffit ensuite de définir les variables d'environnement standard selon votre contexte réseau :
 

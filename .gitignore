@@ -1,10 +1,16 @@
+# Dependencies and build output
 /node_modules/
-/coverage/
-/*.log
 /dist/
-/.vscode/
-.npmrc
-.codex
-.env.e2e
-.env
+/coverage/
+
+# Local scratch files and logs
 /tmp/
+/*.log
+
+# Editor and tool settings
+/.vscode/
+.codex
+
+# Secrets and local configuration
+.env
+.npmrc
