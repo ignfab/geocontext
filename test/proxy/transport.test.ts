@@ -35,7 +35,11 @@ vi.mock("../../src/helpers/RateLimiter", () => ({
   },
 }));
 
-import { getProxyWfsClient, resolveProxyTravelTimeGeometry } from "../../src/proxy/transport";
+import {
+  getDefaultGeometryIsochroneQueryDeps,
+  getProxyWfsClient,
+  resolveProxyTravelTimeGeometry,
+} from "../../src/proxy/transport";
 import { resetEnv } from "../../src/config/env";
 import { geometryToEwkt } from "../../src/wfs/geometry";
 
@@ -148,5 +152,31 @@ describe("proxy/transport · resolveProxyTravelTimeGeometry", () => {
     };
     await expect(resolveProxyTravelTimeGeometry(noFilter)).rejects.toThrow(/travel_time/);
     expect(fetchJSONGetWithLimit).not.toHaveBeenCalled();
+  });
+});
+
+describe("proxy/transport · getDefaultGeometryIsochroneQueryDeps", () => {
+  it("resolves the isochrone through the bounded fetch (PROXY_UPSTREAM_TIMEOUT + PROXY_MAX_RESPONSE_BYTES)", async () => {
+    const geometry = { type: "Polygon", coordinates: [[[2, 48], [2.2, 48], [2.2, 48.2], [2, 48]]] };
+    fetchJSONGetWithLimit.mockResolvedValue({ geometry });
+
+    const result = await getDefaultGeometryIsochroneQueryDeps().getGeometry({
+      lon: 2.35,
+      lat: 48.85,
+      minutes: 15,
+      profile: "car",
+    });
+
+    expect(fetchJSONGetWithLimit).toHaveBeenCalledOnce();
+    const [url, timeoutMs, maxBytes, label] = fetchJSONGetWithLimit.mock.calls[0];
+    expect(url).toContain("data.geopf.fr/navigation/isochrone");
+    expect(url).toContain("point=2.35%2C48.85");
+    expect(url).toContain("costValue=15");
+    expect(url).toContain("profile=car");
+    expect(timeoutMs).toBe(10 * 1000); // PROXY_UPSTREAM_TIMEOUT (s) → ms, NOT HTTP_TIMEOUT
+    expect(maxBytes).toBe(26214400); // PROXY_MAX_RESPONSE_BYTES
+    expect(label).toBe("d'isochrone");
+    expect(rateLimit).toHaveBeenCalled();
+    expect(result).toEqual(geometry);
   });
 });
