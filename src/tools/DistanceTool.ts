@@ -27,11 +27,11 @@ const distanceInputSchema = z.object({
     .enum(["spherical", "ellipsoidal", ...ITINERARY_PROFILES])
     .default("spherical")
     .describe(["Le type de chemin suivi :",
-      "`spherical` distance à vol d'oiseau (Terre ronde, précision à 0.5%)",
-      "`ellipsoidal` distance à vol d'oiseau (Terre ellipsoïde, plus précise et coûteuse, précision à 1mm)",
-      "`car` en voiture",
-      "`pedestrian` à pied.",
-    ].join(", ")),
+      " `spherical` distance à vol d'oiseau (Terre ronde, précision à 0.5%),",
+      " `ellipsoidal` distance à vol d'oiseau (Terre ellipsoïde, plus précise, précision à 0.5cm),",
+      " `car` en voiture,",
+      " `pedestrian` à pied.",
+    ].join("")),
   optimize: z
     .enum(ITINERARY_METRICS)
     .default("time")

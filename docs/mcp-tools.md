@@ -2237,7 +2237,7 @@ Renvoie aussi une estimation du temps de trajet dans le cas où un profil (march
 | `arrival` | object | oui | Le point d'arrivée |
 | `departure` | object | oui | Le point de départ |
 | `optimize` | string (enum) | non | La métrique à optimiser, lorsqu'il y a un choix : `time` chemin le plus rapide, `distance` chemin le plus court. Cette option est sans effet lorsque `profile=spherical` ou `ellipsoidal`. Valeurs : time, distance. Valeur par défaut : time. |
-| `profile` | string (enum) | non | Le type de chemin suivi :, `spherical` distance à vol d'oiseau (Terre ronde, précision à 0.5%), `ellipsoidal` distance à vol d'oiseau (Terre ellipsoïde, plus précise et coûteuse, précision à 1mm), `car` en voiture, `pedestrian` à pied. Valeurs : spherical, ellipsoidal, car, pedestrian. Valeur par défaut : spherical. |
+| `profile` | string (enum) | non | Le type de chemin suivi : `spherical` distance à vol d'oiseau (Terre ronde, précision à 0.5%), `ellipsoidal` distance à vol d'oiseau (Terre ellipsoïde, plus précise, précision à 0.5cm), `car` en voiture, `pedestrian` à pied. Valeurs : spherical, ellipsoidal, car, pedestrian. Valeur par défaut : spherical. |
 
 <details>
 <summary>Schéma d’entrée brut</summary>
@@ -2301,7 +2301,7 @@ Renvoie aussi une estimation du temps de trajet dans le cas où un profil (march
         "pedestrian"
       ],
       "default": "spherical",
-      "description": "Le type de chemin suivi :, `spherical` distance à vol d'oiseau (Terre ronde, précision à 0.5%), `ellipsoidal` distance à vol d'oiseau (Terre ellipsoïde, plus précise et coûteuse, précision à 1mm), `car` en voiture, `pedestrian` à pied."
+      "description": "Le type de chemin suivi : `spherical` distance à vol d'oiseau (Terre ronde, précision à 0.5%), `ellipsoidal` distance à vol d'oiseau (Terre ellipsoïde, plus précise, précision à 0.5cm), `car` en voiture, `pedestrian` à pied."
     },
     "optimize": {
       "type": "string",
