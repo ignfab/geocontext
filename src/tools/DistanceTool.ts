@@ -1,5 +1,5 @@
 /**
- * MCP tool exposing distance lookup for a single geographic position.
+ * MCP tool exposing the distance between two geographic positions.
  */
 
 import BaseTool from "./BaseTool.js";
