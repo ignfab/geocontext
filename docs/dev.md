@@ -112,13 +112,14 @@ npm run inspect:mcp:cli   # mode CLI
 
 ## Tests
 
-Le projet distingue trois niveaux de tests :
+Le projet distingue deux niveaux de tests :
 
 - **Unitaires** : pas de réseau, exécutés par défaut.
 - **Intégration niveau 1** (`test/integration/level1-protocol`) : appels MCP directs vers les tools, avec de vrais appels réseau vers la Géoplateforme.
-- **E2E niveau 2** (`test/integration/level2-agent`) : un agent LangChain branché au serveur MCP local avec un vrai modèle LLM.
 
-Les niveaux 1 et 2 nécessitent un build à jour (`npm run build`) et un accès réseau aux services appelés. Les deux suites s'exécutent séquentiellement pour limiter la charge sur les services externes et éviter de démarrer plusieurs serveurs MCP en parallèle.
+Les tests d'intégration nécessitent un build à jour (`npm run build`) et un accès réseau aux services appelés. Ils s'exécutent séquentiellement pour limiter la charge sur les services externes et éviter de démarrer plusieurs serveurs MCP en parallèle.
+
+Les tests de bout en bout, avec un agent et un vrai modèle LLM, sont dans le dépôt [geocontext-test](https://github.com/ignfab/geocontext-test).
 
 ### Vue d'ensemble des commandes
 
@@ -129,12 +130,10 @@ Les niveaux 1 et 2 nécessitent un build à jour (`npm run build`) et un accès 
 | `npm test` / `test:unit`   | Tests unitaires                                                      |
 | `npm run test:perf`        | Tests chronométrés (`*.perf.test.ts`), un fichier à la fois          |
 | `npm run test:integration` | Tests d'intégration niveau 1                                         |
-| `npm run test:e2e`         | Tests E2E agent niveau 2                                             |
 | `npm run test:coverage`    | Tests unitaires avec couverture                                      |
 | `npm run bench`            | Benchmark du calcul de `intersection_area`                           |
 | `npm run verify:fast`      | `typecheck` + `typecheck:test` + `build` + `test:unit` + `test:perf` |
 | `npm run verify`           | `verify:fast` + `test:integration`                                   |
-| `npm run verify:full`      | `verify` + `test:e2e`                                                |
 
 ### Tests unitaires
 
@@ -159,13 +158,6 @@ npm run build
 npm run test:integration
 ```
 
-### Tests E2E agent (niveau 2)
-
-```bash
-npm run build
-npm run test:e2e
-```
-
 ### Couverture
 
 ```bash
@@ -177,12 +169,11 @@ npm run test:coverage
 ```bash
 npm run verify:fast   # typecheck + build + tests unitaires et chronométrés
 npm run verify        # verify:fast + tests d'intégration niveau 1
-npm run verify:full   # verify + tests E2E niveau 2
 ```
 
 ### Variables d'environnement
 
-Communes aux suites d'intégration (niveaux 1 et 2) :
+Pour les tests d'intégration :
 
 | Variable                                  | Description                                                         |
 | ----------------------------------------- | ------------------------------------------------------------------- |
@@ -190,43 +181,9 @@ Communes aux suites d'intégration (niveaux 1 et 2) :
 | `GEOCONTEXT_LOG_LEVEL`                    | Niveau de log du serveur lancé par les tests                        |
 | `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` | Configuration proxy réseau                                          |
 
-Spécifiques aux tests E2E agent (`test:e2e`) :
-
-| Variable            | Description                                                         |
-| ------------------- | ------------------------------------------------------------------- |
-| `MODEL_NAME`        | Modèle LangChain à utiliser (défaut : `anthropic:claude-haiku-4-5`) |
-| `ANTHROPIC_API_KEY` | Clé API Anthropic                                                   |
-| `OPENAI_API_KEY`    | Clé API OpenAI                                                      |
-| `GOOGLE_API_KEY`    | Clé API Google                                                      |
-| `MISTRAL_API_KEY`   | Clé API Mistral                                                     |
-
-La clé API requise dépend du provider indiqué dans `MODEL_NAME`.
-
-### Exemples de lancement des tests E2E
-
-Avec Anthropic :
-
-```bash
-export MODEL_NAME=anthropic:claude-haiku-4-5
-export ANTHROPIC_API_KEY=...
-npm run build
-npm run test:e2e
-```
-
-Avec Ollama en local :
-
-```bash
-export MODEL_NAME=ollama:llama3.1
-export OLLAMA_BASE_URL=http://127.0.0.1:11434
-npm run build
-npm run test:e2e
-```
-
 ## Dépannage
 
 - Si `test:integration` échoue immédiatement : vérifier que `dist/index.js` existe (`npm run build`).
-- Si `test:e2e` est ignoré : vérifier que la clé API attendue par `MODEL_NAME` est définie.
-- Si un provider local (Ollama, etc.) est utilisé derrière un proxy : ajouter `NO_PROXY=localhost,127.0.0.1`.
 
 ## Commandes utiles
 
