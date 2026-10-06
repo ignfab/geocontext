@@ -1,5 +1,5 @@
 /**
- * Proxy-side WFS and isochrone execution engine.
+ * Proxy-side WFS, isoline and itinerary execution engine.
  *
  * `runGeometryFeatureQuery` (entry point) compiles and runs the layer query;
  * `resolveReferenceGeometry` (internal helper) resolves the reference geometry
@@ -42,7 +42,9 @@ import type {
   GpfGetFeaturesInput,
   GpfGetFeatureByIdLayerInput,
   GpfIsolineLayerInput,
+  GpfItineraryLayerInput,
 } from "../wfs/schema.js";
+import { roundItineraryCosts, type ItineraryLayerResponse } from "../gpf/itinerary.js";
 
 // --- Injected Dependencies ---
 
@@ -343,6 +345,52 @@ export async function runGeometryIsolineQuery(
         geometry,
         properties: input,
       }
+    ]
+  };
+}
+
+// --- Itinerary Public Engine ---
+
+export type ItineraryLayerResolver = (
+  input: GpfItineraryLayerInput,
+) => Promise<ItineraryLayerResponse>;
+
+export type GeometryItineraryQueryDeps = {
+  getItineraryLayer: ItineraryLayerResolver;
+};
+
+/**
+ * Fetches the itinerary route and returns it as a GeoJSON `FeatureCollection`
+ * with full geometry (for map rendering by MCP Carto).
+ *
+ * The request params and computed distance/duration are echoed into `properties`
+ * so the rendered layer carries its own legend.
+ *
+ * @param input Validated itinerary layer input.
+ * @param deps Injected itinerary geometry resolver.
+ * @returns The route as a GeoJSON FeatureCollection.
+ */
+export async function runGeometryItineraryQuery(
+  input: GpfItineraryLayerInput,
+  deps: GeometryItineraryQueryDeps,
+): Promise<FeatureCollection> {
+  const { geometry, ...costs } = await deps.getItineraryLayer(input);
+
+  return {
+    type: "FeatureCollection" as const,
+    features: [
+      {
+        type: "Feature" as const,
+        geometry,
+        properties: {
+          profile: input.profile,
+          optimize: input.optimize,
+          departure: [input.departure.lon, input.departure.lat],
+          arrival: [input.arrival.lon, input.arrival.lat],
+          // Same rounding as the `distance` tool, so both report identical figures.
+          ...roundItineraryCosts(costs),
+        },
+      },
     ]
   };
 }

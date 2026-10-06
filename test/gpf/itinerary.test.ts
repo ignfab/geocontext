@@ -4,18 +4,30 @@ import { NavigationItineraryClient } from "../../src/gpf/itinerary.js";
 import { RateLimiter } from "../../src/helpers/RateLimiter.js";
 
 describe("NavigationItineraryClient", () => {
+
+  const ROUTE_GEOMETRY = {
+    type: "LineString",
+    coordinates: [[3.274356, 49.839862], [3.623693, 49.564267]],
+  };
+
+  type RawResponse = { geometry?: unknown; distance?: unknown; duration?: unknown };
+
+  function buildClient(fetcher: (url: string) => Promise<RawResponse>) {
+    return new NavigationItineraryClient(
+      new RateLimiter({ name: "test", maxCalls: 100, period: 1 }),
+      fetcher,
+    );
+  }
+
   it("should build an itinerary request and return distance and duration", async () => {
     const urls: string[] = [];
-    const client = new NavigationItineraryClient(
-      new RateLimiter({ name: "test", maxCalls: 100, period: 1 }),
-      async (url) => {
-        urls.push(url);
-        return {
-          distance: 395174,
-          duration: 212,
-        };
-      },
-    );
+    const client = buildClient(async (url) => {
+      urls.push(url);
+      return {
+        distance: 395174,
+        duration: 212,
+      };
+    });
 
     const itinerary = await client.getItinerary({
       departure: { // 117 rue de Paris, 02100 Saint-Quentin
@@ -49,15 +61,50 @@ describe("NavigationItineraryClient", () => {
     expect(parsedUrl.searchParams.get("getBbox")).toEqual("false");
   });
 
+  it("should request a GeoJSON geometry and return it with distance and duration", async () => {
+    const urls: string[] = [];
+    const client = buildClient(async (url) => {
+      urls.push(url);
+      return { geometry: ROUTE_GEOMETRY, distance: 48231, duration: 42 };
+    });
+
+    const result = await client.getItineraryLayer({
+      departure: { lon: 3.274356, lat: 49.839862 },
+      arrival: { lon: 3.623693, lat: 49.564267 },
+      profile: "car",
+    });
+
+    expect(result).toEqual({
+      geometry: ROUTE_GEOMETRY,
+      distance: 48231,
+      duration: 42,
+    });
+
+    const parsedUrl = new URL(urls[0]);
+    expect(parsedUrl.origin + parsedUrl.pathname).toEqual("https://data.geopf.fr/navigation/itineraire");
+
+    expect(parsedUrl.searchParams.get("resource")).toEqual("bdtopo-valhalla");
+    expect(parsedUrl.searchParams.get("start")).toEqual("3.274356,49.839862");
+    expect(parsedUrl.searchParams.get("end")).toEqual("3.623693,49.564267");
+
+    expect(parsedUrl.searchParams.get("profile")).toEqual("car");
+    expect(parsedUrl.searchParams.get("optimization")).toEqual("fastest");
+    expect(parsedUrl.searchParams.get("timeUnit")).toEqual("minute");
+    expect(parsedUrl.searchParams.get("distanceUnit")).toEqual("meter");
+    expect(parsedUrl.searchParams.get("crs")).toEqual("EPSG:4326");
+
+    // The layer client needs the geometry itself, unlike the plain client.
+    expect(parsedUrl.searchParams.get("geometryFormat")).toEqual("geojson");
+    expect(parsedUrl.searchParams.get("getSteps")).toEqual("false");
+    expect(parsedUrl.searchParams.get("getBbox")).toEqual("false");
+  });
+
   it("should request the shortest itinerary when optimize=distance", async () => {
     const urls: string[] = [];
-    const client = new NavigationItineraryClient(
-      new RateLimiter({ name: "test", maxCalls: 100, period: 1 }),
-      async (url) => {
-        urls.push(url);
-        return { distance: 1000, duration: 10 };
-      },
-    );
+    const client = buildClient(async (url) => {
+      urls.push(url);
+      return { distance: 1000, duration: 10 };
+    });
 
     await client.getItinerary({
       departure: { lon: 3.274356, lat: 49.839862 },
@@ -70,15 +117,22 @@ describe("NavigationItineraryClient", () => {
   });
 
   it("should reject responses without usable distance and duration", async () => {
-    const client = new NavigationItineraryClient(
-      new RateLimiter({ name: "test", maxCalls: 100, period: 1 }),
-      async () => ({ distance: 1000 }),
-    );
+    const client = buildClient(async () => ({ distance: 1000 }));
 
     await expect(client.getItinerary({
       departure: { lon: 3.274356, lat: 49.839862 },
       arrival: { lon: 5.044572, lat: 47.326213 },
       profile: "car",
     })).rejects.toThrow("distance et de durée exploitables");
+  });
+
+  it("should reject responses without an exploitable GeoJSON geometry", async () => {
+    const client = buildClient(async () => ({ distance: 48231, duration: 42 }));
+
+    await expect(client.getItineraryLayer({
+      departure: { lon: 3.274356, lat: 49.839862 },
+      arrival: { lon: 3.623693, lat: 49.564267 },
+      profile: "car",
+    })).rejects.toThrow(/n'a pas renvoyé de LineString/);
   });
 });

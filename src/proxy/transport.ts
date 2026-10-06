@@ -16,11 +16,13 @@ import type { WfsFeatureCollectionResponse } from "../wfs/types.js";
 import { getSpatialFilter } from "../wfs/queryPreparation.js";
 import type { GpfGetFeaturesInput } from "../wfs/schema.js";
 import { NavigationIsolineClient } from "../gpf/navigation.js";
+import { NavigationItineraryClient } from "../gpf/itinerary.js";
 import type {
   IsolineResolver,
   GeometryFeatureQueryDeps,
   GeometryFeatureByIdQueryDeps,
   GeometryIsolineQueryDeps,
+  GeometryItineraryQueryDeps,
 } from "./execute.js";
 import { fetchJSONPostWithLimit, fetchJSONGetWithLimit } from "../helpers/http.js";
 import { RateLimiter } from "../helpers/RateLimiter.js";
@@ -82,6 +84,22 @@ export function getProxyWfsClient(): WfsClient {
   return cachedProxyWfsClient;
 }
 
+// --- Proxy navigation rate limiter (singleton) ---
+
+let cachedProxyNavigationRateLimiter: RateLimiter | undefined;
+
+/**
+ * Returns the proxy's shared navigation rate limiter.
+ */
+function getProxyNavigationRateLimiter(): RateLimiter {
+  cachedProxyNavigationRateLimiter ??= new RateLimiter({
+    name: "GPF_NAVIGATION_PROXY",
+    maxCalls: getEnv().GPF_NAVIGATION_PROXY_RATE_LIMIT,
+    period: 1,
+  });
+  return cachedProxyNavigationRateLimiter;
+}
+
 // --- Proxy Isoline Client (singleton) ---
 
 let cachedProxyIsolineClient: NavigationIsolineClient | undefined;
@@ -89,7 +107,7 @@ let cachedProxyIsolineClient: NavigationIsolineClient | undefined;
 /**
  * Returns the proxy isoline client: a dedicated `NavigationIsolineClient`
  * wired to the SAME size-bounded, shorter-timeout fetch the geodata proxy leg uses
- * (`PROXY_UPSTREAM_TIMEOUT` + `PROXY_MAX_RESPONSE_BYTES`) and its own
+ * (`PROXY_UPSTREAM_TIMEOUT` + `PROXY_MAX_RESPONSE_BYTES`) and the shared
  * `GPF_NAVIGATION_PROXY` rate limiter — NOT the default `navigationIsolineClient`
  * singleton, which uses the unbounded `HTTP_TIMEOUT`-only `fetchJSONGet`. This
  * keeps both upstream legs of an `isoline` layer request under the same bounds,
@@ -98,7 +116,7 @@ let cachedProxyIsolineClient: NavigationIsolineClient | undefined;
  */
 function getProxyIsolineClient(): NavigationIsolineClient {
   cachedProxyIsolineClient ??= new NavigationIsolineClient(
-    new RateLimiter({ name: "GPF_NAVIGATION_PROXY", maxCalls: getEnv().GPF_NAVIGATION_PROXY_RATE_LIMIT, period: 1 }),
+    getProxyNavigationRateLimiter(),
     (url) => fetchJSONGetWithLimit(url, getEnv().PROXY_UPSTREAM_TIMEOUT * 1000, getEnv().PROXY_MAX_RESPONSE_BYTES, "d'isochrone"),
   );
   return cachedProxyIsolineClient;
@@ -163,5 +181,33 @@ export function getDefaultGeometryFeatureByIdQueryDeps(): GeometryFeatureByIdQue
 export function getDefaultGeometryIsolineQueryDeps(): GeometryIsolineQueryDeps {
   return {
     getGeometry: (input) => getProxyIsolineClient().getIsoline(input),
+  };
+}
+
+// --- Proxy Itinerary Client (singleton) ---
+
+let cachedProxyItineraryClient: NavigationItineraryClient | undefined;
+
+/**
+ * Returns the proxy itinerary client: a dedicated `NavigationItineraryClient`
+ * wired to the size-bounded, shorter-timeout fetch the geodata proxy leg uses and the
+ * `GPF_NAVIGATION_PROXY` rate limiter it shares with the proxy isoline client.
+ * Lazily built so the bounds are read from a fully-parsed environment.
+ */
+function getProxyItineraryClient(): NavigationItineraryClient {
+  cachedProxyItineraryClient ??= new NavigationItineraryClient(
+    getProxyNavigationRateLimiter(),
+    (url) => fetchJSONGetWithLimit(url, getEnv().PROXY_UPSTREAM_TIMEOUT * 1000, getEnv().PROXY_MAX_RESPONSE_BYTES, "d'itinéraire"),
+  );
+  return cachedProxyItineraryClient;
+}
+
+/**
+ * Default dependency bundle for `runGeometryItineraryQuery`.
+ */
+export function getDefaultGeometryItineraryQueryDeps(): GeometryItineraryQueryDeps {
+  return {
+    getItineraryLayer: (input) =>
+      getProxyItineraryClient().getItineraryLayer(input),
   };
 }

@@ -1,9 +1,11 @@
-import { fetchJSONGet } from "../helpers/http.js";
+import { fetchJSONGet, ServiceResponseError } from "../helpers/http.js";
 import logger from "../logger.js";
 import type { JsonFetcher } from "../helpers/http.js";
 import type { RateLimiter } from "../helpers/RateLimiter.js";
 import { getNavigationRateLimiter } from "./navigationRateLimiter.js";
 import { NAVIGATION_METRICS, NAVIGATION_PROFILES, NAVIGATION_ISOLINE_RESOURCE } from "./navigation.js";
+import type { LineString } from "geojson";
+import { isGeometryLike } from "../helpers/geojson.js";
 
 export const NAVIGATION_ITINERARY_SOURCE = "Géoplateforme (calcul d'itinéraire)";
 export const NAVIGATION_ITINERARY_URL = "https://data.geopf.fr/navigation/itineraire";
@@ -15,10 +17,19 @@ export const ITINERARY_METRICS = NAVIGATION_METRICS;
 export type ItineraryProfile = typeof ITINERARY_PROFILES[number];
 export type ItineraryMetric = typeof ITINERARY_METRICS[number];
 
+/**
+ * Maximum crow-flies distance accepted between departure and arrival. Caps the
+ * upstream compute and the size of the returned LineString: a route this long
+ * already yields thousands of vertices.
+ */
+export const ITINERARY_MAX_DIRECT_DISTANCE_METERS = 100_000;
+
 type ItineraryResponse = {
   distance: number;
   duration: number;
 };
+
+export type ItineraryLayerResponse = ItineraryResponse & { geometry: LineString; };
 
 export type ItineraryInput = {
   departure: {
@@ -57,15 +68,32 @@ function buildItineraryUrl(input: ItineraryInput, geometryFormat: "polyline" | "
  */
 function parseItineraryCosts(distance: unknown, duration: unknown): ItineraryResponse {
   if (typeof distance !== "number" || typeof duration !== "number") {
-    throw new Error("Le service d'itinéraire n'a pas renvoyé de distance et de durée exploitables.");
+    throw new ServiceResponseError(
+      "Le service d'itinéraire n'a pas renvoyé de distance et de durée exploitables.",
+      {
+        http: { status: 502, statusText: "Bad Gateway" },
+        service: { code: "invalid_upstream_body", detail: "distance/duration manquantes ou non numériques" },
+      },
+    );
   }
   return { distance, duration };
+}
+
+/**
+ * Rounds the itinerary distance (to the cm) and duration (to the tenth of a minute),
+ * so every tool reports identical figures.
+ */
+export function roundItineraryCosts({ distance, duration }: ItineraryResponse) {
+  return {
+    distance: Math.round(distance * 100) / 100,
+    time: Math.round(duration * 10) / 10,
+  };
 }
 
 export class NavigationItineraryClient {
   constructor(
     private rateLimiter: RateLimiter,
-    private fetcher: JsonFetcher<{distance?: unknown; duration?: unknown}> = fetchJSONGet,
+    private fetcher: JsonFetcher<{distance?: unknown; duration?: unknown; geometry?: unknown}> = fetchJSONGet,
   ) {}
 
   async getItinerary(input: ItineraryInput): Promise<ItineraryResponse> {
@@ -75,6 +103,30 @@ export class NavigationItineraryClient {
     // polyline format minimizes response size; geometry is discarded anyway
     const result = await this.fetcher(buildItineraryUrl(input, "polyline"));
     return parseItineraryCosts(result.distance, result.duration);
+  }
+
+  /**
+   * Requests the route with `geometryFormat: "geojson"` so the response includes the route geometry
+   * (a LineString) alongside distance and duration.
+   */
+  async getItineraryLayer(input: ItineraryInput): Promise<ItineraryLayerResponse> {
+    await this.rateLimiter.limit();
+    logger.debug(`[gpf:navigation] getItineraryLayer(${JSON.stringify(input)})...`);
+
+    const result = await this.fetcher(buildItineraryUrl(input, "geojson"));
+    if (!(isGeometryLike(result.geometry) && result.geometry.type === "LineString")) {
+      throw new ServiceResponseError(
+        "Le service d'itinéraire n'a pas renvoyé de LineString exploitable.",
+        {
+          http: { status: 502, statusText: "Bad Gateway" },
+          service: { code: "invalid_upstream_body", detail: "geometry manquante ou non-LineString" },
+        },
+      );
+    }
+    return {
+      geometry: result.geometry,
+      ...parseItineraryCosts(result.distance, result.duration),
+    };
   }
 }
 

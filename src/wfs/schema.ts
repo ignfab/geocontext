@@ -17,6 +17,12 @@ import {
   NAVIGATION_ISODISTANCE_MAX_METERS,
   type NavigationMetric,
 } from "../gpf/navigation.js";
+import {
+  ITINERARY_METRICS,
+  ITINERARY_PROFILES,
+  ITINERARY_MAX_DIRECT_DISTANCE_METERS,
+} from "../gpf/itinerary.js";
+import { haversine } from "../helpers/distance.js";
 
 // --- Shared Constants ---
 
@@ -445,8 +451,8 @@ export const gpfGetFeaturesLayerOutputSchema = z.object({
 // --- Proxy token discriminant ---
 
 // The proxy serves ONE opaque token (in the URL path, `${endpoint}/<token>.json`)
-// but several token kinds (a filtered layer query, a single-feature by-id lookup
-// and an isoline). Every producer tool stamps its token
+// but several token kinds (a filtered layer query, a single-feature by-id lookup,
+// an isoline and an itinerary). Every producer tool stamps its token
 // with this `kind` discriminant; the proxy reads it to dispatch to the right
 // schema + engine, then strips it before the strict per-kind `.parse`. It is
 // injected by the tool from validated params — never an LLM-supplied field.
@@ -454,6 +460,7 @@ export const PROXY_TOKEN_KIND = {
   query: "query",
   byId: "by_id",
   isoline: "isoline",
+  itinerary: "itinerary",
 } as const;
 
 export type ProxyTokenKind = (typeof PROXY_TOKEN_KIND)[keyof typeof PROXY_TOKEN_KIND];
@@ -503,6 +510,63 @@ export const gpfIsolineLayerInputSchema = gpfIsolineLayerInputObjectSchema
 export type GpfIsolineLayerInput = z.infer<typeof gpfIsolineLayerInputSchema>;
 
 export const gpfIsolineLayerPublishedInputSchema = generatePublishedInputSchema(gpfIsolineLayerInputObjectSchema);
+
+// --- `gpf_itinerary_layer` (proxy) ---
+
+const itineraryProfileSchema = z
+  .enum(ITINERARY_PROFILES)
+  .describe("Mode de déplacement : `car` ou `pedestrian`.");
+
+export const gpfItineraryLayerInputObjectSchema = z.object({
+  departure: z.object({
+    lon: lonSchema.describe("La longitude du point de départ."),
+    lat: latSchema.describe("La latitude du point de départ."),
+  }).describe("Le point de départ"),
+  arrival: z.object({
+    lon: lonSchema.describe("La longitude du point d'arrivée."),
+    lat: latSchema.describe("La latitude du point d'arrivée."),
+  }).describe("Le point d'arrivée"),
+  profile: itineraryProfileSchema,
+  optimize: z
+    .enum(ITINERARY_METRICS)
+    .default("time")
+    .describe("Métrique d'optimisation : `time` (itinéraire le plus rapide) ou `distance` (le plus court)."),
+}).strict();
+
+/**
+ * Caps the crow-flies span of an itinerary request. The upstream service accepts any
+ * pair of points, but a very long route costs proportionally more to compute and
+ * returns a LineString with thousands of vertices, so it is rejected up front rather
+ * than truncated downstream by `PROXY_MAX_RESPONSE_BYTES`.
+ *
+ * The issue is attached to the object root, not to a single coordinate: the constraint
+ * is a property of the departure/arrival pair.
+ */
+function assertItineraryDirectDistance(
+  input: z.infer<typeof gpfItineraryLayerInputObjectSchema>,
+  ctx: z.RefinementCtx,
+) {
+  const dist = haversine([input.departure.lon, input.departure.lat], [input.arrival.lon, input.arrival.lat]);
+
+  if (dist > ITINERARY_MAX_DIRECT_DISTANCE_METERS) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.too_big,
+      maximum: ITINERARY_MAX_DIRECT_DISTANCE_METERS,
+      type: "number",
+      inclusive: true,
+      message: `La distance à vol d'oiseau entre le départ et l'arrivée (${Math.ceil(dist / 1000)} km) ne peut pas dépasser ${ITINERARY_MAX_DIRECT_DISTANCE_METERS / 1000} km.`,
+    });
+  }
+}
+
+// Refined counterpart of the object schema above, mirroring `gpf_isoline_layer`: the
+// published schema stays a plain object while the cross-field cap runs on parse.
+export const gpfItineraryLayerInputSchema = gpfItineraryLayerInputObjectSchema
+  .superRefine(assertItineraryDirectDistance);
+
+export type GpfItineraryLayerInput = z.infer<typeof gpfItineraryLayerInputSchema>;
+
+export const gpfItineraryLayerPublishedInputSchema = generatePublishedInputSchema(gpfItineraryLayerInputObjectSchema);
 
 // --- `gpf_count_features` ---
 

@@ -5,7 +5,7 @@
 import BaseTool from "./BaseTool.js";
 import { z } from "zod";
 
-import { NAVIGATION_ITINERARY_SOURCE, navigationItineraryClient, ITINERARY_METRICS, ITINERARY_PROFILES } from "../gpf/itinerary.js";
+import { NAVIGATION_ITINERARY_SOURCE, navigationItineraryClient, roundItineraryCosts, ITINERARY_METRICS, ITINERARY_PROFILES } from "../gpf/itinerary.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import { lonSchema, latSchema } from "../helpers/schemas.js";
 import { generatePublishedInputSchema } from "../helpers/jsonSchema.js";
@@ -56,6 +56,7 @@ type DistanceInput = z.infer<typeof distanceInputSchema>;
 const DISTANCE_TOOL_DESCRIPTION = [
   `Renvoie la distance (en mètres) entre deux points à partir de leur longitude et latitude.`,
   `Renvoie aussi une estimation du temps de trajet lorsque \`profile\` vaut \`car\` ou \`pedestrian\`.`,
+  `Pour obtenir l'itinéraire sous forme de couche cartographiable, utiliser \`gpf_itinerary_layer\`.`,
   `(source : ${NAVIGATION_ITINERARY_SOURCE}).`,
 ].join("\n");
 
@@ -105,10 +106,7 @@ class DistanceTool extends BaseTool<DistanceInput> {
           profile: input.profile,
           optimize: input.optimize,
         });
-        return {
-          distance: Math.round(itinerary.distance * 100) / 100,
-          time: Math.round(itinerary.duration * 10) / 10
-        };
+        return roundItineraryCosts(itinerary);
       }
       default: {
         const profile: never = input.profile;

@@ -35,7 +35,7 @@ Annotations MCP exposées dans la définition `tools/list` de chaque tool :
 | `readOnlyHint` | oui | Le tool consulte des données sans modifier d'état côté serveur. |
 | `destructiveHint` | non | Le tool n'est pas signalé comme destructif. |
 | `idempotentHint` | oui | Répéter le même appel ne déclenche pas d'effet de bord supplémentaire attendu. |
-| `openWorldHint` | oui (non pour `gpf_search_types`, `gpf_describe_type`, `gpf_get_features_layer`, `gpf_get_feature_by_id_layer` et `gpf_isoline_layer`) | Le tool interroge des sources externes ou ouvertes, dont le contenu peut évoluer. |
+| `openWorldHint` | oui (non pour `gpf_search_types`, `gpf_describe_type`, `gpf_get_features_layer`, `gpf_get_feature_by_id_layer`, `gpf_isoline_layer` et `gpf_itinerary_layer`) | Le tool interroge des sources externes ou ouvertes, dont le contenu peut évoluer. |
 
 ## Liste des tools
 
@@ -53,6 +53,7 @@ Annotations MCP exposées dans la définition `tools/list` de chaque tool :
 - [`gpf_get_feature_by_id`](#gpf_get_feature_by_id)
 - [`gpf_get_feature_by_id_layer`](#gpf_get_feature_by_id_layer)
 - [`gpf_isoline_layer`](#gpf_isoline_layer)
+- [`gpf_itinerary_layer`](#gpf_itinerary_layer)
 - [`distance`](#distance)
 
 ## `geocode`
@@ -2358,6 +2359,150 @@ Utiliser `lon`/`lat` pour le point de départ, `profile` pour le mode de déplac
 | Succès | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
 | Erreur | oui | non | `content[0].text` porte le message d'erreur ; aucun `structuredContent` n'est ajouté (réservé au `outputSchema` du cas de succès). |
 
+## `gpf_itinerary_layer`
+
+Code Source : [src/tools/GpfItineraryLayerTool.ts](../src/tools/GpfItineraryLayerTool.ts)
+
+### Titre
+
+Couche cartographiable d’itinéraire GPF
+
+### Description du tool
+
+```
+Interroge l'itinéraire entre deux points.
+À utiliser pour afficher ou cartographier un trajet. Pour obtenir seulement la distance et le temps de trajet, utiliser plutôt l'outil `distance`.
+Renvoie une **URL de couche cartographiable** (`data_url`) : une URL opaque, à passer telle quelle à un outil d'affichage cartographique (MCP Carto, ...). L'ouvrir renvoie une FeatureCollection GeoJSON contenant la géométrie LineString de l'itinéraire, avec ses propriétés `distance` (en mètres) et `time` (en minutes).
+Utiliser `departure`/`arrival` pour les points de départ et d'arrivée, `profile` pour le mode de déplacement (`car` ou `pedestrian`) et `optimize` pour choisir entre l'itinéraire le plus rapide (`time`) ou le plus court (`distance`).
+(source : Géoplateforme (calcul d'itinéraire)).
+```
+
+### Schéma d’entrée
+
+| Champ | Type | Requis | Description |
+| --- | --- | --- | --- |
+| `arrival` | object | oui | Le point d'arrivée |
+| `departure` | object | oui | Le point de départ |
+| `optimize` | string (enum) | non | Métrique d'optimisation : `time` (itinéraire le plus rapide) ou `distance` (le plus court). Valeurs : time, distance. Valeur par défaut : time. |
+| `profile` | string (enum) | oui | Mode de déplacement : `car` ou `pedestrian`. Valeurs : car, pedestrian. |
+
+<details>
+<summary>Schéma d’entrée brut</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "departure": {
+      "type": "object",
+      "properties": {
+        "lon": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180,
+          "description": "La longitude du point de départ."
+        },
+        "lat": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90,
+          "description": "La latitude du point de départ."
+        }
+      },
+      "required": [
+        "lon",
+        "lat"
+      ],
+      "additionalProperties": false,
+      "description": "Le point de départ"
+    },
+    "arrival": {
+      "type": "object",
+      "properties": {
+        "lon": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180,
+          "description": "La longitude du point d'arrivée."
+        },
+        "lat": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90,
+          "description": "La latitude du point d'arrivée."
+        }
+      },
+      "required": [
+        "lon",
+        "lat"
+      ],
+      "additionalProperties": false,
+      "description": "Le point d'arrivée"
+    },
+    "profile": {
+      "type": "string",
+      "enum": [
+        "car",
+        "pedestrian"
+      ],
+      "description": "Mode de déplacement : `car` ou `pedestrian`."
+    },
+    "optimize": {
+      "type": "string",
+      "enum": [
+        "time",
+        "distance"
+      ],
+      "default": "time",
+      "description": "Métrique d'optimisation : `time` (itinéraire le plus rapide) ou `distance` (le plus court)."
+    }
+  },
+  "required": [
+    "departure",
+    "arrival",
+    "profile"
+  ],
+  "additionalProperties": false,
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}
+```
+
+</details>
+
+### Schéma de sortie
+
+| Champ | Type | Requis | Description |
+| --- | --- | --- | --- |
+| `data_url` | string | oui | URL renvoyant une FeatureCollection GeoJSON (géométries complètes) prête à être affichée dans un outil cartographique. |
+
+<details>
+<summary>Schéma de sortie brut</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "data_url": {
+      "type": "string",
+      "description": "URL renvoyant une FeatureCollection GeoJSON (géométries complètes) prête à être affichée dans un outil cartographique.",
+      "format": "uri"
+    }
+  },
+  "required": [
+    "data_url"
+  ]
+}
+```
+
+</details>
+
+### Réponse MCP
+
+| Cas | `content` | `structuredContent` | Relation entre `content` et `structuredContent` |
+| --- | --- | --- | --- |
+| Succès | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
+| Erreur | oui | non | `content[0].text` porte le message d'erreur ; aucun `structuredContent` n'est ajouté (réservé au `outputSchema` du cas de succès). |
+
 ## `distance`
 
 Code Source : [src/tools/DistanceTool.ts](../src/tools/DistanceTool.ts)
@@ -2371,6 +2516,7 @@ Distance et temps de trajet entre deux points
 ```
 Renvoie la distance (en mètres) entre deux points à partir de leur longitude et latitude.
 Renvoie aussi une estimation du temps de trajet lorsque `profile` vaut `car` ou `pedestrian`.
+Pour obtenir l'itinéraire sous forme de couche cartographiable, utiliser `gpf_itinerary_layer`.
 (source : Géoplateforme (calcul d'itinéraire)).
 ```
 
