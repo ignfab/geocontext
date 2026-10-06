@@ -1300,14 +1300,14 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
       "properties": {
         "lon": {
           "type": "number",
-          "minimum": -180,
-          "maximum": 180,
+          "minimum": -63.28125,
+          "maximum": 55.8984375,
           "description": "Longitude du point de départ en WGS84 `lon/lat`."
         },
         "lat": {
           "type": "number",
-          "minimum": -90,
-          "maximum": 90,
+          "minimum": -21.42148437,
+          "maximum": 51.27109375,
           "description": "Latitude du point de départ en WGS84 `lon/lat`."
         },
         "profile": {
@@ -1633,14 +1633,14 @@ Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, 
       "properties": {
         "lon": {
           "type": "number",
-          "minimum": -180,
-          "maximum": 180,
+          "minimum": -63.28125,
+          "maximum": 55.8984375,
           "description": "Longitude du point de départ en WGS84 `lon/lat`."
         },
         "lat": {
           "type": "number",
-          "minimum": -90,
-          "maximum": 90,
+          "minimum": -21.42148437,
+          "maximum": 51.27109375,
           "description": "Latitude du point de départ en WGS84 `lon/lat`."
         },
         "profile": {
@@ -1969,14 +1969,14 @@ Les noms de propriétés utilisés dans `where` **ne peuvent pas être devinés*
       "properties": {
         "lon": {
           "type": "number",
-          "minimum": -180,
-          "maximum": 180,
+          "minimum": -63.28125,
+          "maximum": 55.8984375,
           "description": "Longitude du point de départ en WGS84 `lon/lat`."
         },
         "lat": {
           "type": "number",
-          "minimum": -90,
-          "maximum": 90,
+          "minimum": -21.42148437,
+          "maximum": 51.27109375,
           "description": "Latitude du point de départ en WGS84 `lon/lat`."
         },
         "profile": {
@@ -2279,14 +2279,14 @@ Utiliser `lon`/`lat` pour le point de départ, `profile` pour le mode de déplac
   "properties": {
     "lon": {
       "type": "number",
-      "minimum": -180,
-      "maximum": 180,
+      "minimum": -63.28125,
+      "maximum": 55.8984375,
       "description": "Longitude du point de départ en WGS84 `lon/lat`."
     },
     "lat": {
       "type": "number",
-      "minimum": -90,
-      "maximum": 90,
+      "minimum": -21.42148437,
+      "maximum": 51.27109375,
       "description": "Latitude du point de départ en WGS84 `lon/lat`."
     },
     "profile": {
@@ -2374,6 +2374,7 @@ Interroge l'itinéraire entre deux points.
 À utiliser pour afficher ou cartographier un trajet. Pour obtenir seulement la distance et le temps de trajet, utiliser plutôt l'outil `distance`.
 Renvoie une **URL de couche cartographiable** (`data_url`) : une URL opaque, à passer telle quelle à un outil d'affichage cartographique (MCP Carto, ...). L'ouvrir renvoie une FeatureCollection GeoJSON contenant la géométrie LineString de l'itinéraire, avec ses propriétés `distance` (en mètres) et `time` (en minutes).
 Utiliser `departure`/`arrival` pour les points de départ et d'arrivée, `profile` pour le mode de déplacement (`car` ou `pedestrian`) et `optimize` pour choisir entre l'itinéraire le plus rapide (`time`) ou le plus court (`distance`).
+Avec `pedestrian`, le départ et l'arrivée doivent être distants d'au plus 200 km à vol d'oiseau.
 (source : Géoplateforme (calcul d'itinéraire)).
 ```
 
@@ -2398,14 +2399,14 @@ Utiliser `departure`/`arrival` pour les points de départ et d'arrivée, `profil
       "properties": {
         "lon": {
           "type": "number",
-          "minimum": -180,
-          "maximum": 180,
+          "minimum": -63.28125,
+          "maximum": 55.8984375,
           "description": "La longitude du point de départ."
         },
         "lat": {
           "type": "number",
-          "minimum": -90,
-          "maximum": 90,
+          "minimum": -21.42148437,
+          "maximum": 51.27109375,
           "description": "La latitude du point de départ."
         }
       },
@@ -2421,14 +2422,14 @@ Utiliser `departure`/`arrival` pour les points de départ et d'arrivée, `profil
       "properties": {
         "lon": {
           "type": "number",
-          "minimum": -180,
-          "maximum": 180,
+          "minimum": -63.28125,
+          "maximum": 55.8984375,
           "description": "La longitude du point d'arrivée."
         },
         "lat": {
           "type": "number",
-          "minimum": -90,
-          "maximum": 90,
+          "minimum": -21.42148437,
+          "maximum": 51.27109375,
           "description": "La latitude du point d'arrivée."
         }
       },
@@ -2516,6 +2517,7 @@ Distance et temps de trajet entre deux points
 ```
 Renvoie la distance (en mètres) entre deux points à partir de leur longitude et latitude.
 Renvoie aussi une estimation du temps de trajet lorsque `profile` vaut `car` ou `pedestrian`.
+Avec `pedestrian`, le départ et l'arrivée doivent être distants d'au plus 200 km à vol d'oiseau.
 Pour obtenir l'itinéraire sous forme de couche cartographiable, utiliser `gpf_itinerary_layer`.
 (source : Géoplateforme (calcul d'itinéraire)).
 ```

@@ -29,6 +29,9 @@ vi.doMock("../../../src/helpers/http.js", () => ({
 const { gpfGetFeaturesInputSchema } = await import(
   "../../../src/wfs/schema.js"
 );
+const { NAVIGATION_BBOX } = await import(
+  "../../../src/gpf/navigation.js"
+);
 const { default: GpfGetFeaturesTool } = await import(
   "../../../src/tools/GpfGetFeaturesTool"
 );
@@ -241,11 +244,12 @@ describe("Test GpfGetFeaturesTool", () => {
         distance_m: expect.objectContaining({ type: "number" }),
       }),
     });
+    const [west, south, east, north] = NAVIGATION_BBOX;
     expect(tool.toolDefinition.inputSchema.properties?.isoline_filter).toMatchObject({
       type: "object",
       properties: expect.objectContaining({
-        lon: expect.objectContaining({ type: "number" }),
-        lat: expect.objectContaining({ type: "number" }),
+        lon: expect.objectContaining({ type: "number", minimum: west, maximum: east }),
+        lat: expect.objectContaining({ type: "number", minimum: south, maximum: north }),
         cost_type: expect.objectContaining({ enum: ["time", "distance"] }),
         // The filter's lower time limit, not the isoline service's 600 minutes.
         cost_value: expect.objectContaining({ type: "number", description: expect.stringContaining("maximum : 120)") }),

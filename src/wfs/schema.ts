@@ -15,12 +15,13 @@ import {
   NAVIGATION_PROFILES,
   NAVIGATION_ISOCHRONE_MAX_MINUTES,
   NAVIGATION_ISODISTANCE_MAX_METERS,
+  NAVIGATION_BBOX,
   type NavigationMetric,
 } from "../gpf/navigation.js";
 import {
   ITINERARY_METRICS,
   ITINERARY_PROFILES,
-  ITINERARY_MAX_DIRECT_DISTANCE_METERS,
+  ITINERARY_PEDESTRIAN_MAX_DIRECT_DISTANCE_METERS,
 } from "../gpf/itinerary.js";
 import { haversine } from "../helpers/distance.js";
 
@@ -111,8 +112,8 @@ const navigationProfileSchema = z
 // filter (`intersects_point_filter`, `dwithin_point_filter`, ...), so the LLM sees
 // one point convention across the whole surface.
 const isolinePointSchema = z.object({
-  lon: lonSchema.describe("Longitude du point de départ en WGS84 `lon/lat`."),
-  lat: latSchema.describe("Latitude du point de départ en WGS84 `lon/lat`."),
+  lon: lonSchema.min(NAVIGATION_BBOX[0]).max(NAVIGATION_BBOX[2]).describe("Longitude du point de départ en WGS84 `lon/lat`."),
+  lat: latSchema.min(NAVIGATION_BBOX[1]).max(NAVIGATION_BBOX[3]).describe("Latitude du point de départ en WGS84 `lon/lat`."),
 }).strict();
 
 const navigationMetricsSchema = z
@@ -519,12 +520,12 @@ const itineraryProfileSchema = z
 
 export const gpfItineraryLayerInputObjectSchema = z.object({
   departure: z.object({
-    lon: lonSchema.describe("La longitude du point de départ."),
-    lat: latSchema.describe("La latitude du point de départ."),
+    lon: lonSchema.min(NAVIGATION_BBOX[0]).max(NAVIGATION_BBOX[2]).describe("La longitude du point de départ."),
+    lat: latSchema.min(NAVIGATION_BBOX[1]).max(NAVIGATION_BBOX[3]).describe("La latitude du point de départ."),
   }).describe("Le point de départ"),
   arrival: z.object({
-    lon: lonSchema.describe("La longitude du point d'arrivée."),
-    lat: latSchema.describe("La latitude du point d'arrivée."),
+    lon: lonSchema.min(NAVIGATION_BBOX[0]).max(NAVIGATION_BBOX[2]).describe("La longitude du point d'arrivée."),
+    lat: latSchema.min(NAVIGATION_BBOX[1]).max(NAVIGATION_BBOX[3]).describe("La latitude du point d'arrivée."),
   }).describe("Le point d'arrivée"),
   profile: itineraryProfileSchema,
   optimize: z
@@ -534,10 +535,7 @@ export const gpfItineraryLayerInputObjectSchema = z.object({
 }).strict();
 
 /**
- * Caps the crow-flies span of an itinerary request. The upstream service accepts any
- * pair of points, but a very long route costs proportionally more to compute and
- * returns a LineString with thousands of vertices, so it is rejected up front rather
- * than truncated downstream by `PROXY_MAX_RESPONSE_BYTES`.
+ * Caps the crow-flies span of a `pedestrian` itinerary request.
  *
  * The issue is attached to the object root, not to a single coordinate: the constraint
  * is a property of the departure/arrival pair.
@@ -546,15 +544,19 @@ function assertItineraryDirectDistance(
   input: z.infer<typeof gpfItineraryLayerInputObjectSchema>,
   ctx: z.RefinementCtx,
 ) {
+  if (input.profile !== "pedestrian") {
+    return;
+  }
+
   const dist = haversine([input.departure.lon, input.departure.lat], [input.arrival.lon, input.arrival.lat]);
 
-  if (dist > ITINERARY_MAX_DIRECT_DISTANCE_METERS) {
+  if (dist > ITINERARY_PEDESTRIAN_MAX_DIRECT_DISTANCE_METERS) {
     ctx.addIssue({
       code: z.ZodIssueCode.too_big,
-      maximum: ITINERARY_MAX_DIRECT_DISTANCE_METERS,
+      maximum: ITINERARY_PEDESTRIAN_MAX_DIRECT_DISTANCE_METERS,
       type: "number",
       inclusive: true,
-      message: `La distance à vol d'oiseau entre le départ et l'arrivée (${Math.ceil(dist / 1000)} km) ne peut pas dépasser ${ITINERARY_MAX_DIRECT_DISTANCE_METERS / 1000} km.`,
+      message: `La distance à vol d'oiseau entre le départ et l'arrivée (${Math.ceil(dist / 1000)} km) ne peut pas dépasser ${ITINERARY_PEDESTRIAN_MAX_DIRECT_DISTANCE_METERS / 1000} km avec le profil \`pedestrian\`.`,
     });
   }
 }

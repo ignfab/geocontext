@@ -5,10 +5,11 @@
 import BaseTool from "./BaseTool.js";
 import { z } from "zod";
 
-import { NAVIGATION_ITINERARY_SOURCE, navigationItineraryClient, roundItineraryCosts, ITINERARY_METRICS, ITINERARY_PROFILES } from "../gpf/itinerary.js";
+import { NAVIGATION_ITINERARY_SOURCE, navigationItineraryClient, roundItineraryCosts, ITINERARY_METRICS, ITINERARY_PROFILES, ITINERARY_PEDESTRIAN_MAX_DIRECT_DISTANCE_METERS } from "../gpf/itinerary.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import { lonSchema, latSchema } from "../helpers/schemas.js";
 import { generatePublishedInputSchema } from "../helpers/jsonSchema.js";
+import { gpfItineraryLayerInputSchema } from "../wfs/schema.js";
 import logger from "../logger.js";
 import { ellipsoidalDistance, haversine } from "../helpers/distance.js";
 
@@ -56,6 +57,7 @@ type DistanceInput = z.infer<typeof distanceInputSchema>;
 const DISTANCE_TOOL_DESCRIPTION = [
   `Renvoie la distance (en mètres) entre deux points à partir de leur longitude et latitude.`,
   `Renvoie aussi une estimation du temps de trajet lorsque \`profile\` vaut \`car\` ou \`pedestrian\`.`,
+  `Avec \`pedestrian\`, le départ et l'arrivée doivent être distants d'au plus ${ITINERARY_PEDESTRIAN_MAX_DIRECT_DISTANCE_METERS / 1000} km à vol d'oiseau.`,
   `Pour obtenir l'itinéraire sous forme de couche cartographiable, utiliser \`gpf_itinerary_layer\`.`,
   `(source : ${NAVIGATION_ITINERARY_SOURCE}).`,
 ].join("\n");
@@ -100,12 +102,9 @@ class DistanceTool extends BaseTool<DistanceInput> {
       }
       case "car":
       case "pedestrian": {
-        const itinerary = await navigationItineraryClient.getItinerary({
-          departure: input.departure,
-          arrival: input.arrival,
-          profile: input.profile,
-          optimize: input.optimize,
-        });
+        // Same upstream as `gpf_itinerary_layer`, so the same extent and pedestrian cap apply.
+        const itineraryInput = gpfItineraryLayerInputSchema.parse(input);
+        const itinerary = await navigationItineraryClient.getItinerary(itineraryInput);
         return roundItineraryCosts(itinerary);
       }
       default: {

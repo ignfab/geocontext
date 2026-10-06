@@ -18,11 +18,11 @@ export type ItineraryProfile = typeof ITINERARY_PROFILES[number];
 export type ItineraryMetric = typeof ITINERARY_METRICS[number];
 
 /**
- * Maximum crow-flies distance accepted between departure and arrival. Caps the
- * upstream compute and the size of the returned LineString: a route this long
- * already yields thousands of vertices.
+ * Maximum crow-flies distance accepted between departure and arrival with `pedestrian`,
+ * under the upstream's own limit (~250 km, beyond which it answers "No path found").
+ * `car` has no upstream limit.
  */
-export const ITINERARY_MAX_DIRECT_DISTANCE_METERS = 100_000;
+export const ITINERARY_PEDESTRIAN_MAX_DIRECT_DISTANCE_METERS = 200_000;
 
 type ItineraryResponse = {
   distance: number;

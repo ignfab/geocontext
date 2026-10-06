@@ -23,7 +23,7 @@ import {
   gpfItineraryLayerPublishedInputSchema,
   type GpfItineraryLayerInput,
 } from "../wfs/schema.js";
-import { NAVIGATION_ITINERARY_SOURCE } from "../gpf/itinerary.js";
+import { ITINERARY_PEDESTRIAN_MAX_DIRECT_DISTANCE_METERS, NAVIGATION_ITINERARY_SOURCE } from "../gpf/itinerary.js";
 import logger from "../logger.js";
 
 const GPF_ITINERARY_LAYER_TOOL_DESCRIPTION = [
@@ -31,6 +31,7 @@ const GPF_ITINERARY_LAYER_TOOL_DESCRIPTION = [
   "À utiliser pour afficher ou cartographier un trajet. Pour obtenir seulement la distance et le temps de trajet, utiliser plutôt l'outil `distance`.",
   "Renvoie une **URL de couche cartographiable** (`data_url`) : une URL opaque, à passer telle quelle à un outil d'affichage cartographique (MCP Carto, ...). L'ouvrir renvoie une FeatureCollection GeoJSON contenant la géométrie LineString de l'itinéraire, avec ses propriétés `distance` (en mètres) et `time` (en minutes).",
   "Utiliser `departure`/`arrival` pour les points de départ et d'arrivée, `profile` pour le mode de déplacement (`car` ou `pedestrian`) et `optimize` pour choisir entre l'itinéraire le plus rapide (`time`) ou le plus court (`distance`).",
+  `Avec \`pedestrian\`, le départ et l'arrivée doivent être distants d'au plus ${ITINERARY_PEDESTRIAN_MAX_DIRECT_DISTANCE_METERS / 1000} km à vol d'oiseau.`,
   `(source : ${NAVIGATION_ITINERARY_SOURCE}).`,
 ].join("\n");
 

@@ -311,7 +311,7 @@ describe("proxy/server", () => {
     // a leaked secret must not reach the upstream itinerary service either.
     const overCap = encodeToken({
       kind: PROXY_TOKEN_KIND.itinerary,
-      // Saint-Quentin -> Dijon: ~300 km apart, over the 100 km cap.
+      // Saint-Quentin -> Dijon: ~300 km apart, over the pedestrian cap.
       departure: { lon: 3.274356, lat: 49.839862, },
       arrival: { lon: 5.044572, lat: 47.326213, },
       optimize: "distance",

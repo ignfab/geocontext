@@ -4,7 +4,8 @@ import type { Env } from "../../src/config/env.js";
 import { decodeToken } from "../../src/proxy/token.js";
 import { PROXY_TOKEN_KIND } from "../../src/wfs/schema.js";
 import { validateStructuredContentAgainstOutputSchema } from "./helpers/outputSchema";
-import { ITINERARY_MAX_DIRECT_DISTANCE_METERS } from "../../src/gpf/itinerary.js";
+import { ITINERARY_PEDESTRIAN_MAX_DIRECT_DISTANCE_METERS } from "../../src/gpf/itinerary.js";
+import { NAVIGATION_BBOX } from "../../src/gpf/navigation.js";
 
 const SECRET_HEX = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 const SECRET = Buffer.from(SECRET_HEX, "hex");
@@ -157,7 +158,7 @@ describe("Test GpfItineraryLayerTool", () => {
     expect(textContent.text).toContain(`profile`);
   });
 
-  it("rejects a departure/arrival pair beyond the crow-flies cap", async () => {
+  it("rejects a pedestrian departure/arrival pair beyond the crow-flies cap", async () => {
     mockGetEnv.mockReturnValue(makeEnv({}));
     const tool = new GpfItineraryLayerTool();
 
@@ -165,11 +166,11 @@ describe("Test GpfItineraryLayerTool", () => {
       params: {
         name: "gpf_itinerary_layer",
         arguments: {
-          // Saint-Quentin -> Dijon: ~300 km apart, well over the 100 km cap.
+          // Saint-Quentin -> Dijon: ~300 km apart, over the pedestrian cap.
           departure: { lon: 3.274356, lat: 49.839862, },
           arrival: { lon: 5.044572, lat: 47.326213, },
           optimize: "time",
-          profile: "car",
+          profile: "pedestrian",
         },
       },
     });
@@ -181,7 +182,63 @@ describe("Test GpfItineraryLayerTool", () => {
       throw new Error("expected text content");
     }
     expect(textContent.text).toContain(`309 km`);
-    expect(textContent.text).toContain(`ne peut pas dépasser ${ITINERARY_MAX_DIRECT_DISTANCE_METERS / 1000} km`);
+    expect(textContent.text).toContain(`ne peut pas dépasser ${ITINERARY_PEDESTRIAN_MAX_DIRECT_DISTANCE_METERS / 1000} km`);
+  });
+
+  it("accepts a long car itinerary", async () => {
+    mockGetEnv.mockReturnValue(makeEnv({}));
+    const tool = new GpfItineraryLayerTool();
+
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_itinerary_layer",
+        arguments: {
+          // Brest -> Menton: ~1050 km apart.
+          departure: { lon: -4.4861, lat: 48.3904, },
+          arrival: { lon: 7.4975, lat: 43.7745, },
+          profile: "car",
+        },
+      },
+    });
+
+    expect(response.isError).toBeUndefined();
+  });
+
+  it("rejects a point outside the navigation service extent", async () => {
+    mockGetEnv.mockReturnValue(makeEnv({}));
+    const tool = new GpfItineraryLayerTool();
+
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_itinerary_layer",
+        arguments: {
+          // Paris -> Berlin: Berlin lies north of the upstream bbox.
+          departure: { lon: 2.3522, lat: 48.8566, },
+          arrival: { lon: 13.405, lat: 52.52, },
+          profile: "car",
+        },
+      },
+    });
+
+    expect(response.isError).toBe(true);
+    const textContent = response.content[0];
+    if (textContent.type !== "text") {
+      throw new Error("expected text content");
+    }
+    expect(textContent.text).toContain("arrival.lat");
+    expect(textContent.text).toContain(String(NAVIGATION_BBOX[3]));
+  });
+
+  it("publishes the navigation service extent as coordinate bounds", () => {
+    const tool = new GpfItineraryLayerTool();
+    const [west, south, east, north] = NAVIGATION_BBOX;
+
+    expect(tool.toolDefinition.inputSchema.properties?.departure).toMatchObject({
+      properties: {
+        lon: { minimum: west, maximum: east },
+        lat: { minimum: south, maximum: north },
+      },
+    });
   });
 
   it("accepts a pair under the crow-flies cap", async () => {
@@ -196,7 +253,7 @@ describe("Test GpfItineraryLayerTool", () => {
           departure: { lon: 3.274356, lat: 49.839862, },
           arrival: { lon: 3.623693, lat: 49.564267, },
           optimize: "distance",
-          profile: "car",
+          profile: "pedestrian",
         },
       },
     });
