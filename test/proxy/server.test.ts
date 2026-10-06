@@ -8,17 +8,21 @@ import { resetEnv } from "../../src/config/env";
 import { PROXY_TOKEN_KIND } from "../../src/wfs/schema";
 import { FeatureNotFoundError, FeatureCardinalityError } from "../../src/wfs/byId";
 import { ServiceResponseError, ResponseTooLargeError } from "../../src/helpers/http";
+import { NAVIGATION_ISOCHRONE_MAX_TIME_MINUTES } from "../../src/gpf/navigation";
 
 // Mock the proxy engine + transport so the server is exercised WITHOUT network.
 const runGeometryFeatureQuery = vi.fn();
 const runGeometryFeatureByIdQuery = vi.fn();
+const runGeometryIsochroneQuery = vi.fn();
 vi.mock("../../src/proxy/execute", () => ({
   runGeometryFeatureQuery: (...args: unknown[]) => runGeometryFeatureQuery(...args),
   runGeometryFeatureByIdQuery: (...args: unknown[]) => runGeometryFeatureByIdQuery(...args),
+  runGeometryIsochroneQuery: (...args: unknown[]) => runGeometryIsochroneQuery(...args),
 }));
 vi.mock("../../src/proxy/transport", () => ({
   getDefaultGeometryFeatureQueryDeps: () => ({ wfsClient: {}, resolveTravelTime: vi.fn() }),
   getDefaultGeometryFeatureByIdQueryDeps: () => ({ wfsClient: {} }),
+  getDefaultGeometryIsochroneQueryDeps: () => ({ getGeometry: vi.fn() }),
 }));
 
 // A fixed 32-byte hex key for the test environment.
@@ -50,6 +54,16 @@ function validByIdToken() {
   }, KEY);
 }
 
+function validIsochroneToken() {
+  return encodeToken({
+    kind: PROXY_TOKEN_KIND.isochrone,
+    lon: 2.35,
+    lat: 48.85,
+    profile: "pedestrian",
+    minutes: 15,
+  }, KEY);
+}
+
 beforeAll(async () => {
   process.env.TRANSPORT_TYPE = "http";
   process.env.PROXY_URL_SECRET = TEST_SECRET;
@@ -75,6 +89,7 @@ afterAll(async () => {
 beforeEach(() => {
   runGeometryFeatureQuery.mockReset();
   runGeometryFeatureByIdQuery.mockReset();
+  runGeometryIsochroneQuery.mockReset();
 });
 
 describe("proxy/server", () => {
@@ -201,6 +216,43 @@ describe("proxy/server", () => {
       feature_id: "batiment.1",
       select: ["hauteur"],
     });
+  });
+
+  it("dispatches an isochrone token to the isochrone engine", async () => {
+    runGeometryIsochroneQuery.mockResolvedValue(SAMPLE_COLLECTION);
+
+    const res = await request(baseUrl).get(layerPath(validIsochroneToken()));
+
+    expect(res.status).toBe(200);
+    expect(res.headers["content-type"]).toContain("application/geo+json");
+    expect(JSON.parse(res.text)).toEqual(SAMPLE_COLLECTION);
+    expect(runGeometryIsochroneQuery).toHaveBeenCalledOnce();
+    expect(runGeometryFeatureQuery).not.toHaveBeenCalled();
+    expect(runGeometryFeatureByIdQuery).not.toHaveBeenCalled();
+    const [input] = runGeometryIsochroneQuery.mock.calls[0];
+    expect(input).toEqual({
+      lon: 2.35,
+      lat: 48.85,
+      profile: "pedestrian",
+      minutes: 15,
+    });
+  });
+
+  it.each([
+    ["minutes above the maximum", { minutes: NAVIGATION_ISOCHRONE_MAX_TIME_MINUTES + 1 }],
+    ["an unknown key", { typename: "BDTOPO_V3:batiment" }],
+  ])("400 when an isochrone token carries %s", async (_name, overrides) => {
+    const badToken = encodeToken({
+      kind: PROXY_TOKEN_KIND.isochrone,
+      lon: 2.35,
+      lat: 48.85,
+      profile: "pedestrian",
+      minutes: 15,
+      ...overrides,
+    }, KEY);
+    const res = await request(baseUrl).get(layerPath(badToken));
+    expect(res.status).toBe(400);
+    expect(runGeometryIsochroneQuery).not.toHaveBeenCalled();
   });
 
   it("404 when the by-id feature is absent (FeatureNotFoundError)", async () => {
