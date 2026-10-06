@@ -7,15 +7,12 @@ import { z } from "zod";
 
 import { getParcellaireExpress, PARCELLAIRE_EXPRESS_TYPES, PARCELLAIRE_EXPRESS_SOURCE } from "../gpf/parcellaire-express.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
-import { featureRefSchema, lonSchema, latSchema } from "../helpers/schemas.js";
+import { featureRefSchema, buildLonLatSchema } from "../helpers/schemas.js";
 import logger from "../logger.js";
 
 // --- Schemas ---
 
-const cadastreInputSchema = z.object({
-  lon: lonSchema,
-  lat: latSchema,
-}).strict();
+const cadastreInputSchema = buildLonLatSchema();
 
 const cadastreResultSchema = z
   .object({

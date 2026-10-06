@@ -7,7 +7,7 @@ import { z } from "zod";
 
 import { NAVIGATION_ITINERARY_SOURCE, navigationItineraryClient, roundItineraryCosts, ITINERARY_METRICS, ITINERARY_PROFILES, ITINERARY_PEDESTRIAN_MAX_DIRECT_DISTANCE_METERS } from "../gpf/itinerary.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
-import { lonSchema, latSchema } from "../helpers/schemas.js";
+import { buildLonLatSchema } from "../helpers/schemas.js";
 import { generatePublishedInputSchema } from "../helpers/jsonSchema.js";
 import { gpfItineraryLayerInputSchema } from "../wfs/schema.js";
 import logger from "../logger.js";
@@ -16,14 +16,8 @@ import { ellipsoidalDistance, haversine } from "../helpers/distance.js";
 // --- Schemas ---
 
 const distanceInputSchema = z.object({
-  departure: z.object({
-    lon: lonSchema.describe("La longitude du point de départ."),
-    lat: latSchema.describe("La latitude du point de départ."),
-  }).describe("Le point de départ"),
-  arrival: z.object({
-    lon: lonSchema.describe("La longitude du point d'arrivée."),
-    lat: latSchema.describe("La latitude du point d'arrivée."),
-  }).describe("Le point d'arrivée"),
+  departure: buildLonLatSchema("de départ"),
+  arrival: buildLonLatSchema("d'arrivée"),
   profile: z
     .enum(["spherical", "ellipsoidal", ...ITINERARY_PROFILES])
     .default("spherical")

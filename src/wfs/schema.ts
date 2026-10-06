@@ -9,7 +9,7 @@
 import { z } from "zod";
 
 import { generatePublishedInputSchema } from "../helpers/jsonSchema.js";
-import { lonSchema, latSchema } from "../helpers/schemas.js";
+import { lonSchema, latSchema, buildLonLatSchema } from "../helpers/schemas.js";
 import {
   NAVIGATION_METRICS,
   NAVIGATION_PROFILES,
@@ -82,22 +82,18 @@ const orderBySchema = z.object({
 }).strict().describe("Critère de tri structuré. Exemple : `{ property: \"population\", direction: \"desc\" }`.");
 
 const bboxFilterSchema = z.object({
-  west: lonSchema.describe("Longitude ouest en WGS84 `lon/lat`."),
-  south: latSchema.describe("Latitude sud en WGS84 `lon/lat`."),
-  east: lonSchema.describe("Longitude est en WGS84 `lon/lat`."),
-  north: latSchema.describe("Latitude nord en WGS84 `lon/lat`."),
+  west: lonSchema.describe("Longitude ouest en WGS84."),
+  south: latSchema.describe("Latitude sud en WGS84."),
+  east: lonSchema.describe("Longitude est en WGS84."),
+  north: latSchema.describe("Latitude nord en WGS84."),
 }).strict().describe("Filtre spatial par boîte englobante.");
 
-const intersectsPointFilterSchema = z.object({
-  lon: lonSchema.describe("Longitude du point en WGS84 `lon/lat`."),
-  lat: latSchema.describe("Latitude du point en WGS84 `lon/lat`."),
-}).strict().describe("Filtre les objets dont la géométrie intersecte un point.");
+const intersectsPointFilterSchema = buildLonLatSchema()
+  .describe("Filtre les objets dont la géométrie intersecte un point.");
 
-const dwithinPointFilterSchema = z.object({
-  lon: lonSchema.describe("Longitude du point en WGS84 `lon/lat`."),
-  lat: latSchema.describe("Latitude du point en WGS84 `lon/lat`."),
+const dwithinPointFilterSchema = buildLonLatSchema().extend({
   distance_m: z.number().finite().positive().describe("Distance maximale en mètres."),
-}).strict().describe("Filtre les objets situés à une distance maximale d'un point.");
+}).describe("Filtre les objets situés à une distance maximale d'un point.");
 
 const intersectsFeatureFilterSchema = z.object({
   typename: z.string().trim().min(1).describe("Type GPF du feature de référence."),
@@ -108,13 +104,20 @@ const navigationProfileSchema = z
   .enum(NAVIGATION_PROFILES)
   .describe("Mode de déplacement utilisé pour calculer l'isochrone ou l'isodistance : `car` ou `pedestrian`.");
 
+function buildNavigationLonLatSchema(suffix: string) {
+  const base = buildLonLatSchema(suffix);
+  const [west, south, east, north] = NAVIGATION_BBOX;
+  const message = `Le point est hors de l'emprise du service de navigation ([ouest, sud, est, nord] = [${NAVIGATION_BBOX.join(", ")}]).`;
+  return base.extend({
+    lon: base.shape.lon.min(west, message).max(east, message),
+    lat: base.shape.lat.min(south, message).max(north, message),
+  });
+}
+
 // Departure point of an isoline. Flat `lon`/`lat`, exactly like every spatial
 // filter (`intersects_point_filter`, `dwithin_point_filter`, ...), so the LLM sees
 // one point convention across the whole surface.
-const isolinePointSchema = z.object({
-  lon: lonSchema.min(NAVIGATION_BBOX[0]).max(NAVIGATION_BBOX[2]).describe("Longitude du point de départ en WGS84 `lon/lat`."),
-  lat: latSchema.min(NAVIGATION_BBOX[1]).max(NAVIGATION_BBOX[3]).describe("Latitude du point de départ en WGS84 `lon/lat`."),
-}).strict();
+const isolinePointSchema = buildNavigationLonLatSchema("de départ");
 
 const navigationMetricsSchema = z
   .enum(NAVIGATION_METRICS)
@@ -225,7 +228,7 @@ function spatialExtrasBaseDescriptionLines(withSpatialFilters: boolean) {
   return [
     "`centroid` est le centroïde (moyenne arithmétique des sommets) de la géométrie. Il peut tomber hors d'une géométrie concave" +
       (withSpatialFilters ? " : un `intersects_point_filter` sur ce point peut alors ne renvoyer ni l'objet, ni ce qui le contient." : "."),
-    "`bbox` est la boîte englobante de la géométrie : `[ouest, sud, est, nord]` en WGS84 `lon/lat`" +
+    "`bbox` est la boîte englobante de la géométrie : `[ouest, sud, est, nord]` en WGS84" +
       (withSpatialFilters ? ", dans l'ordre des champs `west`, `south`, `east` et `north` de `bbox_filter`." : "."),
     "`length` est la somme des longueurs (en m) des parties linéaires de la géométrie (LineString, MultiLineString).",
     "`area` est la somme des surfaces (en m²) des parties surfaciques de la géométrie (Polygon, MultiPolygon).",
@@ -519,14 +522,8 @@ const itineraryProfileSchema = z
   .describe("Mode de déplacement : `car` ou `pedestrian`.");
 
 export const gpfItineraryLayerInputObjectSchema = z.object({
-  departure: z.object({
-    lon: lonSchema.min(NAVIGATION_BBOX[0]).max(NAVIGATION_BBOX[2]).describe("La longitude du point de départ."),
-    lat: latSchema.min(NAVIGATION_BBOX[1]).max(NAVIGATION_BBOX[3]).describe("La latitude du point de départ."),
-  }).describe("Le point de départ"),
-  arrival: z.object({
-    lon: lonSchema.min(NAVIGATION_BBOX[0]).max(NAVIGATION_BBOX[2]).describe("La longitude du point d'arrivée."),
-    lat: latSchema.min(NAVIGATION_BBOX[1]).max(NAVIGATION_BBOX[3]).describe("La latitude du point d'arrivée."),
-  }).describe("Le point d'arrivée"),
+  departure: buildNavigationLonLatSchema("de départ"),
+  arrival: buildNavigationLonLatSchema("d'arrivée"),
   profile: itineraryProfileSchema,
   optimize: z
     .enum(ITINERARY_METRICS)

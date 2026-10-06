@@ -258,7 +258,7 @@ describe("Test GpfIsolineLayerTool", () => {
     if (textContent.type !== "text") {
       throw new Error("expected text content");
     }
-    expect(textContent.text).toContain("lat");
+    expect(textContent.text).toContain("lat: Le point est hors de l'emprise du service de navigation");
     expect(textContent.text).toContain(String(NAVIGATION_BBOX[3]));
   });
 

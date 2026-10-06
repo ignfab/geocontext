@@ -115,7 +115,7 @@ describe("Test DistanceTool", () => {
       },
     });
 
-    expect(expectErrorText(response)).toContain("arrival.lat: La valeur doit être au plus 51.27109375");
+    expect(expectErrorText(response)).toContain("arrival.lat: Le point est hors de l'emprise du service de navigation");
     expect(getItinerarySpy).not.toHaveBeenCalled();
   });
 

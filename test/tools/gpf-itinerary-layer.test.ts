@@ -225,8 +225,27 @@ describe("Test GpfItineraryLayerTool", () => {
     if (textContent.type !== "text") {
       throw new Error("expected text content");
     }
-    expect(textContent.text).toContain("arrival.lat");
+    expect(textContent.text).toContain("arrival.lat: Le point est hors de l'emprise du service de navigation");
     expect(textContent.text).toContain(String(NAVIGATION_BBOX[3]));
+  });
+
+  it("rejects an unknown key in a point", async () => {
+    mockGetEnv.mockReturnValue(makeEnv({}));
+    const tool = new GpfItineraryLayerTool();
+
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_itinerary_layer",
+        arguments: {
+          departure: { lon: 2.3522, lat: 48.8566, alt: 35 },
+          arrival: { lon: 2.2945, lat: 48.8584, },
+          profile: "car",
+        },
+      },
+    });
+
+    expect(response.isError).toBe(true);
+    expect((response.content[0] as { text: string }).text).toContain("Le paramètre 'alt' n'est pas reconnu.");
   });
 
   it("publishes the navigation service extent as coordinate bounds", () => {

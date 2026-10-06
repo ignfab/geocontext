@@ -309,7 +309,7 @@ export async function runGeometryFeatureByIdQuery(
   };
 }
 
-// --- Isochrone Public Engine ---
+// --- Isoline Public Engine ---
 
 export type IsolineGeometryResolver = (
   input: GpfIsolineLayerInput,

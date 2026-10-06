@@ -7,15 +7,12 @@ import { z } from "zod";
 
 import { getUrbanisme, URBANISME_SOURCE } from "../gpf/urbanisme.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
-import { featureRefSchema, lonSchema, latSchema } from "../helpers/schemas.js";
+import { featureRefSchema, buildLonLatSchema } from "../helpers/schemas.js";
 import logger from "../logger.js";
 
 // --- Schemas ---
 
-const urbanismeInputSchema = z.object({
-  lon: lonSchema,
-  lat: latSchema,
-}).strict();
+const urbanismeInputSchema = buildLonLatSchema();
 
 const urbanismeResultSchema = z
   .object({
