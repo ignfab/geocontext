@@ -23,7 +23,7 @@ const toolDisplayOrder = [
   "gpf_count_features",
   "gpf_get_feature_by_id",
   "gpf_get_feature_by_id_layer",
-  "gpf_isochrone_layer",
+  "gpf_isoline_layer",
 ];
 
 /**
