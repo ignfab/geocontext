@@ -12,6 +12,9 @@ export const NAVIGATION_ISOLINE_RESOURCE = "bdtopo-valhalla";
 // Upstream ceilings accepted by the GPF isochrone service, per cost type.
 export const NAVIGATION_ISOCHRONE_MAX_MINUTES = 600;
 export const NAVIGATION_ISODISTANCE_MAX_METERS = 50_000;
+// Upstream extent accepted for route and isochrone points, as `[west, south, east, north]`
+// in WGS84 (from the service's GetCapabilities for bdtopo-valhalla).
+export const NAVIGATION_BBOX = [-63.28125, -21.42148437, 55.8984375, 51.27109375] as const;
 export const NAVIGATION_PROFILES = ["car", "pedestrian"] as const;
 export const NAVIGATION_METRICS = ["time", "distance"] as const;
 

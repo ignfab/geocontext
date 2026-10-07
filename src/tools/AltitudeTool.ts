@@ -7,15 +7,12 @@ import { z } from "zod";
 
 import { ALTITUDE_SOURCE, altitudeClient } from "../gpf/altitude.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
-import { lonSchema, latSchema } from "../helpers/schemas.js";
+import { buildLonLatSchema } from "../helpers/schemas.js";
 import logger from "../logger.js";
 
 // --- Schemas ---
 
-const altitudeInputSchema = z.object({
-  lon: lonSchema,
-  lat: latSchema,
-}).strict();
+const altitudeInputSchema = buildLonLatSchema();
 
 const altitudeOutputSchema = z.object({
   lon: z.number().describe("La longitude du point."),

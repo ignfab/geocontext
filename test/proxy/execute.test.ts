@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 import type { GpfFeatureType } from "../../src/wfs/catalog.js";
 
-import { runGeometryFeatureQuery, runGeometryFeatureByIdQuery, runGeometryIsolineQuery, type WfsClientLike, type IsolineResolver } from "../../src/proxy/execute";
+import { runGeometryFeatureQuery, runGeometryFeatureByIdQuery, runGeometryIsolineQuery, runGeometryItineraryQuery, type WfsClientLike, type IsolineResolver } from "../../src/proxy/execute";
 import type { CompiledRequest } from "../../src/wfs/request";
 import type { WfsFeatureCollectionResponse } from "../../src/wfs/types";
 import type { GpfGetFeaturesInput } from "../../src/wfs/schema";
@@ -435,5 +435,63 @@ describe("proxy/execute · runGeometryIsolineQuery", () => {
         }
       ]
     });
+  });
+});
+
+describe("proxy/execute · runGeometryItineraryQuery", () => {
+  const itineraryInput = {
+    departure: { lon: 2.33, lat: 48.84, },
+    arrival: { lon: 2.35, lat: 48.85, },
+    optimize: "time" as const,
+    profile: "car" as const,
+  };
+  const routeGeometry = { type: "LineString" as const, coordinates: [[2.33, 48.84], [2.35, 48.85]] };
+
+  it("returns the itinerary as a FeatureCollection", async () => {
+    const result = await runGeometryItineraryQuery(itineraryInput, {
+      getItineraryLayer: async () => ({ geometry: routeGeometry, distance: 3200, duration: 5.5 }),
+    });
+
+    expect(result).toEqual({
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          geometry: routeGeometry,
+          properties: {
+            departure: [2.33, 48.84],
+            arrival: [2.35, 48.85],
+            profile: "car",
+            optimize: "time",
+            distance: 3200,
+            time: 5.5,
+          },
+        }
+      ]
+    });
+  });
+
+  it("rounds distance and duration like the `distance` tool", async () => {
+    const result = await runGeometryItineraryQuery(itineraryInput, {
+      getItineraryLayer: async () => ({ geometry: routeGeometry, distance: 3200.4567, duration: 5.5432 }),
+    });
+
+    expect(result.features?.[0]?.properties).toMatchObject({
+      distance: 3200.46,
+      time: 5.5,
+    });
+  });
+
+  it("forwards the input to the resolver", async () => {
+    const calls: unknown[] = [];
+
+    await runGeometryItineraryQuery(itineraryInput, {
+      getItineraryLayer: async (input) => {
+        calls.push(input);
+        return { geometry: routeGeometry, distance: 3200, duration: 5.5 };
+      },
+    });
+
+    expect(calls).toEqual([itineraryInput]);
   });
 });

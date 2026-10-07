@@ -135,6 +135,10 @@ describe("isGeometryLike", () => {
   it("returns false when type is not a string", () => {
     expect(isGeometryLike({ type: 42, coordinates: [] })).toBe(false);
   });
+
+  it("returns false when coordinates is not an array", () => {
+    expect(isGeometryLike({ type: "Point", coordinates: { lon: 0, lat: 0 } })).toBe(false);
+  });
 });
 
 describe("dropEmptyRings", () => {
