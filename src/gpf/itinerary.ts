@@ -114,7 +114,7 @@ export class NavigationItineraryClient {
     logger.debug(`[gpf:navigation] getItineraryLayer(${JSON.stringify(input)})...`);
 
     const result = await this.fetcher(buildItineraryUrl(input, "geojson"));
-    if (!(isGeometryLike(result.geometry) && result.geometry.type === "LineString")) {
+    if (!(isGeometryLike(result.geometry) && result.geometry.type === "LineString" && result.geometry.coordinates.length >= 2)) {
       throw new ServiceResponseError(
         "Le service d'itinéraire n'a pas renvoyé de LineString exploitable.",
         {
