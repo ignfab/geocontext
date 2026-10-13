@@ -9,6 +9,7 @@
 import { GPF_WFS_URL } from "./catalog.js";
 import type { CompiledQuery } from "./queryPreparation.js";
 import { queryIsGetFeaturesInput, type GpfQueryFeaturesInput } from "./schema.js";
+import { MAX_CQL_FILTER_BYTES } from "./spatialCql.js";
 
 // --- Transport Types ---
 
@@ -26,12 +27,20 @@ export type CompiledRequest = {
  *
  * @param cqlFilter Compiled CQL filter, when the request needs one.
  * @returns The encoded POST body, or an empty string when no filter is present.
+ * @throws When the body exceeds `MAX_CQL_FILTER_BYTES`, since the WFS would silently ignore the filter.
  */
 function buildBody(cqlFilter?: string) {
   if (!cqlFilter) {
     return "";
   }
-  return new URLSearchParams({ cql_filter: cqlFilter }).toString();
+  const body = new URLSearchParams({ cql_filter: cqlFilter }).toString();
+  // The URL-encoded body is pure ASCII: its length is its size in bytes.
+  if (body.length > MAX_CQL_FILTER_BYTES) {
+    throw new Error(
+      `Le filtre CQL est trop volumineux : ${body.length} octets une fois encodé (limite : ${MAX_CQL_FILTER_BYTES}).`,
+    );
+  }
+  return body;
 }
 
 // --- Public Builders ---
@@ -164,14 +173,10 @@ export function buildMultiTypenameRequest(
     srsName: "EPSG:4326",
   };
 
-  const body = expandedCqlFilter
-    ? new URLSearchParams({ cql_filter: expandedCqlFilter }).toString()
-    : "";
-
   return {
     method: "POST",
     url: GPF_WFS_URL,
     query,
-    body,
+    body: buildBody(expandedCqlFilter),
   };
 }

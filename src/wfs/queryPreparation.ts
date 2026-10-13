@@ -39,6 +39,8 @@ import {
   compileDwithinSpatialFilter,
   compileIntersectsFeatureSpatialFilter,
   compileIntersectsPointSpatialFilter,
+  encodedCqlFilterBytes,
+  MAX_CQL_FILTER_BYTES,
 } from "./spatialCql.js";
 import type { Geometry } from "geojson";
 
@@ -207,7 +209,9 @@ export function compileQueryParts(
         if (!resolvedGeometryRef) {
           throw new Error("Le filtre spatial `intersects_feature` exige la résolution préalable de la géométrie de référence.");
         }
-        fragments.push(compileIntersectsFeatureSpatialFilter(geometryName, resolvedGeometryRef));
+        fragments.push(
+          compileIntersectsFeatureSpatialFilter(geometryName, resolvedGeometryRef, spatialFilter.typename),
+        );
         break;
       case "travel_time":
         if (!resolvedGeometryRef) {
@@ -226,6 +230,15 @@ export function compileQueryParts(
   }
 
   const cqlFilter = fragments.length > 0 ? fragments.join(" AND ") : undefined;
+  if (cqlFilter) {
+    const cqlFilterBytes = encodedCqlFilterBytes(cqlFilter);
+    if (cqlFilterBytes > MAX_CQL_FILTER_BYTES) {
+      throw new Error(
+        `Le filtre CQL est trop volumineux : ${cqlFilterBytes} octets une fois encodé (limite : ${MAX_CQL_FILTER_BYTES}). ` +
+          "Réduire le nombre de clauses attributaires ou simplifier les filtres.",
+      );
+    }
+  }
 
   if (!isGetFeatures) {
     // for CountFeatures: only return the required parts
