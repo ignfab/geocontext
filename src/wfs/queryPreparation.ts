@@ -207,7 +207,9 @@ export function compileQueryParts(
         if (!resolvedGeometryRef) {
           throw new Error("Le filtre spatial `intersects_feature` exige la résolution préalable de la géométrie de référence.");
         }
-        fragments.push(compileIntersectsFeatureSpatialFilter(geometryName, resolvedGeometryRef));
+        fragments.push(
+          compileIntersectsFeatureSpatialFilter(geometryName, resolvedGeometryRef, spatialFilter.typename),
+        );
         break;
       case "travel_time":
         if (!resolvedGeometryRef) {

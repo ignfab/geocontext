@@ -9,6 +9,19 @@ import type { Geometry } from "geojson";
 import type { SpatialFilter } from "./schema.js";
 import { geometryToEwkt } from "./geometry.js";
 
+export const MAX_SPATIAL_FILTER_BYTES = 2 * 1024 * 1024;
+
+const SMALL_SCALE_VERSIONS = ["2025", "2026", "LATEST"];
+
+/** Maps `ADMINEXPRESS-COG.<version>:<layer>` to its CARTO-PE (small-scale) twin, if applicable. */
+function toSmallScaleTypename(typename: string): string | undefined {
+  const match = /^ADMINEXPRESS-COG\.([^:.]+):(.+)$/.exec(typename);
+  if (!match || !SMALL_SCALE_VERSIONS.includes(match[1])) {
+    return undefined;
+  }
+  return `ADMINEXPRESS-COG-CARTO-PE.${match[1]}:${match[2]}`;
+}
+
 // --- Spatial Predicate Compilation ---
 
 /**
@@ -51,12 +64,39 @@ export function compileDwithinSpatialFilter(geometryName: string, spatialFilter:
 }
 
 /**
- * Compiles an `intersects_feature` spatial filter from the resolved reference geometry.  
+ * Compiles an `intersects_feature` spatial filter from the resolved reference geometry.
+ * Throw if the filter is too big
  *
  * @param geometryName Geometry property already resolved for the feature type.
  * @param geometry Reference geometry.
+ * @param referenceTypename Optional typename of the reference feature, used for error diagnostic.
  * @returns A CQL intersects predicate.
+ * @throws When the predicate exceeds the budget.
  */
-export function compileIntersectsFeatureSpatialFilter(geometryName: string, geometry: Geometry) {
-  return `INTERSECTS(${geometryName},${geometryToEwkt(geometry)})`;
+export function compileIntersectsFeatureSpatialFilter(
+  geometryName: string,
+  geometry: Geometry,
+  referenceTypename?: string,
+) {
+  const exactFilter = `INTERSECTS(${geometryName},${geometryToEwkt(geometry)})`;
+  const filterBytes = Buffer.byteLength(exactFilter, "utf8");
+  if (filterBytes <= MAX_SPATIAL_FILTER_BYTES) {
+    return exactFilter;
+  }
+
+  const recommendation = (() => {
+    const peTwin = referenceTypename ? toSmallScaleTypename(referenceTypename) : undefined;
+    if (peTwin) {
+      return `Choisir une géométrie de référence moins détaillée (privilégier la couche '${peTwin}' au lieu de '${referenceTypename}') ou utiliser un filtre bbox.`;
+    }
+    if (referenceTypename?.includes("CARTO-PE")) {
+      return "Choisir une géométrie de référence moins détaillée ou utiliser un filtre bbox.";
+    }
+    return "Choisir une géométrie de référence moins détaillée (privilégier les couches ADMINEXPRESS-COG-CARTO-PE pour les surfaces administratives) ou utiliser un filtre bbox.";
+  })();
+
+  throw new Error([
+    `La géométrie de référence est trop volumineuse pour \`intersects_feature\`: ${filterBytes} octets de filtre (limite : ${MAX_SPATIAL_FILTER_BYTES}).`,
+    recommendation,
+  ].join("\n"));
 }

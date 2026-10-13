@@ -5,9 +5,11 @@ import {
   compileIntersectsPointSpatialFilter,
   compileDwithinSpatialFilter,
   compileIntersectsFeatureSpatialFilter,
+  MAX_SPATIAL_FILTER_BYTES,
 } from "../../src/wfs/spatialCql";
 
 import type { SpatialFilter } from "../../src/wfs/schema";
+import { geometryToEwkt } from "../../src/wfs/geometry";
 
 // --- Shared fixtures ---
 
@@ -124,6 +126,11 @@ describe("compileDwithinSpatialFilter", () => {
 // --- compileIntersectsFeatureSpatialFilter ---
 
 describe("compileIntersectsFeatureSpatialFilter", () => {
+  const oversizedGeometry = {
+    type: "MultiPoint" as const,
+    coordinates: Array.from({ length: 200_000 }, (_, index) => [2 + index / 100_000, 48]),
+  };
+
   it("should compile an intersects_feature filter with EWKT geometry", () => {
     const geometry = {
       type: "MultiPolygon" as const,
@@ -140,6 +147,42 @@ describe("compileIntersectsFeatureSpatialFilter", () => {
     const result = compileIntersectsFeatureSpatialFilter(geometryName, geometry);
 
     expect(result).toEqual("INTERSECTS(the_geom,SRID=4326;POINT(2.3522 48.8566))");
+  });
+
+  it("should preserve small filter geometries even when their vertices could be simplified", () => {
+    const geometry = {
+      type: "LineString" as const,
+      coordinates: [[2, 48], [2.1, 48.00001], [2.2, 48]],
+    };
+
+    expect(compileIntersectsFeatureSpatialFilter(geometryName, geometry)).toEqual(
+      `INTERSECTS(the_geom,${geometryToEwkt(geometry)})`,
+    );
+  });
+
+  it("should reject oversized filter geometries", () => {
+    expect(Buffer.byteLength(`INTERSECTS(the_geom,${geometryToEwkt(oversizedGeometry)})`)).toBeGreaterThan(MAX_SPATIAL_FILTER_BYTES);
+    expect(() => compileIntersectsFeatureSpatialFilter(geometryName, oversizedGeometry)).toThrow(
+      /géométrie.*trop volumineuse.*/,
+    );
+  });
+
+  it("should suggest the corresponding -CARTO-PE layer when reference is from ADMINEXPRESS-COG", () => {
+    expect(() =>
+      compileIntersectsFeatureSpatialFilter(geometryName, oversizedGeometry, "ADMINEXPRESS-COG.LATEST:departement"),
+    ).toThrow(/ADMINEXPRESS-COG-CARTO-PE\.LATEST:departement/);
+  });
+
+  it("should suggest using -CARTO-PE when reference is not small-scale", () => {
+    expect(() =>
+      compileIntersectsFeatureSpatialFilter(geometryName, oversizedGeometry, "BDTOPO_V3:batiment"),
+    ).toThrow(/ADMINEXPRESS-COG-CARTO-PE/);
+  });
+
+  it("should not recommend -CARTO-PE when already using a -CARTO-PE reference layer", () => {
+    expect(() =>
+      compileIntersectsFeatureSpatialFilter(geometryName, oversizedGeometry, "ADMINEXPRESS-COG-CARTO-PE.LATEST:departement"),
+    ).not.toThrow(/ADMINEXPRESS-COG-CARTO-PE/);
   });
 });
 
