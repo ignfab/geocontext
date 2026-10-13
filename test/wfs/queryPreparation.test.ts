@@ -215,6 +215,15 @@ describe("gpfGetFeatures/queryPreparation", () => {
     );
   });
 
+  it("should reject queries when combined CQL filter exceeds MAX_CQL_FILTER_BYTES once URL-encoded", () => {
+    // ~1.6 MB as raw text, ~2.3 MB once URL-encoded
+    const hugeWhereValues = Array.from({ length: 120_000 }, (_, i) => `val_${i}`);
+    expect(() => compileQueryParts({
+      ...baseInput,
+      where: [{ property: "code_insee", operator: "in", values: hugeWhereValues }],
+    }, wrappedFeatureType)).toThrow(/Le filtre CQL est trop volumineux/);
+  });
+
   it("should build sortBy from structured order_by", () => {
     const compiled = compileQueryParts({
       ...baseInput,

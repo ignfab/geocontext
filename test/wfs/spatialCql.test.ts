@@ -5,7 +5,8 @@ import {
   compileIntersectsPointSpatialFilter,
   compileDwithinSpatialFilter,
   compileIntersectsFeatureSpatialFilter,
-  MAX_SPATIAL_FILTER_BYTES,
+  encodedCqlFilterBytes,
+  MAX_CQL_FILTER_BYTES,
 } from "../../src/wfs/spatialCql";
 
 import type { SpatialFilter } from "../../src/wfs/schema";
@@ -126,9 +127,10 @@ describe("compileDwithinSpatialFilter", () => {
 // --- compileIntersectsFeatureSpatialFilter ---
 
 describe("compileIntersectsFeatureSpatialFilter", () => {
+  // Fits under the limit as raw text, but not once URL-encoded (`(`, `)`, `,` take 3 bytes each).
   const oversizedGeometry = {
     type: "MultiPoint" as const,
-    coordinates: Array.from({ length: 200_000 }, (_, index) => [2 + index / 100_000, 48]),
+    coordinates: Array.from({ length: 120_000 }, (_, index) => [2 + index / 100_000, 48]),
   };
 
   it("should compile an intersects_feature filter with EWKT geometry", () => {
@@ -160,8 +162,10 @@ describe("compileIntersectsFeatureSpatialFilter", () => {
     );
   });
 
-  it("should reject oversized filter geometries", () => {
-    expect(Buffer.byteLength(`INTERSECTS(the_geom,${geometryToEwkt(oversizedGeometry)})`)).toBeGreaterThan(MAX_SPATIAL_FILTER_BYTES);
+  it("should reject filter geometries whose URL-encoded filter is oversized", () => {
+    const filter = `INTERSECTS(the_geom,${geometryToEwkt(oversizedGeometry)})`;
+    expect(Buffer.byteLength(filter)).toBeLessThan(MAX_CQL_FILTER_BYTES);
+    expect(encodedCqlFilterBytes(filter)).toBeGreaterThan(MAX_CQL_FILTER_BYTES);
     expect(() => compileIntersectsFeatureSpatialFilter(geometryName, oversizedGeometry)).toThrow(
       /géométrie.*trop volumineuse.*/,
     );

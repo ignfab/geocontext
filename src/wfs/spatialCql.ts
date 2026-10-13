@@ -9,7 +9,21 @@ import type { Geometry } from "geojson";
 import type { SpatialFilter } from "./schema.js";
 import { geometryToEwkt } from "./geometry.js";
 
-export const MAX_SPATIAL_FILTER_BYTES = 2 * 1024 * 1024;
+/**
+ * Maximum size of the URL-encoded `cql_filter=...` POST body accepted by the Géoplateforme WFS.
+ * Beyond it, the server silently ignores `cql_filter` and returns the whole layer (measured on 2026-10-13).
+ */
+export const MAX_CQL_FILTER_BYTES = 2 * 1024 * 1024;
+
+/**
+ * Computes the size of the POST body carrying a CQL filter, to compare with `MAX_CQL_FILTER_BYTES`.
+ *
+ * @param cqlFilter Compiled CQL filter.
+ * @returns The size in bytes of the URL-encoded body (pure ASCII, so its length is its byte size).
+ */
+export function encodedCqlFilterBytes(cqlFilter: string) {
+  return new URLSearchParams({ cql_filter: cqlFilter }).toString().length;
+}
 
 const SMALL_SCALE_VERSIONS = ["2025", "2026", "LATEST"];
 
@@ -79,8 +93,8 @@ export function compileIntersectsFeatureSpatialFilter(
   referenceTypename?: string,
 ) {
   const exactFilter = `INTERSECTS(${geometryName},${geometryToEwkt(geometry)})`;
-  const filterBytes = Buffer.byteLength(exactFilter, "utf8");
-  if (filterBytes <= MAX_SPATIAL_FILTER_BYTES) {
+  const filterBytes = encodedCqlFilterBytes(exactFilter);
+  if (filterBytes <= MAX_CQL_FILTER_BYTES) {
     return exactFilter;
   }
 
@@ -96,7 +110,7 @@ export function compileIntersectsFeatureSpatialFilter(
   })();
 
   throw new Error([
-    `La géométrie de référence est trop volumineuse pour \`intersects_feature\`: ${filterBytes} octets de filtre (limite : ${MAX_SPATIAL_FILTER_BYTES}).`,
+    `La géométrie de référence est trop volumineuse pour \`intersects_feature\`: ${filterBytes} octets de filtre encodé (limite : ${MAX_CQL_FILTER_BYTES}).`,
     recommendation,
   ].join("\n"));
 }
