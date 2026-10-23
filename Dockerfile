@@ -1,4 +1,4 @@
-FROM node:24-alpine AS builder
+FROM node:24.22.1-alpine AS builder
 
 WORKDIR /opt/geocontext
 COPY package.json package-lock.json tsconfig.json ./
@@ -8,7 +8,7 @@ COPY scripts scripts/
 RUN npm run build
 RUN npm prune --omit=dev
 
-FROM node:24-alpine
+FROM node:24.22.1-alpine
 
 WORKDIR /opt/geocontext
 COPY --from=builder /opt/geocontext/package.json package.json
