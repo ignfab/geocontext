@@ -154,9 +154,12 @@ const envSchema = z.object({
                 .filter((o) => o.length > 0);
             return origins.length > 0 ? origins : undefined;
         })
-        // Intentionally not validating origin syntax:
-        // values are passed through to the HTTP transport layer.
-        .pipe(z.array(z.string()).min(1).optional())
+        // Full origins, any scheme (`https://host`, `vscode-webview://id`...): a host
+        // is required, and no wildcard since an origin only matches itself.
+        .pipe(z.array(z.url({
+            hostname: /^[^*]+$/,
+            error: (issue) => `Expected origins like https://example.com, got "${String(issue.input)}"`,
+        })).min(1).optional())
         .optional(),
     // Logging
     LOG_LEVEL: z.preprocess(emptyToUndefined, z.enum(logLevels).default("debug")),

@@ -33,7 +33,7 @@
     "clean:deps": "rm -rf node_modules",
     "clean": "npm run clean:dist && npm run clean:coverage",
     "reset:local": "npm run clean && npm run clean:deps",
-    "build": "npm run clean:dist && mcp-build",
+    "build": "npm run clean:dist && tsc -p tsconfig.json",
     "docs:mcp": "npm run build && node --no-warnings scripts/generate-mcp-docs.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "typecheck:test": "tsc -p tsconfig.test.json --noEmit",
@@ -54,8 +54,9 @@
     "inspect:mcp:cli": "mcp-inspector --cli node --use-env-proxy dist/index.js --"
   },
   "dependencies": {
-    "@ignfab/gpf-schema-store": "^0.3.0",
-    "@modelcontextprotocol/sdk": "^1.32.2",
+    "@ignfab/gpf-schema-store": "^0.4.0",
+    "@modelcontextprotocol/node": "^2.1.2",
+    "@modelcontextprotocol/server": "^2.4.0",
     "@rgrove/parse-xml": "^5.2.0",
     "@turf/bbox": "^7.4.0",
     "@turf/bbox-polygon": "^7.4.0",
@@ -67,12 +68,12 @@
     "earcut": "^3.2.4",
     "geographiclib-geodesic": "^2.2.0",
     "jsts": "^2.12.1",
-    "mcp-framework": "^0.2.22",
     "node-fetch": "^3.3.2",
     "winston": "^3.19.0",
-    "zod": "^3.25.76"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@modelcontextprotocol/client": "^2.4.0",
     "@modelcontextprotocol/inspector": "^2.15.0",
     "@turf/intersect": "^7.4.0",
     "@types/geojson": "^7946.0.16",

@@ -136,8 +136,12 @@ describe("parseEnv", () => {
   // --- CORS ---
 
   it("should parse comma-separated CORS origins", () => {
-    const env = parseEnv({ HTTP_CORS_ALLOWED_ORIGINS: "http://localhost:3000, https://example.com" });
-    expect(env.HTTP_CORS_ALLOWED_ORIGINS).toEqual(["http://localhost:3000", "https://example.com"]);
+    const env = parseEnv({ HTTP_CORS_ALLOWED_ORIGINS: "http://localhost:3000, https://example.com, vscode-webview://abc" });
+    expect(env.HTTP_CORS_ALLOWED_ORIGINS).toEqual(["http://localhost:3000", "https://example.com", "vscode-webview://abc"]);
+  });
+
+  it.each(["geollm.beta.ign.fr", "localhost:3000", "*", "https://*.ign.fr"])("should reject the CORS origin %s", (origin) => {
+    expect(() => parseEnv({ HTTP_CORS_ALLOWED_ORIGINS: origin })).toThrow(`Expected origins like https://example.com, got "${origin}"`);
   });
 
   it("should return undefined for empty CORS string", () => {
