@@ -29,6 +29,7 @@ import {
   ProxyTokenTooLargeError,
 } from "./token.js";
 import { ResponseTooLargeError, ServiceResponseError } from "../helpers/http.js";
+import { CqlFilterTooLargeError } from "../wfs/spatialCql.js";
 import { ZodError } from "zod";
 
 // --- Error → HTTP status mapping ---
@@ -73,6 +74,9 @@ function toHttpError(error: unknown): HttpError {
     // The client request was valid but the upstream WFS broke the single-feature
     // contract (duplicate / id mismatch / unusable body): an upstream anomaly.
     return { status: 502, detail: "Le service WFS a renvoyé une réponse incohérente pour cet objet." };
+  }
+  if (error instanceof CqlFilterTooLargeError) {
+    return { status: 413, detail: "La couche demandée exige un filtrage spatial trop lourd pour être calculé." };
   }
   if (error instanceof ServiceResponseError) {
     const upstream = error.httpStatus ?? 502;

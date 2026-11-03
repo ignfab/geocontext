@@ -9,7 +9,7 @@
 import { GPF_WFS_URL } from "./catalog.js";
 import type { CompiledQuery } from "./queryPreparation.js";
 import { queryIsGetFeaturesInput, type GpfQueryFeaturesInput } from "./schema.js";
-import { MAX_CQL_FILTER_BYTES } from "./spatialCql.js";
+import { CqlFilterTooLargeError, MAX_CQL_FILTER_BYTES } from "./spatialCql.js";
 
 // --- Transport Types ---
 
@@ -36,7 +36,7 @@ function buildBody(cqlFilter?: string) {
   const body = new URLSearchParams({ cql_filter: cqlFilter }).toString();
   // The URL-encoded body is pure ASCII: its length is its size in bytes.
   if (body.length > MAX_CQL_FILTER_BYTES) {
-    throw new Error(
+    throw new CqlFilterTooLargeError(
       `Le filtre CQL est trop volumineux : ${body.length} octets une fois encodé (limite : ${MAX_CQL_FILTER_BYTES}).`,
     );
   }

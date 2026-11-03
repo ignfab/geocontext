@@ -39,6 +39,7 @@ import {
   compileDwithinSpatialFilter,
   compileIntersectsFeatureSpatialFilter,
   compileIntersectsPointSpatialFilter,
+  CqlFilterTooLargeError,
   encodedCqlFilterBytes,
   MAX_CQL_FILTER_BYTES,
 } from "./spatialCql.js";
@@ -233,7 +234,7 @@ export function compileQueryParts(
   if (cqlFilter) {
     const cqlFilterBytes = encodedCqlFilterBytes(cqlFilter);
     if (cqlFilterBytes > MAX_CQL_FILTER_BYTES) {
-      throw new Error(
+      throw new CqlFilterTooLargeError(
         `Le filtre CQL est trop volumineux : ${cqlFilterBytes} octets une fois encodé (limite : ${MAX_CQL_FILTER_BYTES}). ` +
           "Réduire le nombre de clauses attributaires ou simplifier les filtres.",
       );
