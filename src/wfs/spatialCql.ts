@@ -101,12 +101,12 @@ export function compileIntersectsFeatureSpatialFilter(
   const recommendation = (() => {
     const peTwin = referenceTypename ? toSmallScaleTypename(referenceTypename) : undefined;
     if (peTwin) {
-      return `Choisir une géométrie de référence moins détaillée (privilégier la couche '${peTwin}' au lieu de '${referenceTypename}') ou utiliser un filtre bbox.`;
+      return `Choisir une géométrie de référence moins détaillée (privilégier la couche '${peTwin}' au lieu de '${referenceTypename}' et utiliser la propriété \`cleabs\` comme clé primaire pour migrer depuis ${referenceTypename}).`;
     }
     if (referenceTypename?.includes("CARTO-PE")) {
-      return "Choisir une géométrie de référence moins détaillée ou utiliser un filtre bbox.";
+      return "Choisir une géométrie de référence moins détaillée.";
     }
-    return "Choisir une géométrie de référence moins détaillée (privilégier les couches ADMINEXPRESS-COG-CARTO-PE pour les surfaces administratives) ou utiliser un filtre bbox.";
+    return "Choisir une géométrie de référence moins détaillée (privilégier les couches ADMINEXPRESS-COG-CARTO-PE pour les surfaces administratives).";
   })();
 
   throw new Error([
