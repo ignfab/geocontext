@@ -104,7 +104,8 @@ const logFormats = ["json", "simple"] as const;
 const nodeEnvs = ["development", "test", "production"] as const;
 
 // Shared keys used by both `fields` and `boost` in MiniSearchCollectionSearchOptions.
-export const MINISEARCH_INDEXED_OPTION_KEYS = [
+// TODO: export INDEXED_SEARCH_FIELDS in gpf-schema-store instead and reuse it here
+const MINISEARCH_INDEXED_OPTION_KEYS = [
     'namespace',
     'name',
     'identifierTokens',
@@ -119,7 +120,7 @@ export const MINISEARCH_INDEXED_OPTION_KEYS = [
     'selectionCriteria',
 ] as const;
 
-export const MINISEARCH_COMBINE_WITH_VALUES = ["AND", "OR"] as const;
+const MINISEARCH_COMBINE_WITH_VALUES = ["AND", "OR"] as const;
 
 export const miniSearchOptionsSchema = z.object({
     fields: z.array(z.enum(MINISEARCH_INDEXED_OPTION_KEYS)).optional(),

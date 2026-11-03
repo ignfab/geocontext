@@ -54,7 +54,7 @@
     "inspect:mcp:cli": "mcp-inspector --cli node --use-env-proxy dist/index.js --"
   },
   "dependencies": {
-    "@ignfab/gpf-schema-store": "^0.2.2",
+    "@ignfab/gpf-schema-store": "^0.3.0",
     "@modelcontextprotocol/sdk": "^1.31.0",
     "@rgrove/parse-xml": "^5.0.0",
     "@turf/bbox": "^7.4.0",
