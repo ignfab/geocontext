@@ -103,6 +103,11 @@ export class WfsSchemaStore {
         throw new FeatureTypeNotFoundError(name);
     }
 
+    /** Checks whether a typename exists in the embedded catalog without throwing for missing entries. */
+    hasFeatureType(name: string): boolean {
+        return this.catalog.getCollectionSchema(name) !== undefined;
+    }
+
 }
 
 // --- Default singleton ---

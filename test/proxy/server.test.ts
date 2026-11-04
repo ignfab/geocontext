@@ -7,6 +7,7 @@ import { encodeToken } from "../../src/proxy/token";
 import { resetEnv } from "../../src/config/env";
 import { PROXY_TOKEN_KIND } from "../../src/wfs/schema";
 import { FeatureNotFoundError, FeatureCardinalityError } from "../../src/wfs/byId";
+import { CqlFilterTooLargeError } from "../../src/wfs/spatialCql";
 import { ServiceResponseError, ResponseTooLargeError } from "../../src/helpers/http";
 
 // Mock the proxy engine + transport so the server is exercised WITHOUT network.
@@ -117,6 +118,16 @@ describe("proxy/server", () => {
     expect(res.status).toBe(504);
     expect(res.body).toMatchObject({ error: true });
     expect(res.text).not.toContain("upstream timed out");
+  });
+
+  it("413 on a CQL filter built from an oversized isochrone", async () => {
+    const detail = "La couche demandée exige un filtrage spatial trop lourd pour être calculé.";
+    runGeometryFeatureQuery.mockRejectedValue(new CqlFilterTooLargeError(detail));
+
+    const res = await request(baseUrl).get(layerPath(validToken()));
+
+    expect(res.status).toBe(413);
+    expect(res.body).toEqual({ error: true, detail });
   });
 
   it("500 on an unexpected (non-typed) error", async () => {

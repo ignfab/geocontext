@@ -137,6 +137,16 @@ describe("Test WfsSchemaStore",() => {
         });
     });
 
+    describe("hasFeatureType", () => {
+        it("should recognize an existing catalog entry", () => {
+            expect(wfsSchemaStore.hasFeatureType("BDTOPO_V3:batiment")).toBe(true);
+        });
+
+        it("should return false for a missing entry without throwing", () => {
+            expect(wfsSchemaStore.hasFeatureType("BDTOPO_V3:not_found")).toBe(false);
+        });
+    });
+
     describe("getFeatureType",() => {
         it("should return the feature type with BDTOPO_V3:batiment", async () => {
             const featureType = await wfsSchemaStore.getFeatureType("BDTOPO_V3:batiment");
