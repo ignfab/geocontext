@@ -35,7 +35,7 @@ describe("Test GpfSearchTypesTool", () => {
       required: [],
     };
 
-    vi.mocked(wfsSchemaStore).searchFeatureTypesWithScores.mockResolvedValue(mockSearchResults as never);
+    vi.mocked(wfsSchemaStore).searchFeatureTypes.mockResolvedValue(mockSearchResults as never);
     
     // First call succeeds, second call throws an error
     vi.mocked(wfsSchemaStore).getFeatureType.mockImplementation(async (id: string) => {
@@ -118,7 +118,7 @@ describe("Test GpfSearchTypesTool", () => {
       required: [],
     };
 
-    vi.mocked(wfsSchemaStore).searchFeatureTypesWithScores.mockResolvedValue(mockSearchResults as never);
+    vi.mocked(wfsSchemaStore).searchFeatureTypes.mockResolvedValue(mockSearchResults as never);
     vi.mocked(wfsSchemaStore).getFeatureType.mockResolvedValue({
       typename: "BDTOPO_V3:batiment",
       schema: mockFeatureType,

@@ -7,7 +7,7 @@ import type {
     MiniSearchCollectionSearchOptions,
 } from '@ignfab/gpf-schema-store';
 import { getCollectionCatalog } from '@ignfab/gpf-schema-store';
-import { getEnv, MINISEARCH_INDEXED_OPTION_KEYS, miniSearchOptionsSchema } from '../config/env.js';
+import { getEnv, miniSearchOptionsSchema } from '../config/env.js';
 
 export type GpfFeatureType = {
     typename: string;
@@ -17,20 +17,6 @@ export type GpfFeatureType = {
 // --- Constants ---
 
 export const GPF_WFS_URL = "https://data.geopf.fr/wfs";
-
-// --- Types ---
-
-type MiniSearchOptions = MiniSearchCollectionSearchOptions;
-
-/**
- * CollectionSearchMatch extended with MiniSearch-specific metadata.
- * Fields are populated when the underlying engine supports searchDetailed().
- */
-export type DetailedCollectionSearchMatch = CollectionSearchMatch & {
-    queryTerms?: string[];
-    terms?: string[];
-    match?: Record<string, Array<typeof MINISEARCH_INDEXED_OPTION_KEYS[number]>>;
-};
 
 // --- Errors ---
 
@@ -51,7 +37,7 @@ function invalidSearchOptionsError(reason: string): Error {
 
 // Parses and validates a plain-object value into MiniSearchCollectionSearchOptions.
 // Throws a descriptive error if the value has unexpected keys or wrong value types.
-function parseMiniSearchOptions(value: unknown): MiniSearchOptions {
+function parseMiniSearchOptions(value: unknown): MiniSearchCollectionSearchOptions {
     const result = miniSearchOptionsSchema.safeParse(value);
     if (!result.success) {
         const issue = result.error.issues[0];
@@ -64,7 +50,7 @@ function parseMiniSearchOptions(value: unknown): MiniSearchOptions {
 
 // Reads MiniSearch options from the GPF_WFS_MINISEARCH_OPTIONS environment variable.
 // Returns undefined when the variable is absent or empty.
-export function loadMiniSearchOptionsFromEnv(): MiniSearchOptions | undefined {
+export function loadMiniSearchOptionsFromEnv(): MiniSearchCollectionSearchOptions | undefined {
     const raw = getEnv().GPF_WFS_MINISEARCH_OPTIONS;
     if (!raw) {
         return undefined;
@@ -83,15 +69,7 @@ export class WfsSchemaStore {
         this.catalog = getCollectionCatalog(options);
     }
 
-    async searchFeatureTypesWithScores(query: string, maxResults: number = 20): Promise<DetailedCollectionSearchMatch[]> {
-        // Use searchDetailed() when available (MiniSearchCollectionSearchEngine) to surface
-        // queryTerms, terms and match in addition to id and score.
-        // The method is not part of the CollectionCatalog interface, so we access it at
-        // runtime through the engine stored on InMemoryCollectionCatalog.
-        const engine = (this.catalog as unknown as { searchEngine?: { searchDetailed?: (q: string, opts: object) => DetailedCollectionSearchMatch[] } }).searchEngine;
-        if (typeof engine?.searchDetailed === 'function') {
-            return engine.searchDetailed(query, { limit: maxResults });
-        }
+    async searchFeatureTypes(query: string, maxResults: number = 20): Promise<CollectionSearchMatch[]> {
         return this.catalog.search(query, { limit: maxResults });
     }
 

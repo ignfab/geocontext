@@ -54,9 +54,9 @@
     "inspect:mcp:cli": "mcp-inspector --cli node --use-env-proxy dist/index.js --"
   },
   "dependencies": {
-    "@ignfab/gpf-schema-store": "^0.2.2",
-    "@modelcontextprotocol/sdk": "^1.31.0",
-    "@rgrove/parse-xml": "^5.0.0",
+    "@ignfab/gpf-schema-store": "^0.3.0",
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "@rgrove/parse-xml": "^5.1.0",
     "@turf/bbox": "^7.4.0",
     "@turf/bbox-polygon": "^7.4.0",
     "@turf/centroid": "^7.4.0",
@@ -73,17 +73,17 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@modelcontextprotocol/inspector": "^2.9.0",
+    "@modelcontextprotocol/inspector": "^2.13.0",
     "@turf/intersect": "^7.4.0",
     "@types/geojson": "^7946.0.16",
-    "@types/node": "^26.6.3",
+    "@types/node": "^26.6.6",
     "@types/supertest": "^7.2.1",
-    "@vitest/coverage-v8": "^5.0.3",
+    "@vitest/coverage-v8": "^5.1.0",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
-    "supertest": "^7.3.0",
+    "supertest": "^7.3.1",
     "typescript": "^7.0.2",
-    "vitest": "^5.0.3"
+    "vitest": "^5.1.0"
   },
   "allowScripts": {
     "@modelcontextprotocol/inspector": false

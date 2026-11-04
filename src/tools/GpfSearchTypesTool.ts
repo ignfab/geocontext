@@ -7,7 +7,6 @@ import { z } from "zod";
 
 import { READ_ONLY_CLOSED_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import { wfsSchemaStore } from "../wfs/catalog.js";
-import type { DetailedCollectionSearchMatch } from "../wfs/catalog.js";
 import logger from "../logger.js";
 
 // --- Schemas ---
@@ -91,8 +90,8 @@ class GpfSearchTypesTool extends BaseTool<GpfSearchTypesInput> {
     });
 
     const maxResults = input.max_results || 10;
-    const featureTypes = await wfsSchemaStore.searchFeatureTypesWithScores(input.query, maxResults);
-    const results = await Promise.all(featureTypes.map(async ({ id, score, queryTerms, terms, match }: DetailedCollectionSearchMatch) => {
+    const featureTypes = await wfsSchemaStore.searchFeatureTypes(input.query, maxResults);
+    const results = await Promise.all(featureTypes.map(async ({ id, score, queryTerms, terms, match }) => {
       try {
         const featureType = await wfsSchemaStore.getFeatureType(id);
         return {

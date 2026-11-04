@@ -85,16 +85,16 @@ describe("Test WfsSchemaStore",() => {
         });
     });
 
-    describe("searchFeatureTypesWithScores",() => {
+    describe("searchFeatureTypes",() => {
         it("should find BDTOPO_V3:batiment for 'bâtiments bdtopo'", async () => {
-            const featureTypes = await wfsSchemaStore.searchFeatureTypesWithScores("bâtiments bdtopo");
+            const featureTypes = await wfsSchemaStore.searchFeatureTypes("bâtiments bdtopo");
             expect(featureTypes).toBeDefined();
             expect(featureTypes.length).toBeGreaterThan(0);
             const featureTypeNames= featureTypes.map((featureType)=>featureType.id);
             expect(featureTypeNames).toContain("BDTOPO_V3:batiment");
         });
         it("should find BDTOPO_V3:departement and ADMINEXPRESS-COG.LATEST:departement for 'départements'", async () => {
-            const featureTypes = await wfsSchemaStore.searchFeatureTypesWithScores("départements");
+            const featureTypes = await wfsSchemaStore.searchFeatureTypes("départements");
             expect(featureTypes).toBeDefined();
             expect(featureTypes.length).toBeGreaterThan(0);
             const featureTypeNames= featureTypes.map((featureType)=>featureType.id);
@@ -111,14 +111,14 @@ describe("Test WfsSchemaStore",() => {
                     boost: { title: 4.0 },
                 }
             });
-            const featureTypes = await tuned.searchFeatureTypesWithScores("bâtiments bdtopo");
+            const featureTypes = await tuned.searchFeatureTypes("bâtiments bdtopo");
             expect(featureTypes).toBeDefined();
             expect(featureTypes.length).toBeGreaterThan(0);
             const featureTypeNames= featureTypes.map((featureType)=>featureType.id);
             expect(featureTypeNames).toContain("BDTOPO_V3:batiment");
         });
         it("should return scored results for 'bâtiments bdtopo'", async () => {
-            const featureTypes = await wfsSchemaStore.searchFeatureTypesWithScores("bâtiments bdtopo");
+            const featureTypes = await wfsSchemaStore.searchFeatureTypes("bâtiments bdtopo");
             expect(featureTypes).toBeDefined();
             expect(featureTypes.length).toBeGreaterThan(0);
 
@@ -128,7 +128,7 @@ describe("Test WfsSchemaStore",() => {
         });
 
         it("should include MiniSearch detailed metadata", async () => {
-            const featureTypes = await wfsSchemaStore.searchFeatureTypesWithScores("bâtiments bdtopo");
+            const featureTypes = await wfsSchemaStore.searchFeatureTypes("bâtiments bdtopo");
             const batimentResult = featureTypes.find((featureType) => featureType.id === "BDTOPO_V3:batiment");
 
             expect(batimentResult).toBeDefined();
