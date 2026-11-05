@@ -20,6 +20,7 @@ import type {
   TravelTimeResolver,
   GeometryFeatureQueryDeps,
   GeometryFeatureByIdQueryDeps,
+  GeometryIsochroneQueryDeps,
 } from "./execute.js";
 import { fetchJSONPostWithLimit, fetchJSONGetWithLimit } from "../helpers/http.js";
 import { RateLimiter } from "../helpers/RateLimiter.js";
@@ -124,12 +125,9 @@ export const resolveProxyTravelTimeGeometry: TravelTimeResolver = async (
     throw new Error("resolveProxyTravelTimeGeometry appelé sans filtre `travel_time`.");
   }
 
-  return await getProxyIsochroneClient().getTravelTimeGeometry({
-    lon: spatialFilter.lon,
-    lat: spatialFilter.lat,
-    minutes: spatialFilter.minutes,
-    profile: spatialFilter.profile,
-  });
+  const { operator, ...parameters } = spatialFilter;
+
+  return await getProxyIsochroneClient().getIsochrone(parameters);
 };
 
 // --- Default Engine Dependencies ---
@@ -156,5 +154,14 @@ export function getDefaultGeometryFeatureQueryDeps(): GeometryFeatureQueryDeps {
 export function getDefaultGeometryFeatureByIdQueryDeps(): GeometryFeatureByIdQueryDeps {
   return {
     wfsClient: getProxyWfsClient(),
+  };
+}
+
+/**
+ * Default dependency bundle for `runGeometryIsochroneQuery`.
+ */
+export function getDefaultGeometryIsochroneQueryDeps(): GeometryIsochroneQueryDeps {
+  return {
+    getGeometry: (input) => getProxyIsochroneClient().getIsochrone(input),
   };
 }

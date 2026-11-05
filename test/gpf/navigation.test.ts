@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { NavigationIsochroneClient } from "../../src/gpf/navigation.js";
 import { RateLimiter } from "../../src/helpers/RateLimiter.js";
+import { ServiceResponseError } from "../../src/helpers/http.js";
 
 describe("NavigationIsochroneClient", () => {
   it("should build a Valhalla travel-time isochrone request and return its GeoJSON geometry", async () => {
@@ -21,7 +22,7 @@ describe("NavigationIsochroneClient", () => {
       },
     );
 
-    const geometry = await client.getTravelTimeGeometry({
+    const geometry = await client.getIsochrone({
       lon: 2.337306,
       lat: 48.849319,
       minutes: 15,
@@ -49,11 +50,15 @@ describe("NavigationIsochroneClient", () => {
       async () => ({ geometry: null }),
     );
 
-    await expect(client.getTravelTimeGeometry({
+    const promise = client.getIsochrone({
       lon: 2.337306,
       lat: 48.849319,
       minutes: 15,
       profile: "car",
-    })).rejects.toThrow("géométrie GeoJSON exploitable");
+    });
+
+    await expect(promise).rejects.toThrow("géométrie GeoJSON exploitable");
+    await expect(promise).rejects.toBeInstanceOf(ServiceResponseError);
+    await expect(promise).rejects.toMatchObject({ httpStatus: 502 });
   });
 });

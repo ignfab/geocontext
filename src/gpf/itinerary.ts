@@ -3,14 +3,14 @@ import logger from "../logger.js";
 import type { JsonFetcher } from "../helpers/http.js";
 import type { RateLimiter } from "../helpers/RateLimiter.js";
 import { getNavigationRateLimiter } from "./navigationRateLimiter.js";
-import { TRAVEL_TIME_PROFILES, TRAVEL_TIME_RESOURCE } from "./navigation.js";
+import { NAVIGATION_PROFILES, NAVIGATION_ISOCHRONE_RESOURCE } from "./navigation.js";
 
 export const NAVIGATION_ITINERARY_SOURCE = "Géoplateforme (calcul d'itinéraire)";
 export const NAVIGATION_ITINERARY_URL = "https://data.geopf.fr/navigation/itineraire";
 // Same engine as the `travel_time_filter` isochrones, so that both report the
 // same travel times.
-export const ITINERARY_RESOURCE = TRAVEL_TIME_RESOURCE;
-export const ITINERARY_PROFILES = TRAVEL_TIME_PROFILES;
+export const ITINERARY_RESOURCE = NAVIGATION_ISOCHRONE_RESOURCE;
+export const ITINERARY_PROFILES = NAVIGATION_PROFILES;
 export const ITINERARY_METRICS = ["time", "distance"] as const;
 
 export type ItineraryProfile = typeof ITINERARY_PROFILES[number];

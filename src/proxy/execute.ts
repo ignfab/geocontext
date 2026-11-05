@@ -1,5 +1,5 @@
 /**
- * Proxy-side WFS execution engine.
+ * Proxy-side WFS and isochrone execution engine.
  *
  * `runGeometryFeatureQuery` (entry point) compiles and runs the layer query;
  * `resolveReferenceGeometry` (internal helper) resolves the reference geometry
@@ -37,8 +37,12 @@ import { resolveFeatureGeometry } from "../wfs/referenceGeometry.js";
 import { rethrowIdentifiedCatalogDesyncError } from "../wfs/catalogDesync.js";
 import { ServiceResponseError, extractJsonServiceError } from "../helpers/http.js";
 import type { WfsFeatureCollectionResponse } from "../wfs/types.js";
-import type { GpfGetFeaturesInput, GpfGetFeatureByIdLayerInput } from "../wfs/schema.js";
-import type { Geometry } from "geojson";
+import type { FeatureCollection, Geometry } from "geojson";
+import type {
+  GpfGetFeaturesInput,
+  GpfGetFeatureByIdLayerInput,
+  GpfIsochroneLayerInput,
+} from "../wfs/schema.js";
 
 // --- Injected Dependencies ---
 
@@ -300,5 +304,45 @@ export async function runGeometryFeatureByIdQuery(
     totalFeatures: 1,
     numberReturned: 1,
     numberMatched: 1,
+  };
+}
+
+// --- Isochrone Public Engine ---
+
+export type IsochroneGeometryResolver = (
+  input: GpfIsochroneLayerInput,
+) => Promise<Geometry>;
+
+export type GeometryIsochroneQueryDeps = {
+  getGeometry: IsochroneGeometryResolver;
+};
+
+/**
+ * Resolves an isochrone and returns it as a GeoJSON `FeatureCollection` with full
+ * geometry (for map rendering by MCP Carto).
+ *
+ * Counterpart of {@link runGeometryFeatureQuery} for the isochrone producer tool.
+ * The request params are echoed into `properties` so the rendered layer carries
+ * its own legend.
+ *
+ * @param input Validated isochrone layer input (`{ lon, lat, profile, minutes }`).
+ * @param deps Injected isochrone geometry resolver.
+ * @returns The isochrone as a single GeoJSON FeatureCollection.
+ */
+export async function runGeometryIsochroneQuery(
+  input: GpfIsochroneLayerInput,
+  deps: GeometryIsochroneQueryDeps,
+): Promise<FeatureCollection> {
+  const geometry = await deps.getGeometry(input);
+
+  return {
+    type: "FeatureCollection" as const,
+    features: [
+      {
+        type: "Feature" as const,
+        geometry,
+        properties: input,
+      }
+    ]
   };
 }
