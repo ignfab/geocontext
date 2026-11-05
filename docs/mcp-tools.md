@@ -35,7 +35,7 @@ Annotations MCP exposées dans la définition `tools/list` de chaque tool :
 | `readOnlyHint` | oui | Le tool consulte des données sans modifier d'état côté serveur. |
 | `destructiveHint` | non | Le tool n'est pas signalé comme destructif. |
 | `idempotentHint` | oui | Répéter le même appel ne déclenche pas d'effet de bord supplémentaire attendu. |
-| `openWorldHint` | oui (non pour `gpf_search_types`, `gpf_describe_type`, `gpf_get_features_layer`, `gpf_get_feature_by_id_layer` et `gpf_isoline_layer`) | Le tool interroge des sources externes ou ouvertes, dont le contenu peut évoluer. |
+| `openWorldHint` | oui (non pour `gpf_search_types`, `gpf_describe_type`, `gpf_get_features_layer`, `gpf_get_feature_by_id_layer`, `gpf_isoline_layer` et `gpf_itinerary_layer`) | Le tool interroge des sources externes ou ouvertes, dont le contenu peut évoluer. |
 
 ## Liste des tools
 
@@ -53,6 +53,7 @@ Annotations MCP exposées dans la définition `tools/list` de chaque tool :
 - [`gpf_get_feature_by_id`](#gpf_get_feature_by_id)
 - [`gpf_get_feature_by_id_layer`](#gpf_get_feature_by_id_layer)
 - [`gpf_isoline_layer`](#gpf_isoline_layer)
+- [`gpf_itinerary_layer`](#gpf_itinerary_layer)
 - [`distance`](#distance)
 
 ## `geocode`
@@ -190,8 +191,8 @@ Renvoie l'altitude (en mètres) et la précision de la mesure (accuracy) d'un po
 
 | Champ | Type | Requis | Description |
 | --- | --- | --- | --- |
-| `lat` | number | oui | La latitude du point. |
-| `lon` | number | oui | La longitude du point. |
+| `lat` | number | oui | Latitude du point en WGS84. |
+| `lon` | number | oui | Longitude du point en WGS84. |
 
 <details>
 <summary>Schéma d’entrée brut</summary>
@@ -202,13 +203,13 @@ Renvoie l'altitude (en mètres) et la précision de la mesure (accuracy) d'un po
   "properties": {
     "lon": {
       "type": "number",
-      "description": "La longitude du point.",
+      "description": "Longitude du point en WGS84.",
       "minimum": -180,
       "maximum": 180
     },
     "lat": {
       "type": "number",
-      "description": "La latitude du point.",
+      "description": "Latitude du point en WGS84.",
       "minimum": -90,
       "maximum": 90
     }
@@ -295,8 +296,8 @@ Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gp
 
 | Champ | Type | Requis | Description |
 | --- | --- | --- | --- |
-| `lat` | number | oui | La latitude du point. |
-| `lon` | number | oui | La longitude du point. |
+| `lat` | number | oui | Latitude du point en WGS84. |
+| `lon` | number | oui | Longitude du point en WGS84. |
 
 <details>
 <summary>Schéma d’entrée brut</summary>
@@ -307,13 +308,13 @@ Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gp
   "properties": {
     "lon": {
       "type": "number",
-      "description": "La longitude du point.",
+      "description": "Longitude du point en WGS84.",
       "minimum": -180,
       "maximum": 180
     },
     "lat": {
       "type": "number",
-      "description": "La latitude du point.",
+      "description": "Latitude du point en WGS84.",
       "minimum": -90,
       "maximum": 90
     }
@@ -426,8 +427,8 @@ Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gp
 
 | Champ | Type | Requis | Description |
 | --- | --- | --- | --- |
-| `lat` | number | oui | La latitude du point. |
-| `lon` | number | oui | La longitude du point. |
+| `lat` | number | oui | Latitude du point en WGS84. |
+| `lon` | number | oui | Longitude du point en WGS84. |
 
 <details>
 <summary>Schéma d’entrée brut</summary>
@@ -438,13 +439,13 @@ Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gp
   "properties": {
     "lon": {
       "type": "number",
-      "description": "La longitude du point.",
+      "description": "Longitude du point en WGS84.",
       "minimum": -180,
       "maximum": 180
     },
     "lat": {
       "type": "number",
-      "description": "La latitude du point.",
+      "description": "Latitude du point en WGS84.",
       "minimum": -90,
       "maximum": 90
     }
@@ -570,8 +571,8 @@ Modèles d'URL Géoportail de l'Urbanisme :
 
 | Champ | Type | Requis | Description |
 | --- | --- | --- | --- |
-| `lat` | number | oui | La latitude du point. |
-| `lon` | number | oui | La longitude du point. |
+| `lat` | number | oui | Latitude du point en WGS84. |
+| `lon` | number | oui | Longitude du point en WGS84. |
 
 <details>
 <summary>Schéma d’entrée brut</summary>
@@ -582,13 +583,13 @@ Modèles d'URL Géoportail de l'Urbanisme :
   "properties": {
     "lon": {
       "type": "number",
-      "description": "La longitude du point.",
+      "description": "Longitude du point en WGS84.",
       "minimum": -180,
       "maximum": 180
     },
     "lat": {
       "type": "number",
-      "description": "La latitude du point.",
+      "description": "Latitude du point en WGS84.",
       "minimum": -90,
       "maximum": 90
     }
@@ -704,8 +705,8 @@ Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gp
 
 | Champ | Type | Requis | Description |
 | --- | --- | --- | --- |
-| `lat` | number | oui | La latitude du point. |
-| `lon` | number | oui | La longitude du point. |
+| `lat` | number | oui | Latitude du point en WGS84. |
+| `lon` | number | oui | Longitude du point en WGS84. |
 
 <details>
 <summary>Schéma d’entrée brut</summary>
@@ -716,13 +717,13 @@ Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gp
   "properties": {
     "lon": {
       "type": "number",
-      "description": "La longitude du point.",
+      "description": "Longitude du point en WGS84.",
       "minimum": -180,
       "maximum": 180
     },
     "lat": {
       "type": "number",
-      "description": "La latitude du point.",
+      "description": "Latitude du point en WGS84.",
       "minimum": -90,
       "maximum": 90
     }
@@ -1110,7 +1111,7 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
 | `limit` | integer | non | Nombre maximum d'objets à renvoyer. Valeur par défaut : 100. Maximum : 5000. Valeur par défaut : 100. |
 | `order_by` | array | non | Liste ordonnée des critères de tri. |
 | `select` | array | non | Liste des propriétés non géométriques à renvoyer pour chaque objet. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles. Exemple : `["code_insee", "nom_officiel"]`. |
-| `spatial_extras` | array | non | Éléments calculés depuis la géométrie à renvoyer pour chaque objet. Peut inclure `centroid`, `bbox`, `length`, `area`, `distance_to_filter_center` et `intersection_area`, aucun par défaut.<br>`centroid` est le centroïde (moyenne arithmétique des sommets) de la géométrie. Il peut tomber hors d'une géométrie concave : un `intersects_point_filter` sur ce point peut alors ne renvoyer ni l'objet, ni ce qui le contient.<br>`bbox` est la boîte englobante de la géométrie : `[ouest, sud, est, nord]` en WGS84 `lon/lat`, dans l'ordre des champs `west`, `south`, `east` et `north` de `bbox_filter`.<br>`length` est la somme des longueurs (en m) des parties linéaires de la géométrie (LineString, MultiLineString).<br>`area` est la somme des surfaces (en m²) des parties surfaciques de la géométrie (Polygon, MultiPolygon).<br>`distance_to_filter_center` est la distance (en m) entre le centre du filtre spatial et le point le plus proche de l'objet renvoyé, `0` si l'objet contient ce centre. Ce centre est le point de `dwithin_point_filter`, le point de départ de `isoline_filter`, le centre de la boîte de `bbox_filter` et le centroïde (moyenne des sommets) de l'objet de référence de `intersects_feature_filter`.<br>`intersection_area` est l'aire (en m²) de la partie de l'objet renvoyé située dans le filtre spatial (boîte, disque, isochrone/isodistance ou objet de référence surfacique). Elle vaut `null` si l'objet renvoyé n'a pas de partie surfacique, et `0` si l'objet ne recouvre pas le filtre.<br>`distance_to_filter_center` et `intersection_area` exigent un filtre spatial.<br>Les `spatial_extras` sont calculés après la requête, sur les seuls objets renvoyés : ils ne sont utilisables ni dans `where` ni dans `order_by`. Pour un classement (les N plus grands, les N plus proches) ou une somme, vérifier que `numberReturned` est égal à `numberMatched`, sinon augmenter `limit` ou restreindre le filtre spatial. Pour les N plus proches d'un point, utiliser `dwithin_point_filter` avec `distance_to_filter_center`, trier sur cette distance et élargir `distance_m` s'il y a moins de N objets.<br>Si l'élément à calculer est incompatible avec la géométrie (exemple : bbox d'un point, aire d'une géométrie linéaire) et que le type de la géométrie est connu à l'avance, une erreur indiquera comment corriger la requête.<br>Sinon, un élément qui n'est pas calculable pour un objet (géométrie absente ou vide, aucune partie de la dimension requise) vaut `null`. Une valeur numérique, `0` compris, signifie que le calcul a bien eu lieu. Valeur par défaut : []. |
+| `spatial_extras` | array | non | Éléments calculés depuis la géométrie à renvoyer pour chaque objet. Peut inclure `centroid`, `bbox`, `length`, `area`, `distance_to_filter_center` et `intersection_area`, aucun par défaut.<br>`centroid` est le centroïde (moyenne arithmétique des sommets) de la géométrie. Il peut tomber hors d'une géométrie concave : un `intersects_point_filter` sur ce point peut alors ne renvoyer ni l'objet, ni ce qui le contient.<br>`bbox` est la boîte englobante de la géométrie : `[ouest, sud, est, nord]` en WGS84, dans l'ordre des champs `west`, `south`, `east` et `north` de `bbox_filter`.<br>`length` est la somme des longueurs (en m) des parties linéaires de la géométrie (LineString, MultiLineString).<br>`area` est la somme des surfaces (en m²) des parties surfaciques de la géométrie (Polygon, MultiPolygon).<br>`distance_to_filter_center` est la distance (en m) entre le centre du filtre spatial et le point le plus proche de l'objet renvoyé, `0` si l'objet contient ce centre. Ce centre est le point de `dwithin_point_filter`, le point de départ de `isoline_filter`, le centre de la boîte de `bbox_filter` et le centroïde (moyenne des sommets) de l'objet de référence de `intersects_feature_filter`.<br>`intersection_area` est l'aire (en m²) de la partie de l'objet renvoyé située dans le filtre spatial (boîte, disque, isochrone/isodistance ou objet de référence surfacique). Elle vaut `null` si l'objet renvoyé n'a pas de partie surfacique, et `0` si l'objet ne recouvre pas le filtre.<br>`distance_to_filter_center` et `intersection_area` exigent un filtre spatial.<br>Les `spatial_extras` sont calculés après la requête, sur les seuls objets renvoyés : ils ne sont utilisables ni dans `where` ni dans `order_by`. Pour un classement (les N plus grands, les N plus proches) ou une somme, vérifier que `numberReturned` est égal à `numberMatched`, sinon augmenter `limit` ou restreindre le filtre spatial. Pour les N plus proches d'un point, utiliser `dwithin_point_filter` avec `distance_to_filter_center`, trier sur cette distance et élargir `distance_m` s'il y a moins de N objets.<br>Si l'élément à calculer est incompatible avec la géométrie (exemple : bbox d'un point, aire d'une géométrie linéaire) et que le type de la géométrie est connu à l'avance, une erreur indiquera comment corriger la requête.<br>Sinon, un élément qui n'est pas calculable pour un objet (géométrie absente ou vide, aucune partie de la dimension requise) vaut `null`. Une valeur numérique, `0` compris, signifie que le calcul a bien eu lieu. Valeur par défaut : []. |
 | `typename` | string | oui | Nom exact du type GPF à interroger de la forme `prefixe:nom`. Utiliser `gpf_search_types` pour trouver un `typename` valide. |
 | `where` | array | non | Clauses de filtre attributaire, combinées avec `AND`. |
 
@@ -1191,25 +1192,25 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
           "type": "number",
           "minimum": -180,
           "maximum": 180,
-          "description": "Longitude ouest en WGS84 `lon/lat`."
+          "description": "Longitude ouest en WGS84."
         },
         "south": {
           "type": "number",
           "minimum": -90,
           "maximum": 90,
-          "description": "Latitude sud en WGS84 `lon/lat`."
+          "description": "Latitude sud en WGS84."
         },
         "east": {
           "type": "number",
           "minimum": -180,
           "maximum": 180,
-          "description": "Longitude est en WGS84 `lon/lat`."
+          "description": "Longitude est en WGS84."
         },
         "north": {
           "type": "number",
           "minimum": -90,
           "maximum": 90,
-          "description": "Latitude nord en WGS84 `lon/lat`."
+          "description": "Latitude nord en WGS84."
         }
       },
       "required": [
@@ -1228,13 +1229,13 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
           "type": "number",
           "minimum": -180,
           "maximum": 180,
-          "description": "Longitude du point en WGS84 `lon/lat`."
+          "description": "Longitude du point en WGS84."
         },
         "lat": {
           "type": "number",
           "minimum": -90,
           "maximum": 90,
-          "description": "Latitude du point en WGS84 `lon/lat`."
+          "description": "Latitude du point en WGS84."
         }
       },
       "required": [
@@ -1251,13 +1252,13 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
           "type": "number",
           "minimum": -180,
           "maximum": 180,
-          "description": "Longitude du point en WGS84 `lon/lat`."
+          "description": "Longitude du point en WGS84."
         },
         "lat": {
           "type": "number",
           "minimum": -90,
           "maximum": 90,
-          "description": "Latitude du point en WGS84 `lon/lat`."
+          "description": "Latitude du point en WGS84."
         },
         "distance_m": {
           "type": "number",
@@ -1299,15 +1300,15 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
       "properties": {
         "lon": {
           "type": "number",
-          "minimum": -180,
-          "maximum": 180,
-          "description": "Longitude du point de départ en WGS84 `lon/lat`."
+          "minimum": -63.28125,
+          "maximum": 55.8984375,
+          "description": "Longitude du point de départ en WGS84."
         },
         "lat": {
           "type": "number",
-          "minimum": -90,
-          "maximum": 90,
-          "description": "Latitude du point de départ en WGS84 `lon/lat`."
+          "minimum": -21.42148437,
+          "maximum": 51.27109375,
+          "description": "Latitude du point de départ en WGS84."
         },
         "profile": {
           "type": "string",
@@ -1391,7 +1392,7 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
         ]
       },
       "default": [],
-      "description": "Éléments calculés depuis la géométrie à renvoyer pour chaque objet. Peut inclure `centroid`, `bbox`, `length`, `area`, `distance_to_filter_center` et `intersection_area`, aucun par défaut.\n`centroid` est le centroïde (moyenne arithmétique des sommets) de la géométrie. Il peut tomber hors d'une géométrie concave : un `intersects_point_filter` sur ce point peut alors ne renvoyer ni l'objet, ni ce qui le contient.\n`bbox` est la boîte englobante de la géométrie : `[ouest, sud, est, nord]` en WGS84 `lon/lat`, dans l'ordre des champs `west`, `south`, `east` et `north` de `bbox_filter`.\n`length` est la somme des longueurs (en m) des parties linéaires de la géométrie (LineString, MultiLineString).\n`area` est la somme des surfaces (en m²) des parties surfaciques de la géométrie (Polygon, MultiPolygon).\n`distance_to_filter_center` est la distance (en m) entre le centre du filtre spatial et le point le plus proche de l'objet renvoyé, `0` si l'objet contient ce centre. Ce centre est le point de `dwithin_point_filter`, le point de départ de `isoline_filter`, le centre de la boîte de `bbox_filter` et le centroïde (moyenne des sommets) de l'objet de référence de `intersects_feature_filter`.\n`intersection_area` est l'aire (en m²) de la partie de l'objet renvoyé située dans le filtre spatial (boîte, disque, isochrone/isodistance ou objet de référence surfacique). Elle vaut `null` si l'objet renvoyé n'a pas de partie surfacique, et `0` si l'objet ne recouvre pas le filtre.\n`distance_to_filter_center` et `intersection_area` exigent un filtre spatial.\nLes `spatial_extras` sont calculés après la requête, sur les seuls objets renvoyés : ils ne sont utilisables ni dans `where` ni dans `order_by`. Pour un classement (les N plus grands, les N plus proches) ou une somme, vérifier que `numberReturned` est égal à `numberMatched`, sinon augmenter `limit` ou restreindre le filtre spatial. Pour les N plus proches d'un point, utiliser `dwithin_point_filter` avec `distance_to_filter_center`, trier sur cette distance et élargir `distance_m` s'il y a moins de N objets.\nSi l'élément à calculer est incompatible avec la géométrie (exemple : bbox d'un point, aire d'une géométrie linéaire) et que le type de la géométrie est connu à l'avance, une erreur indiquera comment corriger la requête.\nSinon, un élément qui n'est pas calculable pour un objet (géométrie absente ou vide, aucune partie de la dimension requise) vaut `null`. Une valeur numérique, `0` compris, signifie que le calcul a bien eu lieu."
+      "description": "Éléments calculés depuis la géométrie à renvoyer pour chaque objet. Peut inclure `centroid`, `bbox`, `length`, `area`, `distance_to_filter_center` et `intersection_area`, aucun par défaut.\n`centroid` est le centroïde (moyenne arithmétique des sommets) de la géométrie. Il peut tomber hors d'une géométrie concave : un `intersects_point_filter` sur ce point peut alors ne renvoyer ni l'objet, ni ce qui le contient.\n`bbox` est la boîte englobante de la géométrie : `[ouest, sud, est, nord]` en WGS84, dans l'ordre des champs `west`, `south`, `east` et `north` de `bbox_filter`.\n`length` est la somme des longueurs (en m) des parties linéaires de la géométrie (LineString, MultiLineString).\n`area` est la somme des surfaces (en m²) des parties surfaciques de la géométrie (Polygon, MultiPolygon).\n`distance_to_filter_center` est la distance (en m) entre le centre du filtre spatial et le point le plus proche de l'objet renvoyé, `0` si l'objet contient ce centre. Ce centre est le point de `dwithin_point_filter`, le point de départ de `isoline_filter`, le centre de la boîte de `bbox_filter` et le centroïde (moyenne des sommets) de l'objet de référence de `intersects_feature_filter`.\n`intersection_area` est l'aire (en m²) de la partie de l'objet renvoyé située dans le filtre spatial (boîte, disque, isochrone/isodistance ou objet de référence surfacique). Elle vaut `null` si l'objet renvoyé n'a pas de partie surfacique, et `0` si l'objet ne recouvre pas le filtre.\n`distance_to_filter_center` et `intersection_area` exigent un filtre spatial.\nLes `spatial_extras` sont calculés après la requête, sur les seuls objets renvoyés : ils ne sont utilisables ni dans `where` ni dans `order_by`. Pour un classement (les N plus grands, les N plus proches) ou une somme, vérifier que `numberReturned` est égal à `numberMatched`, sinon augmenter `limit` ou restreindre le filtre spatial. Pour les N plus proches d'un point, utiliser `dwithin_point_filter` avec `distance_to_filter_center`, trier sur cette distance et élargir `distance_m` s'il y a moins de N objets.\nSi l'élément à calculer est incompatible avec la géométrie (exemple : bbox d'un point, aire d'une géométrie linéaire) et que le type de la géométrie est connu à l'avance, une erreur indiquera comment corriger la requête.\nSinon, un élément qui n'est pas calculable pour un objet (géométrie absente ou vide, aucune partie de la dimension requise) vaut `null`. Une valeur numérique, `0` compris, signifie que le calcul a bien eu lieu."
     }
   },
   "required": [
@@ -1524,25 +1525,25 @@ Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, 
           "type": "number",
           "minimum": -180,
           "maximum": 180,
-          "description": "Longitude ouest en WGS84 `lon/lat`."
+          "description": "Longitude ouest en WGS84."
         },
         "south": {
           "type": "number",
           "minimum": -90,
           "maximum": 90,
-          "description": "Latitude sud en WGS84 `lon/lat`."
+          "description": "Latitude sud en WGS84."
         },
         "east": {
           "type": "number",
           "minimum": -180,
           "maximum": 180,
-          "description": "Longitude est en WGS84 `lon/lat`."
+          "description": "Longitude est en WGS84."
         },
         "north": {
           "type": "number",
           "minimum": -90,
           "maximum": 90,
-          "description": "Latitude nord en WGS84 `lon/lat`."
+          "description": "Latitude nord en WGS84."
         }
       },
       "required": [
@@ -1561,13 +1562,13 @@ Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, 
           "type": "number",
           "minimum": -180,
           "maximum": 180,
-          "description": "Longitude du point en WGS84 `lon/lat`."
+          "description": "Longitude du point en WGS84."
         },
         "lat": {
           "type": "number",
           "minimum": -90,
           "maximum": 90,
-          "description": "Latitude du point en WGS84 `lon/lat`."
+          "description": "Latitude du point en WGS84."
         }
       },
       "required": [
@@ -1584,13 +1585,13 @@ Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, 
           "type": "number",
           "minimum": -180,
           "maximum": 180,
-          "description": "Longitude du point en WGS84 `lon/lat`."
+          "description": "Longitude du point en WGS84."
         },
         "lat": {
           "type": "number",
           "minimum": -90,
           "maximum": 90,
-          "description": "Latitude du point en WGS84 `lon/lat`."
+          "description": "Latitude du point en WGS84."
         },
         "distance_m": {
           "type": "number",
@@ -1632,15 +1633,15 @@ Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, 
       "properties": {
         "lon": {
           "type": "number",
-          "minimum": -180,
-          "maximum": 180,
-          "description": "Longitude du point de départ en WGS84 `lon/lat`."
+          "minimum": -63.28125,
+          "maximum": 55.8984375,
+          "description": "Longitude du point de départ en WGS84."
         },
         "lat": {
           "type": "number",
-          "minimum": -90,
-          "maximum": 90,
-          "description": "Latitude du point de départ en WGS84 `lon/lat`."
+          "minimum": -21.42148437,
+          "maximum": 51.27109375,
+          "description": "Latitude du point de départ en WGS84."
         },
         "profile": {
           "type": "string",
@@ -1860,25 +1861,25 @@ Les noms de propriétés utilisés dans `where` **ne peuvent pas être devinés*
           "type": "number",
           "minimum": -180,
           "maximum": 180,
-          "description": "Longitude ouest en WGS84 `lon/lat`."
+          "description": "Longitude ouest en WGS84."
         },
         "south": {
           "type": "number",
           "minimum": -90,
           "maximum": 90,
-          "description": "Latitude sud en WGS84 `lon/lat`."
+          "description": "Latitude sud en WGS84."
         },
         "east": {
           "type": "number",
           "minimum": -180,
           "maximum": 180,
-          "description": "Longitude est en WGS84 `lon/lat`."
+          "description": "Longitude est en WGS84."
         },
         "north": {
           "type": "number",
           "minimum": -90,
           "maximum": 90,
-          "description": "Latitude nord en WGS84 `lon/lat`."
+          "description": "Latitude nord en WGS84."
         }
       },
       "required": [
@@ -1897,13 +1898,13 @@ Les noms de propriétés utilisés dans `where` **ne peuvent pas être devinés*
           "type": "number",
           "minimum": -180,
           "maximum": 180,
-          "description": "Longitude du point en WGS84 `lon/lat`."
+          "description": "Longitude du point en WGS84."
         },
         "lat": {
           "type": "number",
           "minimum": -90,
           "maximum": 90,
-          "description": "Latitude du point en WGS84 `lon/lat`."
+          "description": "Latitude du point en WGS84."
         }
       },
       "required": [
@@ -1920,13 +1921,13 @@ Les noms de propriétés utilisés dans `where` **ne peuvent pas être devinés*
           "type": "number",
           "minimum": -180,
           "maximum": 180,
-          "description": "Longitude du point en WGS84 `lon/lat`."
+          "description": "Longitude du point en WGS84."
         },
         "lat": {
           "type": "number",
           "minimum": -90,
           "maximum": 90,
-          "description": "Latitude du point en WGS84 `lon/lat`."
+          "description": "Latitude du point en WGS84."
         },
         "distance_m": {
           "type": "number",
@@ -1968,15 +1969,15 @@ Les noms de propriétés utilisés dans `where` **ne peuvent pas être devinés*
       "properties": {
         "lon": {
           "type": "number",
-          "minimum": -180,
-          "maximum": 180,
-          "description": "Longitude du point de départ en WGS84 `lon/lat`."
+          "minimum": -63.28125,
+          "maximum": 55.8984375,
+          "description": "Longitude du point de départ en WGS84."
         },
         "lat": {
           "type": "number",
-          "minimum": -90,
-          "maximum": 90,
-          "description": "Latitude du point de départ en WGS84 `lon/lat`."
+          "minimum": -21.42148437,
+          "maximum": 51.27109375,
+          "description": "Latitude du point de départ en WGS84."
         },
         "profile": {
           "type": "string",
@@ -2077,7 +2078,7 @@ Utiliser `spatial_extras` pour renvoyer une information géométrique dérivée 
 | --- | --- | --- | --- |
 | `feature_id` | string | oui | Identifiant GPF exact de l'objet à récupérer, par exemple `commune.8952`. |
 | `select` | array | non | Liste des propriétés non géométriques à renvoyer. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles. Exemple : `["code_insee", "nom_officiel"]`. |
-| `spatial_extras` | array | non | Éléments calculés depuis la géométrie à renvoyer pour l'objet. Peut inclure `centroid`, `bbox`, `length` et `area`, aucun par défaut.<br>`centroid` est le centroïde (moyenne arithmétique des sommets) de la géométrie. Il peut tomber hors d'une géométrie concave.<br>`bbox` est la boîte englobante de la géométrie : `[ouest, sud, est, nord]` en WGS84 `lon/lat`.<br>`length` est la somme des longueurs (en m) des parties linéaires de la géométrie (LineString, MultiLineString).<br>`area` est la somme des surfaces (en m²) des parties surfaciques de la géométrie (Polygon, MultiPolygon).<br>Si l'élément à calculer est incompatible avec la géométrie (exemple : bbox d'un point, aire d'une géométrie linéaire) et que le type de la géométrie est connu à l'avance, une erreur indiquera comment corriger la requête.<br>Sinon, un élément qui n'est pas calculable pour un objet (géométrie absente ou vide, aucune partie de la dimension requise) vaut `null`. Une valeur numérique, `0` compris, signifie que le calcul a bien eu lieu. Valeur par défaut : []. |
+| `spatial_extras` | array | non | Éléments calculés depuis la géométrie à renvoyer pour l'objet. Peut inclure `centroid`, `bbox`, `length` et `area`, aucun par défaut.<br>`centroid` est le centroïde (moyenne arithmétique des sommets) de la géométrie. Il peut tomber hors d'une géométrie concave.<br>`bbox` est la boîte englobante de la géométrie : `[ouest, sud, est, nord]` en WGS84.<br>`length` est la somme des longueurs (en m) des parties linéaires de la géométrie (LineString, MultiLineString).<br>`area` est la somme des surfaces (en m²) des parties surfaciques de la géométrie (Polygon, MultiPolygon).<br>Si l'élément à calculer est incompatible avec la géométrie (exemple : bbox d'un point, aire d'une géométrie linéaire) et que le type de la géométrie est connu à l'avance, une erreur indiquera comment corriger la requête.<br>Sinon, un élément qui n'est pas calculable pour un objet (géométrie absente ou vide, aucune partie de la dimension requise) vaut `null`. Une valeur numérique, `0` compris, signifie que le calcul a bien eu lieu. Valeur par défaut : []. |
 | `typename` | string | oui | Nom exact du type GPF à interroger, par exemple `ADMINEXPRESS-COG.LATEST:commune`. |
 
 <details>
@@ -2118,7 +2119,7 @@ Utiliser `spatial_extras` pour renvoyer une information géométrique dérivée 
         ]
       },
       "default": [],
-      "description": "Éléments calculés depuis la géométrie à renvoyer pour l'objet. Peut inclure `centroid`, `bbox`, `length` et `area`, aucun par défaut.\n`centroid` est le centroïde (moyenne arithmétique des sommets) de la géométrie. Il peut tomber hors d'une géométrie concave.\n`bbox` est la boîte englobante de la géométrie : `[ouest, sud, est, nord]` en WGS84 `lon/lat`.\n`length` est la somme des longueurs (en m) des parties linéaires de la géométrie (LineString, MultiLineString).\n`area` est la somme des surfaces (en m²) des parties surfaciques de la géométrie (Polygon, MultiPolygon).\nSi l'élément à calculer est incompatible avec la géométrie (exemple : bbox d'un point, aire d'une géométrie linéaire) et que le type de la géométrie est connu à l'avance, une erreur indiquera comment corriger la requête.\nSinon, un élément qui n'est pas calculable pour un objet (géométrie absente ou vide, aucune partie de la dimension requise) vaut `null`. Une valeur numérique, `0` compris, signifie que le calcul a bien eu lieu."
+      "description": "Éléments calculés depuis la géométrie à renvoyer pour l'objet. Peut inclure `centroid`, `bbox`, `length` et `area`, aucun par défaut.\n`centroid` est le centroïde (moyenne arithmétique des sommets) de la géométrie. Il peut tomber hors d'une géométrie concave.\n`bbox` est la boîte englobante de la géométrie : `[ouest, sud, est, nord]` en WGS84.\n`length` est la somme des longueurs (en m) des parties linéaires de la géométrie (LineString, MultiLineString).\n`area` est la somme des surfaces (en m²) des parties surfaciques de la géométrie (Polygon, MultiPolygon).\nSi l'élément à calculer est incompatible avec la géométrie (exemple : bbox d'un point, aire d'une géométrie linéaire) et que le type de la géométrie est connu à l'avance, une erreur indiquera comment corriger la requête.\nSinon, un élément qui n'est pas calculable pour un objet (géométrie absente ou vide, aucune partie de la dimension requise) vaut `null`. Une valeur numérique, `0` compris, signifie que le calcul a bien eu lieu."
     }
   },
   "required": [
@@ -2265,8 +2266,8 @@ Utiliser `lon`/`lat` pour le point de départ, `profile` pour le mode de déplac
 | --- | --- | --- | --- |
 | `cost_type` | string (enum) | oui | Type de coût utilisé : `time` pour une isochrone, `distance` pour une isodistance. Valeurs : time, distance. |
 | `cost_value` | number | oui | Valeur du coût maximal. Interprétée en minutes si `cost_type = "time"` (maximum : 600), et en mètres si `cost_type = "distance"` (maximum : 50000). |
-| `lat` | number | oui | Latitude du point de départ en WGS84 `lon/lat`. |
-| `lon` | number | oui | Longitude du point de départ en WGS84 `lon/lat`. |
+| `lat` | number | oui | Latitude du point de départ en WGS84. |
+| `lon` | number | oui | Longitude du point de départ en WGS84. |
 | `profile` | string (enum) | oui | Mode de déplacement utilisé pour calculer l'isochrone ou l'isodistance : `car` ou `pedestrian`. Valeurs : car, pedestrian. |
 
 <details>
@@ -2278,15 +2279,15 @@ Utiliser `lon`/`lat` pour le point de départ, `profile` pour le mode de déplac
   "properties": {
     "lon": {
       "type": "number",
-      "minimum": -180,
-      "maximum": 180,
-      "description": "Longitude du point de départ en WGS84 `lon/lat`."
+      "minimum": -63.28125,
+      "maximum": 55.8984375,
+      "description": "Longitude du point de départ en WGS84."
     },
     "lat": {
       "type": "number",
-      "minimum": -90,
-      "maximum": 90,
-      "description": "Latitude du point de départ en WGS84 `lon/lat`."
+      "minimum": -21.42148437,
+      "maximum": 51.27109375,
+      "description": "Latitude du point de départ en WGS84."
     },
     "profile": {
       "type": "string",
@@ -2358,6 +2359,151 @@ Utiliser `lon`/`lat` pour le point de départ, `profile` pour le mode de déplac
 | Succès | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
 | Erreur | oui | non | `content[0].text` porte le message d'erreur ; aucun `structuredContent` n'est ajouté (réservé au `outputSchema` du cas de succès). |
 
+## `gpf_itinerary_layer`
+
+Code Source : [src/tools/GpfItineraryLayerTool.ts](../src/tools/GpfItineraryLayerTool.ts)
+
+### Titre
+
+Couche cartographiable d’itinéraire GPF
+
+### Description du tool
+
+```
+Interroge l'itinéraire entre deux points.
+À utiliser pour afficher ou cartographier un trajet. Pour obtenir seulement la distance et le temps de trajet, utiliser plutôt l'outil `distance`.
+Renvoie une **URL de couche cartographiable** (`data_url`) : une URL opaque, à passer telle quelle à un outil d'affichage cartographique (MCP Carto, ...). L'ouvrir renvoie une FeatureCollection GeoJSON contenant la géométrie LineString de l'itinéraire, avec ses propriétés `distance` (en mètres) et `time` (en minutes).
+Utiliser `departure`/`arrival` pour les points de départ et d'arrivée, `profile` pour le mode de déplacement (`car` ou `pedestrian`) et `optimize` pour choisir entre l'itinéraire le plus rapide (`time`) ou le plus court (`distance`).
+Avec `pedestrian`, le départ et l'arrivée doivent être distants d'au plus 200 km à vol d'oiseau.
+(source : Géoplateforme (calcul d'itinéraire)).
+```
+
+### Schéma d’entrée
+
+| Champ | Type | Requis | Description |
+| --- | --- | --- | --- |
+| `arrival` | object | oui | Le point d'arrivée. |
+| `departure` | object | oui | Le point de départ. |
+| `optimize` | string (enum) | non | Métrique d'optimisation : `time` (itinéraire le plus rapide) ou `distance` (le plus court). Valeurs : time, distance. Valeur par défaut : time. |
+| `profile` | string (enum) | oui | Mode de déplacement : `car` ou `pedestrian`. Valeurs : car, pedestrian. |
+
+<details>
+<summary>Schéma d’entrée brut</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "departure": {
+      "type": "object",
+      "properties": {
+        "lon": {
+          "type": "number",
+          "minimum": -63.28125,
+          "maximum": 55.8984375,
+          "description": "Longitude du point de départ en WGS84."
+        },
+        "lat": {
+          "type": "number",
+          "minimum": -21.42148437,
+          "maximum": 51.27109375,
+          "description": "Latitude du point de départ en WGS84."
+        }
+      },
+      "required": [
+        "lon",
+        "lat"
+      ],
+      "additionalProperties": false,
+      "description": "Le point de départ."
+    },
+    "arrival": {
+      "type": "object",
+      "properties": {
+        "lon": {
+          "type": "number",
+          "minimum": -63.28125,
+          "maximum": 55.8984375,
+          "description": "Longitude du point d'arrivée en WGS84."
+        },
+        "lat": {
+          "type": "number",
+          "minimum": -21.42148437,
+          "maximum": 51.27109375,
+          "description": "Latitude du point d'arrivée en WGS84."
+        }
+      },
+      "required": [
+        "lon",
+        "lat"
+      ],
+      "additionalProperties": false,
+      "description": "Le point d'arrivée."
+    },
+    "profile": {
+      "type": "string",
+      "enum": [
+        "car",
+        "pedestrian"
+      ],
+      "description": "Mode de déplacement : `car` ou `pedestrian`."
+    },
+    "optimize": {
+      "type": "string",
+      "enum": [
+        "time",
+        "distance"
+      ],
+      "default": "time",
+      "description": "Métrique d'optimisation : `time` (itinéraire le plus rapide) ou `distance` (le plus court)."
+    }
+  },
+  "required": [
+    "departure",
+    "arrival",
+    "profile"
+  ],
+  "additionalProperties": false,
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}
+```
+
+</details>
+
+### Schéma de sortie
+
+| Champ | Type | Requis | Description |
+| --- | --- | --- | --- |
+| `data_url` | string | oui | URL renvoyant une FeatureCollection GeoJSON (géométries complètes) prête à être affichée dans un outil cartographique. |
+
+<details>
+<summary>Schéma de sortie brut</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "data_url": {
+      "type": "string",
+      "description": "URL renvoyant une FeatureCollection GeoJSON (géométries complètes) prête à être affichée dans un outil cartographique.",
+      "format": "uri"
+    }
+  },
+  "required": [
+    "data_url"
+  ]
+}
+```
+
+</details>
+
+### Réponse MCP
+
+| Cas | `content` | `structuredContent` | Relation entre `content` et `structuredContent` |
+| --- | --- | --- | --- |
+| Succès | oui | oui | `content[0].text` est `JSON.stringify(structuredContent)`. |
+| Erreur | oui | non | `content[0].text` porte le message d'erreur ; aucun `structuredContent` n'est ajouté (réservé au `outputSchema` du cas de succès). |
+
 ## `distance`
 
 Code Source : [src/tools/DistanceTool.ts](../src/tools/DistanceTool.ts)
@@ -2371,6 +2517,8 @@ Distance et temps de trajet entre deux points
 ```
 Renvoie la distance (en mètres) entre deux points à partir de leur longitude et latitude.
 Renvoie aussi une estimation du temps de trajet lorsque `profile` vaut `car` ou `pedestrian`.
+Avec `pedestrian`, le départ et l'arrivée doivent être distants d'au plus 200 km à vol d'oiseau.
+Pour obtenir l'itinéraire sous forme de couche cartographiable, utiliser `gpf_itinerary_layer`.
 (source : Géoplateforme (calcul d'itinéraire)).
 ```
 
@@ -2378,8 +2526,8 @@ Renvoie aussi une estimation du temps de trajet lorsque `profile` vaut `car` ou 
 
 | Champ | Type | Requis | Description |
 | --- | --- | --- | --- |
-| `arrival` | object | oui | Le point d'arrivée |
-| `departure` | object | oui | Le point de départ |
+| `arrival` | object | oui | Le point d'arrivée. |
+| `departure` | object | oui | Le point de départ. |
 | `optimize` | string (enum) | non | La métrique à optimiser, lorsqu'il y a un choix : `time` chemin le plus rapide, `distance` chemin le plus court. Cette option est sans effet lorsque `profile=spherical` ou `ellipsoidal`. Valeurs : time, distance. Valeur par défaut : time. |
 | `profile` | string (enum) | non | Le type de chemin suivi : `spherical` distance à vol d'oiseau (Terre ronde, précision à 0.5%), `ellipsoidal` distance à vol d'oiseau (Terre ellipsoïde, plus précise, précision à 0.5cm), `car` en voiture, `pedestrian` à pied. Valeurs : spherical, ellipsoidal, car, pedestrian. Valeur par défaut : spherical. |
 
@@ -2397,13 +2545,13 @@ Renvoie aussi une estimation du temps de trajet lorsque `profile` vaut `car` ou 
           "type": "number",
           "minimum": -180,
           "maximum": 180,
-          "description": "La longitude du point de départ."
+          "description": "Longitude du point de départ en WGS84."
         },
         "lat": {
           "type": "number",
           "minimum": -90,
           "maximum": 90,
-          "description": "La latitude du point de départ."
+          "description": "Latitude du point de départ en WGS84."
         }
       },
       "required": [
@@ -2411,7 +2559,7 @@ Renvoie aussi une estimation du temps de trajet lorsque `profile` vaut `car` ou 
         "lat"
       ],
       "additionalProperties": false,
-      "description": "Le point de départ"
+      "description": "Le point de départ."
     },
     "arrival": {
       "type": "object",
@@ -2420,13 +2568,13 @@ Renvoie aussi une estimation du temps de trajet lorsque `profile` vaut `car` ou 
           "type": "number",
           "minimum": -180,
           "maximum": 180,
-          "description": "La longitude du point d'arrivée."
+          "description": "Longitude du point d'arrivée en WGS84."
         },
         "lat": {
           "type": "number",
           "minimum": -90,
           "maximum": 90,
-          "description": "La latitude du point d'arrivée."
+          "description": "Latitude du point d'arrivée en WGS84."
         }
       },
       "required": [
@@ -2434,7 +2582,7 @@ Renvoie aussi une estimation du temps de trajet lorsque `profile` vaut `car` ou 
         "lat"
       ],
       "additionalProperties": false,
-      "description": "Le point d'arrivée"
+      "description": "Le point d'arrivée."
     },
     "profile": {
       "type": "string",

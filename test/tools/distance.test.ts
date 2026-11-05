@@ -3,7 +3,7 @@ import { afterEach, describe, it, expect, vi } from "vitest";
 import DistanceTool from "../../src/tools/DistanceTool.js";
 import { validateStructuredContentAgainstOutputSchema } from "./helpers/outputSchema.js";
 import { expectErrorText } from "./helpers/errorAssertions.js";
-import { navigationItineraryClient } from "../../src/gpf/itinerary.js";
+import { navigationItineraryClient, ITINERARY_PEDESTRIAN_MAX_DIRECT_DISTANCE_METERS } from "../../src/gpf/itinerary.js";
 import { ellipsoidalDistance, haversine } from "../../src/helpers/distance.js";
 
 describe("Test DistanceTool", () => {
@@ -102,5 +102,43 @@ describe("Test DistanceTool", () => {
     });
 
     expect(getItinerarySpy).toHaveBeenCalledWith({ departure, arrival, profile: "car", optimize: "distance" });
+  });
+
+  it.each(["car", "pedestrian"])("should reject a %s point outside the navigation service extent", async (profile) => {
+    const getItinerarySpy = vi.spyOn(navigationItineraryClient, "getItinerary").mockRejectedValue(new Error("must not be called"));
+
+    const response = await new DistanceTool().toolCall({
+      params: {
+        name: "distance",
+        // Berlin lies north of the navigation service extent.
+        arguments: { departure, arrival: { lon: 13.405, lat: 52.52 }, profile },
+      },
+    });
+
+    expect(expectErrorText(response)).toContain("arrival.lat: Le point est hors de l'emprise du service de navigation");
+    expect(getItinerarySpy).not.toHaveBeenCalled();
+  });
+
+  it("should reject a pedestrian pair beyond the crow-flies cap", async () => {
+    const getItinerarySpy = vi.spyOn(navigationItineraryClient, "getItinerary").mockRejectedValue(new Error("must not be called"));
+
+    const response = await new DistanceTool().toolCall({
+      params: {
+        name: "distance",
+        // Saint-Quentin -> Dijon: ~300 km apart.
+        arguments: { departure: { lon: 3.274356, lat: 49.839862 }, arrival: { lon: 5.044572, lat: 47.326213 }, profile: "pedestrian" },
+      },
+    });
+
+    expect(expectErrorText(response)).toContain(`ne peut pas dépasser ${ITINERARY_PEDESTRIAN_MAX_DIRECT_DISTANCE_METERS / 1000} km`);
+    expect(getItinerarySpy).not.toHaveBeenCalled();
+  });
+
+  it("should accept a point outside the navigation service extent for a crow-flies profile", async () => {
+    const response = await new DistanceTool().toolCall({
+      params: { name: "distance", arguments: { departure, arrival: { lon: 13.405, lat: 52.52 } } },
+    });
+
+    expect(response.isError).toBeUndefined();
   });
 });

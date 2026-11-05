@@ -12,7 +12,8 @@ export function isGeometryLike(value: unknown): value is Exclude<Geometry, Geome
     value !== null &&
     "type" in value &&
     typeof value.type === "string" &&
-    "coordinates" in value
+    "coordinates" in value &&
+    Array.isArray(value.coordinates)
   );
 }
 

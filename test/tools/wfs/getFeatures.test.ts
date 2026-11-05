@@ -29,6 +29,9 @@ vi.doMock("../../../src/helpers/http.js", () => ({
 const { gpfGetFeaturesInputSchema } = await import(
   "../../../src/wfs/schema.js"
 );
+const { NAVIGATION_BBOX } = await import(
+  "../../../src/gpf/navigation.js"
+);
 const { default: GpfGetFeaturesTool } = await import(
   "../../../src/tools/GpfGetFeaturesTool"
 );
@@ -223,7 +226,7 @@ describe("Test GpfGetFeaturesTool", () => {
     expect(tool.toolDefinition.inputSchema.properties?.spatial_extras).toMatchObject({
       description: expect.stringContaining(
         "Il peut tomber hors d'une géométrie concave : un `intersects_point_filter` sur ce point peut alors ne renvoyer ni l'objet, ni ce qui le contient.\n" +
-          "`bbox` est la boîte englobante de la géométrie : `[ouest, sud, est, nord]` en WGS84 `lon/lat`, dans l'ordre des champs `west`, `south`, `east` et `north` de `bbox_filter`.\n",
+          "`bbox` est la boîte englobante de la géométrie : `[ouest, sud, est, nord]` en WGS84, dans l'ordre des champs `west`, `south`, `east` et `north` de `bbox_filter`.\n",
       ),
     });
     expect(tool.toolDefinition.outputSchema).toBeUndefined();
@@ -241,11 +244,12 @@ describe("Test GpfGetFeaturesTool", () => {
         distance_m: expect.objectContaining({ type: "number" }),
       }),
     });
+    const [west, south, east, north] = NAVIGATION_BBOX;
     expect(tool.toolDefinition.inputSchema.properties?.isoline_filter).toMatchObject({
       type: "object",
       properties: expect.objectContaining({
-        lon: expect.objectContaining({ type: "number" }),
-        lat: expect.objectContaining({ type: "number" }),
+        lon: expect.objectContaining({ type: "number", minimum: west, maximum: east }),
+        lat: expect.objectContaining({ type: "number", minimum: south, maximum: north }),
         cost_type: expect.objectContaining({ enum: ["time", "distance"] }),
         // The filter's lower time limit, not the isoline service's 600 minutes.
         cost_value: expect.objectContaining({ type: "number", description: expect.stringContaining("maximum : 120)") }),

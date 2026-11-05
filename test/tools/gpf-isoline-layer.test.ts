@@ -2,7 +2,7 @@ import { vi, describe, it, expect, afterEach } from "vitest";
 
 import type { Env } from "../../src/config/env.js";
 import { decodeToken } from "../../src/proxy/token.js";
-import { NAVIGATION_ISOCHRONE_MAX_MINUTES, NAVIGATION_ISODISTANCE_MAX_METERS } from "../../src/gpf/navigation.js";
+import { NAVIGATION_BBOX, NAVIGATION_ISOCHRONE_MAX_MINUTES, NAVIGATION_ISODISTANCE_MAX_METERS } from "../../src/gpf/navigation.js";
 import { PROXY_TOKEN_KIND, gpfIsolineLayerInputSchema } from "../../src/wfs/schema.js";
 import { validateStructuredContentAgainstOutputSchema } from "./helpers/outputSchema";
 
@@ -222,6 +222,44 @@ describe("Test GpfIsolineLayerTool", () => {
 
     expect(response.isError).toBe(true);
     expect((response.content[0] as { text: string }).text).toContain("Le paramètre 'kind' n'est pas reconnu.");
+  });
+
+  it("publishes the navigation service extent as coordinate bounds", () => {
+    mockGetEnv.mockReturnValue(makeEnv({}));
+    const tool = new GpfIsolineLayerTool();
+    const [west, south, east, north] = NAVIGATION_BBOX;
+
+    expect(tool.toolDefinition.inputSchema.properties).toMatchObject({
+      lon: { minimum: west, maximum: east },
+      lat: { minimum: south, maximum: north },
+    });
+  });
+
+  it("rejects a point outside the navigation service extent", async () => {
+    mockGetEnv.mockReturnValue(makeEnv({}));
+    const tool = new GpfIsolineLayerTool();
+
+    const response = await tool.toolCall({
+      params: {
+        name: "gpf_isoline_layer",
+        arguments: {
+          // Berlin lies north of the navigation service extent.
+          lon: 13.405,
+          lat: 52.52,
+          profile: "car",
+          cost_type: "time",
+          cost_value: 10,
+        },
+      },
+    });
+
+    expect(response.isError).toBe(true);
+    const textContent = response.content[0];
+    if (textContent.type !== "text") {
+      throw new Error("expected text content");
+    }
+    expect(textContent.text).toContain("lat: Le point est hors de l'emprise du service de navigation");
+    expect(textContent.text).toContain(String(NAVIGATION_BBOX[3]));
   });
 
   it("rejects a missing profile", async () => {

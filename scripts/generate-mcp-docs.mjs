@@ -24,6 +24,7 @@ const toolDisplayOrder = [
   "gpf_get_feature_by_id",
   "gpf_get_feature_by_id_layer",
   "gpf_isoline_layer",
+  "gpf_itinerary_layer",
 ];
 
 /**

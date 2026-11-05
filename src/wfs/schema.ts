@@ -9,14 +9,21 @@
 import { z } from "zod";
 
 import { generatePublishedInputSchema } from "../helpers/jsonSchema.js";
-import { lonSchema, latSchema } from "../helpers/schemas.js";
+import { lonSchema, latSchema, buildLonLatSchema } from "../helpers/schemas.js";
 import {
   NAVIGATION_METRICS,
   NAVIGATION_PROFILES,
   NAVIGATION_ISOCHRONE_MAX_MINUTES,
   NAVIGATION_ISODISTANCE_MAX_METERS,
+  NAVIGATION_BBOX,
   type NavigationMetric,
 } from "../gpf/navigation.js";
+import {
+  ITINERARY_METRICS,
+  ITINERARY_PROFILES,
+  ITINERARY_PEDESTRIAN_MAX_DIRECT_DISTANCE_METERS,
+} from "../gpf/itinerary.js";
+import { haversine } from "../helpers/distance.js";
 
 // --- Shared Constants ---
 
@@ -75,22 +82,18 @@ const orderBySchema = z.object({
 }).strict().describe("Critère de tri structuré. Exemple : `{ property: \"population\", direction: \"desc\" }`.");
 
 const bboxFilterSchema = z.object({
-  west: lonSchema.describe("Longitude ouest en WGS84 `lon/lat`."),
-  south: latSchema.describe("Latitude sud en WGS84 `lon/lat`."),
-  east: lonSchema.describe("Longitude est en WGS84 `lon/lat`."),
-  north: latSchema.describe("Latitude nord en WGS84 `lon/lat`."),
+  west: lonSchema.describe("Longitude ouest en WGS84."),
+  south: latSchema.describe("Latitude sud en WGS84."),
+  east: lonSchema.describe("Longitude est en WGS84."),
+  north: latSchema.describe("Latitude nord en WGS84."),
 }).strict().describe("Filtre spatial par boîte englobante.");
 
-const intersectsPointFilterSchema = z.object({
-  lon: lonSchema.describe("Longitude du point en WGS84 `lon/lat`."),
-  lat: latSchema.describe("Latitude du point en WGS84 `lon/lat`."),
-}).strict().describe("Filtre les objets dont la géométrie intersecte un point.");
+const intersectsPointFilterSchema = buildLonLatSchema()
+  .describe("Filtre les objets dont la géométrie intersecte un point.");
 
-const dwithinPointFilterSchema = z.object({
-  lon: lonSchema.describe("Longitude du point en WGS84 `lon/lat`."),
-  lat: latSchema.describe("Latitude du point en WGS84 `lon/lat`."),
+const dwithinPointFilterSchema = buildLonLatSchema().extend({
   distance_m: z.number().finite().positive().describe("Distance maximale en mètres."),
-}).strict().describe("Filtre les objets situés à une distance maximale d'un point.");
+}).describe("Filtre les objets situés à une distance maximale d'un point.");
 
 const intersectsFeatureFilterSchema = z.object({
   typename: z.string().trim().min(1).describe("Type GPF du feature de référence."),
@@ -101,13 +104,20 @@ const navigationProfileSchema = z
   .enum(NAVIGATION_PROFILES)
   .describe("Mode de déplacement utilisé pour calculer l'isochrone ou l'isodistance : `car` ou `pedestrian`.");
 
+function buildNavigationLonLatSchema(suffix: string) {
+  const base = buildLonLatSchema(suffix);
+  const [west, south, east, north] = NAVIGATION_BBOX;
+  const message = `Le point est hors de l'emprise du service de navigation ([ouest, sud, est, nord] = [${NAVIGATION_BBOX.join(", ")}]).`;
+  return base.extend({
+    lon: base.shape.lon.min(west, message).max(east, message),
+    lat: base.shape.lat.min(south, message).max(north, message),
+  });
+}
+
 // Departure point of an isoline. Flat `lon`/`lat`, exactly like every spatial
 // filter (`intersects_point_filter`, `dwithin_point_filter`, ...), so the LLM sees
 // one point convention across the whole surface.
-const isolinePointSchema = z.object({
-  lon: lonSchema.describe("Longitude du point de départ en WGS84 `lon/lat`."),
-  lat: latSchema.describe("Latitude du point de départ en WGS84 `lon/lat`."),
-}).strict();
+const isolinePointSchema = buildNavigationLonLatSchema("de départ");
 
 const navigationMetricsSchema = z
   .enum(NAVIGATION_METRICS)
@@ -218,7 +228,7 @@ function spatialExtrasBaseDescriptionLines(withSpatialFilters: boolean) {
   return [
     "`centroid` est le centroïde (moyenne arithmétique des sommets) de la géométrie. Il peut tomber hors d'une géométrie concave" +
       (withSpatialFilters ? " : un `intersects_point_filter` sur ce point peut alors ne renvoyer ni l'objet, ni ce qui le contient." : "."),
-    "`bbox` est la boîte englobante de la géométrie : `[ouest, sud, est, nord]` en WGS84 `lon/lat`" +
+    "`bbox` est la boîte englobante de la géométrie : `[ouest, sud, est, nord]` en WGS84" +
       (withSpatialFilters ? ", dans l'ordre des champs `west`, `south`, `east` et `north` de `bbox_filter`." : "."),
     "`length` est la somme des longueurs (en m) des parties linéaires de la géométrie (LineString, MultiLineString).",
     "`area` est la somme des surfaces (en m²) des parties surfaciques de la géométrie (Polygon, MultiPolygon).",
@@ -445,8 +455,8 @@ export const gpfGetFeaturesLayerOutputSchema = z.object({
 // --- Proxy token discriminant ---
 
 // The proxy serves ONE opaque token (in the URL path, `${endpoint}/<token>.json`)
-// but several token kinds (a filtered layer query, a single-feature by-id lookup
-// and an isoline). Every producer tool stamps its token
+// but several token kinds (a filtered layer query, a single-feature by-id lookup,
+// an isoline and an itinerary). Every producer tool stamps its token
 // with this `kind` discriminant; the proxy reads it to dispatch to the right
 // schema + engine, then strips it before the strict per-kind `.parse`. It is
 // injected by the tool from validated params — never an LLM-supplied field.
@@ -454,6 +464,7 @@ export const PROXY_TOKEN_KIND = {
   query: "query",
   byId: "by_id",
   isoline: "isoline",
+  itinerary: "itinerary",
 } as const;
 
 export type ProxyTokenKind = (typeof PROXY_TOKEN_KIND)[keyof typeof PROXY_TOKEN_KIND];
@@ -503,6 +514,58 @@ export const gpfIsolineLayerInputSchema = gpfIsolineLayerInputObjectSchema
 export type GpfIsolineLayerInput = z.infer<typeof gpfIsolineLayerInputSchema>;
 
 export const gpfIsolineLayerPublishedInputSchema = generatePublishedInputSchema(gpfIsolineLayerInputObjectSchema);
+
+// --- `gpf_itinerary_layer` (proxy) ---
+
+const itineraryProfileSchema = z
+  .enum(ITINERARY_PROFILES)
+  .describe("Mode de déplacement : `car` ou `pedestrian`.");
+
+export const gpfItineraryLayerInputObjectSchema = z.object({
+  departure: buildNavigationLonLatSchema("de départ"),
+  arrival: buildNavigationLonLatSchema("d'arrivée"),
+  profile: itineraryProfileSchema,
+  optimize: z
+    .enum(ITINERARY_METRICS)
+    .default("time")
+    .describe("Métrique d'optimisation : `time` (itinéraire le plus rapide) ou `distance` (le plus court)."),
+}).strict();
+
+/**
+ * Caps the crow-flies span of a `pedestrian` itinerary request.
+ *
+ * The issue is attached to the object root, not to a single coordinate: the constraint
+ * is a property of the departure/arrival pair.
+ */
+function assertItineraryDirectDistance(
+  input: z.infer<typeof gpfItineraryLayerInputObjectSchema>,
+  ctx: z.RefinementCtx,
+) {
+  if (input.profile !== "pedestrian") {
+    return;
+  }
+
+  const dist = haversine([input.departure.lon, input.departure.lat], [input.arrival.lon, input.arrival.lat]);
+
+  if (dist > ITINERARY_PEDESTRIAN_MAX_DIRECT_DISTANCE_METERS) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.too_big,
+      maximum: ITINERARY_PEDESTRIAN_MAX_DIRECT_DISTANCE_METERS,
+      type: "number",
+      inclusive: true,
+      message: `La distance à vol d'oiseau entre le départ et l'arrivée (${Math.ceil(dist / 1000)} km) ne peut pas dépasser ${ITINERARY_PEDESTRIAN_MAX_DIRECT_DISTANCE_METERS / 1000} km avec le profil \`pedestrian\`.`,
+    });
+  }
+}
+
+// Refined counterpart of the object schema above, mirroring `gpf_isoline_layer`: the
+// published schema stays a plain object while the cross-field cap runs on parse.
+export const gpfItineraryLayerInputSchema = gpfItineraryLayerInputObjectSchema
+  .superRefine(assertItineraryDirectDistance);
+
+export type GpfItineraryLayerInput = z.infer<typeof gpfItineraryLayerInputSchema>;
+
+export const gpfItineraryLayerPublishedInputSchema = generatePublishedInputSchema(gpfItineraryLayerInputObjectSchema);
 
 // --- `gpf_count_features` ---
 

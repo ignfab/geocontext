@@ -7,15 +7,12 @@ import { z } from "zod";
 
 import { getAdminUnits, ADMINEXPRESS_TYPES, ADMINEXPRESS_SOURCE } from "../gpf/adminexpress.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
-import { featureRefSchema, lonSchema, latSchema } from "../helpers/schemas.js";
+import { featureRefSchema, buildLonLatSchema } from "../helpers/schemas.js";
 import logger from "../logger.js";
 
 // --- Schemas ---
 
-const adminexpressInputSchema = z.object({
-  lon: lonSchema,
-  lat: latSchema,
-}).strict();
+const adminexpressInputSchema = buildLonLatSchema();
 
 const adminexpressResultSchema = z
   .object({

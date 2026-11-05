@@ -5,19 +5,22 @@ import type { GpfGetFeaturesInput } from "../../src/wfs/schema";
 
 // Mock ONLY the I/O boundaries, so the real proxy transport code runs:
 // - fetchJSONPostWithLimit (the bounded WFS fetch, parses to JSON) — but keep the real error classes;
-// - fetchJSONGetWithLimit (the bounded isochrone fetch) — asserts the isoline leg
-//   goes through the SAME PROXY_UPSTREAM_TIMEOUT + PROXY_MAX_RESPONSE_BYTES bounds as WFS.
-//   The real NavigationIsolineClient runs (only its fetcher is mocked), so this covers
-//   the previously-untested gap where the isoline leg used unbounded fetchJSONGet.
-// - RateLimiter (assert it is invoked, without real timing).
+// - fetchJSONGetWithLimit (the bounded navigation fetch) — asserts the isoline and
+//   itinerary legs go through the SAME PROXY_UPSTREAM_TIMEOUT + PROXY_MAX_RESPONSE_BYTES
+//   bounds as WFS. The real NavigationIsolineClient and NavigationItineraryClient run
+//   (only their fetcher is mocked), so this covers the previously-untested gap where
+//   the isoline leg used unbounded fetchJSONGet.
+// - RateLimiter (assert it is invoked, without real timing, and record the name of
+//   every limiter built).
 // The parse + 502-on-bad-body now lives inside fetchJSON*WithLimit (helpers/http),
 // so it is covered there; here we only assert the transport wires the right args.
 // All spies live in `vi.hoisted` because the vi.mock factories are hoisted above
 // them AND the mocked modules are imported (and RateLimiter constructed) very early.
-const { fetchJSONPostWithLimit, fetchJSONGetWithLimit, rateLimit } = vi.hoisted(() => ({
+const { fetchJSONPostWithLimit, fetchJSONGetWithLimit, rateLimit, rateLimiterNames } = vi.hoisted(() => ({
   fetchJSONPostWithLimit: vi.fn(),
   fetchJSONGetWithLimit: vi.fn(),
   rateLimit: vi.fn(async () => {}),
+  rateLimiterNames: [] as string[],
 }));
 
 vi.mock("../../src/helpers/http", async (importOriginal) => {
@@ -32,11 +35,15 @@ vi.mock("../../src/helpers/http", async (importOriginal) => {
 vi.mock("../../src/helpers/RateLimiter", () => ({
   RateLimiter: class {
     limit = rateLimit;
+    constructor({ name }: { name: string }) {
+      rateLimiterNames.push(name);
+    }
   },
 }));
 
 import {
   getDefaultGeometryIsolineQueryDeps,
+  getDefaultGeometryItineraryQueryDeps,
   getProxyWfsClient,
   resolveProxyIsolineGeometry,
 } from "../../src/proxy/transport";
@@ -179,5 +186,51 @@ describe("proxy/transport · getDefaultGeometryIsolineQueryDeps", () => {
     expect(label).toBe("d'isochrone");
     expect(rateLimit).toHaveBeenCalled();
     expect(result).toEqual(geometry);
+  });
+});
+
+describe("proxy/transport · getDefaultGeometryItineraryQueryDeps", () => {
+  const itineraryInput = {
+    departure: { lon: 2.35, lat: 48.85 },
+    arrival: { lon: 2.29, lat: 48.86 },
+    profile: "pedestrian" as const,
+    optimize: "distance" as const,
+  };
+  const geometry = { type: "LineString", coordinates: [[2.35, 48.85], [2.29, 48.86]] };
+
+  it("resolves the itinerary through the bounded fetch (PROXY_UPSTREAM_TIMEOUT + PROXY_MAX_RESPONSE_BYTES)", async () => {
+    fetchJSONGetWithLimit.mockResolvedValue({ geometry, distance: 4800, duration: 62 });
+
+    const result = await getDefaultGeometryItineraryQueryDeps().getItineraryLayer(itineraryInput);
+
+    expect(fetchJSONGetWithLimit).toHaveBeenCalledOnce();
+    const [url, timeoutMs, maxBytes, label] = fetchJSONGetWithLimit.mock.calls[0];
+    expect(url).toContain("data.geopf.fr/navigation/itineraire");
+    expect(url).toContain("start=2.35%2C48.85");
+    expect(url).toContain("end=2.29%2C48.86");
+    expect(url).toContain("profile=pedestrian");
+    expect(url).toContain("optimization=shortest");
+    expect(url).toContain("geometryFormat=geojson");
+    expect(timeoutMs).toBe(10 * 1000); // PROXY_UPSTREAM_TIMEOUT (s) → ms, NOT HTTP_TIMEOUT
+    expect(maxBytes).toBe(26214400); // PROXY_MAX_RESPONSE_BYTES
+    expect(label).toBe("d'itinéraire");
+    expect(rateLimit).toHaveBeenCalled();
+    expect(result).toEqual({ geometry, distance: 4800, duration: 62 });
+  });
+
+  it("shares a single GPF_NAVIGATION_PROXY rate limiter with the isoline client", async () => {
+    // Satisfies both clients: the isoline client accepts any geometry.
+    fetchJSONGetWithLimit.mockResolvedValue({ geometry, distance: 4800, duration: 62 });
+
+    await getDefaultGeometryIsolineQueryDeps().getGeometry({
+      lon: 2.35,
+      lat: 48.85,
+      cost_type: "time",
+      cost_value: 15,
+      profile: "car",
+    });
+    await getDefaultGeometryItineraryQueryDeps().getItineraryLayer(itineraryInput);
+
+    expect(rateLimiterNames.filter((name) => name === "GPF_NAVIGATION_PROXY")).toHaveLength(1);
   });
 });
