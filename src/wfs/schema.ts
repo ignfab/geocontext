@@ -11,9 +11,12 @@ import { z } from "zod";
 import { generatePublishedInputSchema } from "../helpers/jsonSchema.js";
 import { lonSchema, latSchema } from "../helpers/schemas.js";
 import {
-  TRAVEL_TIME_MAX_MINUTES,
+  NAVIGATION_METRICS,
   NAVIGATION_PROFILES,
-  NAVIGATION_ISOCHRONE_MAX_TIME_MINUTES,
+  NAVIGATION_ISOCHRONE_MAX_MINUTES,
+  NAVIGATION_ISODISTANCE_MAX_METERS,
+  type NavigationMetric,
+  TRAVEL_TIME_MAX_MINUTES,
 } from "../gpf/navigation.js";
 
 // --- Shared Constants ---
@@ -97,7 +100,7 @@ const intersectsFeatureFilterSchema = z.object({
 
 const navigationProfileSchema = z
   .enum(NAVIGATION_PROFILES)
-  .describe("Mode de déplacement utilisé pour calculer l'isochrone (`car` ou `pedestrian`).");
+  .describe("Mode de déplacement utilisé pour calculer l'isochrone ou l'isodistance : `car` ou `pedestrian`.");
 
 const travelTimeMinutesSchema = z
   .number()
@@ -109,22 +112,47 @@ const travelTimeMinutesSchema = z
 // Departure point of an isochrone. Flat `lon`/`lat`, exactly like every spatial
 // filter (`intersects_point_filter`, `dwithin_point_filter`, ...), so the LLM sees
 // one point convention across the whole surface.
-const isochronePointSchema = z.object({
+const isolinePointSchema = z.object({
   lon: lonSchema.describe("Longitude du point de départ en WGS84 `lon/lat`."),
   lat: latSchema.describe("Latitude du point de départ en WGS84 `lon/lat`."),
 }).strict();
 
-const travelTimeFilterSchema = isochronePointSchema.extend({
+const travelTimeFilterSchema = isolinePointSchema.extend({
   minutes: travelTimeMinutesSchema,
   profile: navigationProfileSchema,
 }).strict().describe("Filtre les objets situés dans une zone atteignable en un temps donné depuis un point.");
 
-const isochroneCostValueSchema = z
+const navigationMetricsSchema = z
+  .enum(NAVIGATION_METRICS)
+  .describe("Type de coût utilisé : `time` pour une isochrone, `distance` pour une isodistance.");
+
+const isolineCostValueSchema = z
   .number()
   .finite()
   .positive()
-  .max(NAVIGATION_ISOCHRONE_MAX_TIME_MINUTES)
-  .describe(`Temps de trajet maximal en minutes. Maximum : ${NAVIGATION_ISOCHRONE_MAX_TIME_MINUTES}.`);
+  .describe(`Valeur du coût maximal. Interprétée en minutes si \`cost_type = \"time\"\` (maximum : ${NAVIGATION_ISOCHRONE_MAX_MINUTES}), et en mètres si \`cost_type = \"distance\"\` (maximum : ${NAVIGATION_ISODISTANCE_MAX_METERS}).`);
+
+// One max per cost type: `cost_value` is minutes for `time` and meters for
+// `distance`, so the ceiling can only be checked once `cost_type` is known.
+const ISOLINE_COST_LIMITS: Record<NavigationMetric, { max: number; name: string; unit: string }> = {
+  time: { max: NAVIGATION_ISOCHRONE_MAX_MINUTES, name: "temps", unit: "minutes" },
+  distance: { max: NAVIGATION_ISODISTANCE_MAX_METERS, name: "distance", unit: "mètres" },
+};
+
+function assertIsolineCostValue(input: { cost_type: NavigationMetric; cost_value: number }, ctx: z.RefinementCtx) {
+  const { max, name, unit } = ISOLINE_COST_LIMITS[input.cost_type];
+
+  if (input.cost_value > max) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.too_big,
+      maximum: max,
+      type: "number",
+      inclusive: true,
+      path: ["cost_value"],
+      message: `Le coût maximal en ${name} ne peut pas dépasser ${max} ${unit}.`,
+    });
+  }
+}
 
 // --- Shared GPF Inputs ---
 
@@ -406,14 +434,14 @@ export const gpfGetFeaturesLayerOutputSchema = z.object({
 
 // The proxy serves ONE opaque token (in the URL path, `${endpoint}/<token>.json`)
 // but several token kinds (a filtered layer query, a single-feature by-id lookup
-// and an isochrone). Every producer tool stamps its token
+// and an isoline). Every producer tool stamps its token
 // with this `kind` discriminant; the proxy reads it to dispatch to the right
 // schema + engine, then strips it before the strict per-kind `.parse`. It is
 // injected by the tool from validated params — never an LLM-supplied field.
 export const PROXY_TOKEN_KIND = {
   query: "query",
   byId: "by_id",
-  isochrone: "isochrone",
+  isoline: "isoline",
 } as const;
 
 export type ProxyTokenKind = (typeof PROXY_TOKEN_KIND)[keyof typeof PROXY_TOKEN_KIND];
@@ -452,16 +480,20 @@ export type GpfGetFeatureByIdLayerInput = z.infer<typeof gpfGetFeatureByIdLayerI
 
 export const gpfGetFeatureByIdLayerPublishedInputSchema = generatePublishedInputSchema(gpfGetFeatureByIdLayerInputObjectSchema);
 
-// --- `gpf_isochrone_layer` (proxy) ---
+// --- `gpf_isoline_layer` (proxy) ---
 
-export const gpfIsochroneLayerInputObjectSchema = isochronePointSchema.extend({
-  minutes: isochroneCostValueSchema,
+export const gpfIsolineLayerInputObjectSchema = isolinePointSchema.extend({
   profile: navigationProfileSchema,
+  cost_type: navigationMetricsSchema,
+  cost_value: isolineCostValueSchema,
 }).strict();
 
-export type GpfIsochroneLayerInput = z.infer<typeof gpfIsochroneLayerInputObjectSchema>;
+export const gpfIsolineLayerInputSchema = gpfIsolineLayerInputObjectSchema
+  .superRefine(assertIsolineCostValue);
 
-export const gpfIsochroneLayerPublishedInputSchema = generatePublishedInputSchema(gpfIsochroneLayerInputObjectSchema);
+export type GpfIsolineLayerInput = z.infer<typeof gpfIsolineLayerInputSchema>;
+
+export const gpfIsolineLayerPublishedInputSchema = generatePublishedInputSchema(gpfIsolineLayerInputObjectSchema);
 
 // --- `gpf_count_features` ---
 

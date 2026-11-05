@@ -41,7 +41,7 @@ import type { FeatureCollection, Geometry } from "geojson";
 import type {
   GpfGetFeaturesInput,
   GpfGetFeatureByIdLayerInput,
-  GpfIsochroneLayerInput,
+  GpfIsolineLayerInput,
 } from "../wfs/schema.js";
 
 // --- Injected Dependencies ---
@@ -309,29 +309,29 @@ export async function runGeometryFeatureByIdQuery(
 
 // --- Isochrone Public Engine ---
 
-export type IsochroneGeometryResolver = (
-  input: GpfIsochroneLayerInput,
+export type IsolineGeometryResolver = (
+  input: GpfIsolineLayerInput,
 ) => Promise<Geometry>;
 
-export type GeometryIsochroneQueryDeps = {
-  getGeometry: IsochroneGeometryResolver;
+export type GeometryIsolineQueryDeps = {
+  getGeometry: IsolineGeometryResolver;
 };
 
 /**
- * Resolves an isochrone and returns it as a GeoJSON `FeatureCollection` with full
- * geometry (for map rendering by MCP Carto).
+ * Resolves an isoline (isochrone or isodistance) and returns it as a
+ * GeoJSON `FeatureCollection` with full geometry (for map rendering by MCP Carto).
  *
- * Counterpart of {@link runGeometryFeatureQuery} for the isochrone producer tool.
+ * Counterpart of {@link runGeometryFeatureQuery} for the isoline producer tool.
  * The request params are echoed into `properties` so the rendered layer carries
  * its own legend.
  *
- * @param input Validated isochrone layer input (`{ lon, lat, profile, minutes }`).
- * @param deps Injected isochrone geometry resolver.
- * @returns The isochrone as a single GeoJSON FeatureCollection.
+ * @param input Validated isoline layer input (`{ lon, lat, profile, cost_type, cost_value }`).
+ * @param deps Injected isoline geometry resolver.
+ * @returns The isoline as a GeoJSON FeatureCollection.
  */
-export async function runGeometryIsochroneQuery(
-  input: GpfIsochroneLayerInput,
-  deps: GeometryIsochroneQueryDeps,
+export async function runGeometryIsolineQuery(
+  input: GpfIsolineLayerInput,
+  deps: GeometryIsolineQueryDeps,
 ): Promise<FeatureCollection> {
   const geometry = await deps.getGeometry(input);
 
