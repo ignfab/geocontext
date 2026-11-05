@@ -7,8 +7,7 @@ import { NAVIGATION_METRICS, NAVIGATION_PROFILES, NAVIGATION_ISOLINE_RESOURCE } 
 
 export const NAVIGATION_ITINERARY_SOURCE = "Géoplateforme (calcul d'itinéraire)";
 export const NAVIGATION_ITINERARY_URL = "https://data.geopf.fr/navigation/itineraire";
-// Same engine as the `travel_time_filter` isochrones, so that both report the
-// same travel times.
+// Same engine as the `isoline_filter`, so that both report the same travel times.
 export const ITINERARY_RESOURCE = NAVIGATION_ISOLINE_RESOURCE;
 export const ITINERARY_PROFILES = NAVIGATION_PROFILES;
 export const ITINERARY_METRICS = NAVIGATION_METRICS;

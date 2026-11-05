@@ -15,8 +15,6 @@ export const NAVIGATION_ISODISTANCE_MAX_METERS = 50_000;
 export const NAVIGATION_PROFILES = ["car", "pedestrian"] as const;
 export const NAVIGATION_METRICS = ["time", "distance"] as const;
 
-export const TRAVEL_TIME_MAX_MINUTES = 120;
-
 export type NavigationProfile = typeof NAVIGATION_PROFILES[number];
 export type NavigationMetric = typeof NAVIGATION_METRICS[number];
 

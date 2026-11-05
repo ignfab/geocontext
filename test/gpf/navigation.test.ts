@@ -5,7 +5,7 @@ import { RateLimiter } from "../../src/helpers/RateLimiter.js";
 import { ServiceResponseError } from "../../src/helpers/http.js";
 
 describe("NavigationIsolineClient", () => {
-  it("should build a Valhalla travel-time isoline request and return its GeoJSON geometry", async () => {
+  it("should build a Valhalla isochrone request and return its GeoJSON geometry", async () => {
     const urls: string[] = [];
     const client = new NavigationIsolineClient(
       new RateLimiter({ name: "test", maxCalls: 100, period: 1 }),

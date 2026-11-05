@@ -154,13 +154,14 @@ describe("gpfGetFeatures/queryPreparation", () => {
     expect(compiled.resolvedGeometryRef).toBe(resolvedGeometryRef);
   });
 
-  it("should compile travel_time with resolved isochrone geometry", () => {
+  it("should compile isoline with resolved isochrone geometry", () => {
     const compiled = compileQueryParts({
       ...baseInput,
-      travel_time_filter: {
+      isoline_filter: {
         lon: 2.3522,
         lat: 48.8566,
-        minutes: 15,
+        cost_type: "time",
+        cost_value: 15,
         profile: "pedestrian",
       },
     }, wrappedFeatureType,
