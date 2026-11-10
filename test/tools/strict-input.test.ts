@@ -105,4 +105,13 @@ describe("Strict tool input schemas", () => {
     expect(textContent.text).toContain("Paramètres invalides");
     expect(textContent.text).toContain("Le paramètre 'unexpected' n'est pas reconnu.");
   });
+
+  it("should reject unexpected arguments in DistanceTool points", async () => {
+    const tool = new DistanceTool();
+    const response = await toolCall(tool, {
+      params: { name: tool.name, arguments: { departure: { lon: 2.35, lat: 48.85, alt: 35 }, arrival: { lon: 2.29, lat: 48.86 } } },
+    });
+
+    expect(response).toMatchObject({ isError: true, content: [{ text: expect.stringContaining("Le paramètre 'departure.alt' n'est pas reconnu.") }] });
+  });
 });

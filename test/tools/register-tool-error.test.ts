@@ -3,9 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import logger from "../../src/logger.js";
-import BaseTool from "../../src/tools/BaseTool.js";
+import type { McpTool } from "../../src/helpers/tools.js";
+import { toolCall } from "./helpers/mcp";
 
-describe("Test BaseTool error response", () => {
+describe("Test registerTool error response", () => {
   let loggerErrorSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
@@ -16,11 +17,12 @@ describe("Test BaseTool error response", () => {
     vi.restoreAllMocks();
   });
 
-  class DummyTool extends BaseTool<{ lon: number; delayMs?: number }> {
+  class DummyTool implements McpTool {
     name = "dummy_error_tool";
     title = "Dummy Error Tool";
-    description = "Dummy tool used to test BaseTool error normalization.";
-    schema = z.strictObject({
+    description = "Dummy tool used to test registerTool error normalization.";
+    annotations = {};
+    inputSchema = z.strictObject({
       lon: z.number().max(180),
       delayMs: z.number().int().min(0).optional(),
     });
@@ -37,7 +39,7 @@ describe("Test BaseTool error response", () => {
   it("should return normalized validation errors", async () => {
     const tool = new DummyTool();
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "dummy_error_tool",
         arguments: {
@@ -70,7 +72,7 @@ describe("Test BaseTool error response", () => {
   it("should return normalized runtime errors", async () => {
     const tool = new DummyTool();
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "dummy_error_tool",
         arguments: {
@@ -97,11 +99,42 @@ describe("Test BaseTool error response", () => {
     expect(response.structuredContent).toBeUndefined();
   });
 
+  it("should not report a result breaking the output schema as invalid parameters", async () => {
+    const tool = { ...new DummyTool(), outputSchema: z.object({ count: z.number() }), execute: async () => ({ count: "many" }) };
+
+    const response = await toolCall(tool, {
+      params: { name: "dummy_error_tool", arguments: { lon: 2.3 } },
+    });
+
+    expect(response.isError).toBe(true);
+    expect(response.content[0]).toMatchObject({
+      type: "text",
+      text: expect.stringContaining("Le résultat de l'outil dummy_error_tool ne respecte pas son schéma de sortie"),
+    });
+    expect(loggerErrorSpy).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ error_codes: ["execution_error"] }),
+    );
+  });
+
+  // Published with `additionalProperties: false`: a client checking the output
+  // schema would reject an undeclared key.
+  it("should strip the result keys the output schema does not declare", async () => {
+    const tool = { ...new DummyTool(), outputSchema: z.object({ count: z.number() }), execute: async () => ({ count: 1, extra: true }) };
+
+    const response = await toolCall(tool, {
+      params: { name: "dummy_error_tool", arguments: { lon: 2.3 } },
+    });
+
+    expect(response.structuredContent).toEqual({ count: 1 });
+    expect(response.content).toEqual([{ type: "text", text: JSON.stringify({ count: 1 }) }]);
+  });
+
   it("should keep the matching input in concurrent runtime error logs", async () => {
     const tool = new DummyTool();
 
     const [firstResponse, secondResponse] = await Promise.all([
-      tool.toolCall({
+      toolCall(tool, {
         params: {
           name: "dummy_error_tool",
           arguments: {
@@ -110,7 +143,7 @@ describe("Test BaseTool error response", () => {
           },
         },
       }),
-      tool.toolCall({
+      toolCall(tool, {
         params: {
           name: "dummy_error_tool",
           arguments: {

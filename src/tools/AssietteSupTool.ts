@@ -2,7 +2,7 @@
  * MCP tool exposing nearby servitudes d'utilité publique for a given point.
  */
 
-import BaseTool from "./BaseTool.js";
+import type { McpTool } from "../helpers/tools.js";
 import { z } from "zod";
 
 import { getAssiettesServitudes, URBANISME_SOURCE } from "../gpf/urbanisme.js";
@@ -45,14 +45,14 @@ const ASSIETTE_SUP_TOOL_DESCRIPTION = [
   `(source : ${URBANISME_SOURCE}).`
 ].join("\n");
 
-class AssietteSupTool extends BaseTool<AssietteSupInput> {
+class AssietteSupTool implements McpTool<typeof assietteSupInputSchema> {
   name = "assiette_sup";
   title = "Servitudes d’utilité publique";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
   description = ASSIETTE_SUP_TOOL_DESCRIPTION;
-  protected outputSchemaShape = assietteSupOutputSchema;
+  outputSchema = assietteSupOutputSchema;
 
-  schema = assietteSupInputSchema;
+  inputSchema = assietteSupInputSchema;
 
   /**
    * Looks up nearby SUP footprints relevant to the requested point.
@@ -62,7 +62,7 @@ class AssietteSupTool extends BaseTool<AssietteSupInput> {
    */
   async execute(input: AssietteSupInput) {
     logger.info(`[tool] execute ${this.name} ...`, {
-      input: input
+      input
     });
 
     return {

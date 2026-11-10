@@ -2,7 +2,7 @@
  * MCP tool exposing administrative units that cover a given point.
  */
 
-import BaseTool from "./BaseTool.js";
+import type { McpTool } from "../helpers/tools.js";
 import { z } from "zod";
 
 import { getAdminUnits, ADMINEXPRESS_TYPES, ADMINEXPRESS_SOURCE } from "../gpf/adminexpress.js";
@@ -44,14 +44,14 @@ const ADMINEXPRESS_TOOL_DESCRIPTION = [
   `(source : ${ADMINEXPRESS_SOURCE}).`
 ].join("\n");
 
-class AdminexpressTool extends BaseTool<AdminexpressInput> {
+class AdminexpressTool implements McpTool<typeof adminexpressInputSchema> {
   name = "adminexpress";
   title = "Unités administratives";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
   description = ADMINEXPRESS_TOOL_DESCRIPTION;
-  protected outputSchemaShape = adminexpressOutputSchema;
+  outputSchema = adminexpressOutputSchema;
 
-  schema = adminexpressInputSchema;
+  inputSchema = adminexpressInputSchema;
 
   /**
    * Looks up the administrative units covering the requested point.
@@ -61,7 +61,7 @@ class AdminexpressTool extends BaseTool<AdminexpressInput> {
    */
   async execute(input: AdminexpressInput) {
     logger.info(`[tool] execute ${this.name} ...`, {
-      input: input
+      input
     });
 
     return {

@@ -2,7 +2,7 @@
  * MCP tool exposing urban planning information around a given point.
  */
 
-import BaseTool from "./BaseTool.js";
+import type { McpTool } from "../helpers/tools.js";
 import { z } from "zod";
 
 import { getUrbanisme, URBANISME_SOURCE } from "../gpf/urbanisme.js";
@@ -49,14 +49,14 @@ const URBANISME_TOOL_DESCRIPTION = [
   "- fichier: https://www.geoportail-urbanisme.gouv.fr/api/document/{gpu_doc_id}/files/{nomfic}",
 ].join("\n");
 
-class UrbanismeTool extends BaseTool<UrbanismeInput> {
+class UrbanismeTool implements McpTool<typeof urbanismeInputSchema> {
   name = "urbanisme";
   title = "Informations d’urbanisme";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
   description = URBANISME_TOOL_DESCRIPTION;
-  protected outputSchemaShape = urbanismeOutputSchema;
+  outputSchema = urbanismeOutputSchema;
 
-  schema = urbanismeInputSchema;
+  inputSchema = urbanismeInputSchema;
 
   /**
    * Returns the urban planning objects relevant to the requested point.
@@ -66,7 +66,7 @@ class UrbanismeTool extends BaseTool<UrbanismeInput> {
    */
   async execute(input: UrbanismeInput) {
     logger.info(`[tool] execute ${this.name} ...`, {
-      input: input
+      input
     });
 
     return {

@@ -2,7 +2,7 @@
  * MCP tool exposing keyword-based search over the embedded WFS type catalog.
  */
 
-import BaseTool from "./BaseTool.js";
+import type { McpTool } from "../helpers/tools.js";
 import { z } from "zod";
 
 import { READ_ONLY_CLOSED_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
@@ -69,14 +69,14 @@ const GPF_SEARCH_TYPES_TOOL_DESCRIPTION = [
   "**Important** : Privilégier des termes métier en français pour la recherche."
 ].join("\n");
 
-class GpfSearchTypesTool extends BaseTool<GpfSearchTypesInput> {
+class GpfSearchTypesTool implements McpTool<typeof gpfSearchTypesInputSchema> {
   name = "gpf_search_types";
   title = "Recherche de types GPF";
   annotations = READ_ONLY_CLOSED_WORLD_TOOL_ANNOTATIONS;
   description = GPF_SEARCH_TYPES_TOOL_DESCRIPTION;
-  protected outputSchemaShape = gpfSearchTypesOutputSchema;
+  outputSchema = gpfSearchTypesOutputSchema;
 
-  schema = gpfSearchTypesInputSchema;
+  inputSchema = gpfSearchTypesInputSchema;
 
   /**
    * Searches the embedded WFS type catalog from a free-text query.
@@ -86,7 +86,7 @@ class GpfSearchTypesTool extends BaseTool<GpfSearchTypesInput> {
    */
   async execute(input: GpfSearchTypesInput) {
     logger.info(`[tool] execute ${this.name} ...`, {
-      input: input
+      input
     });
 
     const maxResults = input.max_results || 10;

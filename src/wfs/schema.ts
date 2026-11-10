@@ -1,5 +1,5 @@
 /**
- * Zod schemas and published MCP input schemas for the structured WFS engine.
+ * Zod schemas for the structured WFS engine.
  *
  * This module centralizes:
  * - shared schema fragments reused by WFS tools
@@ -8,7 +8,6 @@
 
 import { z } from "zod";
 
-import { generatePublishedInputSchema } from "../helpers/jsonSchema.js";
 import { lonSchema, latSchema } from "../helpers/schemas.js";
 import { TRAVEL_TIME_MAX_MINUTES, TRAVEL_TIME_PROFILES } from "../gpf/navigation.js";
 
@@ -286,17 +285,14 @@ export type SpatialFilter = SpatialFilterEntry<SpatialFilterKey>;
 
 // --- `gpf_get_features` ---
 
-export const gpfGetFeaturesInputObjectSchema = gpfTypenameInputSchema
-  .extend({
-    select: z
+const gpfGetFeaturesInputObjectSchema = gpfTypenameInputSchema.extend({
+  select: z
     .array(z.string().trim().min(1))
     .min(1)
     .optional()
     .describe("Liste des propriétés non géométriques à renvoyer pour chaque objet. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`."),
-  })
-  .extend(gpfWhereFilterInputSchema.shape)
-  .extend(gpfSpatialFilterInputSchema.shape)
-  .extend({
+  ...gpfWhereFilterInputSchema.shape,
+  ...gpfSpatialFilterInputSchema.shape,
   limit: z
     .number()
     .int()
@@ -309,8 +305,8 @@ export const gpfGetFeaturesInputObjectSchema = gpfTypenameInputSchema
     .min(1)
     .optional()
     .describe("Liste ordonnée des critères de tri."),
-  })
-  .extend(gpfGetFeaturesGeometryExtraInputSchema.shape);
+  ...gpfGetFeaturesGeometryExtraInputSchema.shape,
+});
 
 export const gpfGetFeaturesInputSchema = gpfGetFeaturesInputObjectSchema
   .superRefine(assertSpatialFilterExclusion)
@@ -320,19 +316,13 @@ export const gpfGetFeaturesInputSchema = gpfGetFeaturesInputObjectSchema
 
 export type GpfGetFeaturesInput = z.infer<typeof gpfGetFeaturesInputSchema>;
 
-// --- `gpf_get_features` Published Schema ---
-
-export const gpfGetFeaturesPublishedInputSchema = generatePublishedInputSchema(gpfGetFeaturesInputObjectSchema);
-
 // --- `gpf_get_features_layer` (proxy) ---
 
 // The stateless proxy carries the same query surface as `gpf_get_features` MINUS
 // the LLM-only knob `spatial_extras` (the proxy always returns full-geometry
 // GeoJSON, so the derived-geometry extras have no meaning). Derived from the
-// object schema so the fragments stay defined once. The plain object variant is
-// what the tool publishes (the framework needs a non-transformed Zod object); the
-// transform re-injects `spatial_extras: []` so the parsed value is a valid
-// `GpfGetFeaturesInput` for the engine.
+// object schema so the fragments stay defined once. The transform re-injects
+// `spatial_extras: []` so the parsed value is a valid `GpfGetFeaturesInput` for the engine.
 // `limit` is also overridden: the attribute tool `gpf_get_features` keeps a low
 // default (100) to protect the LLM context, but a MAP LAYER wants the COMPLETE
 // result set — and the tool returns only an opaque `data_url`, so a low default
@@ -340,7 +330,7 @@ export const gpfGetFeaturesPublishedInputSchema = generatePublishedInputSchema(g
 // to MAX_LIMIT (the GPF server-side cap, i.e. "as many as the service returns");
 // the LLM can still lower it for a lighter map, and the proxy byte cap
 // (PROXY_MAX_RESPONSE_BYTES) stays the real volume guard for dense layers.
-export const gpfGetFeaturesLayerInputObjectSchema = gpfGetFeaturesInputObjectSchema
+export const gpfGetFeaturesLayerInputSchema = gpfGetFeaturesInputObjectSchema
   .omit({ spatial_extras: true, limit: true })
   .extend(
     {
@@ -352,20 +342,12 @@ export const gpfGetFeaturesLayerInputObjectSchema = gpfGetFeaturesInputObjectSch
         .default(MAX_LIMIT)
         .describe(`Nombre maximum d'objets à cartographier. Valeur par défaut : ${MAX_LIMIT} (plafond du service). Réduire pour alléger la carte. Maximum : ${MAX_LIMIT}. Une requête produisant plus de ${MAX_LIMIT} objets sera tronquée.`),
     },
-  );
-
-export const gpfGetFeaturesLayerInputSchema = gpfGetFeaturesLayerInputObjectSchema
+  )
   .transform((value): GpfGetFeaturesInput => ({
     ...value,
     spatial_extras: [],
   }))
   .superRefine((value, ctx) => assertSpatialFilterExclusion(value, ctx));
-
-export type GpfGetFeaturesLayerInput = z.input<typeof gpfGetFeaturesLayerInputSchema>;
-
-// --- `gpf_get_features_layer` Published Schema ---
-
-export const gpfGetFeaturesLayerPublishedInputSchema = generatePublishedInputSchema(gpfGetFeaturesLayerInputObjectSchema);
 
 // --- `gpf_get_features_layer` Outputs ---
 
@@ -400,7 +382,7 @@ export type ProxyTokenKind = (typeof PROXY_TOKEN_KIND)[keyof typeof PROXY_TOKEN_
 // the returned attributes while retaining the complete geometry. `select` only
 // controls non-geometric properties; the cartographic path always adds the
 // catalog geometry column itself.
-export const gpfGetFeatureByIdLayerInputObjectSchema = z.strictObject({
+export const gpfGetFeatureByIdLayerInputSchema = z.strictObject({
   typename: z
     .string()
     .trim()
@@ -418,19 +400,13 @@ export const gpfGetFeatureByIdLayerInputObjectSchema = z.strictObject({
     .describe("Liste des propriétés non géométriques à renvoyer. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`."),
 });
 
-export type GpfGetFeatureByIdLayerInput = z.infer<typeof gpfGetFeatureByIdLayerInputObjectSchema>;
-
-// --- `gpf_get_feature_by_id_layer` Published Schema ---
-
-export const gpfGetFeatureByIdLayerPublishedInputSchema = generatePublishedInputSchema(gpfGetFeatureByIdLayerInputObjectSchema);
+export type GpfGetFeatureByIdLayerInput = z.infer<typeof gpfGetFeatureByIdLayerInputSchema>;
 
 // --- `gpf_count_features` ---
 
-export const gpfCountFeaturesInputObjectSchema = gpfTypenameInputSchema
-  .extend(gpfWhereFilterInputSchema.shape)
-  .extend(gpfSpatialFilterInputSchema.shape);
-
-export const gpfCountFeaturesInputSchema = gpfCountFeaturesInputObjectSchema.superRefine(assertSpatialFilterExclusion);
+export const gpfCountFeaturesInputSchema = gpfTypenameInputSchema
+  .extend({ ...gpfWhereFilterInputSchema.shape, ...gpfSpatialFilterInputSchema.shape })
+  .superRefine(assertSpatialFilterExclusion);
 
 // --- `gpf_count_features` Outputs ---
 
@@ -441,10 +417,6 @@ export const gpfCountFeaturesOutputSchema = z.object({
 // --- `gpf_count_features` Types ---
 
 export type GpfCountFeaturesInput = z.infer<typeof gpfCountFeaturesInputSchema>;
-
-// --- `gpf_count_features` Published Schema ---
-
-export const gpfCountFeaturesPublishedInputSchema = generatePublishedInputSchema(gpfCountFeaturesInputObjectSchema);
 
 // --- Hybrid `gpf_get_features` / `gpf_count_features` schema ---
 
@@ -457,13 +429,7 @@ export function queryIsGetFeaturesInput(input: GpfQueryFeaturesInput) : input is
 
 // --- `gpf_get_feature_by_id` ---
 
-export const gpfGetFeatureByIdInputObjectSchema = gpfGetFeatureByIdLayerInputObjectSchema
+export const gpfGetFeatureByIdInputSchema = gpfGetFeatureByIdLayerInputSchema
   .extend(gpfGetFeatureByIdGeometryExtraInputSchema.shape);
 
-export const gpfGetFeatureByIdInputSchema = gpfGetFeatureByIdInputObjectSchema;
-
 export type GpfGetFeatureByIdInput = z.infer<typeof gpfGetFeatureByIdInputSchema>;
-
-// --- `gpf_get_feature_by_id` Published Schema ---
-
-export const gpfGetFeatureByIdPublishedInputSchema = generatePublishedInputSchema(gpfGetFeatureByIdInputObjectSchema);

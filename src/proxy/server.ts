@@ -13,7 +13,7 @@ import { getEnv } from "../config/env.js";
 import { GPF_WFS_URL } from "../wfs/catalog.js";
 import {
   gpfGetFeaturesLayerInputSchema,
-  gpfGetFeatureByIdLayerInputObjectSchema,
+  gpfGetFeatureByIdLayerInputSchema,
   PROXY_TOKEN_KIND,
 } from "../wfs/schema.js";
 import { runGeometryFeatureQuery, runGeometryFeatureByIdQuery } from "./execute.js";
@@ -179,7 +179,7 @@ async function handleLayerRequest(token: string, res: ServerResponse): Promise<v
     const { kind, ...payload } = asDiscriminatedToken(params);
 
     if (kind === PROXY_TOKEN_KIND.byId) {
-      const input = gpfGetFeatureByIdLayerInputObjectSchema.parse(payload);
+      const input = gpfGetFeatureByIdLayerInputSchema.parse(payload);
       featureCollection = await runGeometryFeatureByIdQuery(
         input,
         getDefaultGeometryFeatureByIdQueryDeps(),

@@ -6,7 +6,8 @@ import { Client } from "@modelcontextprotocol/client";
 import { InMemoryTransport } from "@modelcontextprotocol/server";
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
 
-import { createServer } from "../src/server";
+import { createServer, tools } from "../src/server";
+import { toolDefinition } from "./tools/helpers/mcp";
 
 describe("Test createServer", () => {
   let client: Client;
@@ -32,19 +33,50 @@ describe("Test createServer", () => {
       expectedNames.push(new Tool().name);
     }
 
-    const { tools } = await client.listTools();
+    const { tools: listed } = await client.listTools();
 
-    expect(tools.map((tool) => tool.name).sort()).toEqual(expectedNames.sort());
+    expect(listed.map((tool) => tool.name).sort()).toEqual(expectedNames.sort());
   });
 
   // Every published parameter must be described for the LLM.
   it("should describe every input parameter", async () => {
-    const { tools } = await client.listTools();
+    const { tools: listed } = await client.listTools();
 
-    for (const tool of tools) {
+    for (const tool of listed) {
       for (const [name, property] of Object.entries(tool.inputSchema.properties ?? {})) {
         expect((property as { description?: string }).description, `${tool.name}.${name}`).toBeTruthy();
       }
+    }
+  });
+
+  // The tool tests check `toolDefinition`: it must match what the SDK publishes.
+  it("should publish the tool definitions", async () => {
+    const { tools: listed } = await client.listTools();
+
+    for (const tool of tools) {
+      expect(listed.find((definition) => definition.name === tool.name)).toEqual(toolDefinition(tool));
+    }
+  });
+
+  // Served like src/index.ts does in stdio mode.
+  it.each([
+    { protocolVersion: "2026-07-28", clientOptions: { versionNegotiation: { mode: { pin: "2026-07-28" } } } },
+    // By default, the SDK client speaks the 2025 protocol.
+    { protocolVersion: "2025-11-25", clientOptions: {} },
+  ] as const)("should serve the $protocolVersion protocol", async ({ protocolVersion, clientOptions }) => {
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    serveStdio(createServer, { transport: serverTransport });
+    const versionClient = new Client({ name: "test", version: "0.0.0" }, clientOptions);
+
+    try {
+      await versionClient.connect(clientTransport);
+      expect(versionClient.getNegotiatedProtocolVersion()).toBe(protocolVersion);
+      expect((await versionClient.listTools()).tools).toHaveLength(tools.length);
+
+      const result = await versionClient.callTool({ name: "geocode", arguments: { text: "" } });
+      expect(result.content).toMatchObject([{ type: "text", text: expect.stringContaining("Paramètres invalides") }]);
+    } finally {
+      await versionClient.close();
     }
   });
 

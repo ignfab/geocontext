@@ -2,24 +2,23 @@
  * MCP tool exposing the distance and travel time between two geographic positions.
  */
 
-import BaseTool from "./BaseTool.js";
+import type { McpTool } from "../helpers/tools.js";
 import { z } from "zod";
 
 import { NAVIGATION_ITINERARY_SOURCE, navigationItineraryClient, ITINERARY_METRICS, ITINERARY_PROFILES } from "../gpf/itinerary.js";
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import { lonSchema, latSchema } from "../helpers/schemas.js";
-import { generatePublishedInputSchema } from "../helpers/jsonSchema.js";
 import logger from "../logger.js";
 import { ellipsoidalDistance, haversine } from "../helpers/distance.js";
 
 // --- Schemas ---
 
 const distanceInputSchema = z.strictObject({
-  departure: z.object({
+  departure: z.strictObject({
     lon: lonSchema.describe("La longitude du point de départ."),
     lat: latSchema.describe("La latitude du point de départ."),
   }).describe("Le point de départ"),
-  arrival: z.object({
+  arrival: z.strictObject({
     lon: lonSchema.describe("La longitude du point d'arrivée."),
     lat: latSchema.describe("La latitude du point d'arrivée."),
   }).describe("Le point d'arrivée"),
@@ -59,20 +58,14 @@ const DISTANCE_TOOL_DESCRIPTION = [
   `(source : ${NAVIGATION_ITINERARY_SOURCE}).`,
 ].join("\n");
 
-class DistanceTool extends BaseTool<DistanceInput> {
+class DistanceTool implements McpTool<typeof distanceInputSchema> {
   name = "distance";
   title = "Distance et temps de trajet entre deux points";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
   description = DISTANCE_TOOL_DESCRIPTION;
-  protected outputSchemaShape = distanceOutputSchema;
+  outputSchema = distanceOutputSchema;
 
-  schema = distanceInputSchema;
-
-  // The framework requires a plain Zod object here to publish a compatible
-  // input schema, but its `.default()` fields are (incorrectly) marked required.
-  get inputSchema() {
-    return generatePublishedInputSchema(distanceInputSchema);
-  }
+  inputSchema = distanceInputSchema;
 
   /**
    * Resolves the distance query.
@@ -82,7 +75,7 @@ class DistanceTool extends BaseTool<DistanceInput> {
    */
   async execute(input: DistanceInput) {
     logger.info(`[tool] execute ${this.name} ...`, {
-      input: input
+      input
     });
 
     switch (input.profile) {

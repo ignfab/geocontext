@@ -2,7 +2,7 @@
  * MCP tool exposing nearby cadastral objects for a given point.
  */
 
-import BaseTool from "./BaseTool.js";
+import type { McpTool } from "../helpers/tools.js";
 import { z } from "zod";
 
 import { getParcellaireExpress, PARCELLAIRE_EXPRESS_TYPES, PARCELLAIRE_EXPRESS_SOURCE } from "../gpf/parcellaire-express.js";
@@ -47,14 +47,14 @@ const CADASTRE_TOOL_DESCRIPTION = [
   `(source : ${PARCELLAIRE_EXPRESS_SOURCE}).`
 ].join("\n");
 
-class CadastreTool extends BaseTool<CadastreInput> {
+class CadastreTool implements McpTool<typeof cadastreInputSchema> {
   name = "cadastre";
   title = "Informations cadastrales";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
   description = CADASTRE_TOOL_DESCRIPTION;
-  protected outputSchemaShape = cadastreOutputSchema;
+  outputSchema = cadastreOutputSchema;
 
-  schema = cadastreInputSchema;
+  inputSchema = cadastreInputSchema;
 
   /**
    * Returns the nearest cadastral objects around the requested point.
@@ -64,7 +64,7 @@ class CadastreTool extends BaseTool<CadastreInput> {
    */
   async execute(input: CadastreInput) {
     logger.info(`[tool] execute ${this.name} ...`, {
-      input: input
+      input
     });
 
     return {
