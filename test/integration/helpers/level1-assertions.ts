@@ -48,11 +48,12 @@ export function expectFeatureCollectionWithFeatures<TFeature>(
 }
 
 /**
- * Asserts that a tool call promise fails with an error.
+ * Asserts that a tool call promise fails with a tool error (`isError` result), not
+ * with a protocol error, a timeout or a server crash.
  *
  * @param toolCallPromise Promise returned by a tool call.
  * @returns Promise resolved when the failure assertion completes.
  */
 export async function expectToolCallToThrow(toolCallPromise: Promise<unknown>): Promise<void> {
-  await expect(toolCallPromise).rejects.toThrow();
+  await expect(toolCallPromise).rejects.toThrow(/returned an error/);
 }
