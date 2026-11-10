@@ -30,6 +30,8 @@ describe("Test createServer", () => {
     const expectedNames: string[] = [];
     for (const file of readdirSync(toolsDir)) {
       const { default: Tool } = await import(join(toolsDir, file));
+      // docs/mcp-tools.md derives the source file of each tool from its class name.
+      expect(`${Tool.name}.ts`).toEqual(file);
       expectedNames.push(new Tool().name);
     }
 
