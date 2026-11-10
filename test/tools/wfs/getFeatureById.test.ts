@@ -5,6 +5,7 @@ import type { GpfFeatureType } from "../../../src/wfs/catalog.js";
 import { GPF_SPATIAL_EXTRAS_REQUIRING_FILTER } from "../../../src/wfs/schema.js";
 import { ServiceResponseError } from "../../../src/helpers/http.js";
 import { expectFrenchIssue } from "../helpers/errorAssertions.js";
+import { toolCall, toolDefinition } from "../helpers/mcp.js";
 
 const mockGetFeatureType = vi.fn<(typename: string) => Promise<GpfFeatureType>>();
 const mockFetchJSONPost = vi.fn<(
@@ -72,9 +73,9 @@ describe("Test GpfGetFeatureByIdTool", () => {
 
   it("should expose its MCP input schema definition", () => {
     const tool = new GpfGetFeatureByIdTool();
-    expect(tool.toolDefinition.title).toEqual("Lecture d’un objet GPF par identifiant");
-    expect(tool.toolDefinition.outputSchema).toBeUndefined();
-    expect(tool.toolDefinition.inputSchema).toEqual({
+    expect(toolDefinition(tool).title).toEqual("Lecture d’un objet GPF par identifiant");
+    expect(toolDefinition(tool).outputSchema).toBeUndefined();
+    expect(toolDefinition(tool).inputSchema).toEqual({
       type: "object",
       properties: {
         typename: {
@@ -114,7 +115,7 @@ describe("Test GpfGetFeatureByIdTool", () => {
       },
       required: ["typename", "feature_id"],
       additionalProperties: false,
-      $schema: "http://json-schema.org/draft-07/schema#",
+      $schema: "https://json-schema.org/draft/2020-12/schema",
     });
   });
 
@@ -146,7 +147,7 @@ describe("Test GpfGetFeatureByIdTool", () => {
       };
     });
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_feature_by_id",
         arguments: {
@@ -208,7 +209,7 @@ describe("Test GpfGetFeatureByIdTool", () => {
       };
     });
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_feature_by_id",
         arguments: {
@@ -236,7 +237,7 @@ describe("Test GpfGetFeatureByIdTool", () => {
   it.each(GPF_SPATIAL_EXTRAS_REQUIRING_FILTER)("should reject spatial_extra %s for by-id", async (forbiddenExtra) => {
     const tool = new GpfGetFeatureByIdTool();
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_feature_by_id",
         arguments: {
@@ -288,7 +289,7 @@ describe("Test GpfGetFeatureByIdTool", () => {
       };
     });
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_feature_by_id",
         arguments: {
@@ -310,7 +311,7 @@ describe("Test GpfGetFeatureByIdTool", () => {
     mockGetFeatureType.mockResolvedValue({ typename: "ADMINEXPRESS-COG.LATEST:commune", schema: polygonFeatureType });
     mockFetchJSONPost.mockResolvedValue({ type: "FeatureCollection", features: [], totalFeatures: 0 });
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_feature_by_id",
         arguments: {
@@ -341,7 +342,7 @@ describe("Test GpfGetFeatureByIdTool", () => {
       totalFeatures: 2,
     });
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_feature_by_id",
         arguments: {
@@ -370,7 +371,7 @@ describe("Test GpfGetFeatureByIdTool", () => {
       totalFeatures: 1,
     });
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_feature_by_id",
         arguments: {
@@ -391,7 +392,7 @@ describe("Test GpfGetFeatureByIdTool", () => {
   it("should fail clearly when execution returns an unexpected success payload", async () => {
     const tool = new InvalidSuccessPayloadTool();
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_feature_by_id",
         arguments: {
@@ -436,7 +437,7 @@ describe("Test GpfGetFeatureByIdTool", () => {
       };
     });
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_feature_by_id",
         arguments: {
@@ -455,7 +456,7 @@ describe("Test GpfGetFeatureByIdTool", () => {
     const tool = new GpfGetFeatureByIdTool();
     mockGetFeatureType.mockResolvedValue({ typename: "wfs_scot:doc_urba", schema: tableFeatureType });
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_feature_by_id",
         arguments: {

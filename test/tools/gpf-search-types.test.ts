@@ -4,7 +4,7 @@ import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 import type { GpfFeatureType } from "../../src/wfs/catalog.js";
 import GpfSearchTypesTool from "../../src/tools/GpfSearchTypesTool.js";
 import { wfsSchemaStore } from "../../src/wfs/catalog.js";
-import { validateStructuredContentAgainstOutputSchema } from "./helpers/outputSchema.js";
+import { toolCall } from "./helpers/mcp.js";
 
 vi.mock("../../src/wfs/catalog.js");
 
@@ -49,7 +49,7 @@ describe("Test GpfSearchTypesTool", () => {
     });
 
     const tool = new GpfSearchTypesTool();
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_search_types",
         arguments: {
@@ -86,13 +86,6 @@ describe("Test GpfSearchTypesTool", () => {
     expect(parsedContent.results[1].description).toContain("Détails du type introuvable à cause d'une erreur de synchronisation du catalogue.");
     expect(parsedContent.results[1].title).toContain("Synchronization error");
 
-    // Verify structured content matches output schema
-    expect(
-      validateStructuredContentAgainstOutputSchema(
-        tool.toolDefinition.outputSchema,
-        response.structuredContent,
-      ),
-    ).toBeNull();
   });
 
   it("should forward queryTerms, terms and match from the catalog search results", async () => {
@@ -125,7 +118,7 @@ describe("Test GpfSearchTypesTool", () => {
     });
 
     const tool = new GpfSearchTypesTool();
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_search_types",
         arguments: {

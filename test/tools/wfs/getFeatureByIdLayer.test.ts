@@ -2,12 +2,12 @@ import { vi, describe, it, expect, afterEach } from "vitest";
 
 import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 import type { GpfFeatureType } from "../../../src/wfs/catalog.js";
-import { validateStructuredContentAgainstOutputSchema } from "../helpers/outputSchema";
 
 import type { Env } from "../../../src/config/env.js";
 import { decodeToken } from "../../../src/proxy/token.js";
 import { PROXY_TOKEN_KIND } from "../../../src/wfs/schema.js";
 import { expectErrorText, expectFrenchIssue } from "../helpers/errorAssertions";
+import { toolCall } from "../helpers/mcp";
 
 // 32-byte key as 64 hex chars, decoded to a Buffer the way env.ts would.
 const SECRET_HEX = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
@@ -87,7 +87,7 @@ describe("Test GpfGetFeatureByIdLayerTool", () => {
     );
     const tool = new GpfGetFeatureByIdLayerTool();
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_feature_by_id_layer",
         arguments: { typename: "ADMINEXPRESS-COG.LATEST:commune", feature_id: "commune.1" },
@@ -111,7 +111,7 @@ describe("Test GpfGetFeatureByIdLayerTool", () => {
     mockGetFeatureType.mockResolvedValue({ typename: "ADMINEXPRESS-COG.LATEST:commune", schema: communeType });
     const tool = new GpfGetFeatureByIdLayerTool();
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_feature_by_id_layer",
         arguments: { typename: "ADMINEXPRESS-COG.LATEST:commune", feature_id: "commune.1" },
@@ -128,7 +128,7 @@ describe("Test GpfGetFeatureByIdLayerTool", () => {
     mockGetFeatureType.mockResolvedValue({ typename: "ADMINEXPRESS-COG.LATEST:commune", schema: communeType });
     const tool = new GpfGetFeatureByIdLayerTool();
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_feature_by_id_layer",
         arguments: {
@@ -146,12 +146,6 @@ describe("Test GpfGetFeatureByIdLayerTool", () => {
     }
     const payload = JSON.parse(textContent.text);
     expect(payload).toEqual(response.structuredContent);
-    expect(
-      validateStructuredContentAgainstOutputSchema(
-        tool.toolDefinition.outputSchema,
-        response.structuredContent,
-      ),
-    ).toBeNull();
 
     const url = new URL(payload.data_url);
     expect(url.pathname.startsWith("/api/v1/proxy/")).toBe(true);
@@ -176,7 +170,7 @@ describe("Test GpfGetFeatureByIdLayerTool", () => {
     mockGetFeatureType.mockResolvedValue({ typename: "ADMINEXPRESS-COG.LATEST:commune", schema: communeType });
     const tool = new GpfGetFeatureByIdLayerTool();
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_feature_by_id_layer",
         arguments: { typename: "ADMINEXPRESS-COG.LATEST:commune", feature_id: "commune.1" },
@@ -194,7 +188,7 @@ describe("Test GpfGetFeatureByIdLayerTool", () => {
     mockGetFeatureType.mockResolvedValue({ typename: "ADMINEXPRESS-COG.LATEST:commune", schema: communeType });
     const tool = new GpfGetFeatureByIdLayerTool();
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_feature_by_id_layer",
         arguments: { typename: "ADMINEXPRESS-COG.LATEST:commune", feature_id: "commune.1" },
@@ -212,7 +206,7 @@ describe("Test GpfGetFeatureByIdLayerTool", () => {
     mockGetFeatureType.mockRejectedValue(new Error("FeatureTypeNotFound: TYPE_QUI_N_EXISTE_PAS"));
     const tool = new GpfGetFeatureByIdLayerTool();
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_feature_by_id_layer",
         arguments: { typename: "TYPE_QUI_N_EXISTE_PAS", feature_id: "x.1" },
@@ -233,7 +227,7 @@ describe("Test GpfGetFeatureByIdLayerTool", () => {
     mockGetEnv.mockReturnValue(makeEnv({}));
     const tool = new GpfGetFeatureByIdLayerTool();
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_feature_by_id_layer",
         arguments: {
@@ -252,7 +246,7 @@ describe("Test GpfGetFeatureByIdLayerTool", () => {
     mockGetFeatureType.mockResolvedValue({ typename: "ADMINEXPRESS-COG.LATEST:commune", schema: communeType });
     const tool = new GpfGetFeatureByIdLayerTool();
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_feature_by_id_layer",
         arguments: {
@@ -274,7 +268,7 @@ describe("Test GpfGetFeatureByIdLayerTool", () => {
     mockGetFeatureType.mockResolvedValue({ typename: "ADMINEXPRESS-COG.LATEST:commune", schema: communeType });
     const tool = new GpfGetFeatureByIdLayerTool();
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_feature_by_id_layer",
         arguments: {
@@ -294,7 +288,7 @@ describe("Test GpfGetFeatureByIdLayerTool", () => {
     mockGetEnv.mockReturnValue(makeEnv({}));
     const tool = new GpfGetFeatureByIdLayerTool();
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_feature_by_id_layer",
         arguments: { typename: "ADMINEXPRESS-COG.LATEST:commune" },

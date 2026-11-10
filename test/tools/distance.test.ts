@@ -1,10 +1,10 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
 
 import DistanceTool from "../../src/tools/DistanceTool.js";
-import { validateStructuredContentAgainstOutputSchema } from "./helpers/outputSchema.js";
 import { expectErrorText, expectFrenchIssue } from "./helpers/errorAssertions.js";
 import { navigationItineraryClient } from "../../src/gpf/itinerary.js";
 import { ellipsoidalDistance, haversine } from "../../src/helpers/distance.js";
+import { toolCall, toolDefinition } from "./helpers/mcp.js";
 
 describe("Test DistanceTool", () => {
   const departure = { lon: 2.3522, lat: 48.8566 };
@@ -14,18 +14,18 @@ describe("Test DistanceTool", () => {
   
   it("should publish an optional profile and a distance output schema", () => {
     const tool = new DistanceTool();
-    expect(tool.toolDefinition.title).toEqual("Distance et temps de trajet entre deux points");
-    expect(tool.toolDefinition.inputSchema.required).not.toContain("profile");
-    expect(tool.toolDefinition.inputSchema.properties?.profile).toMatchObject({
+    expect(toolDefinition(tool).title).toEqual("Distance et temps de trajet entre deux points");
+    expect(toolDefinition(tool).inputSchema.required).not.toContain("profile");
+    expect(toolDefinition(tool).inputSchema.properties?.profile).toMatchObject({
       enum: ["spherical", "ellipsoidal", "car", "pedestrian"],
       default: "spherical",
     });
-    expect(tool.toolDefinition.outputSchema).toBeDefined();
+    expect(toolDefinition(tool).outputSchema).toBeDefined();
   });
 
   it.each([undefined, "spherical", "ellipsoidal"])("should return a structured distance for profile %s", async (profile) => {
     const tool = new DistanceTool();
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "distance",
         arguments: { departure, arrival, ...(profile && { profile }) },
@@ -36,15 +36,11 @@ describe("Test DistanceTool", () => {
     expect(response.structuredContent).toMatchObject({ distance: expect.any(Number) });
     expect((response.structuredContent as { distance: number }).distance).toBeGreaterThan(0);
     expect(response.content[0]).toMatchObject({ type: "text" });
-    expect(validateStructuredContentAgainstOutputSchema(
-      tool.toolDefinition.outputSchema,
-      response.structuredContent,
-    )).toBeNull();
   });
 
   it("should reject invalid coordinates at the tool boundary", async () => {
     const tool = new DistanceTool();
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "distance",
         arguments: { departure: { lon: 600, lat: 48.8566 }, arrival },
@@ -58,7 +54,7 @@ describe("Test DistanceTool", () => {
     ["spherical", haversine],
     ["ellipsoidal", ellipsoidalDistance],
   ] as const)("should return the rounded %s distance", async (profile, calculateDistance) => {
-    const response = await new DistanceTool().toolCall({
+    const response = await toolCall(new DistanceTool(), {
       params: { name: "distance", arguments: { departure, arrival, profile } },
     });
     const expected = Math.round(calculateDistance(
@@ -76,7 +72,7 @@ describe("Test DistanceTool", () => {
   ] as const)("should return itinerary distance and time for %s", async (profile, rawDistance, distance, duration, time) => {
     const tool = new DistanceTool();
     const getItinerarySpy = vi.spyOn(navigationItineraryClient, "getItinerary").mockResolvedValue({ distance: rawDistance, duration });
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: { name: "distance", arguments: { departure, arrival, profile } },
     });
 
@@ -85,10 +81,6 @@ describe("Test DistanceTool", () => {
     expect(response.content[0]).toMatchObject({ type: "text" });
     expect(JSON.parse((response.content[0] as { type: "text"; text: string }).text)).toEqual({ distance, time });
     expect(response.structuredContent).toEqual({ distance, time });
-    expect(validateStructuredContentAgainstOutputSchema(
-      tool.toolDefinition.outputSchema,
-      response.structuredContent,
-    )).toBeNull();
   });
 
   it("should forward optimize=distance to itinerary client", async () => {
@@ -97,7 +89,7 @@ describe("Test DistanceTool", () => {
       duration: 10,
     });
 
-    await new DistanceTool().toolCall({
+    await toolCall(new DistanceTool(), {
       params: { name: "distance", arguments: { departure, arrival, profile: "car", optimize: "distance" } },
     });
 

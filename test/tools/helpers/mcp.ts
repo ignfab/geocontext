@@ -19,11 +19,13 @@ export async function toolCall(
   const server = new McpServer({ name: "test", version: "0.0.0" });
   registerTool(server, tool);
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-  await server.connect(serverTransport);
-
   const client = new Client({ name: "test", version: "0.0.0" });
-  await client.connect(clientTransport);
   try {
+    await server.connect(serverTransport);
+    await client.connect(clientTransport);
+    // Cached by the client, which then checks `structuredContent` against the
+    // published `outputSchema`.
+    await client.listTools();
     return (await client.callTool(request.params)) as CallToolResult;
   } finally {
     await client.close();

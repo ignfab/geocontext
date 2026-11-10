@@ -12,6 +12,7 @@ import GpfGetFeatureByIdTool from "../../src/tools/GpfGetFeatureByIdTool";
 import GpfGetFeaturesTool from "../../src/tools/GpfGetFeaturesTool";
 import GpfSearchTypesTool from "../../src/tools/GpfSearchTypesTool";
 import UrbanismeTool from "../../src/tools/UrbanismeTool";
+import { toolCall } from "./helpers/mcp";
 
 const strictInputCases = [
   {
@@ -84,7 +85,7 @@ const strictInputCases = [
 
 describe("Strict tool input schemas", () => {
   it.each(strictInputCases)("should reject unexpected arguments for $label", async ({ tool, validArguments }) => {
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: tool.name,
         arguments: {

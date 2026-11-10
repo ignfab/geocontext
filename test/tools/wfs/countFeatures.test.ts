@@ -3,7 +3,7 @@ import { vi, describe, it, expect, afterEach } from "vitest";
 import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 import type { GpfFeatureType } from "../../../src/wfs/catalog.js";
 import { ServiceResponseError } from "../../../src/helpers/http";
-import { validateStructuredContentAgainstOutputSchema } from "../helpers/outputSchema";
+import { toolCall } from "../helpers/mcp";
 
 const mockGetFeatureType = vi.fn<(typename: string) => Promise<GpfFeatureType>>();
 const mockFetchJSONPost = vi.fn<(
@@ -35,13 +35,14 @@ vi.doMock("../../../src/helpers/http.js", async () => {
 const { default: GpfCountFeaturesTool } = await import(
   "../../../src/tools/GpfCountFeaturesTool"
 );
+const { successResult } = await import("../../../src/helpers/tools");
 
 describe("Test GpfCountFeaturesTool", () => {
   const COMMUNE_TYPENAME = "ADMINEXPRESS-COG.LATEST:commune";
 
   class RespondableGpfCountFeaturesTool extends GpfCountFeaturesTool {
     respond(data: {numberMatched: number}) {
-      return this.createSuccessResponse(data);
+      return successResult(this, data);
     }
   }
 
@@ -135,12 +136,6 @@ describe("Test GpfCountFeaturesTool", () => {
     }
     expect(JSON.parse(textContent.text)).toEqual({ numberMatched: 34877 });
     expect(response.structuredContent).toEqual({ numberMatched: 34877 });
-    expect(
-      validateStructuredContentAgainstOutputSchema(
-        tool.toolDefinition.outputSchema,
-        response.structuredContent,
-      ),
-    ).toBeNull();
   });
 
   it("should apply travel_time_filter before returning the count", async () => {
@@ -149,7 +144,7 @@ describe("Test GpfCountFeaturesTool", () => {
     captureIsochroneRequests();
     const requests = captureRequests({ numberMatched: 12 });
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_count_features",
         arguments: {
@@ -199,7 +194,7 @@ describe("Test GpfCountFeaturesTool", () => {
       ),
     );
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_count_features",
         arguments: {
@@ -231,7 +226,7 @@ describe("Test GpfCountFeaturesTool", () => {
     mockFeatureTypes({ [COMMUNE_TYPENAME]: polygonFeatureType });
     captureRequests(mockResponse);
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_count_features",
         arguments: {

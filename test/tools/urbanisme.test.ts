@@ -2,9 +2,9 @@ import { describe, it, expect } from "vitest";
 
 import AssietteSupTool from "../../src/tools/AssietteSupTool";
 import UrbanismeTool from "../../src/tools/UrbanismeTool";
-import { validateStructuredContentAgainstOutputSchema } from "./helpers/outputSchema";
 import { expectInvalidLon } from "./helpers/errorAssertions";
 import { chamonix, mairieLoray } from "../samples";
+import { toolCall, toolDefinition } from "./helpers/mcp";
 
 describe("Test UrbanismeTool",() => {
     class TestableUrbanismeTool extends UrbanismeTool {
@@ -38,23 +38,23 @@ describe("Test UrbanismeTool",() => {
 
     it("should expose an enriched MCP definition", () => {
         const tool = new UrbanismeTool();
-        expect(tool.toolDefinition.title).toEqual("Informations d’urbanisme");
-        expect(tool.toolDefinition.inputSchema.properties?.lon).toMatchObject({
+        expect(toolDefinition(tool).title).toEqual("Informations d’urbanisme");
+        expect(toolDefinition(tool).inputSchema.properties?.lon).toMatchObject({
             type: "number",
             minimum: -180,
             maximum: 180,
         });
-        expect(tool.toolDefinition.inputSchema.properties?.lat).toMatchObject({
+        expect(toolDefinition(tool).inputSchema.properties?.lat).toMatchObject({
             type: "number",
             minimum: -90,
             maximum: 90,
         });
-        expect(tool.toolDefinition.outputSchema).toBeDefined();
+        expect(toolDefinition(tool).outputSchema).toBeDefined();
     });
 
     it("should return both text content and structuredContent", async () => {
         const tool = new TestableUrbanismeTool();
-        const response = await tool.toolCall({
+        const response = await toolCall(tool, {
             params: {
                 name: "urbanisme",
                 arguments: {
@@ -105,17 +105,11 @@ describe("Test UrbanismeTool",() => {
             ]),
         });
         expect(payload).toMatchObject(response.structuredContent as Record<string, unknown>);
-        expect(
-            validateStructuredContentAgainstOutputSchema(
-                tool.toolDefinition.outputSchema,
-                response.structuredContent,
-            ),
-        ).toBeNull();
     });
 
     it("should return isError=true for invalid input", async () => {
         const tool = new UrbanismeTool();
-        const response = await tool.toolCall({
+        const response = await toolCall(tool, {
             params: {
                 name: "urbanisme",
                 arguments: {
@@ -161,23 +155,23 @@ describe("Test AssietteSupTool",() => {
 
     it("should expose an enriched MCP definition", () => {
         const tool = new AssietteSupTool();
-        expect(tool.toolDefinition.title).toEqual("Servitudes d’utilité publique");
-        expect(tool.toolDefinition.inputSchema.properties?.lon).toMatchObject({
+        expect(toolDefinition(tool).title).toEqual("Servitudes d’utilité publique");
+        expect(toolDefinition(tool).inputSchema.properties?.lon).toMatchObject({
             type: "number",
             minimum: -180,
             maximum: 180,
         });
-        expect(tool.toolDefinition.inputSchema.properties?.lat).toMatchObject({
+        expect(toolDefinition(tool).inputSchema.properties?.lat).toMatchObject({
             type: "number",
             minimum: -90,
             maximum: 90,
         });
-        expect(tool.toolDefinition.outputSchema).toBeDefined();
+        expect(toolDefinition(tool).outputSchema).toBeDefined();
     });
 
     it("should return both text content and structuredContent", async () => {
         const tool = new TestableAssietteSupTool();
-        const response = await tool.toolCall({
+        const response = await toolCall(tool, {
             params: {
                 name: "assiette_sup",
                 arguments: {
@@ -228,17 +222,11 @@ describe("Test AssietteSupTool",() => {
             ]),
         });
         expect(payload).toMatchObject(response.structuredContent as Record<string, unknown>);
-        expect(
-            validateStructuredContentAgainstOutputSchema(
-                tool.toolDefinition.outputSchema,
-                response.structuredContent,
-            ),
-        ).toBeNull();
     });
 
     it("should return isError=true for invalid input", async () => {
         const tool = new AssietteSupTool();
-        const response = await tool.toolCall({
+        const response = await toolCall(tool, {
             params: {
                 name: "assiette_sup",
                 arguments: {
