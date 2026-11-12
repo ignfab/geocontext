@@ -4,6 +4,7 @@ import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 import type { GpfFeatureType } from "../../../src/wfs/catalog.js";
 import { GPF_SPATIAL_EXTRAS_REQUIRING_FILTER } from "../../../src/wfs/schema.js";
 import { ServiceResponseError } from "../../../src/helpers/http.js";
+import { expectFrenchIssue } from "../helpers/errorAssertions.js";
 
 const mockGetFeatureType = vi.fn<(typename: string) => Promise<GpfFeatureType>>();
 const mockFetchJSONPost = vi.fn<(
@@ -251,8 +252,7 @@ describe("Test GpfGetFeatureByIdTool", () => {
     if (textContent.type !== "text") {
       throw new Error("expected text content");
     }
-    expect(textContent.text).toContain("Paramètres invalides");
-    expect(textContent.text).toContain("Valeurs autorisées : 'centroid', 'bbox', 'length', 'area'");
+    expectFrenchIssue(textContent.text, "spatial_extras[0]", /centroid.*bbox.*length.*area/);
     expect(mockGetFeatureType).not.toHaveBeenCalled();
     expect(mockFetchJSONPost).not.toHaveBeenCalled();
   });

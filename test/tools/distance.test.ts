@@ -2,7 +2,7 @@ import { afterEach, describe, it, expect, vi } from "vitest";
 
 import DistanceTool from "../../src/tools/DistanceTool.js";
 import { validateStructuredContentAgainstOutputSchema } from "./helpers/outputSchema.js";
-import { expectErrorText } from "./helpers/errorAssertions.js";
+import { expectErrorText, expectFrenchIssue } from "./helpers/errorAssertions.js";
 import { navigationItineraryClient } from "../../src/gpf/itinerary.js";
 import { ellipsoidalDistance, haversine } from "../../src/helpers/distance.js";
 
@@ -51,7 +51,7 @@ describe("Test DistanceTool", () => {
       },
     });
 
-    expect(expectErrorText(response)).toContain("departure.lon: La valeur doit être au plus 180.");
+    expectFrenchIssue(expectErrorText(response), "departure.lon", /180/);
   });
 
   it.each([

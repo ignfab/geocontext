@@ -7,10 +7,12 @@
  *
  * Error responses carry no `structuredContent` (reserved for the success-path
  * `outputSchema`), so `detail` is the only channel the caller sees: it must
- * name the offending parameter and stay self-sufficient.
+ * name the offending parameter and stay self-sufficient. The other fields are
+ * logged.
  */
 
-import { ZodError } from "zod";
+import { z, ZodError } from "zod";
+import { fr } from "zod/locales";
 
 import { ServiceResponseError } from "../helpers/http.js";
 import {
@@ -19,11 +21,16 @@ import {
   ProxyTokenTooLargeError,
 } from "../proxy/token.js";
 import { FeatureNotFoundError, FeatureCardinalityError } from "../wfs/byId.js";
-import { installZodErrorMapFr, issueName } from "./zodErrorMapFr.js";
 
-// Install the FR Zod error map at module load so the very first parse in the
-// process already emits localized messages.
-installZodErrorMapFr();
+// French Zod messages for every parse of the process, installed at module load so
+// the very first parse is already localized. A missing parameter reads better than
+// the locale's "indéfini reçu". Messages set in schemas still take precedence.
+// The SDK validates the protocol messages with this same zod instance: its JSON-RPC
+// errors (e.g. a `tools/call` without `name`) get these French messages too.
+z.config({
+  ...fr(),
+  customError: (issue) => (issue.input === undefined ? "Paramètre requis." : undefined),
+});
 
 // --- Public Contract ---
 
@@ -34,7 +41,7 @@ type ToolErrorItem = {
 };
 
 type ToolUpstreamInfo = {
-  status?: number;
+  status: number;
 };
 
 export type ToolErrorPayload = {
@@ -45,28 +52,6 @@ export type ToolErrorPayload = {
   upstream?: ToolUpstreamInfo;
 };
 
-type ClassifiedToolError =
-  | { kind: "invalid_tool_params"; error: ZodError }
-  | { kind: "upstream"; error: ServiceResponseError }
-  | { kind: "proxy_token"; error: ProxyTokenMalformedError | ProxyTokenTamperedError | ProxyTokenTooLargeError }
-  | { kind: "feature_cardinality"; error: FeatureNotFoundError | FeatureCardinalityError }
-  | { kind: "execution"; error: unknown };
-
-// --- Problem Type Constants ---
-
-/**
- * Stable RFC7807-like problem type identifiers, logged as `problem_type`.
- */
-const INVALID_TOOL_PARAMS_TYPE = "urn:geocontext:problem:invalid-tool-params";
-const UPSTREAM_INVALID_REQUEST_TYPE = "urn:geocontext:problem:upstream-invalid-request";
-const UPSTREAM_ERROR_TYPE = "urn:geocontext:problem:upstream-error";
-const EXECUTION_ERROR_TYPE = "urn:geocontext:problem:execution-error";
-const PROXY_URL_ERROR_TYPE = "urn:geocontext:problem:proxy-url-error";
-const FEATURE_NOT_FOUND_TYPE = "urn:geocontext:problem:feature-not-found";
-const FEATURE_CARDINALITY_TYPE = "urn:geocontext:problem:feature-cardinality";
-
-// --- Shared Helpers ---
-
 /**
  * Validation messages spelled out in full before the summary elides them.
  *
@@ -75,248 +60,90 @@ const FEATURE_CARDINALITY_TYPE = "urn:geocontext:problem:feature-cardinality";
  */
 const MAX_DETAILED_VALIDATION_ERRORS = 5;
 
+// --- Helpers ---
+
 /**
- * Builds a compact end-user summary from normalized validation errors.
+ * Builds a single-error problem payload.
+ *
+ * @param type Suffix of the stable RFC7807-like problem type, logged as `problem_type`.
+ * @param title Problem title.
+ * @param detail Caller-facing message, also the detail of the single `errors[]` item.
+ * @param code Machine-friendly error code, `type` in snake_case by default.
+ * @returns The problem payload.
+ */
+function problem(type: string, title: string, detail: string, code = type.replaceAll("-", "_")): ToolErrorPayload {
+  return { type: `urn:geocontext:problem:${type}`, title, detail, errors: [{ code, detail }] };
+}
+
+/**
+ * Maps a Zod error to the invalid parameters problem.
  *
  * Elided messages still list their parameter names, so the caller can fix
  * every bad input in one round-trip instead of discovering them one at a time.
  *
- * @param errors Normalized validation errors.
- * @returns A short, localized validation summary.
+ * @param error Zod error, its messages localized by the `z.config` above.
+ * @returns The invalid parameters problem payload.
  */
-function summarizeValidationDetail(errors: ToolErrorItem[]) {
-  if (errors.length === 0) {
-    return "Un ou plusieurs paramètres fournis à l'outil sont invalides.";
-  }
+function buildValidationProblem(error: ZodError): ToolErrorPayload {
+  const seen = new Set<string>();
+  const errors = error.issues
+    .flatMap((issue): ToolErrorItem[] => {
+      if (issue.code === "unrecognized_keys") {
+        // Prefixed with the path of its object: `departure.alt`, `where[0].foo`.
+        const prefix = issue.path.length > 0 ? `${z.core.toDotPath(issue.path)}.` : "";
+        return issue.keys.map((key) => ({
+          code: "unknown_parameter",
+          detail: `Le paramètre '${prefix}${key}' n'est pas reconnu.`,
+          name: `${prefix}${key}`,
+        }));
+      }
+      // `bbox.lon`, `tags[1]`, or `[0]` for a root-level array. Empty for a
+      // root-level issue.
+      const name = z.core.toDotPath(issue.path);
+      return name
+        ? [{ code: issue.code, detail: `${name}: ${issue.message}`, name }]
+        : [{ code: issue.code, detail: issue.message }];
+    })
+    // A refinement can raise the same wording twice; repeating it only adds noise.
+    // `detail` carries the name, so per-element array errors stay separate.
+    .filter((item) => !seen.has(item.detail) && seen.add(item.detail));
 
   const shown = errors.slice(0, MAX_DETAILED_VALIDATION_ERRORS);
   const omitted = errors.slice(MAX_DETAILED_VALIDATION_ERRORS);
-  const summary = `Paramètres invalides : ${shown.map((error) => error.detail).join(" ")}`;
+  const omittedNames = [...new Set(omitted.flatMap((item) => item.name ?? []))];
+  const suffix = omitted.length === 0
+    ? ""
+    : omittedNames.length > 0
+      ? ` (et ${omitted.length} autre(s) erreur(s) sur : ${omittedNames.join(", ")}).`
+      : ` (et ${omitted.length} autre(s) erreur(s)).`;
 
-  if (omitted.length === 0) {
-    return summary;
-  }
-
-  const omittedNames = [
-    ...new Set(omitted.map((error) => error.name).filter((name): name is string => Boolean(name))),
-  ];
-  const suffix = omittedNames.length > 0
-    ? ` (et ${omitted.length} autre(s) erreur(s) sur : ${omittedNames.join(", ")}).`
-    : ` (et ${omitted.length} autre(s) erreur(s)).`;
-  return `${summary}${suffix}`;
+  // The Zod locale messages end without a period: add one so that the joined messages stay readable.
+  const detail = `Paramètres invalides : ${shown.map((item) => item.detail.replace(/[^.!?]$/, "$&.")).join(" ")}${suffix}`;
+  return { ...problem("invalid-tool-params", "Paramètres d’outil invalides", detail), errors };
 }
 
 /**
- * Converts service error codes to a snake_case machine-friendly form.
- *
- * @param value Error code to normalize.
- * @returns A normalized snake_case code.
- */
-function toSnakeCase(value: string) {
-  return value
-    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
-    .replace(/[\s\-]+/g, "_")
-    .toLowerCase();
-}
-
-// --- Zod Error Mapping ---
-
-/**
- * Converts Zod issues to normalized `errors[]` entries.
- *
- * Note: issue messages are expected to already be localized through
- * `zodErrorMapFr` (installed once at module load).
- */
-function normalizeZodIssues(error: ZodError): ToolErrorItem[] {
-  const errors: ToolErrorItem[] = [];
-  // A single field can raise the same wording twice (two `ctx.addIssue` calls
-  // in one refinement); repeating it verbatim only adds noise. Keyed on name
-  // too, so per-element array errors stay separate.
-  const seen = new Set<string>();
-
-  const push = (item: ToolErrorItem) => {
-    const key = `${item.name ?? ""}\u0000${item.detail}`;
-    if (seen.has(key)) {
-      return;
-    }
-    seen.add(key);
-    errors.push(item);
-  };
-
-  for (const issue of error.issues) {
-    if (issue.code === "unrecognized_keys") {
-      const keys = issue.keys.length > 0 ? issue.keys : ["<inconnu>"];
-      for (const key of keys) {
-        push({
-          code: "unknown_parameter",
-          detail: `Le paramètre '${key}' n'est pas reconnu.`,
-          name: key,
-        });
-      }
-      continue;
-    }
-
-    const name = issueName(issue.path);
-    // `detail` is the caller's only channel, so the parameter name has to live
-    // inside it. Messages that already name the parameter are left alone: the
-    // FR map spells some out inline (`Le paramètre 'x' est requis.`), and
-    // prefixing those would stutter. Anchored at the start so a message merely
-    // quoting some other field named `x` still gets its own prefix.
-    const message = issue.message || "Valeur invalide.";
-    const messageNamesParam = name !== undefined && message.startsWith(`Le paramètre '${name}'`);
-    const detail = name && !messageNamesParam ? `${name}: ${message}` : message;
-
-    push({
-      code: issue.code,
-      detail,
-      ...(name ? { name } : {}),
-    });
-  }
-
-  return errors;
-}
-
-// --- Upstream Error Mapping ---
-
-/**
- * Maps a `ServiceResponseError` to the shared upstream problem payload.
+ * Maps a `ServiceResponseError` to the upstream problem.
  *
  * @param error Structured upstream service error.
- * @returns A normalized upstream problem payload.
+ * @returns The upstream problem payload.
  */
 function buildUpstreamProblem(error: ServiceResponseError): ToolErrorPayload {
-  const status = typeof error.httpStatus === "number" ? error.httpStatus : undefined;
-
-  const serviceDetail = error.serviceDetail ?? error.message ?? "Erreur amont inconnue.";
-  const inferredErrorCode = /Illegal property name:/i.test(serviceDetail)
+  const status = error.httpStatus;
+  const serviceDetail = error.serviceDetail ?? error.message;
+  // snake_case: `InvalidParameterValue` -> `invalid_parameter_value`.
+  const serviceCode = error.serviceCode?.replace(/([a-z0-9])([A-Z])/g, "$1_$2").replace(/[\s-]+/g, "_").toLowerCase();
+  const code = /Illegal property name:/i.test(serviceDetail)
     ? "invalid_property_name"
-    : error.serviceCode
-      ? toSnakeCase(error.serviceCode)
-      : "upstream_error";
+    : serviceCode || "upstream_error";
   const isInvalidRequest = status !== undefined && status >= 400 && status < 500;
 
   return {
-    type: isInvalidRequest ? UPSTREAM_INVALID_REQUEST_TYPE : UPSTREAM_ERROR_TYPE,
-    title: isInvalidRequest
-      ? "Requête rejetée par le service amont"
-      : "Erreur du service amont",
+    ...(isInvalidRequest
+      ? problem("upstream-invalid-request", "Requête rejetée par le service amont", serviceDetail, code)
+      : problem("upstream-error", "Erreur du service amont", serviceDetail, code)),
     detail: `Le service distant a rejeté la requête : ${serviceDetail}`,
-    errors: [
-      {
-        code: inferredErrorCode,
-        detail: serviceDetail,
-      },
-    ],
     ...(status !== undefined ? { upstream: { status } } : {}),
-  };
-}
-
-/**
- * Maps a proxy URL-token error to a FR problem payload.
- *
- * `token.ts` is a low-level codec with EN messages; the FR wording lives here so
- * translation happens once at the tool boundary, like the rest of the project.
- *
- * @param error Typed proxy-token error thrown by the codec.
- * @returns A normalized proxy-URL problem payload.
- */
-function buildProxyTokenProblem(
-  error: ProxyTokenMalformedError | ProxyTokenTamperedError | ProxyTokenTooLargeError,
-): ToolErrorPayload {
-  const detail = error instanceof ProxyTokenTooLargeError
-    ? "La requête est trop volumineuse pour être encodée dans une URL de couche. Réduire le filtre `where` ou le nombre de propriétés `select`."
-    : "Impossible de produire l'URL de couche cartographique.";
-
-  return {
-    type: PROXY_URL_ERROR_TYPE,
-    title: "Erreur de génération de l’URL de couche",
-    detail,
-    errors: [
-      {
-        code: error instanceof ProxyTokenTooLargeError ? "proxy_url_too_large" : "proxy_url_error",
-        detail,
-      },
-    ],
-  };
-}
-
-/**
- * Maps a by-id cardinality error to a FR problem payload. These errors already
- * carry FR, caller-safe messages (they name the requested typename/feature_id,
- * not upstream internals), so the message is surfaced as-is with a stable code.
- *
- * @param error Typed by-id cardinality error.
- * @returns A normalized problem payload.
- */
-function buildFeatureCardinalityProblem(
-  error: FeatureNotFoundError | FeatureCardinalityError,
-): ToolErrorPayload {
-  const isNotFound = error instanceof FeatureNotFoundError;
-  const detail = error.message.trim();
-
-  return {
-    type: isNotFound ? FEATURE_NOT_FOUND_TYPE : FEATURE_CARDINALITY_TYPE,
-    title: isNotFound ? "Objet introuvable" : "Réponse incohérente du service amont",
-    detail,
-    errors: [
-      {
-        code: isNotFound ? "feature_not_found" : "feature_cardinality",
-        detail,
-      },
-    ],
-  };
-}
-
-/**
- * Maps unknown runtime errors to one of the normalization categories.
- *
- * @param error Unknown runtime error.
- * @returns Classified error with a normalized kind and a narrowed payload.
- */
-function classifyToolError(error: unknown): ClassifiedToolError {
-  if (error instanceof ZodError) {
-    return { kind: "invalid_tool_params", error };
-  }
-  if (error instanceof ServiceResponseError) {
-    return { kind: "upstream", error };
-  }
-  if (
-    error instanceof ProxyTokenTooLargeError ||
-    error instanceof ProxyTokenMalformedError ||
-    error instanceof ProxyTokenTamperedError
-  ) {
-    return { kind: "proxy_token", error };
-  }
-  if (error instanceof FeatureNotFoundError || error instanceof FeatureCardinalityError) {
-    return { kind: "feature_cardinality", error };
-  }
-  return { kind: "execution", error };
-}
-
-/**
- * Maps generic runtime errors to the shared execution problem payload.
- *
- * @param error Unknown runtime error.
- * @returns A normalized execution problem payload.
- */
-function buildExecutionProblem(error: unknown): ToolErrorPayload {
-  const message = error instanceof Error
-    ? error.message.trim()
-    : typeof error === "string"
-      ? error.trim()
-      : "";
-  const detail = message.length > 0 ? message : "Erreur interne inattendue.";
-
-  return {
-    type: EXECUTION_ERROR_TYPE,
-    title: "Erreur d’exécution de l’outil",
-    detail,
-    errors: [
-      {
-        code: "execution_error",
-        detail,
-      },
-    ],
   };
 }
 
@@ -325,29 +152,41 @@ function buildExecutionProblem(error: unknown): ToolErrorPayload {
 /**
  * Normalizes any runtime error into the shared MCP tool problem contract.
  *
+ * The by-id cardinality errors already carry FR, caller-safe messages. The proxy
+ * token codec has EN messages: the FR wording lives here, at the tool boundary.
+ *
  * @param error Unknown runtime error to normalize.
  * @returns A stable problem payload whose `detail` is caller-facing.
  */
 export function normalizeToolError(error: unknown): ToolErrorPayload {
-  const classifiedError = classifyToolError(error);
-
-  switch (classifiedError.kind) {
-    case "invalid_tool_params": {
-      const errors = normalizeZodIssues(classifiedError.error);
-      return {
-        type: INVALID_TOOL_PARAMS_TYPE,
-        title: "Paramètres d’outil invalides",
-        detail: summarizeValidationDetail(errors),
-        errors,
-      };
-    }
-    case "upstream":
-      return buildUpstreamProblem(classifiedError.error);
-    case "proxy_token":
-      return buildProxyTokenProblem(classifiedError.error);
-    case "feature_cardinality":
-      return buildFeatureCardinalityProblem(classifiedError.error);
-    case "execution":
-      return buildExecutionProblem(classifiedError.error);
+  if (error instanceof ZodError) {
+    return buildValidationProblem(error);
   }
+  if (error instanceof ServiceResponseError) {
+    return buildUpstreamProblem(error);
+  }
+  if (error instanceof ProxyTokenTooLargeError) {
+    return problem(
+      "proxy-url-error",
+      "Erreur de génération de l’URL de couche",
+      "La requête est trop volumineuse pour être encodée dans une URL de couche. Réduire le filtre `where` ou le nombre de propriétés `select`.",
+      "proxy_url_too_large",
+    );
+  }
+  if (error instanceof ProxyTokenMalformedError || error instanceof ProxyTokenTamperedError) {
+    return problem(
+      "proxy-url-error",
+      "Erreur de génération de l’URL de couche",
+      "Impossible de produire l'URL de couche cartographique.",
+    );
+  }
+  if (error instanceof FeatureNotFoundError) {
+    return problem("feature-not-found", "Objet introuvable", error.message.trim());
+  }
+  if (error instanceof FeatureCardinalityError) {
+    return problem("feature-cardinality", "Réponse incohérente du service amont", error.message.trim());
+  }
+
+  const message = error instanceof Error ? error.message.trim() : typeof error === "string" ? error.trim() : "";
+  return problem("execution-error", "Erreur d’exécution de l’outil", message || "Erreur interne inattendue.");
 }

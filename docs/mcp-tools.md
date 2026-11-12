@@ -19,7 +19,7 @@ Exemple complet généré automatiquement à partir d'un appel de tool invalide 
     "content": [
       {
         "type": "text",
-        "text": "Paramètres invalides : Le paramètre 'text' est requis."
+        "text": "Paramètres invalides : text: Paramètre requis."
       }
     ]
   }

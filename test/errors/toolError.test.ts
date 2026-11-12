@@ -3,6 +3,13 @@ import { z } from "zod";
 
 import { ServiceResponseError } from "../../src/helpers/http.js";
 import { normalizeToolError } from "../../src/errors/toolError.js";
+import {
+  ProxyTokenMalformedError,
+  ProxyTokenTamperedError,
+  ProxyTokenTooLargeError,
+} from "../../src/proxy/token.js";
+import { FeatureNotFoundError, FeatureCardinalityError } from "../../src/wfs/byId.js";
+import { expectFrenchIssue } from "../tools/helpers/errorAssertions.js";
 
 describe("Test toolError helper", () => {
   it("should install the FR Zod error map at module load", async () => {
@@ -10,7 +17,7 @@ describe("Test toolError helper", () => {
     const { z: freshZ } = await import("zod");
 
     // Reset to default messages, then import toolError to trigger module-level install.
-    freshZ.config({ customError: undefined });
+    freshZ.config({ customError: undefined, localeError: undefined });
     await import("../../src/errors/toolError.js");
 
     const schema = freshZ.object({
@@ -22,7 +29,7 @@ describe("Test toolError helper", () => {
       throw new Error("expected parse failure");
     }
 
-    expect(result.error.issues[0].message).toContain("au plus");
+    expectFrenchIssue(normalizeToolError(result.error).detail, "lon", /180/);
   });
 
   it("should normalize a Zod error with French messages", () => {
@@ -126,6 +133,19 @@ describe("Test toolError helper", () => {
     });
   });
 
+  it.each([
+    [new ProxyTokenTooLargeError("too large"), "proxy-url-error", "proxy_url_too_large"],
+    [new ProxyTokenMalformedError("malformed"), "proxy-url-error", "proxy_url_error"],
+    [new ProxyTokenTamperedError("tampered"), "proxy-url-error", "proxy_url_error"],
+    [new FeatureNotFoundError("introuvable"), "feature-not-found", "feature_not_found"],
+    [new FeatureCardinalityError("plusieurs objets"), "feature-cardinality", "feature_cardinality"],
+  ])("should normalize %s with a stable type and code", (error, type, code) => {
+    expect(normalizeToolError(error)).toMatchObject({
+      type: `urn:geocontext:problem:${type}`,
+      errors: [{ code }],
+    });
+  });
+
   it("should not classify generic errors with service-like fields as upstream errors", () => {
     const payload = normalizeToolError(Object.assign(new Error("boom"), {
       serviceCode: "InvalidParameterValue",
@@ -138,6 +158,7 @@ describe("Test toolError helper", () => {
   });
   it.each([
     ["enum", z.object({ direction: z.enum(["asc", "desc"]) }), { direction: "sideways" }, "direction: "],
+    ["missing enum", z.object({ direction: z.enum(["asc", "desc"]) }), {}, "direction: Paramètre requis."],
     ["invalid type", z.object({ lon: z.number() }), { lon: "abc" }, "lon: "],
     ["string format", z.object({ site: z.url() }), { site: "nope" }, "site: "],
     ["out of range", z.object({ lon: z.number().max(180) }), { lon: 600 }, "lon: "],
@@ -197,36 +218,6 @@ describe("Test toolError helper", () => {
     expect(payload.errors.map((error) => error.name)).toEqual(["[0]", "[1]"]);
   });
 
-  it("should still prefix a message that quotes some other parameter", () => {
-    const schema = z.object({ a: z.string() }).superRefine((_value, ctx) => {
-      ctx.addIssue({
-        code: "custom",
-        path: ["a"],
-        message: "Doit valoir le paramètre 'a' du parent.",
-      });
-    });
-    const result = schema.safeParse({ a: "x" });
-
-    if (result.success) {
-      throw new Error("expected parse failure");
-    }
-
-    expect(normalizeToolError(result.error).detail).toContain("a: Doit valoir");
-  });
-
-  it("should not repeat a parameter name the message already carries", () => {
-    const result = z.object({ text: z.string() }).safeParse({});
-
-    if (result.success) {
-      throw new Error("expected parse failure");
-    }
-
-    const payload = normalizeToolError(result.error);
-
-    expect(payload.detail).toContain("Le paramètre 'text' est requis.");
-    expect(payload.detail).not.toContain("text: Le paramètre");
-  });
-
   it("should not repeat a parameter name an unknown-key message already carries", () => {
     const result = z.strictObject({ a: z.string() }).safeParse({ a: "x", nope: 1 });
 
@@ -238,6 +229,22 @@ describe("Test toolError helper", () => {
 
     expect(payload.detail).toContain("Le paramètre 'nope' n'est pas reconnu.");
     expect(payload.detail).not.toContain("nope: ");
+  });
+
+  it("should name a nested unknown key by its full path", () => {
+    const point = z.strictObject({ lon: z.number() });
+    const schema = z.object({ departure: point, arrival: point, where: z.array(point) });
+    const result = schema.safeParse({ departure: { lon: 1, alt: 1 }, arrival: { lon: 1, alt: 1 }, where: [{ lon: 1, alt: 1 }] });
+
+    if (result.success) {
+      throw new Error("expected parse failure");
+    }
+
+    const payload = normalizeToolError(result.error);
+
+    // The same key in three objects stays three errors.
+    expect(payload.errors.map((error) => error.name)).toEqual(["departure.alt", "arrival.alt", "where[0].alt"]);
+    expect(payload.detail).toContain("Le paramètre 'where[0].alt' n'est pas reconnu.");
   });
   it("should name every omitted parameter when truncating the summary", () => {
     const keys = ["a", "b", "c", "d", "e", "f", "g"];
@@ -252,8 +259,8 @@ describe("Test toolError helper", () => {
     const payload = normalizeToolError(result.error);
 
     // The first five are spelled out, the rest are named but not detailed.
-    expect(payload.detail).toContain("a: La valeur doit être au plus 1.");
-    expect(payload.detail).toContain("e: La valeur doit être au plus 1.");
+    expectFrenchIssue(payload.detail, "a", /1/);
+    expectFrenchIssue(payload.detail, "e", /1/);
     expect(payload.detail).toContain("(et 2 autre(s) erreur(s) sur : f, g).");
   });
 

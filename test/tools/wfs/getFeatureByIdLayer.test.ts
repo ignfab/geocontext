@@ -7,7 +7,7 @@ import { validateStructuredContentAgainstOutputSchema } from "../helpers/outputS
 import type { Env } from "../../../src/config/env.js";
 import { decodeToken } from "../../../src/proxy/token.js";
 import { PROXY_TOKEN_KIND } from "../../../src/wfs/schema.js";
-import { expectErrorText } from "../helpers/errorAssertions";
+import { expectErrorText, expectFrenchIssue } from "../helpers/errorAssertions";
 
 // 32-byte key as 64 hex chars, decoded to a Buffer the way env.ts would.
 const SECRET_HEX = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
@@ -301,6 +301,6 @@ describe("Test GpfGetFeatureByIdLayerTool", () => {
       },
     });
 
-    expect(expectErrorText(response)).toContain("Le paramètre 'feature_id' est requis.");
+    expectFrenchIssue(expectErrorText(response), "feature_id", /requis/);
   });
 });
