@@ -56,58 +56,58 @@ export const GPF_GET_FEATURE_BY_ID_SPATIAL_EXTRAS_DOCNAMES = GPF_GET_FEATURE_BY_
 
 // --- Shared Clauses ---
 
-const whereClauseSchema = z.object({
+const whereClauseSchema = z.strictObject({
   property: z.string().trim().min(1).describe("Nom exact d'une propriété non géométrique du type GPF. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles."),
   operator: z.enum(WHERE_OPERATORS).describe("Opérateur de filtre : `eq`, `ne`, `lt`, `lte`, `gt`, `gte`, `in`, `is_null`."),
   value: z.string().trim().min(1).optional().describe("Valeur scalaire sérialisée en texte, utilisée avec tous les opérateurs sauf `in` et `is_null`."),
   values: z.array(z.string().trim().min(1)).min(1).optional().describe("Liste de valeurs sérialisées en texte, utilisée uniquement avec `operator = \"in\"`."),
-}).strict().describe("Clause de filtre structurée. Exemple : `{ property: \"code_insee\", operator: \"eq\", value: \"75056\" }`.");
+}).describe("Clause de filtre structurée. Exemple : `{ property: \"code_insee\", operator: \"eq\", value: \"75056\" }`.");
 
-const orderBySchema = z.object({
+const orderBySchema = z.strictObject({
   property: z.string().trim().min(1).describe("Nom exact d'une propriété non géométrique à utiliser pour le tri. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles."),
   direction: z.enum(ORDER_DIRECTIONS).default("asc").describe("Direction de tri : `asc` ou `desc`."),
-}).strict().describe("Critère de tri structuré. Exemple : `{ property: \"population\", direction: \"desc\" }`.");
+}).describe("Critère de tri structuré. Exemple : `{ property: \"population\", direction: \"desc\" }`.");
 
-const bboxFilterSchema = z.object({
+const bboxFilterSchema = z.strictObject({
   west: lonSchema.describe("Longitude ouest en WGS84 `lon/lat`."),
   south: latSchema.describe("Latitude sud en WGS84 `lon/lat`."),
   east: lonSchema.describe("Longitude est en WGS84 `lon/lat`."),
   north: latSchema.describe("Latitude nord en WGS84 `lon/lat`."),
-}).strict().describe("Filtre spatial par boîte englobante.");
+}).describe("Filtre spatial par boîte englobante.");
 
-const intersectsPointFilterSchema = z.object({
+const intersectsPointFilterSchema = z.strictObject({
   lon: lonSchema.describe("Longitude du point en WGS84 `lon/lat`."),
   lat: latSchema.describe("Latitude du point en WGS84 `lon/lat`."),
-}).strict().describe("Filtre les objets dont la géométrie intersecte un point.");
+}).describe("Filtre les objets dont la géométrie intersecte un point.");
 
-const dwithinPointFilterSchema = z.object({
+const dwithinPointFilterSchema = z.strictObject({
   lon: lonSchema.describe("Longitude du point en WGS84 `lon/lat`."),
   lat: latSchema.describe("Latitude du point en WGS84 `lon/lat`."),
-  distance_m: z.number().finite().positive().describe("Distance maximale en mètres."),
-}).strict().describe("Filtre les objets situés à une distance maximale d'un point.");
+  distance_m: z.number().positive().describe("Distance maximale en mètres."),
+}).describe("Filtre les objets situés à une distance maximale d'un point.");
 
-const intersectsFeatureFilterSchema = z.object({
+const intersectsFeatureFilterSchema = z.strictObject({
   typename: z.string().trim().min(1).describe("Type GPF du feature de référence."),
   feature_id: z.string().trim().min(1).describe("Identifiant du feature de référence."),
-}).strict().describe("Filtre les objets dont la géométrie intersecte celle d'un objet GPF de référence.");
+}).describe("Filtre les objets dont la géométrie intersecte celle d'un objet GPF de référence.");
 
-const travelTimeFilterSchema = z.object({
+const travelTimeFilterSchema = z.strictObject({
   lon: lonSchema.describe("Longitude du point de départ en WGS84 `lon/lat`."),
   lat: latSchema.describe("Latitude du point de départ en WGS84 `lon/lat`."),
   minutes: z
     .number()
-    .finite()
     .positive()
     .max(TRAVEL_TIME_MAX_MINUTES)
     .describe(`Temps de trajet maximal en minutes. Maximum : ${TRAVEL_TIME_MAX_MINUTES}.`),
   profile: z
     .enum(TRAVEL_TIME_PROFILES)
     .describe("Mode de déplacement utilisé pour calculer l'isochrone (`car` ou `pedestrian`)."),
-}).strict().describe("Filtre les objets situés dans une zone atteignable en un temps donné depuis un point.");
+}).describe("Filtre les objets situés dans une zone atteignable en un temps donné depuis un point.");
 
 // --- Shared GPF Inputs ---
 
-const gpfTypenameInputSchema = z.object({
+// Strict: the schemas built on it with `.extend()` or `.omit()` stay strict.
+const gpfTypenameInputSchema = z.strictObject({
   typename: z
     .string()
     .trim()
@@ -215,13 +215,13 @@ function assertSpatialExtraSpatialFilterConsistency(input: z.infer<typeof gpfGet
         .join(", ")
         .replace(/, ([^,]*)$/, ' ou $1');
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         path: ["spatial_extras"],
         message: `\`${extra}\` exige un filtre spatial (${compatibleFilters}) : ajoutez un de ces filtres, ou retirez \`${extra}\` de \`spatial_extras\`.`,
       });
     } else if (usedSpatialFilters.includes(incompatibleFilter)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         path: ["spatial_extras"],
         message: `\`${extra}\` ${incompatibleReason}, ou retirez \`${extra}\` de \`spatial_extras\`.`,
       });
@@ -261,7 +261,7 @@ function assertSpatialFilterExclusion(input : Record<string, unknown>, ctx : z.R
 
   if (usedSpatialFilters.length > 1) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: "custom",
       path: ["spatial_filters"],
       message: `Un seul filtre spatial est autorisé (${usedSpatialFilters.join(", ")} fournis).`,
     });
@@ -287,16 +287,16 @@ export type SpatialFilter = SpatialFilterEntry<SpatialFilterKey>;
 // --- `gpf_get_features` ---
 
 export const gpfGetFeaturesInputObjectSchema = gpfTypenameInputSchema
-  .merge(z.object({
+  .extend({
     select: z
     .array(z.string().trim().min(1))
     .min(1)
     .optional()
     .describe("Liste des propriétés non géométriques à renvoyer pour chaque objet. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`."),
-  }))
-  .merge(gpfWhereFilterInputSchema)
-  .merge(gpfSpatialFilterInputSchema)
-  .merge(z.object({
+  })
+  .extend(gpfWhereFilterInputSchema.shape)
+  .extend(gpfSpatialFilterInputSchema.shape)
+  .extend({
   limit: z
     .number()
     .int()
@@ -309,9 +309,8 @@ export const gpfGetFeaturesInputObjectSchema = gpfTypenameInputSchema
     .min(1)
     .optional()
     .describe("Liste ordonnée des critères de tri."),
-  }))
-  .merge(gpfGetFeaturesGeometryExtraInputSchema)
-  .strict();
+  })
+  .extend(gpfGetFeaturesGeometryExtraInputSchema.shape);
 
 export const gpfGetFeaturesInputSchema = gpfGetFeaturesInputObjectSchema
   .superRefine(assertSpatialFilterExclusion)
@@ -343,8 +342,8 @@ export const gpfGetFeaturesPublishedInputSchema = generatePublishedInputSchema(g
 // (PROXY_MAX_RESPONSE_BYTES) stays the real volume guard for dense layers.
 export const gpfGetFeaturesLayerInputObjectSchema = gpfGetFeaturesInputObjectSchema
   .omit({ spatial_extras: true, limit: true })
-  .merge(
-    z.object({
+  .extend(
+    {
       limit: z
         .number()
         .int()
@@ -352,9 +351,8 @@ export const gpfGetFeaturesLayerInputObjectSchema = gpfGetFeaturesInputObjectSch
         .max(MAX_LIMIT)
         .default(MAX_LIMIT)
         .describe(`Nombre maximum d'objets à cartographier. Valeur par défaut : ${MAX_LIMIT} (plafond du service). Réduire pour alléger la carte. Maximum : ${MAX_LIMIT}. Une requête produisant plus de ${MAX_LIMIT} objets sera tronquée.`),
-    }),
-  )
-  .strict();
+    },
+  );
 
 export const gpfGetFeaturesLayerInputSchema = gpfGetFeaturesLayerInputObjectSchema
   .transform((value): GpfGetFeaturesInput => ({
@@ -374,12 +372,11 @@ export const gpfGetFeaturesLayerPublishedInputSchema = generatePublishedInputSch
 // Shared by both layer-producer tools (`gpf_get_features_layer` and
 // `gpf_get_feature_by_id_layer`): the opaque URL output has the same shape
 // regardless of which query kind produced it.
-export const gpfGetFeaturesLayerOutputSchema = z.object({
+export const gpfGetFeaturesLayerOutputSchema = z.strictObject({
   data_url: z
-    .string()
     .url()
     .describe("URL renvoyant une FeatureCollection GeoJSON (géométries complètes) prête à être affichée dans un outil cartographique."),
-}).strict();
+});
 
 // --- Proxy token discriminant ---
 
@@ -398,10 +395,12 @@ export type ProxyTokenKind = (typeof PROXY_TOKEN_KIND)[keyof typeof PROXY_TOKEN_
 
 // --- `gpf_get_feature_by_id_layer` (proxy) ---
 
-// Fields shared by the attribute and cartographic by-id tools. `select` only
+// Map-layer counterpart of `gpf_get_feature_by_id`: no attribute/spatial filters
+// and no `spatial_extras`, but an optional catalog-validated `select` to reduce
+// the returned attributes while retaining the complete geometry. `select` only
 // controls non-geometric properties; the cartographic path always adds the
 // catalog geometry column itself.
-const gpfFeatureByIdCoreInputSchema = z.object({
+export const gpfGetFeatureByIdLayerInputObjectSchema = z.strictObject({
   typename: z
     .string()
     .trim()
@@ -419,11 +418,6 @@ const gpfFeatureByIdCoreInputSchema = z.object({
     .describe("Liste des propriétés non géométriques à renvoyer. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`."),
 });
 
-// Map-layer counterpart of `gpf_get_feature_by_id`: no attribute/spatial filters
-// and no `spatial_extras`, but an optional catalog-validated `select` to reduce
-// the returned attributes while retaining the complete geometry.
-export const gpfGetFeatureByIdLayerInputObjectSchema = gpfFeatureByIdCoreInputSchema.strict();
-
 export type GpfGetFeatureByIdLayerInput = z.infer<typeof gpfGetFeatureByIdLayerInputObjectSchema>;
 
 // --- `gpf_get_feature_by_id_layer` Published Schema ---
@@ -433,9 +427,8 @@ export const gpfGetFeatureByIdLayerPublishedInputSchema = generatePublishedInput
 // --- `gpf_count_features` ---
 
 export const gpfCountFeaturesInputObjectSchema = gpfTypenameInputSchema
-  .merge(gpfWhereFilterInputSchema)
-  .merge(gpfSpatialFilterInputSchema)
-  .strict();
+  .extend(gpfWhereFilterInputSchema.shape)
+  .extend(gpfSpatialFilterInputSchema.shape);
 
 export const gpfCountFeaturesInputSchema = gpfCountFeaturesInputObjectSchema.superRefine(assertSpatialFilterExclusion);
 
@@ -464,9 +457,8 @@ export function queryIsGetFeaturesInput(input: GpfQueryFeaturesInput) : input is
 
 // --- `gpf_get_feature_by_id` ---
 
-export const gpfGetFeatureByIdInputObjectSchema = gpfFeatureByIdCoreInputSchema
-  .merge(gpfGetFeatureByIdGeometryExtraInputSchema)
-  .strict();
+export const gpfGetFeatureByIdInputObjectSchema = gpfGetFeatureByIdLayerInputObjectSchema
+  .extend(gpfGetFeatureByIdGeometryExtraInputSchema.shape);
 
 export const gpfGetFeatureByIdInputSchema = gpfGetFeatureByIdInputObjectSchema;
 

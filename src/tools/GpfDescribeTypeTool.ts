@@ -12,19 +12,15 @@ import logger from "../logger.js";
 
 // --- Schemas ---
 
-const gpfDescribeTypeInputSchema = z.object({
+const gpfDescribeTypeInputSchema = z.strictObject({
   typename: z
     .string()
     .trim()
     .min(1, "le nom du type ne doit pas être vide")
     .describe("Le nom du type à décrire (de la forme `prefixe:nom`)."),
-}).strict();
+});
 
-// FIXME: when mcp-framework is removed, remove this patch which is only here
-// because mcp-framework does not accept z.record field types.
-const gpfDescribeTypeOutputSchema = zOgcCollectionSchema
-  .omit({ properties: true })
-  .extend({ properties: z.object({}).catchall(z.unknown()) });
+const gpfDescribeTypeOutputSchema = zOgcCollectionSchema;
 
 // --- Types ---
 

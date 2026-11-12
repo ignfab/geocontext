@@ -12,13 +12,13 @@ import logger from "../logger.js";
 
 // --- Schemas ---
 
-const cadastreInputSchema = z.object({
+const cadastreInputSchema = z.strictObject({
   lon: lonSchema,
   lat: latSchema,
-}).strict();
+});
 
 const cadastreResultSchema = z
-  .object({
+  .looseObject({
     type: z.string().describe(`Le type d'objet cadastral (${PARCELLAIRE_EXPRESS_TYPES.join(", ")}).`),
     id: z.string().describe("L'identifiant de l'objet cadastral."),
     bbox: z.array(z.number()).describe("La boîte englobante de l'objet cadastral.").optional(),
@@ -26,7 +26,7 @@ const cadastreResultSchema = z
     distance: z.number().describe("La distance en mètres entre le point demandé et l'objet cadastral retenu."),
     source: z.string().describe("La source des données cadastrales."),
   })
-  .catchall(z.unknown());
+  .meta({ additionalProperties: true }); // zod would publish `{}`, flagged as non-portable by MCP inspector
 
 const cadastreOutputSchema = z.object({
   results: z.array(cadastreResultSchema).describe("La liste des objets cadastraux les plus proches du point demandé."),

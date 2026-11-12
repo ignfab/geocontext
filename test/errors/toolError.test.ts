@@ -10,7 +10,7 @@ describe("Test toolError helper", () => {
     const { z: freshZ } = await import("zod");
 
     // Reset to default messages, then import toolError to trigger module-level install.
-    freshZ.setErrorMap((_, ctx) => ({ message: ctx.defaultError }));
+    freshZ.config({ customError: undefined });
     await import("../../src/errors/toolError.js");
 
     const schema = freshZ.object({
@@ -26,9 +26,9 @@ describe("Test toolError helper", () => {
   });
 
   it("should normalize a Zod error with French messages", () => {
-    const schema = z.object({
+    const schema = z.strictObject({
       lon: z.number().max(180),
-    }).strict();
+    });
     const result = schema.safeParse({
       lon: 600,
       unexpected: true,
@@ -139,7 +139,7 @@ describe("Test toolError helper", () => {
   it.each([
     ["enum", z.object({ direction: z.enum(["asc", "desc"]) }), { direction: "sideways" }, "direction: "],
     ["invalid type", z.object({ lon: z.number() }), { lon: "abc" }, "lon: "],
-    ["string format", z.object({ site: z.string().url() }), { site: "nope" }, "site: "],
+    ["string format", z.object({ site: z.url() }), { site: "nope" }, "site: "],
     ["out of range", z.object({ lon: z.number().max(180) }), { lon: 600 }, "lon: "],
     [
       "nested field",
@@ -150,7 +150,7 @@ describe("Test toolError helper", () => {
     [
       "custom refinement",
       z.object({ a: z.number() }).superRefine((_value, ctx) => {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["a"], message: "Valeur incohérente." });
+        ctx.addIssue({ code: "custom", path: ["a"], message: "Valeur incohérente." });
       }),
       { a: 1 },
       "a: Valeur incohérente.",
@@ -200,7 +200,7 @@ describe("Test toolError helper", () => {
   it("should still prefix a message that quotes some other parameter", () => {
     const schema = z.object({ a: z.string() }).superRefine((_value, ctx) => {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         path: ["a"],
         message: "Doit valoir le paramètre 'a' du parent.",
       });
@@ -228,7 +228,7 @@ describe("Test toolError helper", () => {
   });
 
   it("should not repeat a parameter name an unknown-key message already carries", () => {
-    const result = z.object({ a: z.string() }).strict().safeParse({ a: "x", nope: 1 });
+    const result = z.strictObject({ a: z.string() }).safeParse({ a: "x", nope: 1 });
 
     if (result.success) {
       throw new Error("expected parse failure");
@@ -271,8 +271,8 @@ describe("Test toolError helper", () => {
   it("should drop duplicate messages that share a parameter name", () => {
     const schema = z.object({
       a: z.number().superRefine((_value, ctx) => {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Valeur incohérente." });
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Valeur incohérente." });
+        ctx.addIssue({ code: "custom", message: "Valeur incohérente." });
+        ctx.addIssue({ code: "custom", message: "Valeur incohérente." });
       }),
     });
     const result = schema.safeParse({ a: 1 });

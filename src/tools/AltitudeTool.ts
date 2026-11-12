@@ -12,10 +12,10 @@ import logger from "../logger.js";
 
 // --- Schemas ---
 
-const altitudeInputSchema = z.object({
+const altitudeInputSchema = z.strictObject({
   lon: lonSchema,
   lat: latSchema,
-}).strict();
+});
 
 const altitudeOutputSchema = z.object({
   lon: z.number().describe("La longitude du point."),

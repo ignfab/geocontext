@@ -14,7 +14,7 @@ import { ellipsoidalDistance, haversine } from "../helpers/distance.js";
 
 // --- Schemas ---
 
-const distanceInputSchema = z.object({
+const distanceInputSchema = z.strictObject({
   departure: z.object({
     lon: lonSchema.describe("La longitude du point de départ."),
     lat: latSchema.describe("La latitude du point de départ."),
@@ -40,7 +40,7 @@ const distanceInputSchema = z.object({
       " `distance` chemin le plus court.",
       " Cette option est sans effet lorsque `profile=spherical` ou `ellipsoidal`."
     ].join(""))
-}).strict();
+});
 
 const distanceOutputSchema = z.object({
   distance: z.number().describe("La distance entre les deux points, en mètres."),

@@ -11,7 +11,7 @@ import logger from "../logger.js";
 
 // --- Schemas ---
 
-const geocodeInputSchema = z.object({
+const geocodeInputSchema = z.strictObject({
   text: z
     .string()
     .trim()
@@ -24,7 +24,7 @@ const geocodeInputSchema = z.object({
     .max(10)
     .optional()
     .describe("Le nombre maximum de résultats à retourner (entre 1 et 10). Défaut : 3."),
-}).strict();
+});
 
 const geocodeResultSchema = z.object({
   lon: z.number().describe("La longitude du résultat."),

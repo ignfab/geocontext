@@ -12,19 +12,19 @@ import logger from "../logger.js";
 
 // --- Schemas ---
 
-const adminexpressInputSchema = z.object({
+const adminexpressInputSchema = z.strictObject({
   lon: lonSchema,
   lat: latSchema,
-}).strict();
+});
 
 const adminexpressResultSchema = z
-  .object({
+  .looseObject({
     type: z.string().describe(`Le type d'unité administrative (${ADMINEXPRESS_TYPES.join(", ")}).`),
     id: z.string().describe("L'identifiant de l'unité administrative."),
     bbox: z.array(z.number()).describe("La boîte englobante de l'unité administrative.").optional(),
     feature_ref: featureRefSchema.describe("Référence GPF réutilisable, notamment avec `gpf_get_features` et `intersects_feature_filter`."),
   })
-  .catchall(z.unknown());
+  .meta({ additionalProperties: true }); // zod would publish `{}`, flagged as non-portable by MCP inspector
 
 const adminexpressOutputSchema = z.object({
   results: z.array(adminexpressResultSchema).describe("La liste des unités administratives couvrant le point demandé."),

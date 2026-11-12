@@ -12,20 +12,20 @@ import logger from "../logger.js";
 
 // --- Schemas ---
 
-const assietteSupInputSchema = z.object({
+const assietteSupInputSchema = z.strictObject({
   lon: lonSchema,
   lat: latSchema,
-}).strict();
+});
 
 const assietteSupResultSchema = z
-  .object({
+  .looseObject({
     type: z.string().describe("Le type d'assiette de servitude d'utilité publique renvoyé."),
     id: z.string().describe("L'identifiant de l'assiette."),
     bbox: z.array(z.number()).describe("La boîte englobante de l'assiette.").optional(),
     feature_ref: featureRefSchema.describe("Référence GPF réutilisable, notamment avec `gpf_get_features` et `intersects_feature_filter`.").optional(),
     distance: z.number().describe("La distance en mètres entre le point demandé et l'assiette retenue."),
   })
-  .catchall(z.unknown());
+  .meta({ additionalProperties: true }); // zod would publish `{}`, flagged as non-portable by MCP inspector
 
 const assietteSupOutputSchema = z.object({
   results: z.array(assietteSupResultSchema).describe("La liste des assiettes de servitudes d'utilité publique pertinentes pour le point demandé."),

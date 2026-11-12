@@ -20,10 +20,10 @@ describe("Test BaseTool error response", () => {
     name = "dummy_error_tool";
     title = "Dummy Error Tool";
     description = "Dummy tool used to test BaseTool error normalization.";
-    schema = z.object({
+    schema = z.strictObject({
       lon: z.number().max(180),
       delayMs: z.number().int().min(0).optional(),
-    }).strict();
+    });
 
     async execute(input: { lon: number; delayMs?: number }) {
       if (input.delayMs !== undefined) {

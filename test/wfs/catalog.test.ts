@@ -58,7 +58,7 @@ describe("Test WfsSchemaStore",() => {
             process.env[GPF_WFS_MINISEARCH_OPTIONS_ENV] = JSON.stringify({
                 unsupported: 1,
             });
-            expect(() => loadMiniSearchOptionsFromEnv()).toThrow("Unrecognized key(s) in object: 'unsupported'");
+            expect(() => loadMiniSearchOptionsFromEnv()).toThrow('Unrecognized key: "unsupported"');
         });
 
         it("should throw on invalid option value types", () => {
@@ -67,7 +67,7 @@ describe("Test WfsSchemaStore",() => {
                     title: "4",
                 },
             });
-            expect(() => loadMiniSearchOptionsFromEnv()).toThrow("boost.title: Expected number, received string");
+            expect(() => loadMiniSearchOptionsFromEnv()).toThrow("boost.title: Invalid input: expected number, received string");
         });
 
         it("should throw on invalid fields value", () => {

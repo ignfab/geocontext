@@ -11,7 +11,7 @@ import logger from "../logger.js";
 
 // --- Schemas ---
 
-const gpfSearchTypesInputSchema = z.object({
+const gpfSearchTypesInputSchema = z.strictObject({
   query: z
     .string()
     .trim()
@@ -24,7 +24,7 @@ const gpfSearchTypesInputSchema = z.object({
     .max(50)
     .optional()
     .describe("Le nombre maximum de résultats à retourner (entre 1 et 50). Défaut : 10."),
-}).strict();
+});
 
 const gpfSearchTypesResultSchema = z.object({
   typename: z.string().describe("L'identifiant du type GPF."),
@@ -33,7 +33,7 @@ const gpfSearchTypesResultSchema = z.object({
   score: z.number().describe("Le score de pertinence de la recherche.").optional(),
   queryTerms: z.array(z.string()).optional().describe("Les termes de la requête qui ont produit ce résultat."),
   terms: z.array(z.string()).optional().describe("Les termes indexés correspondant à la requête."),
-  match: z.object({}).catchall(z.array(z.string())).optional().describe(
+  match: z.record(z.string(), z.array(z.string())).optional().describe(
     "Détail des correspondances : associe chaque terme indexé aux champs où il a été trouvé.\n" +
     "Champs possibles :\n" +
     "- `namespace` : préfixe du type (ex. \"ADMINEXPRESS-COG.LATEST\", \"BDTOPO_V3\")\n" +
