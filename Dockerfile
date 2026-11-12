@@ -10,6 +10,8 @@ RUN npm prune --omit=dev
 
 FROM node:24-alpine AS runtime-base
 
+RUN apk upgrade --no-cache
+
 WORKDIR /opt/geocontext
 COPY --from=builder /opt/geocontext/package.json package.json
 COPY --from=builder /opt/geocontext/node_modules node_modules/
