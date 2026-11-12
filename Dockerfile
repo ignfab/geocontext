@@ -10,6 +10,9 @@ RUN npm prune --omit=dev
 
 FROM node:24.22.3-alpine
 
+# Upgrade Alpine packages to the latest version to ensure security patches are applied
+RUN apk upgrade --no-cache
+
 WORKDIR /opt/geocontext
 COPY --from=builder /opt/geocontext/package.json package.json
 COPY --from=builder /opt/geocontext/node_modules node_modules/
