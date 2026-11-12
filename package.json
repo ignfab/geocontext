@@ -56,7 +56,7 @@
   "dependencies": {
     "@ignfab/gpf-schema-store": "^0.3.0",
     "@modelcontextprotocol/sdk": "^1.32.2",
-    "@rgrove/parse-xml": "^5.1.0",
+    "@rgrove/parse-xml": "^5.2.0",
     "@turf/bbox": "^7.4.0",
     "@turf/bbox-polygon": "^7.4.0",
     "@turf/centroid": "^7.4.0",
@@ -73,7 +73,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@modelcontextprotocol/inspector": "^2.13.0",
+    "@modelcontextprotocol/inspector": "^2.15.0",
     "@turf/intersect": "^7.4.0",
     "@types/geojson": "^7946.0.16",
     "@types/node": "^26.6.6",
@@ -81,7 +81,7 @@
     "@vitest/coverage-v8": "^5.1.0",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
-    "supertest": "^7.3.1",
+    "supertest": "^7.3.2",
     "typescript": "^7.0.2",
     "vitest": "^5.1.0"
   },
