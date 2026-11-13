@@ -2,12 +2,12 @@ import { vi, describe, it, expect, afterEach } from "vitest";
 
 import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 import type { GpfFeatureType } from "../../../src/wfs/catalog.js";
-import { validateStructuredContentAgainstOutputSchema } from "../helpers/outputSchema";
 
 import type { Env } from "../../../src/config/env.js";
 import { decodeToken } from "../../../src/proxy/token.js";
 import { PROXY_TOKEN_KIND } from "../../../src/wfs/schema.js";
 import { expectErrorText } from "../helpers/errorAssertions";
+import { toolCall } from "../helpers/mcp";
 
 // 32-byte key as 64 hex chars, decoded to a Buffer the way env.ts would.
 const SECRET_HEX = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
@@ -94,7 +94,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
     );
     const tool = new GpfGetFeaturesLayerTool();
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_features_layer",
         arguments: { typename: "ADMINEXPRESS-COG.LATEST:commune" },
@@ -118,7 +118,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
     mockGetFeatureType.mockResolvedValue(asFeatureType("ADMINEXPRESS-COG.LATEST:commune", communeType));
     const tool = new GpfGetFeaturesLayerTool();
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_features_layer",
         arguments: { typename: "ADMINEXPRESS-COG.LATEST:commune" },
@@ -135,7 +135,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
     mockGetFeatureType.mockResolvedValue(asFeatureType("ADMINEXPRESS-COG.LATEST:commune", communeType));
     const tool = new GpfGetFeaturesLayerTool();
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_features_layer",
         arguments: {
@@ -153,12 +153,6 @@ describe("Test GpfGetFeaturesLayerTool", () => {
     }
     const payload = JSON.parse(textContent.text);
     expect(payload).toEqual(response.structuredContent);
-    expect(
-      validateStructuredContentAgainstOutputSchema(
-        tool.toolDefinition.outputSchema,
-        response.structuredContent,
-      ),
-    ).toBeNull();
 
     const url = new URL(payload.data_url);
     expect(url.pathname.startsWith("/api/v1/proxy/")).toBe(true);
@@ -183,7 +177,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
     mockGetFeatureType.mockResolvedValue(asFeatureType("ADMINEXPRESS-COG.LATEST:commune", communeType));
     const tool = new GpfGetFeaturesLayerTool();
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_features_layer",
         arguments: { typename: "ADMINEXPRESS-COG.LATEST:commune" },
@@ -201,7 +195,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
     mockGetFeatureType.mockResolvedValue(asFeatureType("ADMINEXPRESS-COG.LATEST:commune", communeType));
     const tool = new GpfGetFeaturesLayerTool();
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_features_layer",
         arguments: { typename: "ADMINEXPRESS-COG.LATEST:commune" },
@@ -217,7 +211,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
     mockGetEnv.mockReturnValue(makeEnv({}));
     const tool = new GpfGetFeaturesLayerTool();
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_features_layer",
         arguments: {
@@ -236,7 +230,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
     mockGetEnv.mockReturnValue(makeEnv({}));
     const tool = new GpfGetFeaturesLayerTool();
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_features_layer",
         arguments: {
@@ -272,7 +266,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
     mockGetFeatureType.mockResolvedValue(asFeatureType("INSEE.FILOSOFI.INDICATORS:filosofi_iris_2019", tableType));
     const tool = new GpfGetFeaturesLayerTool();
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_features_layer",
         arguments: { typename: "INSEE.FILOSOFI.INDICATORS:filosofi_iris_2019" },
@@ -297,7 +291,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
     mockGetFeatureType.mockResolvedValue(asFeatureType("ADMINEXPRESS-COG.LATEST:commune", communeType));
     const tool = new GpfGetFeaturesLayerTool();
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_features_layer",
         arguments: {
@@ -328,7 +322,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
     });
     const tool = new GpfGetFeaturesLayerTool();
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_features_layer",
         arguments: {
@@ -376,7 +370,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
     });
     const tool = new GpfGetFeaturesLayerTool();
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_features_layer",
         arguments: {
@@ -413,7 +407,7 @@ describe("Test GpfGetFeaturesLayerTool", () => {
       value: `val_${index}_${(index * 104729).toString(36)}_${(index * 1299709).toString(36)}`,
     }));
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_features_layer",
         arguments: { typename: "ADMINEXPRESS-COG.LATEST:commune", where },

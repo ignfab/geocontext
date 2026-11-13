@@ -1,29 +1,12 @@
-import { constants as fsConstants } from "node:fs";
-import { access } from "node:fs/promises";
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, "..");
-const compiledToolsDir = join(repoRoot, "dist", "tools");
 const outputPath = join(repoRoot, "docs", "mcp-tools.md");
 const miniSearchOptionsEnv = "GPF_WFS_MINISEARCH_OPTIONS";
-const toolDisplayOrder = [
-  "geocode",
-  "altitude",
-  "adminexpress",
-  "cadastre",
-  "urbanisme",
-  "assiette_sup",
-  "gpf_search_types",
-  "gpf_describe_type",
-  "gpf_get_features",
-  "gpf_get_features_layer",
-  "gpf_count_features",
-  "gpf_get_feature_by_id",
-  "gpf_get_feature_by_id_layer",
-];
 
 /**
  * @typedef {object} JsonSchema
@@ -47,10 +30,6 @@ const toolDisplayOrder = [
  * @property {Record<string, boolean>=} annotations
  * @property {JsonSchema=} inputSchema
  * @property {JsonSchema=} outputSchema
- */
-
-/**
- * @typedef {ToolDefinition & {source: string, _instance: import("mcp-framework").MCPTool}} LoadedTool
  */
 
 function formatInline(value) {
@@ -267,7 +246,7 @@ export function renderOutputSection(definition) {
   return [
     "### Sortie",
     "",
-    "Aucun `outputSchema` unique n'est exposé. La sortie est gérée par la sérialisation par défaut du framework ou par un formatage de réponse spécifique.",
+    "Aucun `outputSchema` unique n'est exposé. La sortie est gérée par la sérialisation JSON par défaut ou par un formatage de réponse spécifique.",
   ].join("\n");
 }
 
@@ -280,16 +259,6 @@ async function loadPackageMetadata() {
     name: typeof packageJson.name === "string" ? packageJson.name : "unknown",
     version: typeof packageJson.version === "string" ? packageJson.version : "unknown",
   };
-}
-
-async function ensureCompiledToolsExist() {
-  try {
-    await access(compiledToolsDir, fsConstants.R_OK);
-  } catch {
-    throw new Error(
-      `Missing compiled tools directory: ${compiledToolsDir}. Run \`npm run build\` before \`npm run docs:mcp\`.`,
-    );
-  }
 }
 
 function normalizePotentiallyInvalidEnv() {
@@ -310,224 +279,38 @@ function normalizePotentiallyInvalidEnv() {
 }
 
 /**
- * @param {unknown} definition
- * @param {string} filename
+ * Lists the tools through an MCP client, and calls the first tool with a required
+ * parameter without arguments: a validation error, answered before any service call.
  */
-function assertToolDefinition(definition, filename) {
-  if (!definition || typeof definition !== "object") {
-    throw new Error(`Tool ${filename} did not expose a toolDefinition object.`);
-  }
-  if (typeof definition.name !== "string" || definition.name.trim() === "") {
-    throw new Error(`Tool ${filename} exposed an invalid toolDefinition.name.`);
-  }
-}
-
-function sourcePathForCompiledTool(filename) {
-  return `src/tools/${filename.replace(/\.js$/, ".ts")}`;
-}
-
-export function sortToolDefinitions(definitions) {
-  const order = new Map(toolDisplayOrder.map((name, index) => [name, index]));
-
-  return definitions.sort((left, right) => {
-    const leftOrder = order.get(left.name);
-    const rightOrder = order.get(right.name);
-
-    if (leftOrder !== undefined && rightOrder !== undefined) {
-      return leftOrder - rightOrder;
-    }
-    if (leftOrder !== undefined) {
-      return -1;
-    }
-    if (rightOrder !== undefined) {
-      return 1;
-    }
-    return left.name.localeCompare(right.name);
-  });
-}
-
 async function loadToolDefinitions() {
-  await ensureCompiledToolsExist();
   normalizePotentiallyInvalidEnv();
 
-  const filenames = (await readdir(compiledToolsDir))
-    .filter((filename) => filename.endsWith("Tool.js"))
-    .filter((filename) => filename !== "BaseTool.js")
-    .sort((left, right) => left.localeCompare(right));
-
-  if (filenames.length === 0) {
-    throw new Error(`No tool modules found in ${compiledToolsDir}. Run \`npm run build\` first.`);
-  }
-
-  /** @type {LoadedTool[]} */
-  const definitions = [];
-
-  for (const filename of filenames) {
-    const moduleUrl = pathToFileURL(join(compiledToolsDir, filename)).href;
-    const imported = await import(moduleUrl);
-    const ToolClass = imported.default;
-
-    if (typeof ToolClass !== "function") {
-      throw new Error(`Default export in ${filename} is not a tool class.`);
-    }
-
-    const instance = new ToolClass();
-    assertToolDefinition(instance.toolDefinition, filename);
-    definitions.push({
-      source: sourcePathForCompiledTool(filename),
-      _instance: instance,
-      ...instance.toolDefinition,
-    });
-  }
-
-  const duplicateNames = definitions
-    .map((definition) => definition.name)
-    .filter((name, index, names) => names.indexOf(name) !== index);
-
-  if (duplicateNames.length > 0) {
-    throw new Error(
-      `Duplicate MCP tool names detected: ${Array.from(new Set(duplicateNames)).join(", ")}.`,
-    );
-  }
-
-  return sortToolDefinitions(definitions);
-}
-
-function normalizeErrorResponse(response) {
-  if (!response || typeof response !== "object") {
-    return undefined;
-  }
-
-  const source = /** @type {Record<string, unknown>} */ (response);
-  if (source.isError !== true || !Array.isArray(source.content)) {
-    return undefined;
-  }
+  const { createServer, tools } = await import(pathToFileURL(join(repoRoot, "dist", "server.js")).href);
+  // The server would log the expected validation error of the example.
+  const { default: logger } = await import(pathToFileURL(join(repoRoot, "dist", "logger.js")).href);
+  logger.silent = true;
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  await createServer().connect(serverTransport);
+  const client = new Client({ name: "docs-mcp", version: "0.0.0" });
+  await client.connect(clientTransport);
+  const { tools: definitions } = await client.listTools();
+  const invalidTool = definitions.find((definition) => definition.inputSchema.required?.length);
+  const errorExample = invalidTool && {
+    toolName: invalidTool.name,
+    response: await client.callTool({ name: invalidTool.name, arguments: {} }),
+  };
+  await client.close();
 
   return {
-    isError: true,
-    content: source.content,
-    ...(source.structuredContent !== undefined ? { structuredContent: source.structuredContent } : {}),
+    errorExample,
+    tools: definitions.map((definition) => {
+      const instance = tools.find((tool) => tool.name === definition.name);
+      return { source: `src/tools/${instance.constructor.name}.ts`, ...definition };
+    }),
   };
 }
 
-async function loadNormalizeToolError() {
-  const moduleUrl = pathToFileURL(join(repoRoot, "dist", "errors", "toolError.js")).href;
-  const imported = await import(moduleUrl);
-
-  if (typeof imported.normalizeToolError !== "function") {
-    throw new Error("Compiled helper normalizeToolError was not found.");
-  }
-
-  return imported.normalizeToolError;
-}
-
-/**
- * @param {JsonSchema | undefined} schema
- * @returns {unknown}
- */
-export function buildInvalidValue(schema) {
-  const type = schemaType(schema);
-
-  if (type.includes("number") || type.includes("integer")) {
-    return "invalid";
-  }
-  if (type.includes("string") || type === "enum") {
-    return 123;
-  }
-  if (type.includes("boolean")) {
-    return "invalid";
-  }
-  if (type.includes("array")) {
-    return "invalid";
-  }
-  if (type.includes("object") || type.includes("oneOf") || type.includes("anyOf") || type.includes("allOf")) {
-    return "invalid";
-  }
-
-  return null;
-}
-
-/**
- * @param {ToolDefinition} definition
- * @returns {Record<string, unknown>[]}
- */
-export function buildInvalidInputCandidates(definition) {
-  const candidates = [{}];
-  const properties = definition.inputSchema?.properties;
-
-  if (properties && Object.keys(properties).length > 0) {
-    const firstFieldName = Object.keys(properties).sort((left, right) => left.localeCompare(right))[0];
-    candidates.push({
-      [firstFieldName]: buildInvalidValue(properties[firstFieldName]),
-    });
-  }
-
-  candidates.push({
-    __invalid_parameter__: true,
-  });
-
-  return candidates;
-}
-
-/**
- * @param {LoadedTool} tool
- * @param {(error: unknown) => Record<string, unknown>} normalizeToolError
- * @returns {{ toolName: string, response: ReturnType<typeof normalizeErrorResponse> } | undefined}
- */
-export function buildValidationErrorExampleForTool(tool, normalizeToolError) {
-  const schema = tool._instance?.schema;
-
-  if (!schema || typeof schema.safeParse !== "function") {
-    return undefined;
-  }
-
-  for (const candidate of buildInvalidInputCandidates(tool)) {
-    const result = schema.safeParse(candidate);
-
-    if (result.success) {
-      continue;
-    }
-
-    const payload = normalizeToolError(result.error);
-    // Mirrors `BaseTool.createErrorResponse`, which omits `structuredContent`.
-    const response = normalizeErrorResponse({
-      isError: true,
-      content: [
-        {
-          type: "text",
-          text: String(payload.detail ?? "Erreur de validation."),
-        },
-      ],
-    });
-
-    if (!response) {
-      return undefined;
-    }
-
-    return {
-      toolName: tool.name,
-      response,
-    };
-  }
-
-  return undefined;
-}
-
-async function buildErrorExample(tools) {
-  const normalizeToolError = await loadNormalizeToolError();
-
-  for (const tool of tools) {
-    const errorExample = buildValidationErrorExampleForTool(tool, normalizeToolError);
-    if (errorExample) {
-      return errorExample;
-    }
-  }
-
-  return undefined;
-}
-
-async function buildErrorContractSection(tools) {
-  const errorExample = await buildErrorExample(tools);
+function buildErrorContractSection(errorExample) {
   if (!errorExample) {
     return [];
   }
@@ -589,8 +372,8 @@ export function buildAnnotationsSection(tools) {
   ];
 }
 
-async function buildDocumentLines(pkg, tools) {
-  const errorContractSection = await buildErrorContractSection(tools);
+function buildDocumentLines(pkg, tools, errorExample) {
+  const errorContractSection = buildErrorContractSection(errorExample);
   const annotationsSection = buildAnnotationsSection(tools);
   const lines = [
     "# Référence des tools MCP",
@@ -641,8 +424,8 @@ async function buildDocumentLines(pkg, tools) {
 
 export async function main() {
   const pkg = await loadPackageMetadata();
-  const tools = await loadToolDefinitions();
-  const content = `${(await buildDocumentLines(pkg, tools)).join("\n")}\n`;
+  const { tools, errorExample } = await loadToolDefinitions();
+  const content = `${buildDocumentLines(pkg, tools, errorExample).join("\n")}\n`;
 
   await mkdir(dirname(outputPath), { recursive: true });
 

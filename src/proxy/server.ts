@@ -13,7 +13,7 @@ import { getEnv } from "../config/env.js";
 import { GPF_WFS_URL } from "../wfs/catalog.js";
 import {
   gpfGetFeaturesLayerInputSchema,
-  gpfGetFeatureByIdLayerInputObjectSchema,
+  gpfGetFeatureByIdLayerInputSchema,
   PROXY_TOKEN_KIND,
 } from "../wfs/schema.js";
 import { runGeometryFeatureQuery, runGeometryFeatureByIdQuery } from "./execute.js";
@@ -105,7 +105,7 @@ function toHttpError(error: unknown): HttpError {
  * the response, so with nothing private to protect a restrictive allowlist adds
  * no security and would only break legitimate browser consumers whose origin we
  * cannot enumerate (MCP Carto, claude.ai, ChatGPT, VSCode webviews, ...). So we
- * open it to any origin, exactly as the MCP transport does (`allowOrigin: "*"`).
+ * open it to any origin, exactly as the MCP transport does (src/http.ts).
  * No `Allow-Credentials` (there are none), so `*` is safe.
  */
 function applyCors(res: ServerResponse): void {
@@ -179,7 +179,7 @@ async function handleLayerRequest(token: string, res: ServerResponse): Promise<v
     const { kind, ...payload } = asDiscriminatedToken(params);
 
     if (kind === PROXY_TOKEN_KIND.byId) {
-      const input = gpfGetFeatureByIdLayerInputObjectSchema.parse(payload);
+      const input = gpfGetFeatureByIdLayerInputSchema.parse(payload);
       featureCollection = await runGeometryFeatureByIdQuery(
         input,
         getDefaultGeometryFeatureByIdQueryDeps(),
@@ -243,8 +243,7 @@ function createRequestHandler() {
       // split (/ready → 503 on SIGTERM, so a draining pod leaves the Service before its listener closes).
       // Health probe (Kubernetes liveness/readiness, docker healthcheck): fixed path
       // outside PROXY_ENDPOINT, answered without decoding a token or calling the WFS.
-      // Same path and body as the MCP image (mcp-framework serves /health by default),
-      // so one probe configuration fits both.
+      // Same path and body as the MCP image (src/http.ts), so one probe configuration fits both.
       if (url.pathname === "/health") {
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
         res.end(JSON.stringify({ ok: true }));

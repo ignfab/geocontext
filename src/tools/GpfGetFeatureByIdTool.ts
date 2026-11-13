@@ -5,15 +5,13 @@
  * formatting. The execution flow itself is delegated to the structured WFS engine.
  */
 
-import BaseTool from "./BaseTool.js";
+import type { McpTool } from "../helpers/tools.js";
 
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import { executeGetFeatureById } from "../wfs/byId.js";
 import {
-  gpfGetFeatureByIdInputObjectSchema,
   gpfGetFeatureByIdInputSchema,
   type GpfGetFeatureByIdInput,
-  gpfGetFeatureByIdPublishedInputSchema,
 } from "../wfs/schema.js";
 import logger from "../logger.js";
 
@@ -26,36 +24,25 @@ const GPF_GET_FEATURE_BY_ID_TOOL_DESCRIPTION = [
   "Utiliser `spatial_extras` pour renvoyer une information géométrique dérivée (bbox, centroïde, ...) de l'objet."
 ].join("\n");
 
-class GpfGetFeatureByIdTool extends BaseTool<GpfGetFeatureByIdInput> {
+class GpfGetFeatureByIdTool implements McpTool<typeof gpfGetFeatureByIdInputSchema> {
   name = "gpf_get_feature_by_id";
   title = "Lecture d’un objet GPF par identifiant";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
   description = GPF_GET_FEATURE_BY_ID_TOOL_DESCRIPTION;
 
-  // The framework requires a plain Zod object here to publish a compatible
-  // input schema. Cross-field runtime validation is applied in `execute`.
-  schema = gpfGetFeatureByIdInputObjectSchema;
-
-  /**
-   * Exposes an input schema variant that stays compatible with most MCP integrations.
-   *
-   * @returns The published input schema exposed through the MCP tool definition.
-   */
-  get inputSchema() {
-    return gpfGetFeatureByIdPublishedInputSchema;
-  }
+  inputSchema = gpfGetFeatureByIdInputSchema;
 
   /**
    * Formats the `results` FeatureCollection into `structuredContent`.
    *
-   * We intentionally do not expose an `outputSchemaShape` for the tool: the
+   * We intentionally do not expose an `outputSchema` for the tool: the
    * returned FeatureCollection's feature properties depend on the queried WFS
    * layer, so it has no closed shape worth validating.
    *
    * @param data Raw execution result returned by the tool implementation.
    * @returns An MCP success response enriched with structured content.
    */
-  protected createSuccessResponse(data: unknown) {
+  createSuccessResponse(data: unknown) {
     if (
       typeof data === "object" &&
       data !== null &&
@@ -75,18 +62,17 @@ class GpfGetFeatureByIdTool extends BaseTool<GpfGetFeatureByIdInput> {
 
   /**
    * Orchestrates the by-id execution flow:
-   * schema validation -> WFS execution -> cardinality validation.
+   * WFS execution -> cardinality validation.
    *
    * @param input Normalized tool input.
    * @returns A transformed FeatureCollection containing one feature.
    */
   async execute(input: GpfGetFeatureByIdInput) {
-    const validatedInput = gpfGetFeatureByIdInputSchema.parse(input);
     logger.info(`[tool] execute ${this.name} ...`, {
-      input: validatedInput
+      input
     });
 
-    return executeGetFeatureById(validatedInput);
+    return executeGetFeatureById(input);
   }
 }
 

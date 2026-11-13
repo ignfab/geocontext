@@ -4,6 +4,7 @@ import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 import type { GpfFeatureType } from "../../../src/wfs/catalog.js";
 import { ServiceResponseError } from "../../../src/helpers/http.js";
 import { expectErrorText } from "../helpers/errorAssertions";
+import { toolCall, toolDefinition } from "../helpers/mcp.js";
 
 const mockGetFeatureType = vi.fn<(typename: string) => Promise<GpfFeatureType>>();
 const mockFetchJSONPost = vi.fn<(
@@ -32,6 +33,7 @@ const { gpfGetFeaturesInputSchema } = await import(
 const { default: GpfGetFeaturesTool } = await import(
   "../../../src/tools/GpfGetFeaturesTool"
 );
+const { successResult } = await import("../../../src/helpers/tools.js");
 
 describe("Test GpfGetFeaturesTool", () => {
   const COMMUNE_TYPENAME = "ADMINEXPRESS-COG.LATEST:commune";
@@ -41,7 +43,7 @@ describe("Test GpfGetFeaturesTool", () => {
 
   class RespondableGpfGetFeaturesTool extends GpfGetFeaturesTool {
     respond(data: unknown) {
-      return this.createSuccessResponse(data);
+      return successResult(this, data);
     }
   }
 
@@ -200,40 +202,40 @@ describe("Test GpfGetFeaturesTool", () => {
 
   it("should expose an enriched MCP definition", () => {
     const tool = new GpfGetFeaturesTool();
-    expect(tool.toolDefinition.title).toEqual("Lecture d’objets GPF");
-    expect(tool.toolDefinition.inputSchema.properties?.typename).toMatchObject({
+    expect(toolDefinition(tool).title).toEqual("Lecture d’objets GPF");
+    expect(toolDefinition(tool).inputSchema.properties?.typename).toMatchObject({
       type: "string",
       minLength: 1,
     });
-    expect(tool.toolDefinition.inputSchema.properties?.limit).toMatchObject({
+    expect(toolDefinition(tool).inputSchema.properties?.limit).toMatchObject({
       type: "integer",
       minimum: 1,
       maximum: 5000,
     });
-    expect(tool.toolDefinition.inputSchema.properties?.select).toMatchObject({
+    expect(toolDefinition(tool).inputSchema.properties?.select).toMatchObject({
       type: "array",
     });
-    expect(tool.toolDefinition.inputSchema.properties?.order_by).toMatchObject({
+    expect(toolDefinition(tool).inputSchema.properties?.order_by).toMatchObject({
       type: "array",
     });
-    expect(tool.toolDefinition.inputSchema.properties?.where).toMatchObject({
+    expect(toolDefinition(tool).inputSchema.properties?.where).toMatchObject({
       type: "array",
     });
     // Only this tool has the spatial filters that the centroid and bbox lines refer to.
-    expect(tool.toolDefinition.inputSchema.properties?.spatial_extras).toMatchObject({
+    expect(toolDefinition(tool).inputSchema.properties?.spatial_extras).toMatchObject({
       description: expect.stringContaining(
         "Il peut tomber hors d'une géométrie concave : un `intersects_point_filter` sur ce point peut alors ne renvoyer ni l'objet, ni ce qui le contient.\n" +
           "`bbox` est la boîte englobante de la géométrie : `[ouest, sud, est, nord]` en WGS84 `lon/lat`, dans l'ordre des champs `west`, `south`, `east` et `north` de `bbox_filter`.\n",
       ),
     });
-    expect(tool.toolDefinition.outputSchema).toBeUndefined();
+    expect(toolDefinition(tool).outputSchema).toBeUndefined();
   });
 
   it("should publish an LLM-compatible input schema without composition keywords", () => {
     const tool = new GpfGetFeaturesTool();
 
-    expect(hasJsonSchemaComposition(tool.toolDefinition.inputSchema)).toBe(false);
-    expect(tool.toolDefinition.inputSchema.properties?.dwithin_point_filter).toMatchObject({
+    expect(hasJsonSchemaComposition(toolDefinition(tool).inputSchema)).toBe(false);
+    expect(toolDefinition(tool).inputSchema.properties?.dwithin_point_filter).toMatchObject({
       type: "object",
       properties: expect.objectContaining({
         lon: expect.objectContaining({ type: "number" }),
@@ -241,7 +243,7 @@ describe("Test GpfGetFeaturesTool", () => {
         distance_m: expect.objectContaining({ type: "number" }),
       }),
     });
-    expect(tool.toolDefinition.inputSchema.properties?.travel_time_filter).toMatchObject({
+    expect(toolDefinition(tool).inputSchema.properties?.travel_time_filter).toMatchObject({
       type: "object",
       properties: expect.objectContaining({
         lon: expect.objectContaining({ type: "number" }),
@@ -277,7 +279,7 @@ describe("Test GpfGetFeaturesTool", () => {
     const isochroneUrls = captureIsochroneRequests();
     const requests = captureRequests({ type: "FeatureCollection", features: [], totalFeatures: 0 });
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_features",
         arguments: {
@@ -310,7 +312,7 @@ describe("Test GpfGetFeaturesTool", () => {
 
   it("should return isError=true for invalid input", async () => {
     const tool = new GpfGetFeaturesTool();
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_features",
         arguments: {
@@ -329,7 +331,7 @@ describe("Test GpfGetFeaturesTool", () => {
     }
     expect(textContent.text).toContain("Paramètres invalides");
     expect(textContent.text).toContain("le nom du type ne doit pas être vide");
-    expect(tool.toolDefinition.outputSchema).toBeUndefined();
+    expect(toolDefinition(tool).outputSchema).toBeUndefined();
   });
 
   it("should be distinguishable from other queries thanks to the presence of `spatial_extras`", async () => {
@@ -339,7 +341,7 @@ describe("Test GpfGetFeaturesTool", () => {
 
   it("should reject multiple spatial filters as invalid tool parameters", async () => {
     const tool = new GpfGetFeaturesTool();
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_features",
         arguments: {
@@ -375,7 +377,7 @@ describe("Test GpfGetFeaturesTool", () => {
 
     async function callWith(args: Record<string, unknown>) {
       const tool = new GpfGetFeaturesTool();
-      return tool.toolCall({
+      return toolCall(tool, {
         params: {
           name: "gpf_get_features",
           arguments: { typename: COMMUNE_TYPENAME, ...args },
@@ -425,7 +427,7 @@ describe("Test GpfGetFeaturesTool", () => {
 
   it("should reject legacy inputs removed from the public schema", async () => {
     const tool = new GpfGetFeaturesTool();
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_features",
         arguments: {
@@ -449,7 +451,7 @@ describe("Test GpfGetFeaturesTool", () => {
     mockFeatureTypes({ [COMMUNE_TYPENAME]: polygonFeatureType });
     const requests = captureRequests(featureCollection);
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_features",
         arguments: {
@@ -490,7 +492,7 @@ describe("Test GpfGetFeaturesTool", () => {
       ),
     );
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_features",
         arguments: {
@@ -531,7 +533,7 @@ describe("Test GpfGetFeaturesTool", () => {
       ],
     });
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_features",
         arguments: {
@@ -576,7 +578,7 @@ describe("Test GpfGetFeaturesTool", () => {
       totalFeatures: 1,
     });
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_features",
         arguments: {
@@ -608,7 +610,7 @@ describe("Test GpfGetFeaturesTool", () => {
     mockFeatureTypes({ [COMMUNE_TYPENAME]: polygonFeatureType });
     const requests = captureRequests(featureCollection);
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_features",
         arguments: {
@@ -630,7 +632,7 @@ describe("Test GpfGetFeaturesTool", () => {
     mockFeatureTypes({ [COMMUNE_TYPENAME]: polygonFeatureType });
     const requests = captureRequests(featureCollection);
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_features",
         arguments: {
@@ -662,7 +664,7 @@ describe("Test GpfGetFeaturesTool", () => {
       totalFeatures: 1,
     });
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_features",
         arguments: {
@@ -705,7 +707,7 @@ describe("Test GpfGetFeaturesTool", () => {
       totalFeatures: 1,
     });
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_features",
         arguments: {
@@ -736,7 +738,7 @@ describe("Test GpfGetFeaturesTool", () => {
       totalFeatures: 0,
     });
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_features",
         arguments: {
@@ -765,7 +767,7 @@ describe("Test GpfGetFeaturesTool", () => {
       properties: { ...polygonFeatureType.properties, geometrie: { format, "x-ogc-role": "primary-geometry" } },
     });
     const callWith = (typename: string, spatial_extras: string[]) =>
-      new GpfGetFeaturesTool().toolCall({
+      toolCall(new GpfGetFeaturesTool(), {
         params: {
           name: "gpf_get_features",
           arguments: {
@@ -839,7 +841,7 @@ describe("Test GpfGetFeaturesTool", () => {
     const tool = new GpfGetFeaturesTool();
     const requests = captureRequests(featureCollection);
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_features",
         arguments: {
@@ -880,7 +882,7 @@ describe("Test GpfGetFeaturesTool", () => {
       totalFeatures: 1,
     });
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_features",
         arguments: {
@@ -899,7 +901,7 @@ describe("Test GpfGetFeaturesTool", () => {
     const tool = new GpfGetFeaturesTool();
     mockFeatureTypes({ [DOC_URBA_TYPENAME]: tableFeatureType });
 
-    const response = await tool.toolCall({
+    const response = await toolCall(tool, {
       params: {
         name: "gpf_get_features",
         arguments: {

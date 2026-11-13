@@ -2,7 +2,7 @@
  * MCP tool exposing altitude lookup for a single geographic position.
  */
 
-import BaseTool from "./BaseTool.js";
+import type { McpTool } from "../helpers/tools.js";
 import { z } from "zod";
 
 import { ALTITUDE_SOURCE, altitudeClient } from "../gpf/altitude.js";
@@ -12,10 +12,10 @@ import logger from "../logger.js";
 
 // --- Schemas ---
 
-const altitudeInputSchema = z.object({
+const altitudeInputSchema = z.strictObject({
   lon: lonSchema,
   lat: latSchema,
-}).strict();
+});
 
 const altitudeOutputSchema = z.object({
   lon: z.number().describe("La longitude du point."),
@@ -32,14 +32,14 @@ type AltitudeInput = z.infer<typeof altitudeInputSchema>;
 
 const ALTITUDE_TOOL_DESCRIPTION = `Renvoie l'altitude (en mètres) et la précision de la mesure (accuracy) d'un point géographique à partir de sa longitude et de sa latitude. (source : ${ALTITUDE_SOURCE}).`;
 
-class AltitudeTool extends BaseTool<AltitudeInput> {
+class AltitudeTool implements McpTool<typeof altitudeInputSchema> {
   name = "altitude";
   title = "Altitude d'une position";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
   description = ALTITUDE_TOOL_DESCRIPTION;
-  protected outputSchemaShape = altitudeOutputSchema;
+  outputSchema = altitudeOutputSchema;
 
-  schema = altitudeInputSchema;
+  inputSchema = altitudeInputSchema;
 
   /**
    * Resolves the altitude information for the requested position.
@@ -49,7 +49,7 @@ class AltitudeTool extends BaseTool<AltitudeInput> {
    */
   async execute(input: AltitudeInput) {
     logger.info(`[tool] execute ${this.name} ...`, {
-      input: input
+      input
     });
 
     return await altitudeClient.getByLocation(input.lon, input.lat);

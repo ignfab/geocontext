@@ -15,13 +15,13 @@ Exemple complet généré automatiquement à partir d'un appel de tool invalide 
   "jsonrpc": "2.0",
   "id": "geocode:invalid-input-example",
   "result": {
-    "isError": true,
     "content": [
       {
         "type": "text",
-        "text": "Paramètres invalides : Le paramètre 'text' est requis."
+        "text": "Paramètres invalides : text: Paramètre requis."
       }
-    ]
+    ],
+    "isError": true
   }
 }
 ```
@@ -86,19 +86,21 @@ Les coordonnées `lon/lat` retournées sont directement réutilisables dans tous
   "properties": {
     "text": {
       "type": "string",
-      "description": "Le texte devant être complété et géocodé",
-      "minLength": 1
+      "minLength": 1,
+      "description": "Le texte devant être complété et géocodé"
     },
     "maximumResponses": {
-      "type": "integer",
       "description": "Le nombre maximum de résultats à retourner (entre 1 et 10). Défaut : 3.",
+      "type": "integer",
       "minimum": 1,
       "maximum": 10
     }
   },
   "required": [
     "text"
-  ]
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false
 }
 ```
 
@@ -119,7 +121,6 @@ Les coordonnées `lon/lat` retournées sont directement réutilisables dans tous
   "properties": {
     "results": {
       "type": "array",
-      "description": "La liste ordonnée des résultats géocodés.",
       "items": {
         "type": "object",
         "properties": {
@@ -152,13 +153,17 @@ Les coordonnées `lon/lat` retournées sont directement réutilisables dans tous
           "lon",
           "lat",
           "fulltext"
-        ]
-      }
+        ],
+        "additionalProperties": false
+      },
+      "description": "La liste ordonnée des résultats géocodés."
     }
   },
   "required": [
     "results"
-  ]
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false
 }
 ```
 
@@ -201,21 +206,23 @@ Renvoie l'altitude (en mètres) et la précision de la mesure (accuracy) d'un po
   "properties": {
     "lon": {
       "type": "number",
-      "description": "La longitude du point.",
       "minimum": -180,
-      "maximum": 180
+      "maximum": 180,
+      "description": "La longitude du point."
     },
     "lat": {
       "type": "number",
-      "description": "La latitude du point.",
       "minimum": -90,
-      "maximum": 90
+      "maximum": 90,
+      "description": "La latitude du point."
     }
   },
   "required": [
     "lon",
     "lat"
-  ]
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false
 }
 ```
 
@@ -259,7 +266,9 @@ Renvoie l'altitude (en mètres) et la précision de la mesure (accuracy) d'un po
     "lat",
     "altitude",
     "accuracy"
-  ]
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false
 }
 ```
 
@@ -306,21 +315,23 @@ Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gp
   "properties": {
     "lon": {
       "type": "number",
-      "description": "La longitude du point.",
       "minimum": -180,
-      "maximum": 180
+      "maximum": 180,
+      "description": "La longitude du point."
     },
     "lat": {
       "type": "number",
-      "description": "La latitude du point.",
       "minimum": -90,
-      "maximum": 90
+      "maximum": 90,
+      "description": "La latitude du point."
     }
   },
   "required": [
     "lon",
     "lat"
-  ]
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false
 }
 ```
 
@@ -341,7 +352,6 @@ Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gp
   "properties": {
     "results": {
       "type": "array",
-      "description": "La liste des unités administratives couvrant le point demandé.",
       "items": {
         "type": "object",
         "properties": {
@@ -355,14 +365,13 @@ Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gp
           },
           "bbox": {
             "type": "array",
-            "description": "La boîte englobante de l'unité administrative.",
             "items": {
               "type": "number"
-            }
+            },
+            "description": "La boîte englobante de l'unité administrative."
           },
           "feature_ref": {
             "type": "object",
-            "description": "Référence GPF réutilisable, notamment avec `gpf_get_features` et `intersects_feature_filter`.",
             "properties": {
               "typename": {
                 "type": "string",
@@ -376,20 +385,26 @@ Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gp
             "required": [
               "typename",
               "feature_id"
-            ]
+            ],
+            "additionalProperties": false,
+            "description": "Référence GPF réutilisable, notamment avec `gpf_get_features` et `intersects_feature_filter`."
           }
         },
         "required": [
           "type",
           "id",
           "feature_ref"
-        ]
-      }
+        ],
+        "additionalProperties": true
+      },
+      "description": "La liste des unités administratives couvrant le point demandé."
     }
   },
   "required": [
     "results"
-  ]
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false
 }
 ```
 
@@ -437,21 +452,23 @@ Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gp
   "properties": {
     "lon": {
       "type": "number",
-      "description": "La longitude du point.",
       "minimum": -180,
-      "maximum": 180
+      "maximum": 180,
+      "description": "La longitude du point."
     },
     "lat": {
       "type": "number",
-      "description": "La latitude du point.",
       "minimum": -90,
-      "maximum": 90
+      "maximum": 90,
+      "description": "La latitude du point."
     }
   },
   "required": [
     "lon",
     "lat"
-  ]
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false
 }
 ```
 
@@ -472,7 +489,6 @@ Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gp
   "properties": {
     "results": {
       "type": "array",
-      "description": "La liste des objets cadastraux les plus proches du point demandé.",
       "items": {
         "type": "object",
         "properties": {
@@ -486,14 +502,13 @@ Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gp
           },
           "bbox": {
             "type": "array",
-            "description": "La boîte englobante de l'objet cadastral.",
             "items": {
               "type": "number"
-            }
+            },
+            "description": "La boîte englobante de l'objet cadastral."
           },
           "feature_ref": {
             "type": "object",
-            "description": "Référence GPF réutilisable, notamment avec `gpf_get_features` et `intersects_feature_filter`.",
             "properties": {
               "typename": {
                 "type": "string",
@@ -507,7 +522,9 @@ Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gp
             "required": [
               "typename",
               "feature_id"
-            ]
+            ],
+            "additionalProperties": false,
+            "description": "Référence GPF réutilisable, notamment avec `gpf_get_features` et `intersects_feature_filter`."
           },
           "distance": {
             "type": "number",
@@ -524,13 +541,17 @@ Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gp
           "feature_ref",
           "distance",
           "source"
-        ]
-      }
+        ],
+        "additionalProperties": true
+      },
+      "description": "La liste des objets cadastraux les plus proches du point demandé."
     }
   },
   "required": [
     "results"
-  ]
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false
 }
 ```
 
@@ -581,21 +602,23 @@ Modèles d'URL Géoportail de l'Urbanisme :
   "properties": {
     "lon": {
       "type": "number",
-      "description": "La longitude du point.",
       "minimum": -180,
-      "maximum": 180
+      "maximum": 180,
+      "description": "La longitude du point."
     },
     "lat": {
       "type": "number",
-      "description": "La latitude du point.",
       "minimum": -90,
-      "maximum": 90
+      "maximum": 90,
+      "description": "La latitude du point."
     }
   },
   "required": [
     "lon",
     "lat"
-  ]
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false
 }
 ```
 
@@ -616,7 +639,6 @@ Modèles d'URL Géoportail de l'Urbanisme :
   "properties": {
     "results": {
       "type": "array",
-      "description": "La liste des objets d'urbanisme pertinents pour le point demandé.",
       "items": {
         "type": "object",
         "properties": {
@@ -630,14 +652,13 @@ Modèles d'URL Géoportail de l'Urbanisme :
           },
           "bbox": {
             "type": "array",
-            "description": "La boîte englobante de l'objet d'urbanisme.",
             "items": {
               "type": "number"
-            }
+            },
+            "description": "La boîte englobante de l'objet d'urbanisme."
           },
           "feature_ref": {
             "type": "object",
-            "description": "Référence GPF réutilisable, notamment avec `gpf_get_features` et `intersects_feature_filter`.",
             "properties": {
               "typename": {
                 "type": "string",
@@ -651,7 +672,9 @@ Modèles d'URL Géoportail de l'Urbanisme :
             "required": [
               "typename",
               "feature_id"
-            ]
+            ],
+            "additionalProperties": false,
+            "description": "Référence GPF réutilisable, notamment avec `gpf_get_features` et `intersects_feature_filter`."
           },
           "distance": {
             "type": "number",
@@ -662,13 +685,17 @@ Modèles d'URL Géoportail de l'Urbanisme :
           "type",
           "id",
           "distance"
-        ]
-      }
+        ],
+        "additionalProperties": true
+      },
+      "description": "La liste des objets d'urbanisme pertinents pour le point demandé."
     }
   },
   "required": [
     "results"
-  ]
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false
 }
 ```
 
@@ -715,21 +742,23 @@ Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gp
   "properties": {
     "lon": {
       "type": "number",
-      "description": "La longitude du point.",
       "minimum": -180,
-      "maximum": 180
+      "maximum": 180,
+      "description": "La longitude du point."
     },
     "lat": {
       "type": "number",
-      "description": "La latitude du point.",
       "minimum": -90,
-      "maximum": 90
+      "maximum": 90,
+      "description": "La latitude du point."
     }
   },
   "required": [
     "lon",
     "lat"
-  ]
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false
 }
 ```
 
@@ -750,7 +779,6 @@ Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gp
   "properties": {
     "results": {
       "type": "array",
-      "description": "La liste des assiettes de servitudes d'utilité publique pertinentes pour le point demandé.",
       "items": {
         "type": "object",
         "properties": {
@@ -764,14 +792,13 @@ Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gp
           },
           "bbox": {
             "type": "array",
-            "description": "La boîte englobante de l'assiette.",
             "items": {
               "type": "number"
-            }
+            },
+            "description": "La boîte englobante de l'assiette."
           },
           "feature_ref": {
             "type": "object",
-            "description": "Référence GPF réutilisable, notamment avec `gpf_get_features` et `intersects_feature_filter`.",
             "properties": {
               "typename": {
                 "type": "string",
@@ -785,7 +812,9 @@ Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gp
             "required": [
               "typename",
               "feature_id"
-            ]
+            ],
+            "additionalProperties": false,
+            "description": "Référence GPF réutilisable, notamment avec `gpf_get_features` et `intersects_feature_filter`."
           },
           "distance": {
             "type": "number",
@@ -796,13 +825,17 @@ Pour récupérer exactement l'objet correspondant au `feature_ref`, utiliser `gp
           "type",
           "id",
           "distance"
-        ]
-      }
+        ],
+        "additionalProperties": true
+      },
+      "description": "La liste des assiettes de servitudes d'utilité publique pertinentes pour le point demandé."
     }
   },
   "required": [
     "results"
-  ]
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false
 }
 ```
 
@@ -849,19 +882,21 @@ Le paramètre `max_results` permet d'élargir le nombre de candidats retournés 
   "properties": {
     "query": {
       "type": "string",
-      "description": "La requête de recherche",
-      "minLength": 1
+      "minLength": 1,
+      "description": "La requête de recherche"
     },
     "max_results": {
-      "type": "integer",
       "description": "Le nombre maximum de résultats à retourner (entre 1 et 50). Défaut : 10.",
+      "type": "integer",
       "minimum": 1,
       "maximum": 50
     }
   },
   "required": [
     "query"
-  ]
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false
 }
 ```
 
@@ -882,7 +917,6 @@ Le paramètre `max_results` permet d'élargir le nombre de candidats retournés 
   "properties": {
     "results": {
       "type": "array",
-      "description": "La liste ordonnée des types GPF trouvés.",
       "items": {
         "type": "object",
         "properties": {
@@ -903,36 +937,48 @@ Le paramètre `max_results` permet d'élargir le nombre de candidats retournés 
             "description": "Le score de pertinence de la recherche."
           },
           "queryTerms": {
-            "type": "array",
             "description": "Les termes de la requête qui ont produit ce résultat.",
+            "type": "array",
             "items": {
               "type": "string"
             }
           },
           "terms": {
-            "type": "array",
             "description": "Les termes indexés correspondant à la requête.",
+            "type": "array",
             "items": {
               "type": "string"
             }
           },
           "match": {
-            "type": "object",
             "description": "Détail des correspondances : associe chaque terme indexé aux champs où il a été trouvé.\nChamps possibles :\n- `namespace` : préfixe du type (ex. \"ADMINEXPRESS-COG.LATEST\", \"BDTOPO_V3\")\n- `name` : nom du type (ex. \"commune\", \"departement\")\n- `identifierTokens` : identifiant complet décomposé en mots-clés\n- `title` : titre lisible du type\n- `description` : description détaillée du type\n- `propertyNames` : noms des propriétés disponibles (ex. \"numero\", \"section\", \"code_insee\" pour CADASTRALPARCELS.PARCELLAIRE_EXPRESS:parcelle)\n- `propertyTitles` : titres des propriétés (ex. \"Superficie cadastrale\", \"Code Insee de la commune\", \"Population\" pour BDTOPO_V3:commune)\n- `propertyDescriptions` : descriptions des propriétés (ex. \"Identifiant de l'objet hydrographique.\", \"Précise si le cours d'eau est permanent ou pas.\" pour BDTOPO_V3:cours_d_eau)\n- `oneOfConsts` : valeurs énumérées constantes (ex. \"Agricole\", \"Industriel\", \"Résidentiel\" pour BDTOPO_V3:batiment, propriété usage_1)\n- `oneOfDescriptions` : descriptions des valeurs énumérées (ex. \"Zone de vignes.\", \"Culture de houblon.\" pour BDTOPO_V3:zone_de_vegetation, propriété nature)\n- `representedFeatures` : objets géographiques représentés (ex. \"Piscine découverte\", \"Terrain de rugby\", \"Vélodrome (piste)\" pour BDTOPO_V3:terrain_de_sport)\n- `selectionCriteria` : texte libre décrivant les critères de sélection du type (ex. \"Toutes les emprises de parcs et de réserves naturelles nationales ou régionales sont retenues.\" pour BDTOPO_V3:parc_ou_reserve)",
-            "properties": {}
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
           }
         },
         "required": [
           "typename",
           "title",
           "description"
-        ]
-      }
+        ],
+        "additionalProperties": false
+      },
+      "description": "La liste ordonnée des types GPF trouvés."
     }
   },
   "required": [
     "results"
-  ]
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false
 }
 ```
 
@@ -977,13 +1023,15 @@ Utiliser ce tool après `gpf_search_types` pour inspecter les propriétés dispo
   "properties": {
     "typename": {
       "type": "string",
-      "description": "Le nom du type à décrire (de la forme `prefixe:nom`).",
-      "minLength": 1
+      "minLength": 1,
+      "description": "Le nom du type à décrire (de la forme `prefixe:nom`)."
     }
   },
   "required": [
     "typename"
-  ]
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false
 }
 ```
 
@@ -1012,14 +1060,16 @@ Utiliser ce tool après `gpf_search_types` pour inspecter les propriétés dispo
   "type": "object",
   "properties": {
     "$schema": {
-      "type": "string"
+      "type": "string",
+      "const": "https://json-schema.org/draft/2020-12/schema"
     },
     "$id": {
       "type": "string",
       "format": "uri"
     },
     "type": {
-      "type": "string"
+      "type": "string",
+      "const": "object"
     },
     "title": {
       "type": "string"
@@ -1039,15 +1089,76 @@ Utiliser ce tool après `gpf_search_types` pour inspecter les propriétés dispo
         "type": "string"
       }
     },
+    "properties": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "string",
+              "boolean",
+              "integer",
+              "number"
+            ]
+          },
+          "format": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "oneOf": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "const": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "x-ign-representedFeatures": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "const",
+                "title"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "x-ogc-role": {
+            "type": "string",
+            "enum": [
+              "id",
+              "primary-geometry"
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
     "required": {
       "type": "array",
       "items": {
         "type": "string"
       }
-    },
-    "properties": {
-      "type": "object",
-      "properties": {}
     }
   },
   "required": [
@@ -1056,9 +1167,11 @@ Utiliser ce tool après `gpf_search_types` pour inspecter les propriétés dispo
     "type",
     "title",
     "description",
-    "required",
-    "properties"
-  ]
+    "properties",
+    "required"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false
 }
 ```
 
@@ -1125,15 +1238,17 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
       "description": "Nom exact du type GPF à interroger de la forme `prefixe:nom`. Utiliser `gpf_search_types` pour trouver un `typename` valide."
     },
     "select": {
+      "description": "Liste des propriétés non géométriques à renvoyer pour chaque objet. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`.",
+      "minItems": 1,
       "type": "array",
       "items": {
         "type": "string",
         "minLength": 1
-      },
-      "minItems": 1,
-      "description": "Liste des propriétés non géométriques à renvoyer pour chaque objet. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`."
+      }
     },
     "where": {
+      "description": "Clauses de filtre attributaire, combinées avec `AND`.",
+      "minItems": 1,
       "type": "array",
       "items": {
         "type": "object",
@@ -1158,18 +1273,18 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
             "description": "Opérateur de filtre : `eq`, `ne`, `lt`, `lte`, `gt`, `gte`, `in`, `is_null`."
           },
           "value": {
+            "description": "Valeur scalaire sérialisée en texte, utilisée avec tous les opérateurs sauf `in` et `is_null`.",
             "type": "string",
-            "minLength": 1,
-            "description": "Valeur scalaire sérialisée en texte, utilisée avec tous les opérateurs sauf `in` et `is_null`."
+            "minLength": 1
           },
           "values": {
+            "description": "Liste de valeurs sérialisées en texte, utilisée uniquement avec `operator = \"in\"`.",
+            "minItems": 1,
             "type": "array",
             "items": {
               "type": "string",
               "minLength": 1
-            },
-            "minItems": 1,
-            "description": "Liste de valeurs sérialisées en texte, utilisée uniquement avec `operator = \"in\"`."
+            }
           }
         },
         "required": [
@@ -1178,11 +1293,10 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
         ],
         "additionalProperties": false,
         "description": "Clause de filtre structurée. Exemple : `{ property: \"code_insee\", operator: \"eq\", value: \"75056\" }`."
-      },
-      "minItems": 1,
-      "description": "Clauses de filtre attributaire, combinées avec `AND`."
+      }
     },
     "bbox_filter": {
+      "description": "Filtre spatial par boîte englobante. Exclusif avec les autres filtres spatiaux.",
       "type": "object",
       "properties": {
         "west": {
@@ -1216,10 +1330,10 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
         "east",
         "north"
       ],
-      "additionalProperties": false,
-      "description": "Filtre spatial par boîte englobante. Exclusif avec les autres filtres spatiaux."
+      "additionalProperties": false
     },
     "intersects_point_filter": {
+      "description": "Filtre spatial par intersection avec un point. Exclusif avec les autres filtres spatiaux.",
       "type": "object",
       "properties": {
         "lon": {
@@ -1239,10 +1353,10 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
         "lon",
         "lat"
       ],
-      "additionalProperties": false,
-      "description": "Filtre spatial par intersection avec un point. Exclusif avec les autres filtres spatiaux."
+      "additionalProperties": false
     },
     "dwithin_point_filter": {
+      "description": "Filtre spatial par distance à un point. Exclusif avec les autres filtres spatiaux.",
       "type": "object",
       "properties": {
         "lon": {
@@ -1268,10 +1382,10 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
         "lat",
         "distance_m"
       ],
-      "additionalProperties": false,
-      "description": "Filtre spatial par distance à un point. Exclusif avec les autres filtres spatiaux."
+      "additionalProperties": false
     },
     "intersects_feature_filter": {
+      "description": "Filtre spatial par intersection avec un feature GPF de référence. Exclusif avec les autres filtres spatiaux.",
       "type": "object",
       "properties": {
         "typename": {
@@ -1289,10 +1403,10 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
         "typename",
         "feature_id"
       ],
-      "additionalProperties": false,
-      "description": "Filtre spatial par intersection avec un feature GPF de référence. Exclusif avec les autres filtres spatiaux."
+      "additionalProperties": false
     },
     "travel_time_filter": {
+      "description": "Filtre spatial par temps de trajet depuis un point (`profile` voiture ou piéton). Exclusif avec les autres filtres spatiaux.",
       "type": "object",
       "properties": {
         "lon": {
@@ -1328,17 +1442,18 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
         "minutes",
         "profile"
       ],
-      "additionalProperties": false,
-      "description": "Filtre spatial par temps de trajet depuis un point (`profile` voiture ou piéton). Exclusif avec les autres filtres spatiaux."
+      "additionalProperties": false
     },
     "limit": {
+      "default": 100,
+      "description": "Nombre maximum d'objets à renvoyer. Valeur par défaut : 100. Maximum : 5000.",
       "type": "integer",
       "minimum": 1,
-      "maximum": 5000,
-      "default": 100,
-      "description": "Nombre maximum d'objets à renvoyer. Valeur par défaut : 100. Maximum : 5000."
+      "maximum": 5000
     },
     "order_by": {
+      "description": "Liste ordonnée des critères de tri.",
+      "minItems": 1,
       "type": "array",
       "items": {
         "type": "object",
@@ -1349,13 +1464,13 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
             "description": "Nom exact d'une propriété non géométrique à utiliser pour le tri. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles."
           },
           "direction": {
+            "default": "asc",
+            "description": "Direction de tri : `asc` ou `desc`.",
             "type": "string",
             "enum": [
               "asc",
               "desc"
-            ],
-            "default": "asc",
-            "description": "Direction de tri : `asc` ou `desc`."
+            ]
           }
         },
         "required": [
@@ -1363,11 +1478,11 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
         ],
         "additionalProperties": false,
         "description": "Critère de tri structuré. Exemple : `{ property: \"population\", direction: \"desc\" }`."
-      },
-      "minItems": 1,
-      "description": "Liste ordonnée des critères de tri."
+      }
     },
     "spatial_extras": {
+      "description": "Éléments calculés depuis la géométrie à renvoyer pour chaque objet. Peut inclure `centroid`, `bbox`, `length`, `area`, `distance_to_filter_center` et `intersection_area`, aucun par défaut.\n`centroid` est le centroïde (moyenne arithmétique des sommets) de la géométrie. Il peut tomber hors d'une géométrie concave : un `intersects_point_filter` sur ce point peut alors ne renvoyer ni l'objet, ni ce qui le contient.\n`bbox` est la boîte englobante de la géométrie : `[ouest, sud, est, nord]` en WGS84 `lon/lat`, dans l'ordre des champs `west`, `south`, `east` et `north` de `bbox_filter`.\n`length` est la somme des longueurs (en m) des parties linéaires de la géométrie (LineString, MultiLineString).\n`area` est la somme des surfaces (en m²) des parties surfaciques de la géométrie (Polygon, MultiPolygon).\n`distance_to_filter_center` est la distance (en m) entre le centre du filtre spatial et le point le plus proche de l'objet renvoyé, `0` si l'objet contient ce centre. Ce centre est le point de `dwithin_point_filter`, le point de départ de `travel_time_filter`, le centre de la boîte de `bbox_filter` et le centroïde (moyenne des sommets) de l'objet de référence de `intersects_feature_filter`.\n`intersection_area` est l'aire (en m²) de la partie de l'objet renvoyé située dans le filtre spatial (boîte, disque, isochrone ou objet de référence surfacique). Elle vaut `null` si l'objet renvoyé n'a pas de partie surfacique, et `0` si l'objet ne recouvre pas le filtre.\n`distance_to_filter_center` et `intersection_area` exigent un filtre spatial.\nLes `spatial_extras` sont calculés après la requête, sur les seuls objets renvoyés : ils ne sont utilisables ni dans `where` ni dans `order_by`. Pour un classement (les N plus grands, les N plus proches) ou une somme, vérifier que `numberReturned` est égal à `numberMatched`, sinon augmenter `limit` ou restreindre le filtre spatial. Pour les N plus proches d'un point, utiliser `dwithin_point_filter` avec `distance_to_filter_center`, trier sur cette distance et élargir `distance_m` s'il y a moins de N objets.\nSi l'élément à calculer est incompatible avec la géométrie (exemple : bbox d'un point, aire d'une géométrie linéaire) et que le type de la géométrie est connu à l'avance, une erreur indiquera comment corriger la requête.\nSinon, un élément qui n'est pas calculable pour un objet (géométrie absente ou vide, aucune partie de la dimension requise) vaut `null`. Une valeur numérique, `0` compris, signifie que le calcul a bien eu lieu.",
+      "default": [],
       "type": "array",
       "items": {
         "type": "string",
@@ -1379,16 +1494,14 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
           "distance_to_filter_center",
           "intersection_area"
         ]
-      },
-      "default": [],
-      "description": "Éléments calculés depuis la géométrie à renvoyer pour chaque objet. Peut inclure `centroid`, `bbox`, `length`, `area`, `distance_to_filter_center` et `intersection_area`, aucun par défaut.\n`centroid` est le centroïde (moyenne arithmétique des sommets) de la géométrie. Il peut tomber hors d'une géométrie concave : un `intersects_point_filter` sur ce point peut alors ne renvoyer ni l'objet, ni ce qui le contient.\n`bbox` est la boîte englobante de la géométrie : `[ouest, sud, est, nord]` en WGS84 `lon/lat`, dans l'ordre des champs `west`, `south`, `east` et `north` de `bbox_filter`.\n`length` est la somme des longueurs (en m) des parties linéaires de la géométrie (LineString, MultiLineString).\n`area` est la somme des surfaces (en m²) des parties surfaciques de la géométrie (Polygon, MultiPolygon).\n`distance_to_filter_center` est la distance (en m) entre le centre du filtre spatial et le point le plus proche de l'objet renvoyé, `0` si l'objet contient ce centre. Ce centre est le point de `dwithin_point_filter`, le point de départ de `travel_time_filter`, le centre de la boîte de `bbox_filter` et le centroïde (moyenne des sommets) de l'objet de référence de `intersects_feature_filter`.\n`intersection_area` est l'aire (en m²) de la partie de l'objet renvoyé située dans le filtre spatial (boîte, disque, isochrone ou objet de référence surfacique). Elle vaut `null` si l'objet renvoyé n'a pas de partie surfacique, et `0` si l'objet ne recouvre pas le filtre.\n`distance_to_filter_center` et `intersection_area` exigent un filtre spatial.\nLes `spatial_extras` sont calculés après la requête, sur les seuls objets renvoyés : ils ne sont utilisables ni dans `where` ni dans `order_by`. Pour un classement (les N plus grands, les N plus proches) ou une somme, vérifier que `numberReturned` est égal à `numberMatched`, sinon augmenter `limit` ou restreindre le filtre spatial. Pour les N plus proches d'un point, utiliser `dwithin_point_filter` avec `distance_to_filter_center`, trier sur cette distance et élargir `distance_m` s'il y a moins de N objets.\nSi l'élément à calculer est incompatible avec la géométrie (exemple : bbox d'un point, aire d'une géométrie linéaire) et que le type de la géométrie est connu à l'avance, une erreur indiquera comment corriger la requête.\nSinon, un élément qui n'est pas calculable pour un objet (géométrie absente ou vide, aucune partie de la dimension requise) vaut `null`. Une valeur numérique, `0` compris, signifie que le calcul a bien eu lieu."
+      }
     }
   },
   "required": [
     "typename"
   ],
-  "additionalProperties": false,
-  "$schema": "http://json-schema.org/draft-07/schema#"
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false
 }
 ```
 
@@ -1396,7 +1509,7 @@ Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiqu
 
 ### Sortie
 
-Aucun `outputSchema` unique n'est exposé. La sortie est gérée par la sérialisation par défaut du framework ou par un formatage de réponse spécifique.
+Aucun `outputSchema` unique n'est exposé. La sortie est gérée par la sérialisation JSON par défaut ou par un formatage de réponse spécifique.
 
 ### Réponse MCP
 
@@ -1450,15 +1563,17 @@ Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, 
       "description": "Nom exact du type GPF à interroger de la forme `prefixe:nom`. Utiliser `gpf_search_types` pour trouver un `typename` valide."
     },
     "select": {
+      "description": "Liste des propriétés non géométriques à renvoyer pour chaque objet. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`.",
+      "minItems": 1,
       "type": "array",
       "items": {
         "type": "string",
         "minLength": 1
-      },
-      "minItems": 1,
-      "description": "Liste des propriétés non géométriques à renvoyer pour chaque objet. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`."
+      }
     },
     "where": {
+      "description": "Clauses de filtre attributaire, combinées avec `AND`.",
+      "minItems": 1,
       "type": "array",
       "items": {
         "type": "object",
@@ -1483,18 +1598,18 @@ Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, 
             "description": "Opérateur de filtre : `eq`, `ne`, `lt`, `lte`, `gt`, `gte`, `in`, `is_null`."
           },
           "value": {
+            "description": "Valeur scalaire sérialisée en texte, utilisée avec tous les opérateurs sauf `in` et `is_null`.",
             "type": "string",
-            "minLength": 1,
-            "description": "Valeur scalaire sérialisée en texte, utilisée avec tous les opérateurs sauf `in` et `is_null`."
+            "minLength": 1
           },
           "values": {
+            "description": "Liste de valeurs sérialisées en texte, utilisée uniquement avec `operator = \"in\"`.",
+            "minItems": 1,
             "type": "array",
             "items": {
               "type": "string",
               "minLength": 1
-            },
-            "minItems": 1,
-            "description": "Liste de valeurs sérialisées en texte, utilisée uniquement avec `operator = \"in\"`."
+            }
           }
         },
         "required": [
@@ -1503,11 +1618,10 @@ Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, 
         ],
         "additionalProperties": false,
         "description": "Clause de filtre structurée. Exemple : `{ property: \"code_insee\", operator: \"eq\", value: \"75056\" }`."
-      },
-      "minItems": 1,
-      "description": "Clauses de filtre attributaire, combinées avec `AND`."
+      }
     },
     "bbox_filter": {
+      "description": "Filtre spatial par boîte englobante. Exclusif avec les autres filtres spatiaux.",
       "type": "object",
       "properties": {
         "west": {
@@ -1541,10 +1655,10 @@ Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, 
         "east",
         "north"
       ],
-      "additionalProperties": false,
-      "description": "Filtre spatial par boîte englobante. Exclusif avec les autres filtres spatiaux."
+      "additionalProperties": false
     },
     "intersects_point_filter": {
+      "description": "Filtre spatial par intersection avec un point. Exclusif avec les autres filtres spatiaux.",
       "type": "object",
       "properties": {
         "lon": {
@@ -1564,10 +1678,10 @@ Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, 
         "lon",
         "lat"
       ],
-      "additionalProperties": false,
-      "description": "Filtre spatial par intersection avec un point. Exclusif avec les autres filtres spatiaux."
+      "additionalProperties": false
     },
     "dwithin_point_filter": {
+      "description": "Filtre spatial par distance à un point. Exclusif avec les autres filtres spatiaux.",
       "type": "object",
       "properties": {
         "lon": {
@@ -1593,10 +1707,10 @@ Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, 
         "lat",
         "distance_m"
       ],
-      "additionalProperties": false,
-      "description": "Filtre spatial par distance à un point. Exclusif avec les autres filtres spatiaux."
+      "additionalProperties": false
     },
     "intersects_feature_filter": {
+      "description": "Filtre spatial par intersection avec un feature GPF de référence. Exclusif avec les autres filtres spatiaux.",
       "type": "object",
       "properties": {
         "typename": {
@@ -1614,10 +1728,10 @@ Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, 
         "typename",
         "feature_id"
       ],
-      "additionalProperties": false,
-      "description": "Filtre spatial par intersection avec un feature GPF de référence. Exclusif avec les autres filtres spatiaux."
+      "additionalProperties": false
     },
     "travel_time_filter": {
+      "description": "Filtre spatial par temps de trajet depuis un point (`profile` voiture ou piéton). Exclusif avec les autres filtres spatiaux.",
       "type": "object",
       "properties": {
         "lon": {
@@ -1653,10 +1767,11 @@ Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, 
         "minutes",
         "profile"
       ],
-      "additionalProperties": false,
-      "description": "Filtre spatial par temps de trajet depuis un point (`profile` voiture ou piéton). Exclusif avec les autres filtres spatiaux."
+      "additionalProperties": false
     },
     "order_by": {
+      "description": "Liste ordonnée des critères de tri.",
+      "minItems": 1,
       "type": "array",
       "items": {
         "type": "object",
@@ -1667,13 +1782,13 @@ Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, 
             "description": "Nom exact d'une propriété non géométrique à utiliser pour le tri. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles."
           },
           "direction": {
+            "default": "asc",
+            "description": "Direction de tri : `asc` ou `desc`.",
             "type": "string",
             "enum": [
               "asc",
               "desc"
-            ],
-            "default": "asc",
-            "description": "Direction de tri : `asc` ou `desc`."
+            ]
           }
         },
         "required": [
@@ -1681,23 +1796,21 @@ Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, 
         ],
         "additionalProperties": false,
         "description": "Critère de tri structuré. Exemple : `{ property: \"population\", direction: \"desc\" }`."
-      },
-      "minItems": 1,
-      "description": "Liste ordonnée des critères de tri."
+      }
     },
     "limit": {
+      "default": 5000,
+      "description": "Nombre maximum d'objets à cartographier. Valeur par défaut : 5000 (plafond du service). Réduire pour alléger la carte. Maximum : 5000. Une requête produisant plus de 5000 objets sera tronquée.",
       "type": "integer",
       "minimum": 1,
-      "maximum": 5000,
-      "default": 5000,
-      "description": "Nombre maximum d'objets à cartographier. Valeur par défaut : 5000 (plafond du service). Réduire pour alléger la carte. Maximum : 5000. Une requête produisant plus de 5000 objets sera tronquée."
+      "maximum": 5000
     }
   },
   "required": [
     "typename"
   ],
-  "additionalProperties": false,
-  "$schema": "http://json-schema.org/draft-07/schema#"
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false
 }
 ```
 
@@ -1718,13 +1831,15 @@ Mêmes filtres que `gpf_get_features` : `select` pour choisir les propriétés, 
   "properties": {
     "data_url": {
       "type": "string",
-      "description": "URL renvoyant une FeatureCollection GeoJSON (géométries complètes) prête à être affichée dans un outil cartographique.",
-      "format": "uri"
+      "format": "uri",
+      "description": "URL renvoyant une FeatureCollection GeoJSON (géométries complètes) prête à être affichée dans un outil cartographique."
     }
   },
   "required": [
     "data_url"
-  ]
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false
 }
 ```
 
@@ -1786,6 +1901,8 @@ Les noms de propriétés utilisés dans `where` **ne peuvent pas être devinés*
       "description": "Nom exact du type GPF à interroger de la forme `prefixe:nom`. Utiliser `gpf_search_types` pour trouver un `typename` valide."
     },
     "where": {
+      "description": "Clauses de filtre attributaire, combinées avec `AND`.",
+      "minItems": 1,
       "type": "array",
       "items": {
         "type": "object",
@@ -1810,18 +1927,18 @@ Les noms de propriétés utilisés dans `where` **ne peuvent pas être devinés*
             "description": "Opérateur de filtre : `eq`, `ne`, `lt`, `lte`, `gt`, `gte`, `in`, `is_null`."
           },
           "value": {
+            "description": "Valeur scalaire sérialisée en texte, utilisée avec tous les opérateurs sauf `in` et `is_null`.",
             "type": "string",
-            "minLength": 1,
-            "description": "Valeur scalaire sérialisée en texte, utilisée avec tous les opérateurs sauf `in` et `is_null`."
+            "minLength": 1
           },
           "values": {
+            "description": "Liste de valeurs sérialisées en texte, utilisée uniquement avec `operator = \"in\"`.",
+            "minItems": 1,
             "type": "array",
             "items": {
               "type": "string",
               "minLength": 1
-            },
-            "minItems": 1,
-            "description": "Liste de valeurs sérialisées en texte, utilisée uniquement avec `operator = \"in\"`."
+            }
           }
         },
         "required": [
@@ -1830,11 +1947,10 @@ Les noms de propriétés utilisés dans `where` **ne peuvent pas être devinés*
         ],
         "additionalProperties": false,
         "description": "Clause de filtre structurée. Exemple : `{ property: \"code_insee\", operator: \"eq\", value: \"75056\" }`."
-      },
-      "minItems": 1,
-      "description": "Clauses de filtre attributaire, combinées avec `AND`."
+      }
     },
     "bbox_filter": {
+      "description": "Filtre spatial par boîte englobante. Exclusif avec les autres filtres spatiaux.",
       "type": "object",
       "properties": {
         "west": {
@@ -1868,10 +1984,10 @@ Les noms de propriétés utilisés dans `where` **ne peuvent pas être devinés*
         "east",
         "north"
       ],
-      "additionalProperties": false,
-      "description": "Filtre spatial par boîte englobante. Exclusif avec les autres filtres spatiaux."
+      "additionalProperties": false
     },
     "intersects_point_filter": {
+      "description": "Filtre spatial par intersection avec un point. Exclusif avec les autres filtres spatiaux.",
       "type": "object",
       "properties": {
         "lon": {
@@ -1891,10 +2007,10 @@ Les noms de propriétés utilisés dans `where` **ne peuvent pas être devinés*
         "lon",
         "lat"
       ],
-      "additionalProperties": false,
-      "description": "Filtre spatial par intersection avec un point. Exclusif avec les autres filtres spatiaux."
+      "additionalProperties": false
     },
     "dwithin_point_filter": {
+      "description": "Filtre spatial par distance à un point. Exclusif avec les autres filtres spatiaux.",
       "type": "object",
       "properties": {
         "lon": {
@@ -1920,10 +2036,10 @@ Les noms de propriétés utilisés dans `where` **ne peuvent pas être devinés*
         "lat",
         "distance_m"
       ],
-      "additionalProperties": false,
-      "description": "Filtre spatial par distance à un point. Exclusif avec les autres filtres spatiaux."
+      "additionalProperties": false
     },
     "intersects_feature_filter": {
+      "description": "Filtre spatial par intersection avec un feature GPF de référence. Exclusif avec les autres filtres spatiaux.",
       "type": "object",
       "properties": {
         "typename": {
@@ -1941,10 +2057,10 @@ Les noms de propriétés utilisés dans `where` **ne peuvent pas être devinés*
         "typename",
         "feature_id"
       ],
-      "additionalProperties": false,
-      "description": "Filtre spatial par intersection avec un feature GPF de référence. Exclusif avec les autres filtres spatiaux."
+      "additionalProperties": false
     },
     "travel_time_filter": {
+      "description": "Filtre spatial par temps de trajet depuis un point (`profile` voiture ou piéton). Exclusif avec les autres filtres spatiaux.",
       "type": "object",
       "properties": {
         "lon": {
@@ -1980,15 +2096,14 @@ Les noms de propriétés utilisés dans `where` **ne peuvent pas être devinés*
         "minutes",
         "profile"
       ],
-      "additionalProperties": false,
-      "description": "Filtre spatial par temps de trajet depuis un point (`profile` voiture ou piéton). Exclusif avec les autres filtres spatiaux."
+      "additionalProperties": false
     }
   },
   "required": [
     "typename"
   ],
-  "additionalProperties": false,
-  "$schema": "http://json-schema.org/draft-07/schema#"
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false
 }
 ```
 
@@ -2014,7 +2129,9 @@ Les noms de propriétés utilisés dans `where` **ne peuvent pas être devinés*
   },
   "required": [
     "numberMatched"
-  ]
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false
 }
 ```
 
@@ -2071,15 +2188,17 @@ Utiliser `spatial_extras` pour renvoyer une information géométrique dérivée 
       "description": "Identifiant GPF exact de l'objet à récupérer, par exemple `commune.8952`."
     },
     "select": {
+      "description": "Liste des propriétés non géométriques à renvoyer. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`.",
+      "minItems": 1,
       "type": "array",
       "items": {
         "type": "string",
         "minLength": 1
-      },
-      "minItems": 1,
-      "description": "Liste des propriétés non géométriques à renvoyer. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`."
+      }
     },
     "spatial_extras": {
+      "description": "Éléments calculés depuis la géométrie à renvoyer pour l'objet. Peut inclure `centroid`, `bbox`, `length` et `area`, aucun par défaut.\n`centroid` est le centroïde (moyenne arithmétique des sommets) de la géométrie. Il peut tomber hors d'une géométrie concave.\n`bbox` est la boîte englobante de la géométrie : `[ouest, sud, est, nord]` en WGS84 `lon/lat`.\n`length` est la somme des longueurs (en m) des parties linéaires de la géométrie (LineString, MultiLineString).\n`area` est la somme des surfaces (en m²) des parties surfaciques de la géométrie (Polygon, MultiPolygon).\nSi l'élément à calculer est incompatible avec la géométrie (exemple : bbox d'un point, aire d'une géométrie linéaire) et que le type de la géométrie est connu à l'avance, une erreur indiquera comment corriger la requête.\nSinon, un élément qui n'est pas calculable pour un objet (géométrie absente ou vide, aucune partie de la dimension requise) vaut `null`. Une valeur numérique, `0` compris, signifie que le calcul a bien eu lieu.",
+      "default": [],
       "type": "array",
       "items": {
         "type": "string",
@@ -2089,17 +2208,15 @@ Utiliser `spatial_extras` pour renvoyer une information géométrique dérivée 
           "length",
           "area"
         ]
-      },
-      "default": [],
-      "description": "Éléments calculés depuis la géométrie à renvoyer pour l'objet. Peut inclure `centroid`, `bbox`, `length` et `area`, aucun par défaut.\n`centroid` est le centroïde (moyenne arithmétique des sommets) de la géométrie. Il peut tomber hors d'une géométrie concave.\n`bbox` est la boîte englobante de la géométrie : `[ouest, sud, est, nord]` en WGS84 `lon/lat`.\n`length` est la somme des longueurs (en m) des parties linéaires de la géométrie (LineString, MultiLineString).\n`area` est la somme des surfaces (en m²) des parties surfaciques de la géométrie (Polygon, MultiPolygon).\nSi l'élément à calculer est incompatible avec la géométrie (exemple : bbox d'un point, aire d'une géométrie linéaire) et que le type de la géométrie est connu à l'avance, une erreur indiquera comment corriger la requête.\nSinon, un élément qui n'est pas calculable pour un objet (géométrie absente ou vide, aucune partie de la dimension requise) vaut `null`. Une valeur numérique, `0` compris, signifie que le calcul a bien eu lieu."
+      }
     }
   },
   "required": [
     "typename",
     "feature_id"
   ],
-  "additionalProperties": false,
-  "$schema": "http://json-schema.org/draft-07/schema#"
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false
 }
 ```
 
@@ -2107,7 +2224,7 @@ Utiliser `spatial_extras` pour renvoyer une information géométrique dérivée 
 
 ### Sortie
 
-Aucun `outputSchema` unique n'est exposé. La sortie est gérée par la sérialisation par défaut du framework ou par un formatage de réponse spécifique.
+Aucun `outputSchema` unique n'est exposé. La sortie est gérée par la sérialisation JSON par défaut ou par un formatage de réponse spécifique.
 
 ### Réponse MCP
 
@@ -2160,21 +2277,21 @@ Cet outil ne peut renvoyer qu'un unique objet (0 ou plusieurs résultats provoqu
       "description": "Identifiant GPF exact de l'objet à récupérer, par exemple `commune.8952`."
     },
     "select": {
+      "description": "Liste des propriétés non géométriques à renvoyer. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`.",
+      "minItems": 1,
       "type": "array",
       "items": {
         "type": "string",
         "minLength": 1
-      },
-      "minItems": 1,
-      "description": "Liste des propriétés non géométriques à renvoyer. Utiliser `gpf_describe_type` pour connaître les noms exacts disponibles. Exemple : `[\"code_insee\", \"nom_officiel\"]`."
+      }
     }
   },
   "required": [
     "typename",
     "feature_id"
   ],
-  "additionalProperties": false,
-  "$schema": "http://json-schema.org/draft-07/schema#"
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false
 }
 ```
 
@@ -2195,13 +2312,15 @@ Cet outil ne peut renvoyer qu'un unique objet (0 ou plusieurs résultats provoqu
   "properties": {
     "data_url": {
       "type": "string",
-      "description": "URL renvoyant une FeatureCollection GeoJSON (géométries complètes) prête à être affichée dans un outil cartographique.",
-      "format": "uri"
+      "format": "uri",
+      "description": "URL renvoyant une FeatureCollection GeoJSON (géométries complètes) prête à être affichée dans un outil cartographique."
     }
   },
   "required": [
     "data_url"
-  ]
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false
 }
 ```
 
@@ -2293,32 +2412,32 @@ Renvoie aussi une estimation du temps de trajet lorsque `profile` vaut `car` ou 
       "description": "Le point d'arrivée"
     },
     "profile": {
+      "default": "spherical",
+      "description": "Le type de chemin suivi : `spherical` distance à vol d'oiseau (Terre ronde, précision à 0.5%), `ellipsoidal` distance à vol d'oiseau (Terre ellipsoïde, plus précise, précision à 0.5cm), `car` en voiture, `pedestrian` à pied.",
       "type": "string",
       "enum": [
         "spherical",
         "ellipsoidal",
         "car",
         "pedestrian"
-      ],
-      "default": "spherical",
-      "description": "Le type de chemin suivi : `spherical` distance à vol d'oiseau (Terre ronde, précision à 0.5%), `ellipsoidal` distance à vol d'oiseau (Terre ellipsoïde, plus précise, précision à 0.5cm), `car` en voiture, `pedestrian` à pied."
+      ]
     },
     "optimize": {
+      "default": "time",
+      "description": "La métrique à optimiser, lorsqu'il y a un choix : `time` chemin le plus rapide, `distance` chemin le plus court. Cette option est sans effet lorsque `profile=spherical` ou `ellipsoidal`.",
       "type": "string",
       "enum": [
         "time",
         "distance"
-      ],
-      "default": "time",
-      "description": "La métrique à optimiser, lorsqu'il y a un choix : `time` chemin le plus rapide, `distance` chemin le plus court. Cette option est sans effet lorsque `profile=spherical` ou `ellipsoidal`."
+      ]
     }
   },
   "required": [
     "departure",
     "arrival"
   ],
-  "additionalProperties": false,
-  "$schema": "http://json-schema.org/draft-07/schema#"
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false
 }
 ```
 
@@ -2343,13 +2462,15 @@ Renvoie aussi une estimation du temps de trajet lorsque `profile` vaut `car` ou 
       "description": "La distance entre les deux points, en mètres."
     },
     "time": {
-      "type": "number",
-      "description": "Estimation du temps de trajet, en minutes. Absent si `profile=spherical` ou `ellipsoidal`."
+      "description": "Estimation du temps de trajet, en minutes. Absent si `profile=spherical` ou `ellipsoidal`.",
+      "type": "number"
     }
   },
   "required": [
     "distance"
-  ]
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false
 }
 ```
 

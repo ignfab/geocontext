@@ -15,7 +15,7 @@ function parseJsonEnvValue(val: string, ctx: z.RefinementCtx): unknown {
         return JSON.parse(val) as unknown;
     } catch (e) {
         ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             message: `Invalid JSON: ${e instanceof Error ? e.message : "unknown parse error"}`,
         });
         return z.NEVER;
@@ -30,7 +30,7 @@ function parseJsonEnvValue(val: string, ctx: z.RefinementCtx): unknown {
  * swallow the endpoint — producing a broken `data_url` that 404s at map-load with
  * NO error here. Rejecting them at startup keeps that failure out of production.
  * Symmetric with the `[^?#]` guard `PROXY_ENDPOINT` / `HTTP_MCP_ENDPOINT` enforce,
- * and it also drops non-http(s) schemes (`z.string().url()` alone accepts `ftp://`).
+ * and it also drops non-http(s) schemes (`z.url()` alone accepts `ftp://`).
  */
 function isCleanHttpBaseUrl(value: string): boolean {
     let url: URL;
@@ -70,7 +70,7 @@ function parseProxyUrlSecret(val: string, ctx: z.RefinementCtx): Buffer | undefi
 
     if (!PROXY_URL_SECRET_HEX.test(val)) {
         ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             message: `Expected a ${PROXY_URL_SECRET_BYTES}-byte key as ${PROXY_URL_SECRET_BYTES * 2} hex characters (e.g. \`openssl rand -hex ${PROXY_URL_SECRET_BYTES}\`).`,
         });
         return z.NEVER as unknown as undefined;
@@ -122,12 +122,12 @@ const MINISEARCH_INDEXED_OPTION_KEYS = [
 
 const MINISEARCH_COMBINE_WITH_VALUES = ["AND", "OR"] as const;
 
-export const miniSearchOptionsSchema = z.object({
+export const miniSearchOptionsSchema = z.strictObject({
     fields: z.array(z.enum(MINISEARCH_INDEXED_OPTION_KEYS)).optional(),
     combineWith: z.enum(MINISEARCH_COMBINE_WITH_VALUES).optional(),
-    fuzzy: z.number().finite().optional(),
-    boost: z.record(z.enum(MINISEARCH_INDEXED_OPTION_KEYS), z.number().finite()).optional(),
-}).strict();
+    fuzzy: z.number().optional(),
+    boost: z.partialRecord(z.enum(MINISEARCH_INDEXED_OPTION_KEYS), z.number()).optional(),
+});
 
 // --- Env Schema ---
 
@@ -154,9 +154,12 @@ const envSchema = z.object({
                 .filter((o) => o.length > 0);
             return origins.length > 0 ? origins : undefined;
         })
-        // Intentionally not validating origin syntax:
-        // values are passed through to the HTTP transport layer.
-        .pipe(z.array(z.string()).min(1).optional())
+        // Full origins, any scheme (`https://host`, `vscode-webview://id`...): a host
+        // is required, and no wildcard since an origin only matches itself.
+        .pipe(z.array(z.url({
+            hostname: /^[^*]+$/,
+            error: (issue) => `Expected origins like https://example.com, got "${String(issue.input)}"`,
+        })).min(1).optional())
         .optional(),
     // Logging
     LOG_LEVEL: z.preprocess(emptyToUndefined, z.enum(logLevels).default("debug")),
@@ -213,7 +216,6 @@ const envSchema = z.object({
     PROXY_PUBLIC_BASE_URL: z.preprocess(
         emptyToUndefined,
         z
-            .string()
             .url()
             .refine(
                 isCleanHttpBaseUrl,

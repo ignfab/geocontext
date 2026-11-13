@@ -9,8 +9,8 @@
  * ```
  */
 
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { Client } from "@modelcontextprotocol/client";
+import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 import { INTEGRATION_CONFIG } from "../config/shared.js";
 
 /**
@@ -44,6 +44,7 @@ export async function connectToServer(): Promise<McpServerHandle> {
   );
 
   await client.connect(transport, { timeout: INTEGRATION_CONFIG.connectTimeout });
+  await client.listTools(); // Lets the client check `structuredContent` against the output schemas.
 
   const cleanup = async () => {
     await client.close();

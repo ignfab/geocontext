@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
 
 import CadastreTool from "../../src/tools/CadastreTool";
-import { validateStructuredContentAgainstOutputSchema } from "./helpers/outputSchema";
 import { expectInvalidLon } from "./helpers/errorAssertions";
 import { mairieLoray } from "../samples";
+import { toolCall, toolDefinition } from "./helpers/mcp";
 
 describe("Test CadastreTool",() => {
     class TestableCadastreTool extends CadastreTool {
@@ -41,23 +41,23 @@ describe("Test CadastreTool",() => {
 
     it("should expose an enriched MCP definition", () => {
         const tool = new CadastreTool();
-        expect(tool.toolDefinition.title).toEqual("Informations cadastrales");
-        expect(tool.toolDefinition.inputSchema.properties?.lon).toMatchObject({
+        expect(toolDefinition(tool).title).toEqual("Informations cadastrales");
+        expect(toolDefinition(tool).inputSchema.properties?.lon).toMatchObject({
             type: "number",
             minimum: -180,
             maximum: 180,
         });
-        expect(tool.toolDefinition.inputSchema.properties?.lat).toMatchObject({
+        expect(toolDefinition(tool).inputSchema.properties?.lat).toMatchObject({
             type: "number",
             minimum: -90,
             maximum: 90,
         });
-        expect(tool.toolDefinition.outputSchema).toBeDefined();
+        expect(toolDefinition(tool).outputSchema).toBeDefined();
     });
 
     it("should return both text content and structuredContent", async () => {
         const tool = new TestableCadastreTool();
-        const response = await tool.toolCall({
+        const response = await toolCall(tool, {
             params: {
                 name: "cadastre",
                 arguments: {
@@ -108,17 +108,11 @@ describe("Test CadastreTool",() => {
             ]),
         });
         expect(payload).toMatchObject(response.structuredContent as Record<string, unknown>);
-        expect(
-            validateStructuredContentAgainstOutputSchema(
-                tool.toolDefinition.outputSchema,
-                response.structuredContent,
-            ),
-        ).toBeNull();
     });
 
     it("should return isError=true for invalid input", async () => {
         const tool = new CadastreTool();
-        const response = await tool.toolCall({
+        const response = await toolCall(tool, {
             params: {
                 name: "cadastre",
                 arguments: {
