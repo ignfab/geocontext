@@ -23,7 +23,7 @@ describe("parseEnv", () => {
       GPF_NAVIGATION_RATE_LIMIT: 5,
       PROXY_MAX_RESPONSE_BYTES: 25 * 1024 * 1024,
     });
-    expect(env).not.toHaveProperty("HTTP_CORS_ALLOWED_ORIGINS");
+    expect(env).not.toHaveProperty("HTTP_ALLOWED_ORIGINS");
     expect(env).not.toHaveProperty("GPF_WFS_MINISEARCH_OPTIONS");
   });
 
@@ -136,17 +136,17 @@ describe("parseEnv", () => {
   // --- CORS ---
 
   it("should parse comma-separated CORS origins", () => {
-    const env = parseEnv({ HTTP_CORS_ALLOWED_ORIGINS: "http://localhost:3000, https://example.com, vscode-webview://abc" });
-    expect(env.HTTP_CORS_ALLOWED_ORIGINS).toEqual(["http://localhost:3000", "https://example.com", "vscode-webview://abc"]);
+    const env = parseEnv({ HTTP_ALLOWED_ORIGINS: "http://localhost:3000, https://example.com, vscode-webview://abc" });
+    expect(env.HTTP_ALLOWED_ORIGINS).toEqual(["http://localhost:3000", "https://example.com", "vscode-webview://abc"]);
   });
 
   it.each(["geollm.beta.ign.fr", "localhost:3000", "*", "https://*.ign.fr"])("should reject the CORS origin %s", (origin) => {
-    expect(() => parseEnv({ HTTP_CORS_ALLOWED_ORIGINS: origin })).toThrow(`Expected origins like https://example.com, got "${origin}"`);
+    expect(() => parseEnv({ HTTP_ALLOWED_ORIGINS: origin })).toThrow(`Expected origins like https://example.com, got "${origin}"`);
   });
 
   it("should return undefined for empty CORS string", () => {
-    const env = parseEnv({ HTTP_CORS_ALLOWED_ORIGINS: "  ,  , " });
-    expect(env.HTTP_CORS_ALLOWED_ORIGINS).toBeUndefined();
+    const env = parseEnv({ HTTP_ALLOWED_ORIGINS: "  ,  , " });
+    expect(env.HTTP_ALLOWED_ORIGINS).toBeUndefined();
   });
 
   // --- GPF_WFS_MINISEARCH_OPTIONS (JSON) ---

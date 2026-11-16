@@ -145,7 +145,7 @@ const envSchema = z.object({
             .regex(/^\/(?!\/)[^?#]*$/, "Expected a path like /mcp, without query or fragment")
             .default("/mcp"),
     ),
-    HTTP_CORS_ALLOWED_ORIGINS: z
+    HTTP_ALLOWED_ORIGINS: z
         .string()
         .transform((val) => {
             const origins = val

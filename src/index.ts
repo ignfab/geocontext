@@ -33,8 +33,8 @@ async function main() {
     return;
   }
 
-  if (!env.HTTP_CORS_ALLOWED_ORIGINS) {
-    logger.warn('Security : HTTP_CORS_ALLOWED_ORIGINS is not set. It is recommended to set this variable to prevent DNS rebinding attacks (e.g., HTTP_CORS_ALLOWED_ORIGINS="http://localhost:3000,https://geollm.beta.ign.fr".');
+  if (!env.HTTP_ALLOWED_ORIGINS) {
+    logger.warn('Security : HTTP_ALLOWED_ORIGINS is not set. It is recommended to set this variable to prevent DNS rebinding attacks (e.g., HTTP_ALLOWED_ORIGINS="http://localhost:3000,https://geollm.beta.ign.fr".');
   }
 
   const server = await startHttpServer();

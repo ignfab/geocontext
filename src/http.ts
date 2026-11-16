@@ -48,7 +48,7 @@ export function createRequestHandler() {
 
   // DNS rebinding protection: browser requests must come from an allowed origin
   // (scheme, host and port). Requests without an `Origin` header pass.
-  const allowedOrigins = env.HTTP_CORS_ALLOWED_ORIGINS?.map(normalizeOrigin);
+  const allowedOrigins = env.HTTP_ALLOWED_ORIGINS?.map(normalizeOrigin);
 
   return async (req: IncomingMessage, res: ServerResponse) => {
     try {

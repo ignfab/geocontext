@@ -13,7 +13,7 @@ describe("Test MCP HTTP server", () => {
   let server: Server;
 
   beforeAll(async () => {
-    process.env.HTTP_CORS_ALLOWED_ORIGINS = "http://localhost:3000,vscode-webview://abc";
+    process.env.HTTP_ALLOWED_ORIGINS = "http://localhost:3000,vscode-webview://abc";
     resetEnv();
     server = createServer(createRequestHandler()).listen(0, "127.0.0.1");
     await once(server, "listening");
@@ -21,7 +21,7 @@ describe("Test MCP HTTP server", () => {
 
   afterAll(() => {
     server.close();
-    delete process.env.HTTP_CORS_ALLOWED_ORIGINS;
+    delete process.env.HTTP_ALLOWED_ORIGINS;
     resetEnv();
   });
 
