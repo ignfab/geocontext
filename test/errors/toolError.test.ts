@@ -192,6 +192,28 @@ describe("Test toolError helper", () => {
     expect(normalizeToolError(result.error).detail).toContain(expectedPrefix);
   });
 
+  it.each([
+    ["a decimal given for an integer", z.number().int(), 1.5, "limit: Entier attendu, nombre décimal reçu."],
+    ["an integer above the schema bound", z.number().int().max(5000), 1e20, "limit: Trop grand : nombre doit être <=5000."],
+    ["an integer above a schema bound declared before .int()", z.number().max(5000).int(), 1e20, "limit: Trop grand : nombre doit être <=5000."],
+    ["an integer below the schema bound", z.number().int().min(1), -1e20, "limit: Trop petit : nombre doit être >=1."],
+    ["an integer beyond the safe range only", z.number().int(), 1e20, "limit: Trop grand : entier doit être <=9007199254740991."],
+    [
+      "two integer fields in a single object",
+      z.object({ a: z.number().int(), b: z.number().int().max(5) }),
+      { a: 1e20, b: 1e20 },
+      "limit.a: Trop grand : entier doit être <=9007199254740991. limit.b: Trop grand : nombre doit être <=5.",
+    ],
+  ])("should report %s with a single actionable message per parameter", (_label, schema, limit, message) => {
+    const result = z.object({ limit: schema }).safeParse({ limit });
+
+    if (result.success) {
+      throw new Error("expected parse failure");
+    }
+
+    expect(normalizeToolError(result.error).detail).toBe(`Paramètres invalides : ${message}`);
+  });
+
   it("should keep array element errors distinguishable by index", () => {
     const result = z.object({ tags: z.array(z.string()) }).safeParse({ tags: [1, 2] });
 

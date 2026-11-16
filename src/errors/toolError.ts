@@ -24,12 +24,17 @@ import { FeatureNotFoundError, FeatureCardinalityError } from "../wfs/byId.js";
 
 // French Zod messages for every parse of the process, installed at module load so
 // the very first parse is already localized. A missing parameter reads better than
-// the locale's "indéfini reçu". Messages set in schemas still take precedence.
+// the locale's "indéfini reçu", and a decimal given for an integer better than its
+// "entier attendu, nombre reçu". Messages set in schemas still take precedence.
 // The SDK validates the protocol messages with this same zod instance: its JSON-RPC
 // errors (e.g. a `tools/call` without `name`) get these French messages too.
 z.config({
   ...fr(),
-  customError: (issue) => (issue.input === undefined ? "Paramètre requis." : undefined),
+  customError: (issue) => {
+    if (issue.input === undefined) return "Paramètre requis.";
+    if (issue.code === "invalid_type" && issue.expected === "int") return "Entier attendu, nombre décimal reçu.";
+    return undefined;
+  },
 });
 
 // --- Public Contract ---
@@ -100,6 +105,12 @@ function buildValidationProblem(error: ZodError): ToolErrorPayload {
       // `bbox.lon`, `tags[1]`, or `[0]` for a root-level array. Empty for a
       // root-level issue.
       const name = z.core.toDotPath(issue.path);
+      // `.int()` also bounds the value to the safe-integer range: when the schema's own
+      // `.max()` / `.min()` fails on the same side, only that one is actionable.
+      if ((issue.code === "too_big" || issue.code === "too_small") && issue.origin === "int" &&
+        error.issues.some((other) => other.code === issue.code && other.origin !== "int" && z.core.toDotPath(other.path) === name)) {
+        return [];
+      }
       return name
         ? [{ code: issue.code, detail: `${name}: ${issue.message}`, name }]
         : [{ code: issue.code, detail: issue.message }];
