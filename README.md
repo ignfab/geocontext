@@ -263,7 +263,7 @@ Merci de **fournir la question type** pour laquelle vous souhaiteriez que le MCP
 
 ## Crédits
 
-- [mcp-framework](https://mcp-framework.com) : **cadre de développement du MCP** 
+- [MCP TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk) : **implémentation du protocole MCP**
 - [@ignfab/gpf-schema-store](https://www.npmjs.com/package/@ignfab/gpf-schema-store) : **couche sémantique** / **catalogue de schémas embarqué** (en attendant [OGC API - Features - schema](https://docs.ogc.org/is/23-058r2/23-058r2.html))
     - [@camptocamp/ogc-client](https://camptocamp.github.io/ogc-client/#/) : **exploration WFS** (ex. : parsing [GetCapabilities](https://data.geopf.fr/wfs?request=GetCapabilities&version=2.0.0&service=WFS))
     - [MiniSearch](https://github.com/lucaong/minisearch) : **recherche par mot-clé** (`gpf_search_types`)

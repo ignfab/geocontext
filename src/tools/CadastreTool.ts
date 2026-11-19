@@ -2,7 +2,7 @@
  * MCP tool exposing nearby cadastral objects for a given point.
  */
 
-import BaseTool from "./BaseTool.js";
+import type { McpTool } from "../helpers/tools.js";
 import { z } from "zod";
 
 import { getParcellaireExpress, PARCELLAIRE_EXPRESS_TYPES, PARCELLAIRE_EXPRESS_SOURCE } from "../gpf/parcellaire-express.js";
@@ -12,13 +12,13 @@ import logger from "../logger.js";
 
 // --- Schemas ---
 
-const cadastreInputSchema = z.object({
+const cadastreInputSchema = z.strictObject({
   lon: lonSchema,
   lat: latSchema,
-}).strict();
+});
 
 const cadastreResultSchema = z
-  .object({
+  .looseObject({
     type: z.string().describe(`Le type d'objet cadastral (${PARCELLAIRE_EXPRESS_TYPES.join(", ")}).`),
     id: z.string().describe("L'identifiant de l'objet cadastral."),
     bbox: z.array(z.number()).describe("La boîte englobante de l'objet cadastral.").optional(),
@@ -26,7 +26,7 @@ const cadastreResultSchema = z
     distance: z.number().describe("La distance en mètres entre le point demandé et l'objet cadastral retenu."),
     source: z.string().describe("La source des données cadastrales."),
   })
-  .catchall(z.unknown());
+  .meta({ additionalProperties: true }); // zod would publish `{}`, flagged as non-portable by MCP inspector
 
 const cadastreOutputSchema = z.object({
   results: z.array(cadastreResultSchema).describe("La liste des objets cadastraux les plus proches du point demandé."),
@@ -47,14 +47,14 @@ const CADASTRE_TOOL_DESCRIPTION = [
   `(source : ${PARCELLAIRE_EXPRESS_SOURCE}).`
 ].join("\n");
 
-class CadastreTool extends BaseTool<CadastreInput> {
+class CadastreTool implements McpTool<typeof cadastreInputSchema> {
   name = "cadastre";
   title = "Informations cadastrales";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
   description = CADASTRE_TOOL_DESCRIPTION;
-  protected outputSchemaShape = cadastreOutputSchema;
+  outputSchema = cadastreOutputSchema;
 
-  schema = cadastreInputSchema;
+  inputSchema = cadastreInputSchema;
 
   /**
    * Returns the nearest cadastral objects around the requested point.
@@ -64,7 +64,7 @@ class CadastreTool extends BaseTool<CadastreInput> {
    */
   async execute(input: CadastreInput) {
     logger.info(`[tool] execute ${this.name} ...`, {
-      input: input
+      input
     });
 
     return {

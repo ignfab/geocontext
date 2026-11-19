@@ -2,7 +2,7 @@
  * MCP tool exposing detailed schema inspection for a single WFS type.
  */
 
-import BaseTool from "./BaseTool.js";
+import type { McpTool } from "../helpers/tools.js";
 import { z } from "zod";
 import { zOgcCollectionSchema } from "@ignfab/gpf-schema-store";
 
@@ -12,19 +12,13 @@ import logger from "../logger.js";
 
 // --- Schemas ---
 
-const gpfDescribeTypeInputSchema = z.object({
+const gpfDescribeTypeInputSchema = z.strictObject({
   typename: z
     .string()
     .trim()
     .min(1, "le nom du type ne doit pas être vide")
     .describe("Le nom du type à décrire (de la forme `prefixe:nom`)."),
-}).strict();
-
-// FIXME: when mcp-framework is removed, remove this patch which is only here
-// because mcp-framework does not accept z.record field types.
-const gpfDescribeTypeOutputSchema = zOgcCollectionSchema
-  .omit({ properties: true })
-  .extend({ properties: z.object({}).catchall(z.unknown()) });
+});
 
 // --- Types ---
 
@@ -39,14 +33,14 @@ const GPF_DESCRIBE_TYPE_TOOL_DESCRIPTION = [
   "**IMPORTANT : Appel fortement recommandé si les noms exacts des propriétés ne sont pas connus : un nom de propriété incorrect provoque une erreur**."
 ].join("\n");
 
-class GpfDescribeTypeTool extends BaseTool<GpfDescribeTypeInput> {
+class GpfDescribeTypeTool implements McpTool<typeof gpfDescribeTypeInputSchema> {
   name = "gpf_describe_type";
   title = "Description d’un type GPF";
   annotations = READ_ONLY_CLOSED_WORLD_TOOL_ANNOTATIONS;
   description = GPF_DESCRIBE_TYPE_TOOL_DESCRIPTION;
-  protected outputSchemaShape = gpfDescribeTypeOutputSchema;
+  outputSchema = zOgcCollectionSchema;
 
-  schema = gpfDescribeTypeInputSchema;
+  inputSchema = gpfDescribeTypeInputSchema;
 
   /**
    * Loads the detailed schema description for one GPF typename.
@@ -56,7 +50,7 @@ class GpfDescribeTypeTool extends BaseTool<GpfDescribeTypeInput> {
    */
   async execute(input: GpfDescribeTypeInput) {
     logger.info(`[tool] execute ${this.name} ...`, {
-      input: input
+      input
     });
 
     try {

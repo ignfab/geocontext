@@ -1,7 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { z } from "zod";
-
-import { normalizeToolError } from "../../src/errors/toolError.js";
 
 type DocsHelpersModule = {
   toAnchorSlug: (value: string) => string;
@@ -10,18 +7,6 @@ type DocsHelpersModule = {
   renderDescription: (description: string | undefined) => string;
   renderResponseContractSection: (definition: { name: string; outputSchema?: unknown }) => string;
   buildAnnotationsSection: (tools: Array<{ name?: string; annotations?: Record<string, boolean> }>) => string[];
-  sortToolDefinitions: <T extends { name: string }>(definitions: T[]) => T[];
-  buildValidationErrorExampleForTool: (
-    tool: unknown,
-    normalizeToolError: (error: unknown) => Record<string, unknown>,
-  ) => {
-    toolName: string;
-    response: {
-      isError: true;
-      content: Array<{ type: string; text: string }>;
-      structuredContent: Record<string, unknown>;
-    };
-  } | undefined;
 };
 
 let docsHelpers: DocsHelpersModule;
@@ -56,34 +41,6 @@ describe("generate-mcp-docs helpers", () => {
     expect(schemaType({ oneOf: [{ type: "string" }] })).toEqual("oneOf");
     expect(schemaType({ anyOf: [{ type: "string" }] })).toEqual("anyOf");
     expect(schemaType({ allOf: [{ type: "string" }] })).toEqual("allOf");
-  });
-
-  it("should sort tools in documentation reading order", async () => {
-    const { sortToolDefinitions } = await loadDocsHelpers();
-
-    const sorted = sortToolDefinitions([
-      { name: "gpf_get_feature_by_id_layer" },
-      { name: "gpf_count_features" },
-      { name: "gpf_get_features" },
-      { name: "gpf_get_feature_by_id" },
-      { name: "adminexpress" },
-      { name: "gpf_get_features_layer" },
-      { name: "geocode" },
-      { name: "unknown_custom_tool" },
-      { name: "altitude" },
-    ]);
-
-    expect(sorted.map((tool) => tool.name)).toEqual([
-      "geocode",
-      "altitude",
-      "adminexpress",
-      "gpf_get_features",
-      "gpf_get_features_layer",
-      "gpf_count_features",
-      "gpf_get_feature_by_id",
-      "gpf_get_feature_by_id_layer",
-      "unknown_custom_tool",
-    ]);
   });
 
   it("should render a markdown table sorted by property name", async () => {
@@ -198,50 +155,5 @@ describe("generate-mcp-docs helpers", () => {
 
     expect(markdown).toContain("| `readOnlyHint` | oui |");
     expect(markdown).toContain("| `openWorldHint` | oui (non pour `tool_b` et `tool_c`) |");
-  });
-
-  it("should build a validation example without executing the tool", async () => {
-    const { buildValidationErrorExampleForTool } = await loadDocsHelpers();
-
-    let executeCount = 0;
-    const example = buildValidationErrorExampleForTool(
-      {
-        name: "adminexpress",
-        inputSchema: {
-          type: "object",
-          properties: {
-            lon: { type: "number" },
-            lat: { type: "number" },
-          },
-          required: ["lon", "lat"],
-        },
-        _instance: {
-          schema: z.object({
-            lon: z.number(),
-            lat: z.number(),
-          }).strict(),
-          async toolCall() {
-            executeCount += 1;
-            return undefined;
-          },
-        },
-      },
-      normalizeToolError,
-    );
-
-    expect(executeCount).toEqual(0);
-    expect(example).toMatchObject({
-      toolName: "adminexpress",
-      response: {
-        isError: true,
-        content: [
-          {
-            type: "text",
-            text: expect.stringContaining("Paramètres invalides"),
-          },
-        ],
-      },
-    });
-    expect(example?.response.structuredContent).toBeUndefined();
   });
 });

@@ -30,13 +30,29 @@ export function expectErrorText(response: ToolResponse) {
 }
 
 /**
+ * Asserts that an error text holds a French message on `name` stating `condition`,
+ * without pinning the wording of the Zod locale (it may change on upgrade).
+ *
+ * @param text Error text, or `detail` of a normalized tool error.
+ * @param name Parameter name the message must be prefixed with.
+ * @param condition Pattern the message must match (bound, allowed values...).
+ */
+export function expectFrenchIssue(text: string, name: string, condition: RegExp) {
+  expect(text).toMatch(/^Paramètres invalides : /);
+  // Each message ends with a period: split before every `param: ` prefix, keep the one on `name`.
+  const messages = text.replace(/^Paramètres invalides : /, "").split(/(?<=[.!?]) (?=\S+: )/);
+  const message = messages.find((item) => item.startsWith(`${name}: `));
+  expect(message, text).toBeDefined();
+  expect(message).toMatch(/requis|invalide|attendu|trop/i);
+  expect(message).toMatch(condition);
+}
+
+/**
  * Asserts that a response rejected an out-of-range `lon`.
  *
  * @param response Tool response expected to be a validation error.
  */
 export function expectInvalidLon(response: ToolResponse) {
-  const text = expectErrorText(response);
-  expect(text).toContain("Paramètres invalides");
-  // `detail` is the only channel left: pin param name and `too_big` wording.
-  expect(text).toContain("lon: La valeur doit être au plus 180.");
+  // `detail` is the only channel left: pin param name and bound.
+  expectFrenchIssue(expectErrorText(response), "lon", /180/);
 }

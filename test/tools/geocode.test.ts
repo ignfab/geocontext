@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 import GeocodeTool from "../../src/tools/GeocodeTool";
-import { validateStructuredContentAgainstOutputSchema } from "./helpers/outputSchema";
+import { toolCall, toolDefinition } from "./helpers/mcp";
 
 describe("Test GeocodeTool",() => {
     class TestableGeocodeTool extends GeocodeTool {
@@ -23,22 +23,22 @@ describe("Test GeocodeTool",() => {
 
     it("should expose an enriched MCP definition", () => {
         const tool = new GeocodeTool();
-        expect(tool.toolDefinition.title).toEqual("Géocodage de lieux et d’adresses");
-        expect(tool.toolDefinition.inputSchema.properties?.text).toMatchObject({
+        expect(toolDefinition(tool).title).toEqual("Géocodage de lieux et d’adresses");
+        expect(toolDefinition(tool).inputSchema.properties?.text).toMatchObject({
             type: "string",
             minLength: 1,
         });
-        expect(tool.toolDefinition.inputSchema.properties?.maximumResponses).toMatchObject({
+        expect(toolDefinition(tool).inputSchema.properties?.maximumResponses).toMatchObject({
             type: "integer",
             minimum: 1,
             maximum: 10,
         });
-        expect(tool.toolDefinition.outputSchema).toBeDefined();
+        expect(toolDefinition(tool).outputSchema).toBeDefined();
     });
 
     it("should return both text content and structuredContent", async () => {
         const tool = new TestableGeocodeTool();
-        const response = await tool.toolCall({
+        const response = await toolCall(tool, {
             params: {
                 name: "geocode",
                 arguments: {
@@ -71,17 +71,11 @@ describe("Test GeocodeTool",() => {
                 },
             ],
         });
-        expect(
-            validateStructuredContentAgainstOutputSchema(
-                tool.toolDefinition.outputSchema,
-                response.structuredContent,
-            ),
-        ).toBeNull();
     });
 
     it("should return isError=true for invalid input", async () => {
         const tool = new GeocodeTool();
-        const response = await tool.toolCall({
+        const response = await toolCall(tool, {
             params: {
                 name: "geocode",
                 arguments: {

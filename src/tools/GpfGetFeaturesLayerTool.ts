@@ -18,7 +18,7 @@
  * or token minting — when no proxy is configured.
  */
 
-import BaseTool from "./BaseTool.js";
+import type { McpTool } from "../helpers/tools.js";
 
 import { READ_ONLY_CLOSED_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import { getEnv } from "../config/env.js";
@@ -27,12 +27,10 @@ import { buildDataUrl } from "../proxy/dataUrl.js";
 import { wfsClient } from "../wfs/execution.js";
 import { compileQueryParts, getGeometryName, getSpatialFilter } from "../wfs/queryPreparation.js";
 import {
-  gpfGetFeaturesLayerInputObjectSchema,
   gpfGetFeaturesLayerInputSchema,
   gpfGetFeaturesLayerOutputSchema,
-  gpfGetFeaturesLayerPublishedInputSchema,
   PROXY_TOKEN_KIND,
-  type GpfGetFeaturesLayerInput,
+  type GpfGetFeaturesInput,
   GPF_SPATIAL_FILTER_DOCNAMES,
 } from "../wfs/schema.js";
 import logger from "../logger.js";
@@ -46,40 +44,14 @@ const GPF_GET_FEATURES_LAYER_TOOL_DESCRIPTION = [
   "**OBLIGATOIRE : toujours appeler `gpf_describe_type` avant ce tool, sauf si `gpf_describe_type` a déjà été appelé pour ce même typename dans la conversation en cours.** Les noms de propriétés ne peuvent pas être devinés."
 ].join("\n");
 
-class GpfGetFeaturesLayerTool extends BaseTool<GpfGetFeaturesLayerInput> {
+class GpfGetFeaturesLayerTool implements McpTool<typeof gpfGetFeaturesLayerInputSchema> {
   name = "gpf_get_features_layer";
   title = "Couche cartographiable d’objets GPF";
   annotations = READ_ONLY_CLOSED_WORLD_TOOL_ANNOTATIONS;
   description = GPF_GET_FEATURES_LAYER_TOOL_DESCRIPTION;
-  protected outputSchemaShape = gpfGetFeaturesLayerOutputSchema;
+  outputSchema = gpfGetFeaturesLayerOutputSchema;
 
-  // The framework requires a plain Zod object here to publish a compatible
-  // input schema. Cross-field runtime validation is applied in `execute`.
-  schema = gpfGetFeaturesLayerInputObjectSchema;
-
-  /**
-   * Exposes an input schema variant that stays compatible with most MCP integrations.
-   *
-   * @returns The published input schema exposed through the MCP tool definition.
-   */
-  get inputSchema() {
-    return gpfGetFeaturesLayerPublishedInputSchema;
-  }
-
-  /**
-   * Formats the `{ data_url }` response into `structuredContent`.
-   *
-   * @param data Raw execution result returned by the tool implementation.
-   * @returns An MCP success response enriched with structured content.
-   */
-  protected createSuccessResponse(data: unknown) {
-    const payload = gpfGetFeaturesLayerOutputSchema.parse(data);
-
-    return {
-      content: [{ type: "text" as const, text: JSON.stringify(payload) }],
-      structuredContent: payload,
-    };
-  }
+  inputSchema = gpfGetFeaturesLayerInputSchema;
 
   /**
    * Mints the opaque proxy URL for the query.
@@ -91,7 +63,7 @@ class GpfGetFeaturesLayerTool extends BaseTool<GpfGetFeaturesLayerInput> {
    * @param input Normalized tool input.
    * @returns An object carrying the opaque `data_url`.
    */
-  async execute(input: GpfGetFeaturesLayerInput) {
+  async execute(input: GpfGetFeaturesInput) {
     const env = getEnv();
 
     // Gate on CONFIGURATION, not on TRANSPORT_TYPE: the tool only yields a working
@@ -106,21 +78,13 @@ class GpfGetFeaturesLayerTool extends BaseTool<GpfGetFeaturesLayerInput> {
       );
     }
 
-    // Validate the input the same way the proxy will re-validate the decoded token,
-    // and encode exactly that object shape so the round-trip is symmetric (the
-    // proxy parses the token through the strict object schema).
-    const tokenParams = gpfGetFeaturesLayerInputObjectSchema.parse(input);
-    // Run the transform+refinement (single spatial filter, spatial_extras default)
-    // so the caller gets a clean validation error rather than a proxy-side rejection.
-    const compiledInput = gpfGetFeaturesLayerInputSchema.parse(input);
-
     // Semantic pre-flight: validate the query against the EMBEDDED catalog
     // BEFORE minting the URL, so a bad typename/select/where/order_by fails at THIS
     // tool call (where the LLM can fix it) instead of surfacing as an opaque proxy
     // 5xx only when the map client later fetches the data_url. getFeatureType and
     // compileQueryParts are network-free (embedded catalog).
-    const featureType = await wfsClient.getFeatureType(compiledInput.typename);
-    const spatialFilter = getSpatialFilter(compiledInput);
+    const featureType = await wfsClient.getFeatureType(input.typename);
+    const spatialFilter = getSpatialFilter(input);
 
     // Also check that the typename corresponds to a collection that has a geometry.
     getGeometryName(featureType);
@@ -147,24 +111,27 @@ class GpfGetFeaturesLayerTool extends BaseTool<GpfGetFeaturesLayerInput> {
     const needsResolvedRef =
       spatialFilter?.operator === "intersects_feature" || spatialFilter?.operator === "travel_time";
     compileQueryParts(
-      compiledInput,
+      input,
       featureType,
       needsResolvedRef ? { type: "Point" as const, coordinates: [0, 0] } : undefined,
     );
 
     logger.info(`[tool] execute ${this.name} ...`, {
-      input: tokenParams,
+      input
     });
+
+    // The proxy parses the token with the input schema, which re-injects `spatial_extras`.
+    const { spatial_extras: _spatialExtras, ...params } = input;
 
     // Tag the token with the query discriminant so the two-producer proxy dispatches
     // it to the layer-query engine. The `kind` is injected here from validated
     // params, never taken from tool input.
     //
     // encodeToken may throw a typed ProxyToken* error (EN message). We let it
-    // propagate: BaseTool.createErrorResponse -> normalizeToolError translates it
+    // propagate: errorResult -> normalizeToolError translates it
     // to a FR payload with a stable code (translation lives at the tool boundary).
     const token = encodeToken(
-      { kind: PROXY_TOKEN_KIND.query, ...tokenParams },
+      { kind: PROXY_TOKEN_KIND.query, ...params },
       env.PROXY_URL_SECRET,
     );
 

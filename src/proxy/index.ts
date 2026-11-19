@@ -10,8 +10,8 @@
  * The `#!/usr/bin/env node` shebang above is preserved verbatim by tsc into the
  * emitted dist/proxy/index.js, so the `geocontext-proxy` npm bin (symlinked and
  * executed directly on POSIX) resolves its interpreter. tsc can PRESERVE a source
- * shebang but has no option to ADD one (TS issue #45319), and mcp-build only
- * shebangs dist/index.js — hence putting it in the source is the declarative fix.
+ * shebang but has no option to ADD one (TS issue #45319) — hence putting it in
+ * the source is the declarative fix (same as src/index.ts).
  */
 
 import logger from "../logger.js";

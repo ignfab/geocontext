@@ -5,7 +5,7 @@
  * WFS request preparation and execution live in the structured WFS engine.
  */
 
-import BaseTool from "./BaseTool.js";
+import type { McpTool } from "../helpers/tools.js";
 
 import { READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import {
@@ -13,9 +13,7 @@ import {
 } from "../wfs/features.js";
 import {
   gpfGetFeaturesInputSchema,
-  gpfGetFeaturesInputObjectSchema,
   type GpfGetFeaturesInput,
-  gpfGetFeaturesPublishedInputSchema,
   GPF_SPATIAL_FILTER_DOCNAMES,
   GPF_SPATIAL_EXTRAS_DOCNAMES,
 } from "../wfs/schema.js";
@@ -38,42 +36,29 @@ const GPF_GET_FEATURES_TOOL_DESCRIPTION = [
   "Les noms de propriétés **ne peuvent pas être devinés** : ils sont spécifiques à chaque typename et diffèrent systématiquement des conventions habituelles (ex : pas de nom_officiel, navigabilite sans accent, etc.). Toute tentative sans appel préalable à `gpf_describe_type` **provoquera une erreur.**",
 ].join("\n");
 
-class GpfGetFeaturesTool extends BaseTool<GpfGetFeaturesInput> {
+class GpfGetFeaturesTool implements McpTool<typeof gpfGetFeaturesInputSchema> {
   name = "gpf_get_features";
   title = "Lecture d’objets GPF";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
   description = GPF_GET_FEATURES_TOOL_DESCRIPTION;
 
-  // The framework requires a plain Zod object here to publish a compatible
-  // input schema. Cross-field runtime validation is applied in `execute`.
-  schema = gpfGetFeaturesInputObjectSchema;
-
-  /**
-   * Exposes an input schema variant that stays compatible with most MCP integrations.
-   *
-   * @returns The published input schema exposed through the MCP tool definition.
-   */
-  get inputSchema() {
-    return gpfGetFeaturesPublishedInputSchema;
-  }
+  inputSchema = gpfGetFeaturesInputSchema;
 
   /**
    * Orchestrates the MCP-facing execution flow.
    *
    * WFS-side preparation and execution live in `features.ts`; the tool only
-   * validates the input and delegates.
+   * delegates.
    *
    * @param input Normalized tool input.
    * @returns A transformed FeatureCollection.
    */
   async execute(input: GpfGetFeaturesInput) {
-    const validatedInput = gpfGetFeaturesInputSchema.parse(input);
-
     logger.info(`[tool] execute ${this.name} ...`, {
-      input: validatedInput
+      input
     });
 
-    return executeQueryFeatures(validatedInput);
+    return executeQueryFeatures(input);
   }
 }
 

@@ -2,7 +2,7 @@
  * MCP tool exposing free-text geocoding and autocomplete.
  */
 
-import BaseTool from "./BaseTool.js";
+import type { McpTool } from "../helpers/tools.js";
 import { z } from "zod";
 
 import { geocodeClient, GEOCODE_SOURCE } from "../gpf/geocode.js";
@@ -11,7 +11,7 @@ import logger from "../logger.js";
 
 // --- Schemas ---
 
-const geocodeInputSchema = z.object({
+const geocodeInputSchema = z.strictObject({
   text: z
     .string()
     .trim()
@@ -24,7 +24,7 @@ const geocodeInputSchema = z.object({
     .max(10)
     .optional()
     .describe("Le nombre maximum de résultats à retourner (entre 1 et 10). Défaut : 3."),
-}).strict();
+});
 
 const geocodeResultSchema = z.object({
   lon: z.number().describe("La longitude du résultat."),
@@ -51,14 +51,14 @@ const GEOCODE_TOOL_DESCRIPTION = [
   `(source : ${GEOCODE_SOURCE}).`
 ].join("\n");
 
-class GeocodeTool extends BaseTool<GeocodeInput> {
+class GeocodeTool implements McpTool<typeof geocodeInputSchema> {
   name = "geocode";
   title = "Géocodage de lieux et d’adresses";
   annotations = READ_ONLY_OPEN_WORLD_TOOL_ANNOTATIONS;
   description = GEOCODE_TOOL_DESCRIPTION;
-  protected outputSchemaShape = geocodeOutputSchema;
+  outputSchema = geocodeOutputSchema;
 
-  schema = geocodeInputSchema;
+  inputSchema = geocodeInputSchema;
 
   /**
    * Geocodes a free-text query and returns the ordered candidate list.
@@ -68,7 +68,7 @@ class GeocodeTool extends BaseTool<GeocodeInput> {
    */
   async execute(input: GeocodeInput) {
     logger.info(`[tool] execute ${this.name} ...`, {
-      input: input
+      input
     });
 
     return {

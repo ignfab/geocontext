@@ -25,7 +25,7 @@
  * or token minting — when no proxy is configured.
  */
 
-import BaseTool from "./BaseTool.js";
+import type { McpTool } from "../helpers/tools.js";
 
 import { READ_ONLY_CLOSED_WORLD_TOOL_ANNOTATIONS } from "../helpers/toolAnnotations.js";
 import { getEnv } from "../config/env.js";
@@ -35,8 +35,7 @@ import { wfsClient } from "../wfs/execution.js";
 import { buildPropertyNameWithGeometry, getGeometryName } from "../wfs/properties.js";
 import {
   PROXY_TOKEN_KIND,
-  gpfGetFeatureByIdLayerInputObjectSchema,
-  gpfGetFeatureByIdLayerPublishedInputSchema,
+  gpfGetFeatureByIdLayerInputSchema,
   gpfGetFeaturesLayerOutputSchema,
   type GpfGetFeatureByIdLayerInput,
 } from "../wfs/schema.js";
@@ -52,42 +51,14 @@ const GPF_GET_FEATURE_BY_ID_LAYER_TOOL_DESCRIPTION = [
   "Cet outil ne peut renvoyer qu'un unique objet (0 ou plusieurs résultats provoquent une erreur explicite).",
 ].join("\n");
 
-class GpfGetFeatureByIdLayerTool extends BaseTool<GpfGetFeatureByIdLayerInput> {
+class GpfGetFeatureByIdLayerTool implements McpTool<typeof gpfGetFeatureByIdLayerInputSchema> {
   name = "gpf_get_feature_by_id_layer";
   title = "Couche cartographiable d’un objet GPF par identifiant";
   annotations = READ_ONLY_CLOSED_WORLD_TOOL_ANNOTATIONS;
   description = GPF_GET_FEATURE_BY_ID_LAYER_TOOL_DESCRIPTION;
-  protected outputSchemaShape = gpfGetFeaturesLayerOutputSchema;
+  outputSchema = gpfGetFeaturesLayerOutputSchema;
 
-  // The framework requires a plain Zod object here to publish a compatible input
-  // schema. This by-id surface has no cross-field refinement (no filters, so no
-  // single-spatial-filter rule to enforce), so the object schema is the full
-  // runtime contract. `select` is validated against the catalog in execute().
-  schema = gpfGetFeatureByIdLayerInputObjectSchema;
-
-  /**
-   * Exposes an input schema variant that stays compatible with most MCP integrations.
-   *
-   * @returns The published input schema exposed through the MCP tool definition.
-   */
-  get inputSchema() {
-    return gpfGetFeatureByIdLayerPublishedInputSchema;
-  }
-
-  /**
-   * Formats the `{ data_url }` response into `structuredContent`.
-   *
-   * @param data Raw execution result returned by the tool implementation.
-   * @returns An MCP success response enriched with structured content.
-   */
-  protected createSuccessResponse(data: unknown) {
-    const payload = gpfGetFeaturesLayerOutputSchema.parse(data);
-
-    return {
-      content: [{ type: "text" as const, text: JSON.stringify(payload) }],
-      structuredContent: payload,
-    };
-  }
+  inputSchema = gpfGetFeatureByIdLayerInputSchema;
 
   /**
    * Mints the opaque proxy URL for the single-feature lookup.
@@ -115,24 +86,19 @@ class GpfGetFeatureByIdLayerTool extends BaseTool<GpfGetFeatureByIdLayerInput> {
       );
     }
 
-    // Validate the input the same way the proxy will re-validate the decoded token,
-    // and encode exactly that object shape so the round-trip is symmetric (the
-    // proxy parses the token through the strict object schema).
-    const tokenParams = gpfGetFeatureByIdLayerInputObjectSchema.parse(input);
-
     // Semantic pre-flight (network-free): validate the typename, selected
     // non-geometric properties and geometry invariant against the EMBEDDED catalog
     // BEFORE minting the URL, so a bad selection fails at THIS tool call rather
     // than as an opaque proxy error when the map client fetches the URL.
     // The `feature_id` cannot be validated here — that is a network lookup resolved
     // at fetch time by the proxy (runGeometryFeatureByIdQuery).
-    const featureType = await wfsClient.getFeatureType(tokenParams.typename);
+    const featureType = await wfsClient.getFeatureType(input.typename);
     // Also check that the typename corresponds to a collection that has a geometry.
     const geometryName = getGeometryName(featureType);
-    buildPropertyNameWithGeometry(featureType, tokenParams.select, geometryName);
+    buildPropertyNameWithGeometry(featureType, input.select, geometryName);
 
     logger.info(`[tool] execute ${this.name} ...`, {
-      input: tokenParams,
+      input
     });
 
     // Tag the token with the by-id discriminant so the single-token, two-producer
@@ -141,10 +107,10 @@ class GpfGetFeatureByIdLayerTool extends BaseTool<GpfGetFeatureByIdLayerInput> {
     // it is injected here from the parsed params, never taken from tool input.
     //
     // encodeToken may throw a typed ProxyToken* error (EN message). We let it
-    // propagate: BaseTool.createErrorResponse -> normalizeToolError translates it
+    // propagate: errorResult -> normalizeToolError translates it
     // to a FR payload with a stable code (translation lives at the tool boundary).
     const token = encodeToken(
-      { kind: PROXY_TOKEN_KIND.byId, ...tokenParams },
+      { kind: PROXY_TOKEN_KIND.byId, ...input },
       env.PROXY_URL_SECRET,
     );
 

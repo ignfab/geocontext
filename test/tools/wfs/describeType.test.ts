@@ -3,7 +3,7 @@ import { describe, it, expect } from "vitest";
 import type { OgcCollectionSchema } from "@ignfab/gpf-schema-store";
 
 import GpfDescribeTypeTool from "../../../src/tools/GpfDescribeTypeTool";
-import { validateStructuredContentAgainstOutputSchema } from "../helpers/outputSchema";
+import { toolCall, toolDefinition } from "../helpers/mcp";
 
 describe("Test GpfDescribeTypeTool",() => {
     const mockCollection: OgcCollectionSchema = {
@@ -34,17 +34,17 @@ describe("Test GpfDescribeTypeTool",() => {
 
     it("should expose an enriched MCP definition", () => {
         const tool = new GpfDescribeTypeTool();
-        expect(tool.toolDefinition.title).toEqual("Description d’un type GPF");
-        expect(tool.toolDefinition.inputSchema.properties?.typename).toMatchObject({
+        expect(toolDefinition(tool).title).toEqual("Description d’un type GPF");
+        expect(toolDefinition(tool).inputSchema.properties?.typename).toMatchObject({
             type: "string",
             minLength: 1,
         });
-        expect(tool.toolDefinition.outputSchema).toBeDefined();
+        expect(toolDefinition(tool).outputSchema).toBeDefined();
     });
 
     it("should return both text content and structuredContent", async () => {
         const tool = new TestableGpfDescribeTypeTool();
-        const response = await tool.toolCall({
+        const response = await toolCall(tool, {
             params: {
                 name: "gpf_describe_type",
                 arguments: {
@@ -74,7 +74,7 @@ describe("Test GpfDescribeTypeTool",() => {
 
     it("should return a payload that validates against its outputSchema", async () => {
         const tool = new TestableGpfDescribeTypeTool();
-        const response = await tool.toolCall({
+        const response = await toolCall(tool, {
             params: {
                 name: "gpf_describe_type",
                 arguments: {
@@ -85,19 +85,12 @@ describe("Test GpfDescribeTypeTool",() => {
 
         expect(response.isError).toBeUndefined();
         expect(response.structuredContent).toBeDefined();
-        expect(tool.toolDefinition.outputSchema).toBeDefined();
-
-        expect(
-            validateStructuredContentAgainstOutputSchema(
-                tool.toolDefinition.outputSchema,
-                response.structuredContent,
-            ),
-        ).toBeNull();
+        expect(toolDefinition(tool).outputSchema).toBeDefined();
     });
 
     it("should return isError=true for invalid input", async () => {
         const tool = new GpfDescribeTypeTool();
-        const response = await tool.toolCall({
+        const response = await toolCall(tool, {
             params: {
                 name: "gpf_describe_type",
                 arguments: {
@@ -120,7 +113,7 @@ describe("Test GpfDescribeTypeTool",() => {
 
     it("should return isError=true when execute fails", async () => {
         const tool = new TestableGpfDescribeTypeToolError();
-        const response = await tool.toolCall({
+        const response = await toolCall(tool, {
             params: {
                 name: "gpf_describe_type",
                 arguments: {

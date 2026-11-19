@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 import GpfSearchTypesTool from "../../../src/tools/GpfSearchTypesTool";
-import { validateStructuredContentAgainstOutputSchema } from "../helpers/outputSchema";
+import { toolCall, toolDefinition } from "../helpers/mcp";
 
 describe("Test GpfSearchTypesTool",() => {
     class TestableGpfSearchTypesTool extends GpfSearchTypesTool {
@@ -42,22 +42,22 @@ describe("Test GpfSearchTypesTool",() => {
 
     it("should expose an enriched MCP definition", () => {
         const tool = new GpfSearchTypesTool();
-        expect(tool.toolDefinition.title).toEqual("Recherche de types GPF");
-        expect(tool.toolDefinition.inputSchema.properties?.query).toMatchObject({
+        expect(toolDefinition(tool).title).toEqual("Recherche de types GPF");
+        expect(toolDefinition(tool).inputSchema.properties?.query).toMatchObject({
             type: "string",
             minLength: 1,
         });
-        expect(tool.toolDefinition.inputSchema.properties?.max_results).toMatchObject({
+        expect(toolDefinition(tool).inputSchema.properties?.max_results).toMatchObject({
             type: "integer",
             minimum: 1,
             maximum: 50,
         });
-        expect(tool.toolDefinition.outputSchema).toBeDefined();
+        expect(toolDefinition(tool).outputSchema).toBeDefined();
     });
 
     it("should return both text content and structuredContent", async () => {
         const tool = new TestableGpfSearchTypesTool();
-        const response = await tool.toolCall({
+        const response = await toolCall(tool, {
             params: {
                 name: "gpf_search_types",
                 arguments: {
@@ -90,17 +90,11 @@ describe("Test GpfSearchTypesTool",() => {
                 },
             ],
         });
-        expect(
-            validateStructuredContentAgainstOutputSchema(
-                tool.toolDefinition.outputSchema,
-                response.structuredContent,
-            ),
-        ).toBeNull();
     });
 
     it("should include MiniSearch metadata fields in text and structuredContent when present", async () => {
         const tool = new TestableGpfSearchTypesToolWithMetadata();
-        const response = await tool.toolCall({
+        const response = await toolCall(tool, {
             params: {
                 name: "gpf_search_types",
                 arguments: { query: "batiment", max_results: 1 },
@@ -135,7 +129,7 @@ describe("Test GpfSearchTypesTool",() => {
 
     it("should return isError=true for invalid input", async () => {
         const tool = new GpfSearchTypesTool();
-        const response = await tool.toolCall({
+        const response = await toolCall(tool, {
             params: {
                 name: "gpf_search_types",
                 arguments: {

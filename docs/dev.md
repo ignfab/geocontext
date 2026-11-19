@@ -189,9 +189,6 @@ Pour les tests d'intégration :
 
 ### Mettre à jour des dépendances
 
-> [!WARNING]
-> **zod doit rester en version 3**
-
 L'utilisation de [npm-check-updates](https://www.npmjs.com/package/npm-check-updates?activeTab=readme) est recommandée pour gérer les montées de version :
 
 ```bash
